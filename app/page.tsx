@@ -1,65 +1,210 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+import { useState, useRef, useEffect } from "react"
+
+// UI
+import WordCard from "@/components/WordCard"
+import Fab from "@/components/Fab"
+import SearchModal from "@/components/SearchModal"
+
+import toast, { Toaster } from "react-hot-toast"
+import type { WordInfo } from "@/types/WordInfo"
+import { checkIfWordExists, toggleSaveStatus } from "@/lib/supabaseApi"
+
+// ---------- 型 ----------
+type AiParsedResult = {
+    main: WordInfo
+    related?: {
+        synonyms?: string[]
+        antonyms?: string[]
+    }
+    }
+
+    type LabeledWord = WordInfo & {
+    label?: "main" | "synonym" | "antonym"
+    }
+
+    // ---------- Component ----------
+    export default function SearchPage() {
+    const [input, setInput] = useState("")
+    const [isLoading, setIsLoading] = useState(false)
+    const [inputError, setInputError] = useState("")
+    const [wordList, setWordList] = useState<LabeledWord[]>([])
+    const [savedWords, setSavedWords] = useState<string[]>([])
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [showFab, setShowFab] = useState(false)
+    const [hasSearched, setHasSearched] = useState(false)
+
+    const searchFormRef = useRef<HTMLFormElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+    const [editingWordId, setEditingWordId] = useState<string | null>(null)
+
+    // ---------- AI ----------
+    const parseOpenAIResponse = async (
+        word: string
+    ): Promise<AiParsedResult | undefined> => {
+        try {
+        const API_URL = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
+        if (!API_URL) throw new Error("API URL not defined")
+
+        const res = await fetch(`${API_URL}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: word }),
+        })
+
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`)
+        return await res.json()
+        } catch (err) {
+        console.error(err)
+        toast.error("AIの応答取得に失敗しました")
+        }
+    }
+
+    const hydrateWord = async (word: LabeledWord): Promise<LabeledWord> => {
+        if (word.meaning) return word
+        const detail = await parseOpenAIResponse(word.word)
+        if (detail?.main) return { ...detail.main, label: word.label }
+        return word
+    }
+
+    // ---------- Search ----------
+    const handleSearch = async (
+        inputRef?: React.RefObject<HTMLInputElement | null>,
+        closeModal = false
+    ) => {
+        if (!/^[a-zA-Z]+$/.test(input)) {
+        setInputError("アルファベットのみ入力してください")
+        return
+        }
+
+        setInputError("")
+        setIsLoading(true)
+
+        try {
+        const parsed = await parseOpenAIResponse(input)
+        if (!parsed) return
+
+        const existing = await checkIfWordExists(parsed.main)
+
+        if (existing) {
+            setWordList([existing])
+            setSavedWords([existing.word])
+        } else {
+            const base: LabeledWord[] = [
+            { ...parsed.main, label: "main" },
+            ...(parsed.related?.synonyms?.slice(0, 1).map((s) => ({
+                word: s,
+                meaning: "",
+                partOfSpeech: [],
+                pronunciation: "",
+                example: "",
+                translation: "",
+                label: "synonym",
+            })) ?? []),
+            ...(parsed.related?.antonyms?.slice(0, 1).map((a) => ({
+                word: a,
+                meaning: "",
+                partOfSpeech: [],
+                pronunciation: "",
+                example: "",
+                translation: "",
+                label: "antonym",
+            })) ?? []),
+            ]
+
+            const hydrated = await Promise.all(base.map(hydrateWord))
+            setWordList(hydrated)
+        }
+        } finally {
+        setIsLoading(false)
+        setHasSearched(true)
+        inputRef?.current?.blur()
+        if (closeModal) setIsModalOpen(false)
+        }
+    }
+
+    // ---------- FAB ----------
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+        ([entry]) => setShowFab(!entry.isIntersecting),
+        { threshold: 0 }
+        )
+        if (searchFormRef.current) observer.observe(searchFormRef.current)
+        return () => observer.disconnect()
+    }, [])
+
+    // ---------- Render ----------
+    return (
+        <>
+        <Toaster position="top-center" />
+
+        <div className="rounded-2xl w-full">
+            <SearchForm
+            inputRef={inputRef}
+            formRef={searchFormRef}
+            input={input}
+            onInputChange={(e) => setInput(e.target.value)}
+            onSearch={() => handleSearch(inputRef)}
+            error={inputError}
+            placeholder="検索ワードを入力"
+            isLoading={isLoading}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            {!hasSearched && (
+            <img
+                src="/empty.png"
+                alt="empty"
+                className="w-full mx-auto rounded-2xl bg-white border"
+            />
+            )}
+
+            {wordList.map((word) => (
+            <WordCard
+                key={word.word}
+                label={word.label}
+                word={word}
+                savedWords={savedWords}
+                onSave={async (w) => {
+                const result = await toggleSaveStatus(
+                    w,
+                    savedWords.includes(w.word)
+                )
+                if (result.success) {
+                    setSavedWords((prev) =>
+                    prev.includes(w.word)
+                        ? prev.filter((x) => x !== w.word)
+                        : [...prev, w.word]
+                    )
+                    toast.success("更新しました")
+                } else {
+                    toast.error("失敗しました")
+                }
+                }}
+                isEditing={editingWordId === word.word}
+                onEdit={() => setEditingWordId(word.word)}
+                onFinishEdit={() => setEditingWordId(null)}
+            />
+            ))}
         </div>
-      </main>
-    </div>
-  );
+
+        {!isModalOpen && (
+            <Fab isVisible={showFab} onClick={() => setIsModalOpen(true)} />
+        )}
+
+        {isModalOpen && (
+            <SearchModal
+            input={input}
+            onInputChange={(e) => setInput(e.target.value)}
+            error={inputError}
+            isLoading={isLoading}
+            formRef={searchFormRef}
+            onClose={() => setIsModalOpen(false)}
+            isOpen={isModalOpen}
+            onSearch={() => handleSearch(inputRef, true)}
+            inputRef={inputRef}
+            />
+        )}
+        </>
+    )
 }
