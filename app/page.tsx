@@ -140,17 +140,6 @@ type AiParsedResult = {
         <Toaster position="top-center" />
 
         <div className="rounded-2xl w-full">
-            <SearchForm
-            inputRef={inputRef}
-            formRef={searchFormRef}
-            input={input}
-            onInputChange={(e) => setInput(e.target.value)}
-            onSearch={() => handleSearch(inputRef)}
-            error={inputError}
-            placeholder="検索ワードを入力"
-            isLoading={isLoading}
-            />
-
             {!hasSearched && (
             <img
                 src="/empty.png"

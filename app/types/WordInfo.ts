@@ -6,8 +6,8 @@ export type PartOfSpeech =
     | 'auxiliary' | 'article';
 
     export type WordInfo = {
-      saved_id: string | null;   // saved_words.id (保存されていない単語は null)
-      word_id: string;           // words.id （辞書データの主キー）
+      saved_id?: string | null;
+      word_id?: string;
     
       word: string;
       meaning: string;
@@ -18,4 +18,5 @@ export type PartOfSpeech =
     
       tags?: string[];
     };
+    
     
