@@ -1,4 +1,4 @@
-// types.ts
+// WordInfo.ts
 export type PartOfSpeech =
     | 'noun' | 'verb' | 'adjective' | 'adverb'
     | 'adjectival_noun' | 'pronoun' | 'preposition'

@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
-import Button from "@/components/ui/Button";
+import Button from "../components/button";
+
 import EditProfileModal from "@/components/EditProfileModal";
 
 const Header = () => {

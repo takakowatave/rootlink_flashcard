@@ -6,7 +6,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
 
-export default function ProfilePage() {
+export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -35,11 +35,7 @@ export default function ProfilePage() {
 
       <div className="flex items-center gap-4 mb-10">
         {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            className="w-20 h-20 rounded-full"
-            alt="avatar"
-          />
+          <img src={profile.avatar_url} className="w-20 h-20 rounded-full" />
         ) : (
           <FaUserCircle className="w-20 h-20 text-gray-300" />
         )}

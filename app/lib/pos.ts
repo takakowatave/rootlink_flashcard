@@ -1,5 +1,5 @@
 // lib/pos.ts
-import type { PartOfSpeech } from '../types'; 
+import type { PartOfSpeech } from '@/types/WordInfo'; 
 // 型定義をインポート。PartOfSpeech は "noun" | "verb" | ... のような列挙型。
 
 // ===========================
