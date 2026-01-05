@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import type { WordInfo } from "../types";
+import type { WordInfo } from "@/types/WordInfo";
 
 /* ------------------------------------------
   Supabase JOIN の戻り型（手動で型を定義）

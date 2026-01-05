@@ -151,12 +151,15 @@ export default function WordCard({
 
             {/* ブックマーク */}
             <button
-              onClick={() => onSave?.(word)}
-              disabled={!isBookmarked && savedWords.length >= 500}
-              className="text-blue-500 hover:text-blue-900 transition-colors"
-              aria-label="save word"
-              type="button"
-            >
+                onClick={() => {
+                  console.log("CLICKED");
+                  onSave?.(word);
+                }}
+                disabled={!isBookmarked && savedWords.length >= 500}
+                className="text-blue-500 hover:text-blue-900 transition-colors"
+                aria-label="save word"
+                type="button"
+              >
               {isBookmarked ? <BsBookmarkFill size={22} /> : <BsBookmark size={22} />}
             </button>
           </div>

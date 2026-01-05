@@ -8,7 +8,7 @@ import { useState, useEffect } from "react"
 import WordCard from "@/components/WordCard"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
-import type { WordInfo } from "@/types"
+import type { WordInfo } from "@/types/WordInfo"
 import { supabase } from "@/lib/supabaseClient"
 
 type LabeledWord = WordInfo & {
