@@ -71,7 +71,7 @@ interface FormData {
             アカウントにログイン
             </h2>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            {/* <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <TextInput
                 label="メールアドレス"
                 type="email"
@@ -92,14 +92,14 @@ interface FormData {
                 disabled={isSubmitting}
                 variant="primary"
             />
-            </form>
+            </form> */}
 
             {/* 仕切り線 */}
-            <div className="flex items-center my-6">
+            {/* <div className="flex items-center my-6">
             <div className="flex-grow border-t" />
             <span className="text-xs text-gray-400 mx-3">or</span>
             <div className="flex-grow border-t" />
-            </div>
+            </div> */}
 
             {/* Googleログイン */}
             <button
@@ -110,7 +110,7 @@ interface FormData {
             Googleでログイン
             </button>
 
-            {/* パスワード忘れ */}
+            {/* パスワード忘れ
             <div className="text-center mt-4">
             <Link
                 href="/password/request"
@@ -122,7 +122,7 @@ interface FormData {
 
             <p className="text-center text-xs text-gray-400 mt-6">
             ©Rootlink2025. All rights reserved.
-            </p>
+            </p> */}
         </div>
         </div>
     );

@@ -48,7 +48,7 @@ const Header = () => {
         {/* 右 */}
         <div className="flex items-center gap-4">
           {!profile && (
-            <Link href="/login">
+            <Link href="login">
               <Button text="ログイン" variant="secondary" />
             </Link>
           )}
