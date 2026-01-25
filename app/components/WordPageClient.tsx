@@ -41,42 +41,42 @@ async function fetchFromAI(prompt: string): Promise<AiResponse> {
 /* =========================
  * Component
  * ========================= */
-export default function WordPageClient({
-  word,
-}: {
-  word: string
-}) {
+export default function WordPageClient({ word }: { word: string }) {
   const [viewWords, setViewWords] = useState<WordWithType[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // 🔒 二重実行防止
+  // 🔒 検索語ごとの二重生成防止
   const hasGeneratedRef = useRef(false)
 
   /* =========================
-   * 検索語が変わったら完全リセット
+   * 検索語変更時のリセット
    * ========================= */
   useEffect(() => {
+    console.log('🔁 word changed:', word)
+
     setViewWords([])
     setError(null)
     hasGeneratedRef.current = false
   }, [word])
 
   /* =========================
-   * 保存済み単語ロード（1回）
+   * 保存済み単語ロード（初回のみ）
    * ========================= */
   useEffect(() => {
-    const load = async () => {
+    const loadSavedWords = async () => {
       const { data } = await supabase.auth.getUser()
       if (!data.user) return
+
       const list = await fetchWordlists(data.user.id)
       setSavedWords(list.map((w) => w.word))
     }
-    load()
+
+    loadSavedWords()
   }, [])
 
   /* =========================
-   * AI生成（wordごとに1回）
+   * AI 生成（検索語ごとに1回）
    * ========================= */
   useEffect(() => {
     if (!word) return
@@ -86,20 +86,25 @@ export default function WordPageClient({
 
     const run = async () => {
       try {
-        const base = await fetchFromAI(wordPrompt(word))
-        console.log('[AI response]', base)
+        /* ---------- ① 入り口：最終プロンプト ---------- */
+        const prompt = wordPrompt(word)
+        console.log('🟢 PROMPT (final):', prompt)
+
+        /* ---------- AI 呼び出し ---------- */
+        const response = await fetchFromAI(prompt)
+
 
         const result: WordWithType[] = [
           {
-            word, // ← 必ずURLのword
-            meaning: base.main.meaning,
-            example: base.main.example,
-            translation: base.main.translation,
-            pronunciation: base.main.pronunciation,
-            partOfSpeech: normalizePOS(base.main.partOfSpeech),
-            type: 'main' as const,
+            word, // URL の word を必ず使う
+            meaning: response.main.meaning,
+            example: response.main.example,
+            translation: response.main.translation,
+            pronunciation: response.main.pronunciation,
+            partOfSpeech: normalizePOS(response.main.partOfSpeech),
+            type: 'main',
           },
-          ...(base.related.synonyms ?? []).map((w) => ({
+          ...(response.related.synonyms ?? []).map((w) => ({
             word: w,
             meaning: '',
             example: '',
@@ -108,7 +113,7 @@ export default function WordPageClient({
             partOfSpeech: [],
             type: 'synonym' as const,
           })),
-          ...(base.related.antonyms ?? []).map((w) => ({
+          ...(response.related.antonyms ?? []).map((w) => ({
             word: w,
             meaning: '',
             example: '',
@@ -120,8 +125,8 @@ export default function WordPageClient({
         ]
 
         setViewWords(result)
-      } catch (e) {
-        console.error(e)
+      } catch (err) {
+        console.error('❌ AI generation failed:', err)
         setError('AIの結果を取得できませんでした')
       }
     }
@@ -135,6 +140,7 @@ export default function WordPageClient({
   const handleSave = async (w: WordInfo) => {
     const isSaved = savedWords.includes(w.word)
     const result = await toggleSaveStatus(w, isSaved)
+
     if (result.success) {
       setSavedWords((prev) =>
         isSaved ? prev.filter((x) => x !== w.word) : [...prev, w.word]
@@ -142,6 +148,9 @@ export default function WordPageClient({
     }
   }
 
+  /* =========================
+   * Render
+   * ========================= */
   if (error) {
     return <p className="text-red-500">{error}</p>
   }
