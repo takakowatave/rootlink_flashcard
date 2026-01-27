@@ -7,15 +7,23 @@ CRITICAL RULES:
 - If the input word is misspelled:
   - Set "query" to the original input word.
   - Set "normalized" to the corrected spelling.
-  - Use the corrected spelling as main.word.
 - If the input word is correct:
   - Set both "query" and "normalized" to the input word.
-  - Use the input word as main.word.
+- Treat different meanings of the SAME word as separate senses.
+- Do NOT include synonyms, antonyms, or related words.
+- Generate AT MOST 4 senses.
+- Each sense must represent a genuinely distinct meaning (not paraphrases).
 - All text fields MUST be plain strings.
 - Do NOT use objects for meaning or translation.
 - Use Japanese ONLY for meaning and translation.
+- Return valid JSON only.
 
-Return valid JSON only.
+IMPORTANT:
+- Do NOT split senses if the meanings are essentially the same.
+- Only create multiple senses when the meanings are clearly different in Japanese.
+- If meanings are similar, merge them into ONE sense.
+
+
 The response MUST be a single JSON object.
 Do NOT repeat, reprint, or restate any fields outside the JSON object.
 The output must start with "{" and end with "}".
@@ -23,20 +31,17 @@ The output must start with "{" and end with "}".
 {
   "query": "${word}",
   "normalized": "${word}",
-  "main": {
-    "word": "${word}",
-    "meaning": "日本語で1行の意味",
-    "partOfSpeech": [],
-    "pronunciation": "",
-    "example": "A simple English sentence.",
-    "translation": "例文の日本語訳"
-  },
+  "senses": [
+    {
+      "meaning": "日本語で1行の意味",
+      "partOfSpeech": [],
+      "pronunciation": "",
+      "example": "A simple English sentence.",
+      "translation": "例文の日本語訳"
+    }
+  ],
   "etymologyHook": {
     "text": "One short English sentence explaining the origin."
-  },
-  "related": {
-    "synonyms": [],
-    "antonyms": []
   }
 }
 `;

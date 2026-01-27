@@ -11,22 +11,24 @@ import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
 
 /* =========================
- * AI Response 型
+ * AI Response 型（sense前提）
  * ========================= */
 type AiResponse = {
-  main: {
-    word: string
+  query: string
+  normalized: string
+  senses: {
     meaning: string
     partOfSpeech: string | string[]
-    pronunciation: string
-    example: string
-    translation: string
-  }
-  related: {
-    synonyms: string[]
-    antonyms: string[]
+    pronunciation?: string
+    example?: string
+    translation?: string
+  }[]
+  etymologyHook?: {
+    type: 'A' | 'B' | 'C' | 'D'
+    text: string
   }
 }
+
 
 /* =========================
  * AI 呼び出し
@@ -46,15 +48,12 @@ export default function WordPageClient({ word }: { word: string }) {
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // 🔒 検索語ごとの二重生成防止
   const hasGeneratedRef = useRef(false)
 
   /* =========================
    * 検索語変更時のリセット
    * ========================= */
   useEffect(() => {
-    console.log('🔁 word changed:', word)
-
     setViewWords([])
     setError(null)
     hasGeneratedRef.current = false
@@ -76,7 +75,7 @@ export default function WordPageClient({ word }: { word: string }) {
   }, [])
 
   /* =========================
-   * AI 生成（検索語ごとに1回）
+   * AI生成（検索語ごとに1回）
    * ========================= */
   useEffect(() => {
     if (!word) return
@@ -86,47 +85,34 @@ export default function WordPageClient({ word }: { word: string }) {
 
     const run = async () => {
       try {
-        /* ---------- ① 入り口：最終プロンプト ---------- */
         const prompt = wordPrompt(word)
-        console.log('🟢 PROMPT (final):', prompt)
-
-        /* ---------- AI 呼び出し ---------- */
         const response = await fetchFromAI(prompt)
 
+        const senses = (response.senses ?? []).slice(0, 4)
 
-        const result: WordWithType[] = [
-          {
-            word, // URL の word を必ず使う
-            meaning: response.main.meaning,
-            example: response.main.example,
-            translation: response.main.translation,
-            pronunciation: response.main.pronunciation,
-            partOfSpeech: normalizePOS(response.main.partOfSpeech),
-            type: 'main',
-          },
-          ...(response.related.synonyms ?? []).map((w) => ({
-            word: w,
-            meaning: '',
-            example: '',
-            translation: '',
-            pronunciation: '',
-            partOfSpeech: [],
-            type: 'synonym' as const,
-          })),
-          ...(response.related.antonyms ?? []).map((w) => ({
-            word: w,
-            meaning: '',
-            example: '',
-            translation: '',
-            pronunciation: '',
-            partOfSpeech: [],
-            type: 'antonym' as const,
-          })),
-        ]
+        const result: WordWithType[] = senses.map((sense, index) => ({
+          word: response.normalized || word,
+          meaning: sense.meaning,
+          example: sense.example ?? '',
+          translation: sense.translation ?? '',
+          pronunciation: sense.pronunciation ?? '',
+          partOfSpeech: normalizePOS(sense.partOfSpeech),
+        
+          etymologyHook: response.etymologyHook
+            ? {
+                type: response.etymologyHook.type ?? 'A',
+                text: response.etymologyHook.text,
+              }
+            : undefined,
+        
+          type: 'main',
+          senseIndex: index,
+        }))
+        
 
         setViewWords(result)
       } catch (err) {
-        console.error('❌ AI generation failed:', err)
+        console.error(err)
         setError('AIの結果を取得できませんでした')
       }
     }
@@ -155,14 +141,18 @@ export default function WordPageClient({ word }: { word: string }) {
     return <p className="text-red-500">{error}</p>
   }
 
+  if (viewWords.length === 0) return null
+
   return (
-    <main className="w-full">
-      {viewWords.map((w) => (
+    <main className="w-full space-y-4">
+      {viewWords.map((w, i) => (
         <WordCard
-          key={`${w.word}-${w.type}`}
+          key={`${w.word}-${i}`}
           word={w}
           savedWords={savedWords}
           onSave={handleSave}
+          isFirst={i === 0}      // 👈 見出し語は1回だけ
+          senseIndex={i}        // 👈 ①②③ 用
         />
       ))}
     </main>
