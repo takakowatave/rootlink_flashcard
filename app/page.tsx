@@ -10,12 +10,28 @@ export default function HomePage() {
 
   const handleSubmit = () => {
     if (!value) return
-    router.push(`/word/${value}`)
+    console.log('HomePage search submit', value)
+
+    const trimmed = value.trim()
+
+    // 仮ルール：スペースを含む = idiom
+    if (trimmed.includes(' ')) {
+      const slug = trimmed.replace(/\s+/g, '-')
+      router.push(`/idiom/${slug}`)
+      return
+    }
+
+    // 単語
+    router.push(`/word/${trimmed}`)
   }
 
   return (
     <main>
-      <SearchForm value={value} onChange={setValue} onSubmit={handleSubmit} />
+      <SearchForm
+        value={value}
+        onChange={setValue}
+        onSubmit={handleSubmit}
+      />
     </main>
   )
 }
