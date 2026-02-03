@@ -1,25 +1,25 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import EntryCard from '@/components/EntryCard'
 import WordCard from '@/components/WordCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import type { WordInfo } from '@/types/WordInfo'
-import type { WordWithType } from '@/types/WordWithType'
 import { supabase } from '@/lib/supabaseClient'
 import { apiRequest } from '@/lib/apiClient'
 import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
 
 /* =========================
- * AI Response 型（sense前提）
+ * AI Response
  * ========================= */
 type AiResponse = {
   query: string
   normalized: string
+  pronunciation?: string
   senses: {
     meaning: string
     partOfSpeech: string | string[]
-    pronunciation?: string
     example?: string
     translation?: string
   }[]
@@ -28,7 +28,6 @@ type AiResponse = {
     text: string
   }
 }
-
 
 /* =========================
  * AI 呼び出し
@@ -44,23 +43,30 @@ async function fetchFromAI(prompt: string): Promise<AiResponse> {
  * Component
  * ========================= */
 export default function WordPageClient({ word }: { word: string }) {
-  const [viewWords, setViewWords] = useState<WordWithType[]>([])
+  const [entry, setEntry] = useState<{
+    query: string
+    normalized: string
+    pronunciation?: string
+    etymologyHook?: AiResponse['etymologyHook']
+    senses: WordInfo[]
+  } | null>(null)
+
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const hasGeneratedRef = useRef(false)
 
   /* =========================
-   * 検索語変更時のリセット
+   * 検索語変更時リセット
    * ========================= */
   useEffect(() => {
-    setViewWords([])
+    setEntry(null)
     setError(null)
     hasGeneratedRef.current = false
   }, [word])
 
   /* =========================
-   * 保存済み単語ロード（初回のみ）
+   * 保存済みロード
    * ========================= */
   useEffect(() => {
     const loadSavedWords = async () => {
@@ -75,42 +81,29 @@ export default function WordPageClient({ word }: { word: string }) {
   }, [])
 
   /* =========================
-   * AI生成（検索語ごとに1回）
+   * AI生成
    * ========================= */
   useEffect(() => {
-    if (!word) return
-    if (hasGeneratedRef.current) return
-
+    if (!word || hasGeneratedRef.current) return
     hasGeneratedRef.current = true
 
     const run = async () => {
       try {
-        const prompt = wordPrompt(word)
-        const response = await fetchFromAI(prompt)
+        const response = await fetchFromAI(wordPrompt(word))
 
-        const senses = (response.senses ?? []).slice(0, 4)
-
-        const result: WordWithType[] = senses.map((sense, index) => ({
-          word: response.normalized || word,
-          meaning: sense.meaning,
-          example: sense.example ?? '',
-          translation: sense.translation ?? '',
-          pronunciation: sense.pronunciation ?? '',
-          partOfSpeech: normalizePOS(sense.partOfSpeech),
-        
-          etymologyHook: response.etymologyHook
-            ? {
-                type: response.etymologyHook.type ?? 'A',
-                text: response.etymologyHook.text,
-              }
-            : undefined,
-        
-          type: 'main',
-          senseIndex: index,
-        }))
-        
-
-        setViewWords(result)
+        setEntry({
+          query: response.query,
+          normalized: response.normalized,
+          pronunciation: response.pronunciation,
+          etymologyHook: response.etymologyHook,
+          senses: response.senses.slice(0, 4).map((sense) => ({
+            word: response.normalized,
+            meaning: sense.meaning,
+            example: sense.example ?? '',
+            translation: sense.translation ?? '',
+            partOfSpeech: normalizePOS(sense.partOfSpeech),
+          })),
+        })
       } catch (err) {
         console.error(err)
         setError('AIの結果を取得できませんでした')
@@ -123,13 +116,19 @@ export default function WordPageClient({ word }: { word: string }) {
   /* =========================
    * 保存トグル
    * ========================= */
-  const handleSave = async (w: WordInfo) => {
-    const isSaved = savedWords.includes(w.word)
-    const result = await toggleSaveStatus(w, isSaved)
+  const handleSave = async () => {
+    if (!entry) return
+    const isSaved = savedWords.includes(entry.normalized)
+    const result = await toggleSaveStatus(
+      { word: entry.normalized } as WordInfo,
+      isSaved
+    )
 
     if (result.success) {
       setSavedWords((prev) =>
-        isSaved ? prev.filter((x) => x !== w.word) : [...prev, w.word]
+        isSaved
+          ? prev.filter((x) => x !== entry.normalized)
+          : [...prev, entry.normalized]
       )
     }
   }
@@ -137,24 +136,37 @@ export default function WordPageClient({ word }: { word: string }) {
   /* =========================
    * Render
    * ========================= */
-  if (error) {
-    return <p className="text-red-500">{error}</p>
-  }
-
-  if (viewWords.length === 0) return null
+  if (error) return <p className="text-red-500">{error}</p>
+  if (!entry) return null
 
   return (
-    <main className="w-full space-y-4">
-      {viewWords.map((w, i) => (
+    <EntryCard
+      headword={entry.normalized}
+      isBookmarked={savedWords.includes(entry.normalized)}
+      onSave={handleSave}
+    >
+      {entry.query !== entry.normalized && (
+        <p className="text-sm text-gray-500 mb-2">
+          検索語：{entry.query}
+        </p>
+      )}
+
+      {entry.etymologyHook?.text && (
+        <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
+          <span className="text-xs font-bold text-green-700">語源フック</span>
+          <p className="mt-2 text-green-900">
+            {entry.etymologyHook.text}
+          </p>
+        </div>
+      )}
+
+      {entry.senses.map((sense, i) => (
         <WordCard
-          key={`${w.word}-${i}`}
-          word={w}
-          savedWords={savedWords}
-          onSave={handleSave}
-          isFirst={i === 0}      // 👈 見出し語は1回だけ
-          senseIndex={i}        // 👈 ①②③ 用
+          key={i}
+          word={sense}
+          senseIndex={i}
         />
       ))}
-    </main>
+    </EntryCard>
   )
 }

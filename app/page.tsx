@@ -13,16 +13,16 @@ export default function HomePage() {
     console.log('HomePage search submit', value)
 
     const trimmed = value.trim()
+    const slug = trimmed.toLowerCase().replace(/\s+/g, '-')
 
-    // 仮ルール：スペースを含む = idiom
+    // スペースあり → lexical unit（idiom / phrasal verb などは後で分類）
     if (trimmed.includes(' ')) {
-      const slug = trimmed.replace(/\s+/g, '-')
-      router.push(`/idiom/${slug}`)
+      router.push(`/lexical-unit/${slug}`)
       return
     }
 
     // 単語
-    router.push(`/word/${trimmed}`)
+    router.push(`/word/${slug}`)
   }
 
   return (

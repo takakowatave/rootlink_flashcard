@@ -1,4 +1,4 @@
-import IdiomPageClient from '@/components/IdiomPageClient'
+import IdiomPageClient from '@/components/lexicalUnitPageClient'
 
 export default function Page({
     params,

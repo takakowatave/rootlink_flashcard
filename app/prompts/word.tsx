@@ -1,47 +1,70 @@
 export const wordPrompt = (word: string) => `
-You are generating a dictionary entry for the English word "${word}".
+You are generating a learner-friendly dictionary entry for the English word "${word}".
 
-CRITICAL RULES:
+GOAL:
+- Help a Japanese learner remember this word correctly and easily.
+- Prioritize memorability over academic completeness.
+
+BASIC RULES:
 - Use the input word as the base reference.
 - If the input word is misspelled, infer the most likely correct spelling.
-- If the input word is misspelled:
-  - Set "query" to the original input word.
-  - Set "normalized" to the corrected spelling.
-- If the input word is correct:
-  - Set both "query" and "normalized" to the input word.
-- Treat different meanings of the SAME word as separate senses.
-- Do NOT include synonyms, antonyms, or related words.
-- Generate AT MOST 4 senses.
-- Each sense must represent a genuinely distinct meaning (not paraphrases).
-- All text fields MUST be plain strings.
-- Do NOT use objects for meaning or translation.
-- Use Japanese ONLY for meaning and translation.
+  - If corrected:
+    - "query": original input
+    - "normalized": corrected spelling
+- If not corrected, set both to the input word.
 - Return valid JSON only.
 
-IMPORTANT:
-- Do NOT split senses if the meanings are essentially the same.
-- Only create multiple senses when the meanings are clearly different in Japanese.
-- If meanings are similar, merge them into ONE sense.
+MEANING & SENSE RULES (CORE):
+- Meanings are LABELS, not explanations.
+- If one simple Japanese word is enough, use ONLY that word.
+- Do NOT add commas, extra phrases, or full sentences unnecessarily.
+- HOWEVER:
+  - If the word has clearly different meanings ACROSS PARTS OF SPEECH,
+    you MUST create separate senses for each part of speech.
+  - Verb meanings MUST NOT be merged into noun meanings.
+  - Adjective meanings MUST NOT be merged into noun or verb meanings.
+- Do NOT force sense splitting within the SAME part of speech.
+- 1–3 senses is preferred.
 
+PART OF SPEECH (MANDATORY):
+- Each sense MUST include at least one basic part of speech.
+- Use simple labels only: noun, verb, adjective, adverb.
 
-The response MUST be a single JSON object.
-Do NOT repeat, reprint, or restate any fields outside the JSON object.
-The output must start with "{" and end with "}".
+CONTENT RULES:
+- Use Japanese ONLY for "meaning" and "translation".
+- Use natural, everyday Japanese.
+- Do NOT write dictionary-style definitions.
+- Examples must clearly match the meaning and part of speech.
+- Do NOT include synonyms, antonyms, or related words.
+
+PRONUNCIATION:
+- Pronunciation belongs to the WORD level only.
+
+ETYMOLOGY HOOK (MANDATORY):
+- ALWAYS include an etymologyHook.
+- Write ONE short, memorable sentence IN JAPANESE.
+- The purpose is memory, not academic detail.
+- You MAY briefly mention the original form (Old English / Latin etc.) if helpful.
+- Do NOT write inspirational or generic statements.
+
+OUTPUT FORMAT:
+Return a single JSON object.
+Do NOT include anything outside the JSON.
 
 {
   "query": "${word}",
   "normalized": "${word}",
+  "pronunciation": "",
   "senses": [
     {
-      "meaning": "日本語で1行の意味",
-      "partOfSpeech": [],
-      "pronunciation": "",
-      "example": "A simple English sentence.",
-      "translation": "例文の日本語訳"
+      "meaning": "日本語の短いラベル（できれば一語）",
+      "partOfSpeech": ["verb"],
+      "example": "A natural English sentence.",
+      "translation": "例文の自然な日本語訳"
     }
   ],
   "etymologyHook": {
-    "text": "One short English sentence explaining the origin."
+    "text": "語源や元の意味を、日本語で覚えやすく一言で説明"
   }
 }
 `;
