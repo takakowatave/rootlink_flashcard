@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { apiRequest } from '@/lib/apiClient'
 import { lexicalUnit } from '@/prompts/lexicalUnit'
 import type { LexicalUnit, LexicalUnitType } from '@/types/LexicalUnit'
+import { LEXICAL_UNIT_LABEL_JA } from '@/types/LexicalUnit'
 
 type ApiResponse = {
   lexical_unit_type?: LexicalUnitType
@@ -66,15 +67,14 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
 
   return (
     <main className="space-y-4">
-      {/* WordPageClient と同じ構造 */}
       <h1 className="text-xl font-bold">
         {lexicalUnitData.phrase}
       </h1>
-      {lexicalUnitData.lexicalUnitType && (
-        <span className="inline-block text-xs rounded-full px-2 py-1 bg-gray-100">
-          {lexicalUnitData.lexicalUnitType}
-        </span>
-      )}
+
+      {/* 日本語タグ表示 */}
+      <span className="inline-block text-xs rounded-full px-2 py-1 bg-gray-100">
+        {LEXICAL_UNIT_LABEL_JA[lexicalUnitData.lexicalUnitType]}
+      </span>
 
       <p>{lexicalUnitData.meaning}</p>
 

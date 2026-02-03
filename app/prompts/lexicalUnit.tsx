@@ -21,29 +21,45 @@ Classification guidelines:
 - Well-established expressions commonly found in dictionaries
   may still be classified as idioms.
 
-Meaning guidelines:
+Meaning generation guidelines:
 
-- Write a natural Japanese meaning that reflects the nuance of the expression.
-- Avoid over-general meanings such as
+- Generate BETWEEN 1 AND 5 meanings.
+- Only include meanings that are clearly distinct and commonly recognized in major dictionaries.
+- Do NOT split meanings by minor nuance, tone, or register.
+- If multiple meanings exist, order them by commonness.
+- Each meaning must be expressible as ONE short Japanese sentence.
+- Avoid vague or over-general Japanese such as
   "特定の方法で" or "あるやり方で".
-- Do not explain individual words.
+- Do NOT explain individual words.
+- Do NOT use parentheses () in meanings.
+
+Examples guidelines:
+
+- Provide 2 or 3 example sentences PER meaning.
+- Examples must clearly match the meaning they belong to.
+- Write natural English sentences.
+- Provide accurate and natural Japanese translations.
 
 Rules:
-- Choose exactly ONE type.
-- Treat it as ONE meaning only.
-- Write the meaning in ONE short Japanese sentence.
-- Do NOT use parentheses () in the meaning.
-- Provide 2 or 3 example sentences with Japanese translations.
+
+- Choose exactly ONE lexical_unit_type.
+- Meanings must be clearly separable and non-overlapping.
+- Do NOT generate more than 5 meanings even if more nuances exist.
 
 Output JSON:
 {
   "entry_type": "lexical_unit",
   "lexical_unit_type": "idiom | phrasal_verb | fixed_expression | spoken_expression | collocation | pattern",
-  "meaning": "Japanese meaning",
-  "examples": [
+  "meanings": [
     {
-      "sentence": "English sentence",
-      "translation": "Japanese translation"
+      "id": 1,
+      "meaning": "Japanese meaning",
+      "examples": [
+        {
+          "sentence": "English sentence",
+          "translation": "Japanese translation"
+        }
+      ]
     }
   ]
 }
