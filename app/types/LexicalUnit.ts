@@ -6,13 +6,28 @@ export type LexicalUnitType =
   | 'collocation'
   | 'pattern'
 
+export type CoreImage = {
+  type: 'etymology' | 'core_image'
+  text: string
+}
+
 export type LexicalUnit = {
   phrase: string
   lexicalUnitType: LexicalUnitType
-  meaning: string
-  examples: {
-    sentence: string
-    translation: string
+
+  /**
+   * 単語：語源フック
+   * 熟語：コアイメージ
+   */
+  coreImage?: CoreImage
+
+  meanings: {
+    id: number
+    meaning: string
+    examples: {
+      sentence: string
+      translation: string
+    }[]
   }[]
 }
 

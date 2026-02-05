@@ -9,8 +9,15 @@ import { LEXICAL_UNIT_LABEL_JA } from '@/types/LexicalUnit'
 type ApiResponse = {
   lexical_unit_type?: LexicalUnitType
   lexicalUnitType?: LexicalUnitType
-  meaning: string
-  examples: { sentence: string; translation: string }[]
+  meanings: {
+    id: number
+    meaning: string
+    examples: { sentence: string; translation: string }[]
+  }[]
+  coreImage?: {
+    type: 'etymology' | 'core_image'
+    text: string
+  }
 }
 
 async function fetchFromAI(prompt: string): Promise<ApiResponse> {
@@ -25,8 +32,6 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null)
 
   const hasGeneratedRef = useRef(false)
-
-  // slug → phrase
   const phrase = slug.replace(/-/g, ' ')
 
   useEffect(() => {
@@ -49,9 +54,9 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
           lexicalUnitType:
             result.lexicalUnitType ??
             result.lexical_unit_type ??
-            'idiom',
-          meaning: result.meaning,
-          examples: result.examples.slice(0, 3),
+            'phrasal_verb',
+          meanings: result.meanings ?? [],
+          coreImage: result.coreImage,
         })
       } catch (e) {
         console.error(e)
@@ -66,28 +71,47 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
   if (!lexicalUnitData) return null
 
   return (
-    <main className="space-y-4">
-      <h1 className="text-xl font-bold">
-        {lexicalUnitData.phrase}
-      </h1>
+    <main className="space-y-6">
+      <h1 className="text-xl font-bold">{lexicalUnitData.phrase}</h1>
 
-      {/* 日本語タグ表示 */}
+      {/* 品詞タグ */}
       <span className="inline-block text-xs rounded-full px-2 py-1 bg-gray-100">
         {LEXICAL_UNIT_LABEL_JA[lexicalUnitData.lexicalUnitType]}
       </span>
 
-      <p>{lexicalUnitData.meaning}</p>
+      {/* 🟢 コアイメージ / 語源フック */}
+      {lexicalUnitData.coreImage && (
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
+          <p className="text-sm font-medium text-green-700 mb-1">
+            {lexicalUnitData.coreImage.type === 'etymology'
+              ? '語源フック'
+              : 'コアイメージ'}
+          </p>
+          <p className="text-sm text-green-900">
+            {lexicalUnitData.coreImage.text}
+          </p>
+        </div>
+      )}
 
-      <ul className="space-y-2">
-        {lexicalUnitData.examples.map((ex, i) => (
-          <li key={i}>
-            <div>{ex.sentence}</div>
-            <div className="text-sm text-gray-600">
-              {ex.translation}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {/* 意味一覧 */}
+      {lexicalUnitData.meanings.map((m, index) => (
+        <section key={m.id} className="space-y-2">
+          <p className="font-medium">
+            {index + 1}. {m.meaning}
+          </p>
+
+          <ul className="space-y-1">
+            {m.examples.map((ex, i) => (
+              <li key={i}>
+                <div>{ex.sentence}</div>
+                <div className="text-sm text-gray-600">
+                  {ex.translation}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </main>
   )
 }

@@ -1,62 +1,97 @@
 export const lexicalUnit = (phrase: string) => `
-You are generating data for an English lexical unit for Japanese learners.
+You are generating a dictionary-style entry for an English lexical unit
+for Japanese learners.
+
+This entry follows standard learner dictionary conventions
+such as Google Dictionary and Oxford Learner’s Dictionary.
 
 Input:
 "${phrase}"
 
-First, classify this lexical unit into ONE of the following types:
-- idiom
+────────────────────────
+Step 1: Classification
+────────────────────────
+
+Classify the expression into ONE of the following types:
 - phrasal_verb
+- idiom
 - fixed_expression
 - spoken_expression
 - collocation
 - pattern
 
-Classification guidelines:
+Verb + particle expressions are classified as phrasal_verb.
 
-- Idioms are fixed expressions whose meanings are not directly literal.
-- If an expression follows a common and productive pattern
-  (e.g. "in a ___ way / fashion / manner"),
-  it should generally NOT be classified as an idiom.
-- Well-established expressions commonly found in dictionaries
-  may still be classified as idioms.
+────────────────────────
+Step 2: Core Image
+────────────────────────
 
-Meaning generation guidelines:
+Write ONE core image that captures the shared conceptual essence
+behind all meanings.
 
-- Generate BETWEEN 1 AND 5 meanings.
-- Only include meanings that are clearly distinct and commonly recognized in major dictionaries.
-- Do NOT split meanings by minor nuance, tone, or register.
-- If multiple meanings exist, order them by commonness.
-- Each meaning must be expressible as ONE short Japanese sentence.
-- Avoid vague or over-general Japanese such as
-  "特定の方法で" or "あるやり方で".
-- Do NOT explain individual words.
-- Do NOT use parentheses () in meanings.
+Writing style for core image:
+- Japanese
+- Short noun phrase or abstract action phrase
+- No sentence-ending punctuation
+- Express transition, control, movement, or shift
+- Independent from individual meanings
 
-Examples guidelines:
+Core image examples:
+- 支配や主導権が他者からこちら側へ移る
+- 状況の主導権が入れ替わる
+- 役割の中心が別の主体に移る
 
-- Provide 2 or 3 example sentences PER meaning.
-- Examples must clearly match the meaning they belong to.
-- Write natural English sentences.
-- Provide accurate and natural Japanese translations.
+────────────────────────
+Step 3: Meanings
+────────────────────────
 
-Rules:
+Write EXACTLY FOUR meanings.
 
-- Choose exactly ONE lexical_unit_type.
-- Meanings must be clearly separable and non-overlapping.
-- Do NOT generate more than 5 meanings even if more nuances exist.
+Each meaning corresponds to one category, used once:
 
-Output JSON:
+1. Physical action or movement  
+2. Change of physical or mental state  
+3. Change of situation or outcome  
+4. Social or interpersonal action  
+
+Japanese meanings follow this format:
+
+Correct examples of meaning style:
+- 他人が担っていた仕事や役割を引き継ぐ
+- 組織や事業の支配権を手に入れる
+- 状況や流れを主導する
+- 責任や役割を引き受ける
+
+For each meaning:
+- Write a Japanese dictionary-style meaning following the examples above
+- End the meaning with a verb
+- Use concise, neutral wording
+- Provide one natural English example
+- Provide a natural Japanese translation
+
+Each meaning represents a distinct type of action or control.
+
+────────────────────────
+Output format
+────────────────────────
+
+Output JSON only:
+
 {
   "entry_type": "lexical_unit",
-  "lexical_unit_type": "idiom | phrasal_verb | fixed_expression | spoken_expression | collocation | pattern",
+  "lexical_unit_type": "phrasal_verb | idiom | fixed_expression | spoken_expression | collocation | pattern",
+  "coreImage": {
+    "type": "core_image",
+    "text": "Japanese core image phrase"
+  },
   "meanings": [
     {
       "id": 1,
-      "meaning": "Japanese meaning",
+      "category": "physical | state | outcome | social",
+      "meaning": "Japanese verb-ended meaning",
       "examples": [
         {
-          "sentence": "English sentence",
+          "sentence": "English example",
           "translation": "Japanese translation"
         }
       ]
