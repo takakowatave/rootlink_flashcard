@@ -9,6 +9,7 @@ import EntryCard from '@/components/EntryCard'
 import WordCard from '@/components/WordCard'
 import type { WordInfo } from '@/types/WordInfo'
 import { guardQuery, QueryGuardError } from '@/lib/queryGuard'
+import { entryFilter, EntryFilterResult } from '@/lib/entryFilter'
 
 type ApiResponse = {
   lexical_unit_type?: LexicalUnitType
@@ -39,13 +40,20 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
     coreImage?: ApiResponse['coreImage']
   } | null>(null)
 
+  // queryGuard.ts 用（「ここで止めていい」エラー）
   const [error, setError] = useState<QueryGuardError | null>(null)
+
+  // entryFilter.ts 用（「生成してはいけない」状態）
+  const [entryFilterResult, setEntryFilterResult] =
+    useState<EntryFilterResult | null>(null)
+
   const hasGeneratedRef = useRef(false)
   const phrase = slug.replace(/-/g, ' ')
 
   useEffect(() => {
     setData(null)
     setError(null)
+    setEntryFilterResult(null)
     hasGeneratedRef.current = false
   }, [slug])
 
@@ -55,18 +63,28 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
 
     const run = async () => {
       try {
-        // 🔒 ① 共通ガード（ここが追加点）
+        // 🔒 ① client-side guard（構文のみ・止めてよい）
         const guard = await guardQuery(phrase, 60)
         if (!guard.ok) {
           setError(guard.reason)
           return
         }
 
-        // 🔽 正規化された文字列を使う
-        const result = await fetchFromAI(lexicalUnit(guard.normalized))
+        // 🔎 ② entryFilter（止めないが、生成を抑制する）
+        const filtered = entryFilter(guard.normalized)
+        if (!filtered.ok) {
+          // 正規エントリとしては生成しない
+          setEntryFilterResult(filtered)
+          return
+        }
+
+        // ⬇️ ③ ここを通ったものだけ AI に投げる
+        const result = await fetchFromAI(
+          lexicalUnit(filtered.normalized)
+        )
 
         setData({
-          phrase: guard.normalized,
+          phrase: filtered.normalized,
           lexicalUnitType:
             result.lexicalUnitType ??
             result.lexical_unit_type ??
@@ -76,14 +94,14 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
         })
       } catch (e) {
         console.error(e)
-        setError('NOT_EXIST')
+        // 通信・生成エラーは UI では握りつぶす
       }
     }
 
     run()
   }, [phrase])
 
-  // ===== エラー表示（EntryCardは出さない） =====
+  // ===== queryGuard 由来のエラー表示（完全に止める） =====
   if (error === 'NON_ALPHABET') {
     return <p className="text-red-500">アルファベットのみ入力できます</p>
   }
@@ -92,8 +110,20 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
     return <p className="text-red-500">入力が長すぎます</p>
   }
 
-  if (error === 'NOT_EXIST') {
-    return <p className="text-red-500">英語の熟語として確認できませんでした</p>
+  // ===== entryFilter 由来（生成はしないが検索体験は続行） =====
+  if (entryFilterResult && !entryFilterResult.ok) {
+    return (
+      <div className="mt-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
+        <p className="text-sm text-yellow-800">
+          この語は辞書の正規エントリとして生成できません。
+        </p>
+        {entryFilterResult.note && (
+          <p className="mt-1 text-xs text-yellow-700">
+            {entryFilterResult.note}
+          </p>
+        )}
+      </div>
+    )
   }
 
   if (!data) return null
