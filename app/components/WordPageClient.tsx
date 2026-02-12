@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import EntryCard from '@/components/EntryCard'
 import WordCard from '@/components/WordCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
@@ -9,6 +10,9 @@ import { supabase } from '@/lib/supabaseClient'
 import { apiRequest } from '@/lib/apiClient'
 import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
+import { guardQuery, QueryGuardError } from '@/lib/queryGuard'
+import { entryFilter, EntryFilterResult } from '@/lib/entryFilter'
+import { classifyTypo } from '@/lib/typoClassifier'
 
 /* =========================
  * AI Response
@@ -43,6 +47,8 @@ async function fetchFromAI(prompt: string): Promise<AiResponse> {
  * Component
  * ========================= */
 export default function WordPageClient({ word }: { word: string }) {
+  const router = useRouter()
+
   const [entry, setEntry] = useState<{
     query: string
     normalized: string
@@ -52,7 +58,11 @@ export default function WordPageClient({ word }: { word: string }) {
   } | null>(null)
 
   const [savedWords, setSavedWords] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<
+    QueryGuardError | 'UNSAFE_TO_GENERATE' | null
+  >(null)
+  const [entryFilterResult, setEntryFilterResult] =
+    useState<EntryFilterResult | null>(null)
 
   const hasGeneratedRef = useRef(false)
 
@@ -62,6 +72,7 @@ export default function WordPageClient({ word }: { word: string }) {
   useEffect(() => {
     setEntry(null)
     setError(null)
+    setEntryFilterResult(null)
     hasGeneratedRef.current = false
   }, [word])
 
@@ -81,7 +92,7 @@ export default function WordPageClient({ word }: { word: string }) {
   }, [])
 
   /* =========================
-   * AI生成
+   * AI生成前の上流判定
    * ========================= */
   useEffect(() => {
     if (!word || hasGeneratedRef.current) return
@@ -89,7 +100,35 @@ export default function WordPageClient({ word }: { word: string }) {
 
     const run = async () => {
       try {
-        const response = await fetchFromAI(wordPrompt(word))
+        /* ① guard */
+        const guard = await guardQuery(word, 60)
+        if (!guard.ok) {
+          setError(guard.reason)
+          return
+        }
+
+        /* ② entryFilter */
+        const filtered = await entryFilter(guard.normalized)
+        if (!filtered.ok) {
+          setEntryFilterResult(filtered)
+          return
+        }
+
+        /* ③ typoClassifier */
+        const typo = await classifyTypo(filtered.normalized)
+
+        if (typo.kind === 'BLOCK') {
+          const suggestion = typo.candidates?.[0]
+          if (suggestion) {
+            router.replace(`/word/${suggestion}`)
+          }
+          return
+        }
+
+        /* ④ AI生成 */
+        const response = await fetchFromAI(
+          wordPrompt(filtered.normalized)
+        )
 
         setEntry({
           query: response.query,
@@ -106,18 +145,46 @@ export default function WordPageClient({ word }: { word: string }) {
         })
       } catch (err) {
         console.error(err)
-        setError('AIの結果を取得できませんでした')
+        setError('UNSAFE_TO_GENERATE')
       }
     }
 
     run()
-  }, [word])
+  }, [word, router])
+
+  /* =========================
+   * エラー表示
+   * ========================= */
+
+  if (error === 'NON_ALPHABET') {
+    return <p className="text-red-500">アルファベットのみ入力できます</p>
+  }
+
+  if (error === 'TOO_LONG') {
+    return <p className="text-red-500">入力が長すぎます</p>
+  }
+
+  if (entryFilterResult && !entryFilterResult.ok) {
+    return (
+      <div className="mt-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
+        <p className="text-sm text-yellow-800">
+          この語は辞書エントリとして生成できません。
+        </p>
+        {entryFilterResult.note && (
+          <p className="mt-1 text-xs text-yellow-700">
+            {entryFilterResult.note}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  if (!entry) return null
 
   /* =========================
    * 保存トグル
    * ========================= */
   const handleSave = async () => {
-    if (!entry) return
     const isSaved = savedWords.includes(entry.normalized)
     const result = await toggleSaveStatus(
       { word: entry.normalized } as WordInfo,
@@ -136,9 +203,6 @@ export default function WordPageClient({ word }: { word: string }) {
   /* =========================
    * Render
    * ========================= */
-  if (error) return <p className="text-red-500">{error}</p>
-  if (!entry) return null
-
   return (
     <EntryCard
       headword={entry.normalized}

@@ -11,10 +11,27 @@
   - 単語 / 熟語 共通
 */
 
+/*
+  entryFilter.ts
+
+  役割：
+  - 検索語は止めない
+  - 辞書として「確定・生成してよい正規語」を決める
+  - typo はエラーにせず、正規語に寄せる
+
+  入力:
+    ユーザーが検索した生の語
+
+  出力:
+    - ok: true  → この normalized を辞書エントリとして生成する
+    - ok: false → 生成はしない（検索体験側で扱う）
+*/
+
 export type EntryFilterResult =
   | {
       ok: true
       normalized: string
+      correctedFrom?: string
     }
   | {
       ok: false
@@ -26,14 +43,15 @@ export type EntryFilterResult =
       note?: string
     }
 
-export function entryFilter(input: string): EntryFilterResult {
-  const normalized = input.trim().toLowerCase()
+export async function entryFilter(
+  input: string
+): Promise<EntryFilterResult> {
+  const raw = input.trim()
+  const normalized = raw.toLowerCase()
 
-  /*
-    ① 明らかなノイズ語
-    - asdfgh
-    - aaaaa
-  */
+  /* =========================
+     ① 明らかなノイズ語
+  ========================= */
   if (
     /^[a-z]{5,}$/.test(normalized) &&
     new Set(normalized).size <= 2
@@ -45,10 +63,9 @@ export function entryFilter(input: string): EntryFilterResult {
     }
   }
 
-  /*
-    ② 人名・プロダクト名（代表的なもののみ）
-    ※ 将来 whitelist / blacklist に拡張可能
-  */
+  /* =========================
+     ② 固有名詞（最低限）
+  ========================= */
   const properNouns = ['chatgpt', 'google']
   if (properNouns.includes(normalized)) {
     return {
@@ -58,14 +75,10 @@ export function entryFilter(input: string): EntryFilterResult {
     }
   }
 
-  /*
-    ③ 他言語っぽいもの（英語として意味を立てると危険）
-    - raison detre など
-    ※ 完全判定はしない。事故りやすい形だけ拾う
-  */
-  if (
-    /\b(raison|etre|d[’']etre)\b/.test(normalized)
-  ) {
+  /* =========================
+     ③ 非英語っぽいもの
+  ========================= */
+  if (/\b(raison|etre|d[’']etre)\b/.test(normalized)) {
     return {
       ok: false,
       reason: 'NON_ENGLISH',
@@ -73,18 +86,23 @@ export function entryFilter(input: string): EntryFilterResult {
     }
   }
 
-/*
-  ④ typo 由来の造語 / 無理な分解が必要なもの
-*/
-if (/(.)\1+/.test(normalized)) {
-    return {
-      ok: false,
-      reason: 'UNSAFE_TO_GENERATE',
-      note: 'likely typo-derived expression',
-    }
+  /* =========================
+     ⑤ 正規エントリとして生成OK
+  ========================= */
+  return {
+    ok: true,
+    normalized,
   }
-  
+}
 
-  // 正規エントリとして生成してよい
-  return { ok: true, normalized }
+/* --------------------------------
+   AI typo correction（1語だけ）
+-------------------------------- */
+async function aiSuggestCorrection(
+  input: string
+): Promise<string | null> {
+  // 擬似実装
+  // 実際は LLM / spell API
+  if (input === 'takke over') return 'take over'
+  return null
 }
