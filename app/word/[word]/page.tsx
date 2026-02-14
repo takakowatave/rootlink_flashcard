@@ -1,15 +1,18 @@
-// app/word/[word]/page.tsx
-
+import { redirect } from 'next/navigation'
 import WordPageClient from '@/components/WordPageClient'
+import { normalizeWord } from '@/lib/normalize'
 
-export default async function Page({
-  params,
-}: {
-  params: { word: string }
-}) {
-  const word = params.word
+export default async function Page({ params }: { params: { word: string } }) {
+  const raw = decodeURIComponent(params.word).toLowerCase()
+  const normalized = normalizeWord(raw)
 
-  // Serverは一切ロジックを持たない
-  // 表示・生成はすべてClientに委譲
-  return <WordPageClient word={word} />
+  if (normalized !== raw.toLowerCase()) {
+    redirect(`/word/${normalized}`)
+  }
+
+  return <WordPageClient word={normalized} />
 }
+
+
+
+

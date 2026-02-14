@@ -11,7 +11,6 @@ import WordCard from '@/components/WordCard'
 import SearchForm from '@/components/search-form'
 import type { WordInfo } from '@/types/WordInfo'
 import { guardQuery, QueryGuardError } from '@/lib/queryGuard'
-import { entryFilter, EntryFilterResult } from '@/lib/entryFilter'
 import { classifyTypo } from '@/lib/typoClassifier'
 
 type ApiResponse = {
@@ -49,8 +48,6 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
   } | null>(null)
 
   const [error, setError] = useState<QueryGuardError | null>(null)
-  const [entryFilterResult, setEntryFilterResult] =
-    useState<EntryFilterResult | null>(null)
 
   const hasGeneratedRef = useRef(false)
 
@@ -61,7 +58,6 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
     setQuery(phrase)
     setData(null)
     setError(null)
-    setEntryFilterResult(null)
     hasGeneratedRef.current = false
   }, [slug, phrase])
 
@@ -81,15 +77,8 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
           return
         }
 
-        /* ② entryFilter */
-        const filtered = await entryFilter(guard.normalized)
-        if (!filtered.ok) {
-          setEntryFilterResult(filtered)
-          return
-        }
-
-        /* ③ typoClassifier */
-        const typo = await classifyTypo(filtered.normalized)
+        /* ② typoClassifier */
+        const typo = await classifyTypo(guard.normalized)
 
         if (typo.kind === 'BLOCK') {
           const suggestion = typo.candidates?.[0]
@@ -101,13 +90,13 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
           return
         }
 
-        /* ④ AI生成 */
+        /* ③ AI生成 */
         const result = await fetchFromAI(
-          lexicalUnit(filtered.normalized)
+          lexicalUnit(guard.normalized)
         )
 
         setData({
-          phrase: filtered.normalized,
+          phrase: guard.normalized,
           lexicalUnitType:
             result.lexicalUnitType ??
             result.lexical_unit_type ??
@@ -133,21 +122,6 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
 
   if (error === 'TOO_LONG') {
     return <p className="text-red-500">入力が長すぎます</p>
-  }
-
-  if (entryFilterResult && !entryFilterResult.ok) {
-    return (
-      <div className="mt-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
-        <p className="text-sm text-yellow-800">
-          この語は辞書エントリとして生成できません。
-        </p>
-        {entryFilterResult.note && (
-          <p className="mt-1 text-xs text-yellow-700">
-            {entryFilterResult.note}
-          </p>
-        )}
-      </div>
-    )
   }
 
   if (!data) return null

@@ -11,7 +11,6 @@ import { apiRequest } from '@/lib/apiClient'
 import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
 import { guardQuery, QueryGuardError } from '@/lib/queryGuard'
-import { entryFilter, EntryFilterResult } from '@/lib/entryFilter'
 import { classifyTypo } from '@/lib/typoClassifier'
 
 /* =========================
@@ -61,8 +60,6 @@ export default function WordPageClient({ word }: { word: string }) {
   const [error, setError] = useState<
     QueryGuardError | 'UNSAFE_TO_GENERATE' | null
   >(null)
-  const [entryFilterResult, setEntryFilterResult] =
-    useState<EntryFilterResult | null>(null)
 
   const hasGeneratedRef = useRef(false)
 
@@ -72,7 +69,6 @@ export default function WordPageClient({ word }: { word: string }) {
   useEffect(() => {
     setEntry(null)
     setError(null)
-    setEntryFilterResult(null)
     hasGeneratedRef.current = false
   }, [word])
 
@@ -107,15 +103,8 @@ export default function WordPageClient({ word }: { word: string }) {
           return
         }
 
-        /* ② entryFilter */
-        const filtered = await entryFilter(guard.normalized)
-        if (!filtered.ok) {
-          setEntryFilterResult(filtered)
-          return
-        }
-
-        /* ③ typoClassifier */
-        const typo = await classifyTypo(filtered.normalized)
+        /* ② typoClassifier */
+        const typo = await classifyTypo(guard.normalized)
 
         if (typo.kind === 'BLOCK') {
           const suggestion = typo.candidates?.[0]
@@ -125,9 +114,9 @@ export default function WordPageClient({ word }: { word: string }) {
           return
         }
 
-        /* ④ AI生成 */
+        /* ③ AI生成 */
         const response = await fetchFromAI(
-          wordPrompt(filtered.normalized)
+          wordPrompt(guard.normalized)
         )
 
         setEntry({
@@ -162,21 +151,6 @@ export default function WordPageClient({ word }: { word: string }) {
 
   if (error === 'TOO_LONG') {
     return <p className="text-red-500">入力が長すぎます</p>
-  }
-
-  if (entryFilterResult && !entryFilterResult.ok) {
-    return (
-      <div className="mt-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
-        <p className="text-sm text-yellow-800">
-          この語は辞書エントリとして生成できません。
-        </p>
-        {entryFilterResult.note && (
-          <p className="mt-1 text-xs text-yellow-700">
-            {entryFilterResult.note}
-          </p>
-        )}
-      </div>
-    )
   }
 
   if (!entry) return null
