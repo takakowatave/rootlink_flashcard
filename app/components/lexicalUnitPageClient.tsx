@@ -62,7 +62,7 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
   }, [slug, phrase])
 
   /* =========================
-     上流判定 + AI生成
+    上流判定 + AI生成
   ========================= */
   useEffect(() => {
     if (hasGeneratedRef.current) return
@@ -113,7 +113,7 @@ export default function LexicalUnitPageClient({ slug }: { slug: string }) {
   }, [phrase, router])
 
   /* =========================
-     エラー表示
+    エラー表示
   ========================= */
 
   if (error === 'NON_ALPHABET') {
