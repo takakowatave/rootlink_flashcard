@@ -42,10 +42,43 @@ PRONUNCIATION:
 
 ETYMOLOGY HOOK (MANDATORY):
 - ALWAYS include an etymologyHook.
-- Write ONE short, memorable sentence IN JAPANESE.
-- The purpose is memory, not academic detail.
-- You MAY briefly mention the original form (Old English / Latin etc.) if helpful.
+- The etymologyHook MUST be ONE of the following 3 types:
+  - Type A: Parts-based (reusable parts)
+  - Type B: Origin-based (has origin meaning but not decomposable)
+  - Type C: Pure image (no useful origin/parts)
+- Choose the type with the following priority:
+  1. Type A
+  2. Type B
+  3. Type C
+- Do NOT output any explanation, notes, or commentary about why you chose the type.
+
+Type A requirements:
+- Provide 1–3 reusable parts (prefix/root/suffix).
+- For each part, provide:
+  - part: the string (e.g., "mal")
+  - meaning_en_short: a very short English gloss (1–3 words)
+  - origin_language: one short label (e.g., "Latin", "Greek", "French", "Old English")
+  - related_words: 1–3 real English words that share the SAME part
+- Provide hook_ja as ONE short, memorable sentence in Japanese.
+- Do NOT include academic detail or extra sentences.
+
+Type B requirements:
+- Not decomposable into reusable parts, but the origin form/meaning helps memory.
+- Provide:
+  - origin_language
+  - origin_form (the historical form if known; otherwise empty string)
+  - origin_meaning_en_short (1–6 words)
+- Provide hook_ja as ONE short, memorable sentence in Japanese.
+
+Type C requirements:
+- No useful origin/parts. Do NOT force etymology.
+- Provide hook_ja as ONE short, memorable sentence in Japanese that is a concrete situation/image.
+
+GLOBAL HOOK RULES:
+- hook_ja MUST be exactly ONE sentence.
 - Do NOT write inspirational or generic statements.
+- Do NOT include explanation text or annotations outside the JSON.
+- origin_language MUST NOT be included inside hook_ja. Put it in fields only.
 
 OUTPUT FORMAT:
 Return a single JSON object.
@@ -64,7 +97,19 @@ Do NOT include anything outside the JSON.
     }
   ],
   "etymologyHook": {
-    "text": "語源や元の意味を、日本語で覚えやすく一言で説明"
+    "type": "A",
+    "hook_ja": "日本語で覚えやすい1文。",
+    "parts": [
+      {
+        "part": "mal",
+        "meaning_en_short": "bad",
+        "origin_language": "Latin",
+        "related_words": ["malicious", "malfunction", "malnutrition"]
+      }
+    ],
+    "origin_language": "",
+    "origin_form": "",
+    "origin_meaning_en_short": ""
   }
 }
 `;
