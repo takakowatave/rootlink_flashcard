@@ -7,7 +7,6 @@ GOAL:
 
 BASIC RULES:
 - Use the input word as the base reference.
-- If the input word is misspelled, infer the most likely correct spelling.
   - If corrected:
     - "query": original input
     - "normalized": corrected spelling
