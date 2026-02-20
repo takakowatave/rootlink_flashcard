@@ -6,12 +6,10 @@ GOAL:
 - Prioritize memorability over academic completeness.
 
 BASIC RULES:
-- Use the input word as the base reference.
-  - If corrected:
-    - "query": original input
-    - "normalized": corrected spelling
-- If not corrected, set both to the input word.
-- Return valid JSON only.
+- Treat the input word as already resolved and correct.
+- Use the input word exactly as-is for both "query" and "normalized".
+- Your job is only to generate senses, examples, translations, and etymologyHook for that exact word.
+
 
 MEANING & SENSE RULES (CORE):
 - Meanings are LABELS, not explanations.

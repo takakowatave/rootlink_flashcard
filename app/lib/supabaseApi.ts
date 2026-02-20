@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import type { WordInfo } from "@/types/WordInfo";
+import type { WordInfo, PartOfSpeech } from "@/types/WordInfo";
 
 /* ------------------------------------------
   Supabase JOIN の戻り型（手動で型を定義）
@@ -130,6 +130,10 @@ export const checkIfWordExists = async (word: WordInfo): Promise<WordInfo | null
 
   const w = Array.isArray(row.words) ? row.words[0] : row.words;
 
+  const partOfSpeechArray = Array.isArray(w.partOfSpeech)
+    ? w.partOfSpeech
+    : [w.partOfSpeech];
+
   return {
     saved_id: row.id,
     word_id: row.word_id,
@@ -139,9 +143,7 @@ export const checkIfWordExists = async (word: WordInfo): Promise<WordInfo | null
     example: w.example,
     translation: w.translation,
   
-    partOfSpeech: Array.isArray(w.partOfSpeech)
-      ? w.partOfSpeech
-      : [w.partOfSpeech], // ← ★ 修正ポイント
+    partOfSpeech: partOfSpeechArray as PartOfSpeech[], // ← ★ 型を明示的に合わせる
   
     pronunciation: w.pronunciation,
   
@@ -194,9 +196,13 @@ export const fetchWordlists = async (userId: string): Promise<WordInfo[]> => {
 
   // Supabase の JOIN の戻り型を正しく扱う
   const rows = data as unknown as JoinedWordRow[];
-
+  
   return rows.map((row) => {
     const w = Array.isArray(row.words) ? row.words[0] : row.words;
+
+    const partOfSpeechArray = Array.isArray(w.partOfSpeech)
+      ? w.partOfSpeech
+      : [w.partOfSpeech];
   
     return {
       saved_id: row.id,
@@ -204,9 +210,7 @@ export const fetchWordlists = async (userId: string): Promise<WordInfo[]> => {
   
       word: w.word,
       meaning: w.meaning,
-      partOfSpeech: Array.isArray(w.partOfSpeech)
-        ? w.partOfSpeech
-        : [w.partOfSpeech], // ← ★ 修正ポイント
+      partOfSpeech: partOfSpeechArray as PartOfSpeech[], // ← ★ 型を明示的に合わせる
   
       pronunciation: w.pronunciation,
       example: w.example,

@@ -1,21 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
 import WordCard from '@/components/WordCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import type { WordInfo } from '@/types/WordInfo'
 import { supabase } from '@/lib/supabaseClient'
-import { apiRequest } from '@/lib/apiClient'
 import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
-import { guardQuery, QueryGuardError } from '@/lib/queryGuard'
-import { classifyTypo } from '@/lib/typoClassifier'
+import { useAiEntry } from '@/lib/useAiEntry'
 
-/* =========================
- * AI Response
- * ========================= */
 type AiResponse = {
   query: string
   normalized: string
@@ -28,53 +22,26 @@ type AiResponse = {
   }[]
   etymologyHook?: {
     type: 'A' | 'B' | 'C' | 'D'
-    text: string
+    hook_ja: string
+    parts?: unknown[]
   }
 }
 
-/* =========================
- * AI 呼び出し
- * ========================= */
-async function fetchFromAI(prompt: string): Promise<AiResponse> {
-  return apiRequest('/chat', {
-    method: 'POST',
-    body: JSON.stringify({ prompt }),
-  })
-}
-
-/* =========================
- * Component
- * ========================= */
 export default function WordPageClient({ word }: { word: string }) {
-  const router = useRouter()
 
-  const [entry, setEntry] = useState<{
-    query: string
-    normalized: string
-    pronunciation?: string
-    etymologyHook?: AiResponse['etymologyHook']
-    senses: WordInfo[]
-  } | null>(null)
+  /* =========================
+     AI呼び出し
+  ========================= */
+  const { data: response, loading, error } =
+    useAiEntry<AiResponse>({
+      prompt: word ? wordPrompt(word) : ''
+    })
 
   const [savedWords, setSavedWords] = useState<string[]>([])
-  const [error, setError] = useState<
-    QueryGuardError | 'UNSAFE_TO_GENERATE' | null
-  >(null)
-
-  const hasGeneratedRef = useRef(false)
 
   /* =========================
-   * 検索語変更時リセット
-   * ========================= */
-  useEffect(() => {
-    setEntry(null)
-    setError(null)
-    hasGeneratedRef.current = false
-  }, [word])
-
-  /* =========================
-   * 保存済みロード
-   * ========================= */
+     保存済みロード
+  ========================= */
   useEffect(() => {
     const loadSavedWords = async () => {
       const { data } = await supabase.auth.getUser()
@@ -87,77 +54,38 @@ export default function WordPageClient({ word }: { word: string }) {
     loadSavedWords()
   }, [])
 
-  /* =========================
-   * AI生成前の上流判定
-   * ========================= */
-  useEffect(() => {
-    if (!word || hasGeneratedRef.current) return
-    hasGeneratedRef.current = true
+  if (loading) return <p className="p-4">Loading...</p>
 
-    const run = async () => {
-      try {
-        /* ① guard */
-        const guard = await guardQuery(word, 60)
-        if (!guard.ok) {
-          setError(guard.reason)
-          return
-        }
-
-        /* ② typoClassifier */
-        const typo = await classifyTypo(guard.normalized)
-
-        if (typo.kind === 'BLOCK') {
-          const suggestion = typo.candidates?.[0]
-          if (suggestion) {
-            router.replace(`/word/${suggestion}`)
-          }
-          return
-        }
-
-        /* ③ AI生成 */
-        const response = await fetchFromAI(
-          wordPrompt(guard.normalized)
-        )
-
-        setEntry({
-          query: response.query,
-          normalized: response.normalized,
-          pronunciation: response.pronunciation,
-          etymologyHook: response.etymologyHook,
-          senses: response.senses.slice(0, 4).map((sense) => ({
-            word: response.normalized,
-            meaning: sense.meaning,
-            example: sense.example ?? '',
-            translation: sense.translation ?? '',
-            partOfSpeech: normalizePOS(sense.partOfSpeech),
-          })),
-        })
-      } catch (err) {
-        console.error(err)
-        setError('UNSAFE_TO_GENERATE')
-      }
-    }
-
-    run()
-  }, [word, router])
-
-  /* =========================
-   * エラー表示
-   * ========================= */
-
-  if (error === 'NON_ALPHABET') {
-    return <p className="text-red-500">アルファベットのみ入力できます</p>
+  if (error) {
+    console.error('AI ERROR:', error)
+    return <p className="p-4 text-red-500">AI error</p>
   }
 
-  if (error === 'TOO_LONG') {
-    return <p className="text-red-500">入力が長すぎます</p>
+  if (!response) {
+    console.error('NO RESPONSE')
+    return <p className="p-4 text-red-500">No response</p>
   }
 
-  if (!entry) return null
+  /* =========================
+     データ整形
+  ========================= */
+  const entry = {
+    query: response.query,
+    normalized: response.normalized,
+    pronunciation: response.pronunciation,
+    etymologyHook: response.etymologyHook,
+    senses: response.senses.slice(0, 4).map((sense) => ({
+      word: response.normalized,
+      meaning: sense.meaning,
+      example: sense.example ?? '',
+      translation: sense.translation ?? '',
+      partOfSpeech: normalizePOS(sense.partOfSpeech),
+    })),
+  }
 
   /* =========================
-   * 保存トグル
-   * ========================= */
+     保存トグル
+  ========================= */
   const handleSave = async () => {
     const isSaved = savedWords.includes(entry.normalized)
     const result = await toggleSaveStatus(
@@ -175,8 +103,8 @@ export default function WordPageClient({ word }: { word: string }) {
   }
 
   /* =========================
-   * Render
-   * ========================= */
+     Render
+  ========================= */
   return (
     <EntryCard
       headword={entry.normalized}
@@ -189,11 +117,14 @@ export default function WordPageClient({ word }: { word: string }) {
         </p>
       )}
 
-      {entry.etymologyHook?.text && (
+      {/* ===== 語源フック表示（hook_jaに変更） ===== */}
+      {entry.etymologyHook?.hook_ja && (
         <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
-          <span className="text-xs font-bold text-green-700">語源フック</span>
+          <span className="text-xs font-bold text-green-700">
+            語源フック
+          </span>
           <p className="mt-2 text-green-900">
-            {entry.etymologyHook.text}
+            {entry.etymologyHook.hook_ja}
           </p>
         </div>
       )}
