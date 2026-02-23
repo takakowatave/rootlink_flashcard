@@ -24,7 +24,7 @@ import SearchForm from '@/components/search-form'
  * - なければCloud Run本番URLを使用
  */
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
   'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
 
 export default function HomePage() {

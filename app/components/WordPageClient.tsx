@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
 import WordCard from '@/components/WordCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
@@ -14,79 +14,90 @@ type AiResponse = {
   query: string
   normalized: string
   pronunciation?: string
-  senses: {
-    meaning: string
-    partOfSpeech: string | string[]
-    example?: string
-    translation?: string
-  }[]
   etymologyHook?: {
-    type: 'A' | 'B' | 'C' | 'D'
-    hook_ja: string
-    parts?: unknown[]
+    type: 'A' | 'B' | 'C'
+    summary: string
+    hookJa: string
+    parts?: {
+      part: string
+      meaning: string
+      relatedWords: string[]
+    }[]
   }
 }
 
-export default function WordPageClient({ word }: { word: string }) {
+export default function WordPageClient({
+  word,
+  dictionary,
+}: {
+  word: string
+  dictionary: any
+}) {
+  /* =========================
+     ① 辞書からsense固定抽出
+  ========================= */
+  const dictionarySenses = useMemo(() => {
+    if (!dictionary?.[0]?.meanings) return []
+
+    const result: any[] = []
+
+    for (const m of dictionary[0].meanings) {
+      const pos = normalizePOS(m.partOfSpeech)
+      const firstDef = m.definitions?.[0]
+      if (!firstDef) continue
+
+      result.push({
+        word,
+        meaning: firstDef.definition, // 英語定義は固定
+        example: firstDef.example ?? '',
+        translation: '',
+        partOfSpeech: pos,
+      })
+
+      if (result.length >= 3) break
+    }
+
+    return result
+  }, [dictionary, word])
 
   /* =========================
-     AI呼び出し
+     ② 語源だけAI
   ========================= */
-  const { data: response, loading, error } =
-    useAiEntry<AiResponse>({
-      prompt: word ? wordPrompt(word) : ''
-    })
+  const {
+    data: etymology,
+    loading,
+    error,
+  } = useAiEntry<AiResponse>({
+    prompt: word ? wordPrompt(word, dictionary ?? {}) : '',
+  })
 
   const [savedWords, setSavedWords] = useState<string[]>([])
 
-  /* =========================
-     保存済みロード
-  ========================= */
   useEffect(() => {
     const loadSavedWords = async () => {
       const { data } = await supabase.auth.getUser()
       if (!data.user) return
-
       const list = await fetchWordlists(data.user.id)
       setSavedWords(list.map((w) => w.word))
     }
-
     loadSavedWords()
   }, [])
 
-  if (loading) return <p className="p-4">Loading...</p>
+  const entry = useMemo(() => {
+    if (!etymology) return null
 
-  if (error) {
-    console.error('AI ERROR:', error)
-    return <p className="p-4 text-red-500">AI error</p>
-  }
+    return {
+      query: etymology.query,
+      normalized: etymology.normalized,
+      pronunciation: etymology.pronunciation,
+      etymologyHook: etymology.etymologyHook,
+      senses: dictionarySenses,
+    }
+  }, [etymology, dictionarySenses])
 
-  if (!response) {
-    console.error('NO RESPONSE')
-    return <p className="p-4 text-red-500">No response</p>
-  }
-
-  /* =========================
-     データ整形
-  ========================= */
-  const entry = {
-    query: response.query,
-    normalized: response.normalized,
-    pronunciation: response.pronunciation,
-    etymologyHook: response.etymologyHook,
-    senses: response.senses.slice(0, 4).map((sense) => ({
-      word: response.normalized,
-      meaning: sense.meaning,
-      example: sense.example ?? '',
-      translation: sense.translation ?? '',
-      partOfSpeech: normalizePOS(sense.partOfSpeech),
-    })),
-  }
-
-  /* =========================
-     保存トグル
-  ========================= */
   const handleSave = async () => {
+    if (!entry) return
+
     const isSaved = savedWords.includes(entry.normalized)
     const result = await toggleSaveStatus(
       { word: entry.normalized } as WordInfo,
@@ -106,36 +117,40 @@ export default function WordPageClient({ word }: { word: string }) {
      Render
   ========================= */
   return (
-    <EntryCard
-      headword={entry.normalized}
-      isBookmarked={savedWords.includes(entry.normalized)}
-      onSave={handleSave}
-    >
-      {entry.query !== entry.normalized && (
-        <p className="text-sm text-gray-500 mb-2">
-          検索語：{entry.query}
-        </p>
-      )}
+    <>
+      {loading && <p className="p-4">Loading...</p>}
+      {error && <p className="p-4 text-red-500">AI error</p>}
 
-      {/* ===== 語源フック表示（hook_jaに変更） ===== */}
-      {entry.etymologyHook?.hook_ja && (
-        <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
-          <span className="text-xs font-bold text-green-700">
-            語源フック
-          </span>
-          <p className="mt-2 text-green-900">
-            {entry.etymologyHook.hook_ja}
-          </p>
-        </div>
-      )}
+      {entry && (
+        <EntryCard
+          headword={entry.normalized}
+          pronunciation={{ lang: 'en-GB' }}
+          isBookmarked={savedWords.includes(entry.normalized)}
+          onSave={handleSave}
+        >
+          {entry.query !== entry.normalized && (
+            <p className="text-sm text-gray-500 mb-2">
+              検索語：{entry.query}
+            </p>
+          )}
 
-      {entry.senses.map((sense, i) => (
-        <WordCard
-          key={i}
-          word={sense}
-          senseIndex={i}
-        />
-      ))}
-    </EntryCard>
+          {entry.etymologyHook && (
+            <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
+              <span className="text-xs font-bold text-green-700">
+                語源
+              </span>
+              <p className="mt-2 text-green-900">
+                {entry.etymologyHook.summary ||
+                  entry.etymologyHook.hookJa}
+              </p>
+            </div>
+          )}
+
+          {entry.senses.map((sense: any, i: number) => (
+            <WordCard key={i} word={sense} senseIndex={i} />
+          ))}
+        </EntryCard>
+      )}
+    </>
   )
 }

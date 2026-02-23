@@ -1,112 +1,92 @@
-export const wordPrompt = (word: string) => `
-You are generating a learner-friendly dictionary entry for the English word "${word}".
+export const wordPrompt = (word: string, dictionaryJson: unknown = {}) => `
+You are generating a learner-friendly dictionary entry for the English word "${word}" for Japanese learners.
 
-GOAL:
-- Help a Japanese learner remember this word correctly and easily.
-- Prioritize memorability over academic completeness.
+IMPORTANT
+- The input word is already resolved and correct.
+- You MUST use the provided dictionaryJson as the primary source of truth.
+- Keep the output JSON schema EXACTLY as specified. Do not add or remove keys.
+- Output JSON only. No commentary.
 
-BASIC RULES:
-- Treat the input word as already resolved and correct.
-- Use the input word exactly as-is for both "query" and "normalized".
-- Your job is only to generate senses, examples, translations, and etymologyHook for that exact word.
+INPUTS
+- word: "${word}"
+- dictionaryJson (Free Dictionary API response): ${JSON.stringify(dictionaryJson)}
 
+GOAL
+- Ground all content in dictionaryJson to reduce hallucination.
+- Select only the most learnable core senses.
+- Keep Japanese short and natural.
 
-MEANING & SENSE RULES (CORE):
-- Meanings are LABELS, not explanations.
-- If one simple Japanese word is enough, use ONLY that word.
-- Do NOT add commas, extra phrases, or full sentences unnecessarily.
-- HOWEVER:
-  - If the word has clearly different meanings ACROSS PARTS OF SPEECH,
-    you MUST create separate senses for each part of speech.
-  - Verb meanings MUST NOT be merged into noun meanings.
-  - Adjective meanings MUST NOT be merged into noun or verb meanings.
-- Do NOT force sense splitting within the SAME part of speech.
-- 1–3 senses is preferred.
+SENSE SELECTION (avoid too many senses)
+- Output 1 to 3 senses total (hard limit: 3).
+- Select senses supported by dictionaryJson meanings and definitions only.
+- Prefer, in order:
+  1) high-frequency, general-use senses
+  2) senses with an example sentence in dictionaryJson
+  3) the earliest senses in the list for each part of speech
+- If dictionaryJson contains many near-duplicates, merge to the single most representative sense.
+- Avoid rare, technical, archaic senses if the definition wording signals it (archaic, obsolete, historical, technical, chiefly, dialect).
 
-PART OF SPEECH (MANDATORY):
-- Each sense MUST include at least one basic part of speech.
-- Use simple labels only: noun, verb, adjective, adverb.
+MEANING (Japanese label)
+- "meaning" is a short Japanese LABEL, not a full definition.
+- Derive it from the chosen English definition, but compress it to a learnable label.
+- Use Japanese only for meaning and translation.
+- Avoid overly literal phrasing and avoid semicolons.
 
-CONTENT RULES:
-- Use Japanese ONLY for "meaning" and "translation".
-- Use natural, everyday Japanese.
-- Do NOT write dictionary-style definitions.
-- Examples must clearly match the meaning and part of speech.
-- Do NOT include synonyms, antonyms, or related words.
+PART OF SPEECH
+- Map dictionaryJson partOfSpeech to exactly ONE of: noun, verb, adjective, adverb.
+- Each sense MUST have partOfSpeech as an array with exactly one item, e.g. ["verb"].
 
-PRONUNCIATION:
-- Pronunciation belongs to the WORD level only.
+EXAMPLES
+- If dictionaryJson has an example for the chosen definition, use it.
+- Otherwise generate ONE natural example that clearly matches the chosen sense.
+- Provide a natural Japanese translation for the example.
+- Use British English spelling where applicable.
 
-ETYMOLOGY HOOK (MANDATORY):
-- ALWAYS include an etymologyHook.
-- The etymologyHook MUST be ONE of the following 3 types:
-  - Type A: Parts-based (reusable parts)
-  - Type B: Origin-based (has origin meaning but not decomposable)
-  - Type C: Pure image (no useful origin/parts)
-- Choose the type with the following priority:
-  1. Type A
-  2. Type B
-  3. Type C
-- Do NOT output any explanation, notes, or commentary about why you chose the type.
+PRONUNCIATION
+- If dictionaryJson contains phonetic or phonetics.text, set "pronunciation" to an IPA string.
+- Prefer UK-style IPA when multiple are available (often includes "ɒ" as in /ˈvɒmɪt/).
+- If none exists, set "pronunciation" to "".
 
-Type A requirements:
-- Provide 1–3 reusable parts (prefix/root/suffix).
-- For each part, provide:
-  - part: the string (e.g., "mal")
-  - meaning_en_short: a very short English gloss (1–3 words)
-  - origin_language: one short label (e.g., "Latin", "Greek", "French", "Old English")
-  - related_words: 1–3 real English words that share the SAME part
-- Provide hook_ja as ONE short, memorable sentence in Japanese.
-- Do NOT include academic detail or extra sentences.
+ETYMOLOGY HOOK (MANDATORY)
+- Use dictionaryJson etymology if present; otherwise generate.
+- Choose exactly ONE type: "A", "B", or "C".
+- Type A: only when you are confident about the decomposition. Do not guess.
+- If uncertain, use Type B or Type C.
+- One-sentence rule:
+  - summary MUST be exactly ONE Japanese sentence.
+  - hookJa MUST be exactly ONE Japanese sentence.
+- When type is not A, set parts to [].
+- When type is not C, set hookJa to "".
 
-Type B requirements:
-- Not decomposable into reusable parts, but the origin form/meaning helps memory.
-- Provide:
-  - origin_language
-  - origin_form (the historical form if known; otherwise empty string)
-  - origin_meaning_en_short (1–6 words)
-- Provide hook_ja as ONE short, memorable sentence in Japanese.
-
-Type C requirements:
-- No useful origin/parts. Do NOT force etymology.
-- Provide hook_ja as ONE short, memorable sentence in Japanese that is a concrete situation/image.
-
-GLOBAL HOOK RULES:
-- hook_ja MUST be exactly ONE sentence.
-- Do NOT write inspirational or generic statements.
-- Do NOT include explanation text or annotations outside the JSON.
-- origin_language MUST NOT be included inside hook_ja. Put it in fields only.
-
-OUTPUT FORMAT:
-Return a single JSON object.
-Do NOT include anything outside the JSON.
-
+OUTPUT FORMAT (JSON only)
 {
   "query": "${word}",
   "normalized": "${word}",
   "pronunciation": "",
   "senses": [
     {
-      "meaning": "日本語の短いラベル（できれば一語）",
-      "partOfSpeech": ["verb"],
+      "meaning": "日本語ラベル",
+      "partOfSpeech": ["noun"],
       "example": "A natural English sentence.",
-      "translation": "例文の自然な日本語訳"
+      "translation": "自然な日本語訳"
     }
   ],
   "etymologyHook": {
     "type": "A",
-    "hook_ja": "日本語で覚えやすい1文。",
+    "summary": "語源の簡潔な1文。",
     "parts": [
       {
-        "part": "mal",
-        "meaning_en_short": "bad",
-        "origin_language": "Latin",
-        "related_words": ["malicious", "malfunction", "malnutrition"]
+        "part": "example_part",
+        "meaning": "短い意味",
+        "relatedWords": ["word1", "word2"]
       }
     ],
-    "origin_language": "",
-    "origin_form": "",
-    "origin_meaning_en_short": ""
+    "hookJa": ""
   }
 }
+
+CONSTRAINTS
+- Do NOT invent senses that are not supported by dictionaryJson.
+- Do NOT include synonyms or extra fields.
+- Do NOT output anything outside the JSON.
 `;
