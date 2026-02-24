@@ -1,75 +1,71 @@
-"use client"
+'use client'
 
-import { ReactNode } from "react"
-import { FaVolumeHigh } from "react-icons/fa6"
-import { BsBookmark, BsBookmarkFill } from "react-icons/bs"
+import type { ReactNode } from 'react'
 
 type Pronunciation = {
-  lang: "en-US" | "en-GB"
+  lang: string
 }
 
-type EntryCardProps = {
+type Props = {
   headword: string
-  isBookmarked: boolean
-  isSaveDisabled?: boolean
-
-  /** ★ 共通検索フォーム（単語・熟語共通） */
-  searchForm?: ReactNode
-
-  onSave?: () => void
   pronunciation?: Pronunciation
+  isBookmarked: boolean
+  onSave?: () => void | Promise<void>
+  searchForm?: ReactNode
   children: ReactNode
 }
 
 export default function EntryCard({
   headword,
-  isBookmarked,
-  isSaveDisabled = false,
-  searchForm,
-  onSave,
   pronunciation,
+  isBookmarked,
+  onSave,
+  searchForm,
   children,
-}: EntryCardProps) {
-  const speak = () => {
-    if (!pronunciation) return
-    const utter = new SpeechSynthesisUtterance(headword)
-    utter.lang = pronunciation.lang
-    utter.rate = 0.9
-    speechSynthesis.cancel()
-    speechSynthesis.speak(utter)
-  }
-
+}: Props) {
   return (
-    <div className="mb-4 w-full bg-white md:bg-gray-100">
-      <div className="bg-white p-4 md:rounded-2xl md:p-6 w-full">
-
-        {/* ===== 共通検索フォーム（Figmaどおりカード上部） ===== */}
-        {searchForm && (
-          <div className="mb-4">
-            {searchForm}
-          </div>
-        )}
-
-        {/* ================= HEADER ================= */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold">{headword}</h2>
-
+    <div className="max-w-2xl mx-auto mt-6 px-4">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+              Entry
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {headword}
+            </h1>
             {pronunciation && (
-              <button onClick={speak} aria-label="Play pronunciation">
-                <FaVolumeHigh size={20} />
-              </button>
+              <p className="mt-1 text-sm text-gray-500">
+                /{pronunciation.lang}/
+              </p>
             )}
           </div>
 
-          <button onClick={onSave} disabled={isSaveDisabled}>
-            {isBookmarked ? <BsBookmarkFill /> : <BsBookmark />}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {searchForm}
+            {onSave && (
+              <button
+                type="button"
+                onClick={onSave}
+                className="inline-flex items-center rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span
+                  className={
+                    'mr-1 text-lg ' +
+                    (isBookmarked ? 'text-yellow-400' : 'text-gray-300')
+                  }
+                >
+                  ★
+                </span>
+                {isBookmarked ? '保存済み' : '保存'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* ================= CONTENT ================= */}
-        {children}
-
+        <div className="border-t border-gray-100 pt-4 space-y-4">
+          {children}
+        </div>
       </div>
     </div>
   )

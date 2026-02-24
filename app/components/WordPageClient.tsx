@@ -6,25 +6,7 @@ import WordCard from '@/components/WordCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import type { WordInfo } from '@/types/WordInfo'
 import { supabase } from '@/lib/supabaseClient'
-import { wordPrompt } from '@/prompts/word'
 import { normalizePOS } from '@/lib/pos'
-import { useAiEntry } from '@/lib/useAiEntry'
-
-type AiResponse = {
-  query: string
-  normalized: string
-  pronunciation?: string
-  etymologyHook?: {
-    type: 'A' | 'B' | 'C'
-    summary: string
-    hookJa: string
-    parts?: {
-      part: string
-      meaning: string
-      relatedWords: string[]
-    }[]
-  }
-}
 
 export default function WordPageClient({
   word,
@@ -34,43 +16,65 @@ export default function WordPageClient({
   dictionary: any
 }) {
   /* =========================
-     ① 辞書からsense固定抽出
+     ① Oxfordからsense抽出
   ========================= */
   const dictionarySenses = useMemo(() => {
-    if (!dictionary?.[0]?.meanings) return []
-
     const result: any[] = []
 
-    for (const m of dictionary[0].meanings) {
-      const pos = normalizePOS(m.partOfSpeech)
-      const firstDef = m.definitions?.[0]
-      if (!firstDef) continue
+    const lexicalEntries =
+      dictionary?.results?.[0]?.lexicalEntries ?? []
 
-      result.push({
-        word,
-        meaning: firstDef.definition, // 英語定義は固定
-        example: firstDef.example ?? '',
-        translation: '',
-        partOfSpeech: pos,
-      })
+    for (const lexical of lexicalEntries) {
+      const pos = normalizePOS(lexical.lexicalCategory?.text)
 
-      if (result.length >= 3) break
+      for (const entry of lexical.entries ?? []) {
+        for (const sense of entry.senses ?? []) {
+          const definition = sense.definitions?.[0]
+          if (!definition) continue
+
+          result.push({
+            word,
+            meaning: definition,
+            example: sense.examples?.[0]?.text ?? '',
+            translation: '',
+            partOfSpeech: pos,
+          })
+
+          if (result.length >= 3) return result
+        }
+      }
     }
 
     return result
   }, [dictionary, word])
 
   /* =========================
-     ② 語源だけAI
+     ② Oxfordから語源抽出（生）
   ========================= */
-  const {
-    data: etymology,
-    loading,
-    error,
-  } = useAiEntry<AiResponse>({
-    prompt: word ? wordPrompt(word, dictionary ?? {}) : '',
-  })
+  const rawEtymology = useMemo(() => {
+    return (
+      dictionary?.results?.[0]?.lexicalEntries?.[0]?.entries?.[0]
+        ?.etymologies?.[0] ?? ''
+    )
+  }, [dictionary])
 
+  /* =========================
+     ③ entry構築
+  ========================= */
+  const entry = useMemo(() => {
+    if (!dictionary) return null
+
+    return {
+      query: word,
+      normalized: word,
+      etymology: rawEtymology,
+      senses: dictionarySenses,
+    }
+  }, [dictionary, dictionarySenses, rawEtymology, word])
+
+  /* =========================
+     ④ 保存処理
+  ========================= */
   const [savedWords, setSavedWords] = useState<string[]>([])
 
   useEffect(() => {
@@ -83,22 +87,11 @@ export default function WordPageClient({
     loadSavedWords()
   }, [])
 
-  const entry = useMemo(() => {
-    if (!etymology) return null
-
-    return {
-      query: etymology.query,
-      normalized: etymology.normalized,
-      pronunciation: etymology.pronunciation,
-      etymologyHook: etymology.etymologyHook,
-      senses: dictionarySenses,
-    }
-  }, [etymology, dictionarySenses])
-
   const handleSave = async () => {
     if (!entry) return
 
     const isSaved = savedWords.includes(entry.normalized)
+
     const result = await toggleSaveStatus(
       { word: entry.normalized } as WordInfo,
       isSaved
@@ -118,9 +111,6 @@ export default function WordPageClient({
   ========================= */
   return (
     <>
-      {loading && <p className="p-4">Loading...</p>}
-      {error && <p className="p-4 text-red-500">AI error</p>}
-
       {entry && (
         <EntryCard
           headword={entry.normalized}
@@ -128,26 +118,19 @@ export default function WordPageClient({
           isBookmarked={savedWords.includes(entry.normalized)}
           onSave={handleSave}
         >
-          {entry.query !== entry.normalized && (
-            <p className="text-sm text-gray-500 mb-2">
-              検索語：{entry.query}
-            </p>
-          )}
-
-          {entry.etymologyHook && (
+          {entry.etymology && (
             <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
               <span className="text-xs font-bold text-green-700">
-                語源
+                Etymology
               </span>
               <p className="mt-2 text-green-900">
-                {entry.etymologyHook.summary ||
-                  entry.etymologyHook.hookJa}
+                {entry.etymology}
               </p>
             </div>
           )}
 
           {entry.senses.map((sense: any, i: number) => (
-            <WordCard key={i} word={sense} senseIndex={i} />
+            <WordCard key={i} sense={sense} senseIndex={i} />
           ))}
         </EntryCard>
       )}
