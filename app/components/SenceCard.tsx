@@ -1,7 +1,7 @@
 "use client"
 
 /**
- * WordCard.tsx
+ * SenceCard.tsx
  *
  * 【責務】
  * - 単語の「1つの意味（sense）」のみを表示するUIコンポーネント
@@ -33,7 +33,7 @@ type SenseInfo = {
   meaning: string
   example?: string
   translation?: string
-  partOfSpeech?: PartOfSpeech[]
+  partOfSpeech?: PartOfSpeech[]  
   saved_id?: string
   tags?: string[]
 }

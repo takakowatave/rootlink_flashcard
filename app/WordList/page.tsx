@@ -5,7 +5,7 @@
 // ==============================
 
 import { useState, useEffect } from "react"
-import WordCard from "@/components/WordCard"
+import WordCard from "@/components/SenceCard"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import type { WordInfo } from "@/types/WordInfo"

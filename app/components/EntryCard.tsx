@@ -1,71 +1,150 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
+import { POS_LABEL_JA } from '@/lib/pos'
+import type { PartOfSpeech } from '@/types/WordInfo'
 
 type Pronunciation = {
-  lang: string
+  phoneticSpelling?: string
+  audioFile?: string
+}
+
+type Sense = {
+  meaning: string
+  example?: string
+  partOfSpeech?: PartOfSpeech | PartOfSpeech[]
 }
 
 type Props = {
   headword: string
   pronunciation?: Pronunciation
+  etymology?: string
+  senses?: Record<
+    string,
+    {
+      meaning: string
+      example?: string
+    }[]
+  >
+  patterns?: string[]
   isBookmarked: boolean
   onSave?: () => void | Promise<void>
-  searchForm?: ReactNode
-  children: ReactNode
 }
 
 export default function EntryCard({
   headword,
   pronunciation,
+  etymology,
+  senses = {},
+  patterns = [],
   isBookmarked,
   onSave,
-  searchForm,
-  children,
 }: Props) {
+
+  const playAudio = () => {
+    if (!pronunciation?.audioFile) return
+    new Audio(pronunciation.audioFile).play()
+  }
+
   return (
     <div className="max-w-2xl mx-auto mt-6 px-4">
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
-              Entry
-            </div>
-            <h1 className="text-2xl font-semibold text-gray-900">
+      <div className="rounded-2xl bg-white p-6">
+
+        {/* ===== HEADER ===== */}
+        <div className="flex justify-between items-start">
+
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold text-gray-900">
               {headword}
             </h1>
-            {pronunciation && (
-              <p className="mt-1 text-sm text-gray-500">
-                /{pronunciation.lang}/
+
+            {pronunciation?.audioFile && (
+              <button onClick={playAudio}>
+                <HiSpeakerWave className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
+
+            {pronunciation?.phoneticSpelling && (
+              <span className="text-gray-500">
+                /{pronunciation.phoneticSpelling}/
+              </span>
+            )}
+          </div>
+
+          {onSave && (
+            <button onClick={onSave}>
+              <HiBookmark
+                className={
+                  'w-6 h-6 ' +
+                  (isBookmarked
+                    ? 'text-blue-500'
+                    : 'text-gray-300')
+                }
+              />
+            </button>
+          )}
+        </div>
+
+        {/* ===== ETYMOLOGY ===== */}
+        {etymology && (
+          <div className="mt-6 bg-green-50 rounded-xl p-4">
+            <div className="text-green-700 font-semibold text-sm">
+              Etymology
+            </div>
+            <p className="mt-2 text-green-900">
+              {etymology}
+            </p>
+          </div>
+        )}
+
+{/* ===== SENSES ===== */}
+<div className="mt-6 space-y-8">
+  {Object.entries(senses).map(([pos, items]) => (
+    <div key={pos}>
+      
+      {/* 品詞ラベル（1回だけ表示） */}
+      <div className="mb-3">
+        <span className="text-xs border rounded-full px-3 py-1 text-gray-600">
+          {POS_LABEL_JA[pos as PartOfSpeech]}
+        </span>
+      </div>
+
+      {/* 意味一覧 */}
+      <div className="space-y-4">
+        {items.map((sense, i) => (
+          <div key={i}>
+            <p className="text-gray-900">
+              <span className="font-semibold mr-2">
+                {i + 1}.
+              </span>
+              {sense.meaning}
+            </p>
+
+            {sense.example && (
+              <p className="mt-2 italic text-gray-600">
+                {sense.example}
               </p>
             )}
           </div>
+        ))}
+      </div>
+    </div>
+  ))}
+</div>
 
-          <div className="flex flex-col items-end gap-2">
-            {searchForm}
-            {onSave && (
-              <button
-                type="button"
-                onClick={onSave}
-                className="inline-flex items-center rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <span
-                  className={
-                    'mr-1 text-lg ' +
-                    (isBookmarked ? 'text-yellow-400' : 'text-gray-300')
-                  }
-                >
-                  ★
+        {/* ===== PATTERNS ===== */}
+        {patterns.length > 0 && (
+          <div className="mt-6 border-t pt-4 space-y-2">
+            {patterns.map((p, i) => (
+              <div key={i}>
+                <span className="underline text-gray-900">
+                  {p}
                 </span>
-                {isBookmarked ? '保存済み' : '保存'}
-              </button>
-            )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
-        <div className="border-t border-gray-100 pt-4 space-y-4">
-          {children}
-        </div>
       </div>
     </div>
   )
