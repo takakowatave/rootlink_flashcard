@@ -1,8 +1,7 @@
 /**
  * WordInfo.ts
- * 単語データの型定義ファイル。
- * AIレスポンス・DB保存・UI表示で共通使用する「単語1件の設計図」。
- * 語源UIの表示構造もここで決まる。
+ * 辞書表示・保存・UIで共通使用する単語型。
+ * 「保存一覧」でも使えるよう必須項目を最小化。
  */
 
 export type PartOfSpeech =
@@ -11,43 +10,54 @@ export type PartOfSpeech =
   | 'conjunction' | 'interjection' | 'particle'
   | 'auxiliary' | 'article'
 
-/** Type A用：語源パーツ（UIで分解表示する単位） */
 export type EtymologyPart = {
-  part: string              // 接頭辞・語根（例: "per", "turb"）
-  meaning: string           // 短い日本語意味（長文禁止）
-  relatedWords: string[]    // 同パーツを持つ関連語（SEO/派生導線）
+  part: string
+  meaning: string
+  relatedWords: string[]
 }
 
-/**
- * 語源構造データ（UI準拠）
- * 上段: summary（1行説明）
- * 中段: parts（Type Aのみ）
- * 下段: hookJa（記憶フック）
- */
 export type EtymologyHook = {
-  type: 'A' | 'B' | 'C'     // A=分解可, B=語源形のみ, C=イメージ特化
-  summary: string           // 語源1行説明（必ず1文）
-  hookJa: string            // 記憶補助フック（必ず1文）
-  parts?: EtymologyPart[]   // Type Aのみ使用
+  type: 'A' | 'B' | 'C'
+  summary: string
+  hookJa: string
+  parts?: EtymologyPart[]
 }
 
 /**
- * 単語エントリ本体。
- * 1単語=1意味の最小単位。将来multi-sense拡張可能。
+ * 単語エントリ本体
+ * 必須は「word」のみ。
+ * それ以外は保存用途でも使えるよう optional。
  */
 export type WordInfo = {
-  saved_id?: string | null  // 保存レコードID（未保存ならnull）
-  word_id?: string          // wordsテーブル主キー
+  // 保存関連
+  saved_id?: string | null
+  word_id?: string
 
-  word: string              // 見出し語（正規化済み）
-  meaning: string           // 日本語の短い意味ラベル
-  example?: string          // 英語例文
-  translation?: string      // 例文訳
+  // 見出し語（必須）
+  word: string
+
+  // 以下は辞書表示用（任意）
+  meaning?: string
+  example?: string
+  translation?: string
   partOfSpeech?: PartOfSpeech[]
-  pronunciation?: string
+  pronunciation?: {
+    phoneticSpelling?: string
+    audioFile?: string
+  }
 
-  tags?: string[]           // 任意タグ分類
+  tags?: string[]
+  etymology?: string   // ← これが足りない
 
-  etymologyHook?: EtymologyHook  // 語源UI構造
-  derivedWords?: WordInfo[]      // 派生語（将来拡張）
+  senses?: Record<
+    string,
+    {
+      meaning: string
+      example?: string
+    }[]
+  >
+
+  patterns?: string[]
+  etymologyHook?: EtymologyHook
+  derivedWords?: WordInfo[]
 }

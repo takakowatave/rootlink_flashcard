@@ -1,228 +1,204 @@
 import { supabase } from "./supabaseClient";
-import type { WordInfo, PartOfSpeech } from "@/types/WordInfo";
-
-/* ------------------------------------------
-  Supabase JOIN の戻り型（手動で型を定義）
-------------------------------------------- */
-type SavedWordTagRow = {
-  tag: {
-    name: string;
-  } | null;
-};
-
-type JoinedWordRow = {
-  id: string;
-  word_id: string;
-  words: {
-    id: string;
-    word: string;
-    meaning: string;
-    partOfSpeech: string;
-    pronunciation: string;
-    example: string;
-    translation: string;
-  }[];
-  saved_word_tags: SavedWordTagRow[];
-};
+import type { WordInfo } from "@/types/WordInfo";
 
 /* =========================================
- ① 単語を保存（words → saved_words）
+ ① 保存トグル
 ========================================= */
-export const saveWord = async (word: WordInfo): Promise<boolean> => {
+export const toggleSaveStatus = async (
+  word: WordInfo
+): Promise<{ success: boolean }> => {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user;
-  if (!user) return false;
+  if (!user) return { success: false };
 
-  const { data: insertedWord, error: wordErr } = await supabase
+  // ① words に存在するか確認
+  const { data: existingWord, error: wordFetchError } = await supabase
     .from("words")
-    .upsert(
-      {
-        id: word.word_id,
-        word: word.word,
-        meaning: word.meaning,
-        partOfSpeech: word.partOfSpeech,
-        pronunciation: word.pronunciation,
-        example: word.example,
-        translation: word.translation,
-      },
-      { onConflict: "id" }
-    )
-    .select()
-    .single();
+    .select("id")
+    .eq("word", word.word)
+    .maybeSingle();
 
-  if (wordErr || !insertedWord) {
-    console.log("words 保存エラー:", wordErr?.message);
-    return false;
+  if (wordFetchError) {
+    console.error("words 取得エラー:", wordFetchError);
+    return { success: false };
   }
 
-  const { error: saveErr } = await supabase
+  let wordId: string;
+
+  // ② 無ければ作る（辞書データも保存）
+  if (!existingWord) {
+    const { data: newWord, error: wordInsertError } = await supabase
+      .from("words")
+      .insert({ word: word.word })
+      .select("id")
+      .single();
+
+    if (wordInsertError || !newWord) {
+      console.error("words 作成エラー:", wordInsertError);
+      return { success: false };
+    }
+
+    wordId = newWord.id;
+
+    /* =========================
+       辞書データ保存
+    ========================= */
+    if (word.senses) {
+      for (const [pos, senseList] of Object.entries(word.senses)) {
+        // lexical_entries insert
+        const { error: leInsertError } = await supabase
+          .from("lexical_entries")
+          .insert({
+            word_id: wordId,
+            part_of_speech: pos,
+          });
+
+        if (leInsertError) {
+          console.error("lexical_entries insert error:", leInsertError);
+          continue;
+        }
+
+        // id再取得（INSERTと分離）
+        const { data: lexicalEntry, error: leSelectError } =
+          await supabase
+            .from("lexical_entries")
+            .select("id")
+            .eq("word_id", wordId)
+            .eq("part_of_speech", pos)
+            .order("id", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (leSelectError || !lexicalEntry) {
+          console.error("lexical_entries select error:", leSelectError);
+          continue;
+        }
+
+        // senses insert
+        for (let i = 0; i < senseList.length; i++) {
+          const sense = senseList[i];
+
+          const { error: senseError } = await supabase
+            .from("senses")
+            .insert({
+              lexical_entry_id: lexicalEntry.id,
+              definition_en: sense.meaning,
+              example_en: sense.example ?? null,
+              sense_order: i + 1,
+            });
+
+          if (senseError) {
+            console.error("senses insert error:", senseError);
+          }
+        }
+      }
+    }
+  } else {
+    wordId = existingWord.id;
+  }
+
+  // ③ 保存済み確認
+  const { data: existingSaved, error: savedCheckError } = await supabase
+    .from("saved_words")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("word_id", wordId)
+    .maybeSingle();
+
+  if (savedCheckError) {
+    console.error("saved_words check error:", savedCheckError);
+    return { success: false };
+  }
+
+  // ④ 保存済みなら削除
+  if (existingSaved) {
+    const { error: deleteError } = await supabase
+      .from("saved_words")
+      .delete()
+      .eq("id", existingSaved.id);
+
+    if (deleteError) {
+      console.error("削除エラー:", deleteError);
+      return { success: false };
+    }
+
+    return { success: true };
+  }
+
+  // ⑤ 未保存なら保存
+  const { error: saveError } = await supabase
     .from("saved_words")
     .insert({
       user_id: user.id,
-      word_id: insertedWord.id,
-      status: "saved",
+      word_id: wordId,
     });
 
-  if (saveErr) {
-    console.log("保存エラー:", saveErr.message);
-    return false;
+  if (saveError) {
+    console.error("保存エラー:", saveError);
+    return { success: false };
   }
 
-  return true;
+  return { success: true };
 };
 
 /* =========================================
- ② 単語削除（saved_words）
+ ② 保存一覧取得
 ========================================= */
-export const deleteWord = async (word: WordInfo): Promise<boolean> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user;
-  if (!user) return false;
-
-  const { error } = await supabase
-    .from("saved_words")
-    .delete()
-    .eq("user_id", user.id)
-    .eq("word_id", word.word_id);
-
-  if (error) {
-    console.log("削除エラー:", error.message);
-    return false;
-  }
-
-  return true;
-};
-
-/* =========================================
- ③ 保存済みかチェック
-========================================= */
-export const checkIfWordExists = async (word: WordInfo): Promise<WordInfo | null> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user;
-  if (!user) return null;
-
+export const fetchWordlists = async (
+  userId: string
+): Promise<WordInfo[]> => {
   const { data, error } = await supabase
     .from("saved_words")
     .select(`
       id,
       word_id,
-      words!inner (
+      words (
         id,
         word,
-        meaning,
-        partOfSpeech,
-        pronunciation,
-        example,
-        translation
-      ),
-      saved_word_tags (
-        tag:tag_id ( name )
-      )
-    `)
-    .eq("user_id", user.id)
-    .eq("word_id", word.word_id)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  // 型の強制（Supabase の誤推論を修正）
-  const row = data as unknown as JoinedWordRow;
-
-  const w = Array.isArray(row.words) ? row.words[0] : row.words;
-
-  const partOfSpeechArray = Array.isArray(w.partOfSpeech)
-    ? w.partOfSpeech
-    : [w.partOfSpeech];
-
-  return {
-    saved_id: row.id,
-    word_id: row.word_id,
-  
-    word: w.word,
-    meaning: w.meaning,
-    example: w.example,
-    translation: w.translation,
-  
-    partOfSpeech: partOfSpeechArray as PartOfSpeech[], // ← ★ 型を明示的に合わせる
-  
-    pronunciation: w.pronunciation,
-  
-    tags:
-      row.saved_word_tags
-        ?.map((t) => t.tag?.name)
-        .filter((name): name is string => Boolean(name)) ?? [],
-  };
-  
-};
-
-/* =========================================
- ④ 保存 or 削除（トグル）
-========================================= */
-export const toggleSaveStatus = async (word: WordInfo, isSaved: boolean) => {
-  if (isSaved) {
-    const success = await deleteWord(word);
-    return { success, word };
-  }
-
-  const success = await saveWord(word);
-  return { success, word };
-};
-
-/* =========================================
- ⑤ 保存単語一覧を取得（JOIN 完全版）
-========================================= */
-export const fetchWordlists = async (userId: string): Promise<WordInfo[]> => {
-  const { data, error } = await supabase
-    .from("saved_words")
-    .select(`
-      id,
-      word_id,
-      words!inner (
-        id,
-        word,
-        meaning,
-        partOfSpeech,
-        pronunciation,
-        example,
-        translation
-      ),
-      saved_word_tags (
-        tag:tag_id ( name )
+        lexical_entries (
+          id,
+          part_of_speech,
+          senses (
+            id,
+            definition_en,
+            example_en,
+            sense_order
+          )
+        )
       )
     `)
     .eq("user_id", userId);
 
-  if (error || !data) return [];
+  if (error) {
+    console.error("fetchWordlists error:", error);
+    return [];
+  }
 
-  // Supabase の JOIN の戻り型を正しく扱う
-  const rows = data as unknown as JoinedWordRow[];
-  
-  return rows.map((row) => {
-    const w = Array.isArray(row.words) ? row.words[0] : row.words;
+  return (data ?? []).map((row: any) => {
+    const grouped: Record<string, any[]> = {};
 
-    const partOfSpeechArray = Array.isArray(w.partOfSpeech)
-      ? w.partOfSpeech
-      : [w.partOfSpeech];
-  
+    row.words?.lexical_entries?.forEach((le: any) => {
+      const pos = le.part_of_speech ?? "unknown";
+
+      const sorted = [...(le.senses ?? [])].sort(
+        (a, b) => (a.sense_order ?? 0) - (b.sense_order ?? 0)
+      );
+
+      if (!grouped[pos]) grouped[pos] = [];
+
+      sorted.forEach((s: any) => {
+        grouped[pos].push({
+          meaning: s.definition_en,
+          example: s.example_en,
+        });
+      });
+    });
+
     return {
       saved_id: row.id,
       word_id: row.word_id,
-  
-      word: w.word,
-      meaning: w.meaning,
-      partOfSpeech: partOfSpeechArray as PartOfSpeech[], // ← ★ 型を明示的に合わせる
-  
-      pronunciation: w.pronunciation,
-      example: w.example,
-      translation: w.translation,
-  
-      tags:
-        row.saved_word_tags
-          ?.map((t) => t.tag?.name)
-          .filter((name): name is string => Boolean(name)) ?? [],
-  
-      label: "main",
+      word: row.words?.word,
+      senses: grouped,
     };
   });
-  
 };

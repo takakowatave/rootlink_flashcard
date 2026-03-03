@@ -5,7 +5,7 @@
 // ==============================
 
 import { useState, useEffect } from "react"
-import WordCard from "@/components/SenceCard"
+import EntryCard from "@/components/EntryCard"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import type { WordInfo } from "@/types/WordInfo"
@@ -103,35 +103,26 @@ export default function WordListPage() {
   const handleToggleSave = async (word: WordInfo) => {
     const { data } = await supabase.auth.getUser()
     const currentUser = data.user
-
+  
     if (!currentUser) {
       toast.error("ログインが必要です")
       return
     }
-
-    const currentWords = await fetchWordlists(currentUser.id)
-    const isSaved = currentWords.some((w) => w.word === word.word)
-
-    if (!isSaved && currentWords.length >= 500) {
-      toast.error("保存できる単語は500個までです")
+  
+    // 保存 / 削除 実行
+    const result = await toggleSaveStatus(word)
+    if (!result.success) {
+      toast.error("処理に失敗しました")
       return
     }
-
-    if (isSaved) {
-      setWordList((prev) => prev.filter((w) => w.word !== word.word))
-    }
-
-    const result = await toggleSaveStatus(word, isSaved)
-
-    if (result.success) {
-      if (isSaved) {
-        toast.success("保存を取り消しました")
-        setSavedWords((prev) => prev.filter((w) => w !== word.word))
-      } else {
-        toast.success("保存しました")
-        setSavedWords((prev) => [...prev, result.word.word])
-      }
-    }
+  
+    // 🔴 DBを再取得（これが重要）
+    const updated = await fetchWordlists(currentUser.id)
+  
+    setWordList(updated)
+    setSavedWords(updated.map((w) => w.word))
+  
+    toast.success("更新しました")
   }
 
   // ------------------------------
@@ -165,36 +156,15 @@ export default function WordListPage() {
             : `word-${item.word_id}`
 
           return (
-            <WordCard
-              key={uid}
-              word={item}
-              savedWords={savedWords}
-              onSave={handleToggleSave}
-              isEditing={editingWordId === uid}
-              onEdit={() => setEditingWordId(uid)}
-              onFinishEdit={(tags) => {
-                if (!item.saved_id) return
-
-                if (tags.length > 10) {
-                  toast.error("タグは最大10個までです")
-                  return
-                }
-
-                if (new Set(tags).size !== tags.length) {
-                  toast.error("同じタグは複数追加できません")
-                  return
-                }
-
-                const tooLong = tags.find((t) => t.length > 30)
-                if (tooLong) {
-                  toast.error(`タグは30文字以内です：${tooLong}`)
-                  return
-                }
-
-                updateTags(item.saved_id, tags)
-                setEditingWordId(null)
-              }}
-              allTags={allTags}
+            <EntryCard
+              key={item.saved_id ?? item.word_id}
+              headword={item.word}
+              pronunciation={item.pronunciation}
+              etymology={item.etymology}
+              senses={item.senses}
+              patterns={item.patterns}
+              isBookmarked={savedWords.includes(item.word)}
+              onSave={() => handleToggleSave(item)}
             />
           )
         })}
