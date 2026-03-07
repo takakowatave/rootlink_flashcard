@@ -27,6 +27,10 @@ type Props = {
     }[]
   >
   patterns?: string[]
+  inflections?: string[]
+  synonyms?: string[]
+  antonyms?: string[]
+  grammarTags?: string[]
   isBookmarked: boolean
   onSave?: () => void | Promise<void>
 }
@@ -37,6 +41,10 @@ export default function EntryCard({
   etymology,
   senses = {},
   patterns = [],
+  inflections = [],
+  synonyms = [],
+  antonyms = [],
+  grammarTags = [],
   isBookmarked,
   onSave,
 }: Props) {
@@ -85,6 +93,27 @@ export default function EntryCard({
           )}
         </div>
 
+        {/* ===== INFLECTIONS ===== */}
+        {inflections.length > 0 && (
+          <div className="text-sm text-gray-500 mt-2">
+            {inflections.join(' · ')}
+          </div>
+        )}
+
+        {/* ===== GRAMMAR TAGS ===== */}
+        {grammarTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {grammarTags.map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-100 px-2 py-1 rounded"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* ===== ETYMOLOGY ===== */}
         {etymology && (
           <div className="mt-6 bg-green-50 rounded-xl p-4">
@@ -102,14 +131,12 @@ export default function EntryCard({
   {Object.entries(senses).map(([pos, items]) => (
     <div key={pos}>
       
-      {/* 品詞ラベル（1回だけ表示） */}
       <div className="mb-3">
         <span className="text-xs border rounded-full px-3 py-1 text-gray-600">
-          {POS_LABEL_JA[pos as PartOfSpeech]}
+        {POS_LABEL_JA[pos] ?? pos}
         </span>
       </div>
 
-      {/* 意味一覧 */}
       <div className="space-y-4">
         {items.map((sense, i) => (
           <div key={i}>
@@ -142,6 +169,30 @@ export default function EntryCard({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ===== SYNONYMS ===== */}
+        {synonyms.length > 0 && (
+          <div className="mt-6">
+            <div className="text-xs text-gray-400 mb-1">
+              Synonyms
+            </div>
+            <div className="text-gray-800">
+              {synonyms.slice(0,8).join(', ')}
+            </div>
+          </div>
+        )}
+
+        {/* ===== ANTONYMS ===== */}
+        {antonyms.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs text-gray-400 mb-1">
+              Antonyms
+            </div>
+            <div className="text-gray-800">
+              {antonyms.slice(0,8).join(', ')}
+            </div>
           </div>
         )}
 

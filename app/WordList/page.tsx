@@ -8,19 +8,26 @@ import { useState, useEffect } from "react"
 import EntryCard from "@/components/EntryCard"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
-import type { WordInfo } from "@/types/WordInfo"
 import { supabase } from "@/lib/supabaseClient"
+import { normalizePOS } from '@/lib/pos'
+import { useMemo } from 'react'
 
-type LabeledWord = WordInfo & {
-  label?: "main" | "synonym" | "antonym"
+
+type SavedWordRow = {
+  saved_id?: string | null
+  word_id?: string
+  word: string
+  dictionary: any
 }
 
 export default function WordListPage() {
-  const [wordList, setWordList] = useState<LabeledWord[]>([])
+  const [wordList, setWordList] = useState<SavedWordRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [editingWordId, setEditingWordId] = useState<string | null>(null)
   const [allTags, setAllTags] = useState<string[]>([])
 
+
+  
   // ------------------------------
   // 全タグ取得
   // ------------------------------
@@ -100,7 +107,7 @@ export default function WordListPage() {
   // ------------------------------
   // 保存 / 削除
   // ------------------------------
-  const handleToggleSave = async (word: WordInfo) => {
+  const handleToggleSave = async (word: SavedWordRow): Promise<void> => {
     const { data } = await supabase.auth.getUser()
     const currentUser = data.user
   
@@ -148,27 +155,67 @@ export default function WordListPage() {
   return (
     <>
       <Toaster position="top-center" />
-
-      <div className="w-full">
         {[...wordList].reverse().map((item) => {
-          const uid = item.saved_id
-            ? `saved-${item.saved_id}`
-            : `word-${item.word_id}`
+    const dictionary = item.dictionary
 
-          return (
-            <EntryCard
-              key={item.saved_id ?? item.word_id}
-              headword={item.word}
-              pronunciation={item.pronunciation}
-              etymology={item.etymology}
-              senses={item.senses}
-              patterns={item.patterns}
-              isBookmarked={savedWords.includes(item.word)}
-              onSave={() => handleToggleSave(item)}
-            />
-          )
+    const lexicalEntries =
+      dictionary?.results?.flatMap((r: any) => r.lexicalEntries ?? []) ?? []
+
+    // pronunciation
+    const firstEntry = lexicalEntries[0]?.entries?.[0]
+
+    const pronunciation = {
+      phoneticSpelling:
+        firstEntry?.pronunciations?.[0]?.phoneticSpelling,
+      audioFile:
+        firstEntry?.pronunciations?.[0]?.audioFile,
+    }
+
+    // etymology
+    const etymology =
+      lexicalEntries
+        ?.flatMap((le: any) => le.entries ?? [])
+        ?.flatMap((e: any) => e.etymologies ?? [])
+        ?.[0] ?? ''
+
+    // senses
+    const grouped: Record<string, any[]> = {}
+
+    for (const lexical of lexicalEntries) {
+      const posRaw = normalizePOS(lexical.lexicalCategory?.text)
+      if (!posRaw) continue
+      const posList = Array.isArray(posRaw) ? posRaw : [posRaw]
+
+      for (const pos of posList) {
+        if (!grouped[pos]) grouped[pos] = []
+
+        for (const entry of lexical.entries ?? []) {
+          for (const sense of entry.senses ?? []) {
+            const def = sense.definitions?.[0]
+            if (!def) continue
+
+            grouped[pos].push({
+              meaning: def,
+              example: sense.examples?.[0]?.text ?? '',
+            })
+          }
+        }
+      }
+    }
+
+    return (
+      <EntryCard
+        key={item.saved_id ?? item.word_id}
+        headword={item.word}
+        pronunciation={pronunciation}
+        etymology={etymology}
+        senses={grouped}
+        patterns={[]}
+        isBookmarked={savedWords.includes(item.word)}
+        onSave={() => handleToggleSave(item)}
+      />
+    )
         })}
-      </div>
     </>
   )
 }

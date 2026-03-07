@@ -76,9 +76,21 @@ export function normalizePOS(input: string | string[] | PartOfSpeech[]): PartOfS
 // ===========================
 // UIでバッジなどに表示するためのマップ。
 // 内部値（"noun"など）を日本語で出す。
-export const POS_LABEL_JA: Record<PartOfSpeech,string> = {
-    noun:'名詞', verb:'動詞', adjective:'形容詞', adverb:'副詞',
-    adjectival_noun:'形容動詞', pronoun:'代名詞', preposition:'前置詞',
-    conjunction:'接続詞', interjection:'感嘆詞', particle:'助詞',
-    auxiliary:'助動詞', article:'冠詞',
+export const POS_LABEL_JA: Record<string,string> = {
+    noun:'名詞',
+    verb:'動詞',
+    adjective:'形容詞',
+    adverb:'副詞',
+    adjectival_noun:'形容動詞',
+    pronoun:'代名詞',
+    preposition:'前置詞',
+    conjunction:'接続詞',
+    interjection:'感嘆詞',
+    particle:'助詞',
+    auxiliary:'助動詞',
+    article:'冠詞',
+
+    "Phrasal verb": "句動詞",
+    Idiom: "熟語",
+    Phrase: "フレーズ",
 };

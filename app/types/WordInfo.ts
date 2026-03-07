@@ -47,7 +47,7 @@ export type WordInfo = {
   }
 
   tags?: string[]
-  etymology?: string   // ← これが足りない
+  etymology?: string  
 
   senses?: Record<
     string,
