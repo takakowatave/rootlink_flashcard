@@ -24,11 +24,13 @@ console.log("PAGE SERVER EXECUTION")
 
     if (res.ok) {
       const data = await res.json()
+      console.log("RESOLVE RESPONSE:", data)
       console.log("RAW FROM SERVER:", data.raw)
-
+      console.log("DICTIONARY FROM SERVER:", data.dictionary)
+    
       if (data.ok) {
         resolvedWord = data.resolved
-        dictionary = data.dictionary ?? null
+        dictionary = data.dictionary ?? data.raw ?? null
       }
     }
   } catch (e) {

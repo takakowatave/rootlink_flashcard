@@ -13,11 +13,12 @@ import { normalizePOS } from '@/lib/pos'
 import { useMemo } from 'react'
 
 
-type SavedWordRow = {
-  saved_id?: string | null
-  word_id?: string
+export type SavedWordRow = {
+  word_id: string
   word: string
-  dictionary: any
+  saved_id?: string
+  dictionary?: any
+  grammarTags?: Record<string, string[]>
 }
 
 export default function WordListPage() {
@@ -204,16 +205,16 @@ export default function WordListPage() {
     }
 
     return (
-      <EntryCard
-        key={item.saved_id ?? item.word_id}
-        headword={item.word}
-        pronunciation={pronunciation}
-        etymology={etymology}
-        senses={grouped}
-        patterns={[]}
-        isBookmarked={savedWords.includes(item.word)}
-        onSave={() => handleToggleSave(item)}
-      />
+    <EntryCard
+      key={item.saved_id ?? item.word_id}
+      headword={item.word}
+      pronunciation={pronunciation}
+      etymology={etymology}
+      senses={grouped}
+      grammarTags={item.grammarTags}   // ←追加
+      isBookmarked={savedWords.includes(item.word)}
+      onSave={() => handleToggleSave(item)}
+    />
     )
         })}
     </>

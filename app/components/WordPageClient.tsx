@@ -5,6 +5,7 @@ import EntryCard from '@/components/EntryCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import { normalizeDictionary } from '@/lib/normalizeDictionary'
+import type { LexicalUnit } from "@/types/LexicalUnit"
 
 export default function WordPageClient({
   word,
@@ -22,19 +23,58 @@ export default function WordPageClient({
   const parsed = useMemo(() => {
     return normalizeDictionary(dictionary, word)
   }, [dictionary, word])
-
-  const grammarTags = dictionary?.grammarTags ?? []
-  console.log(dictionary.grammarTags)
+  console.log("parsed", parsed)
 
   const {
     inflections,
     synonyms,
     antonyms,
+    derivatives,
     senses,
-    patterns,
+    lexicalUnits,
     etymology,
   } = parsed
 
+  console.log(
+    JSON.stringify(
+      dictionary?.results?.[0]?.lexicalEntries?.[0]?.entries?.[0],
+      null,
+      2
+    )
+  )
+  const grammarTags = useMemo(() => {
+
+    const result: Record<string, string[]> = {}
+  
+    const lexicalEntries =
+      dictionary?.results?.flatMap((r: any) => r.lexicalEntries ?? []) ?? []
+  
+    lexicalEntries.forEach((le: any) => {
+  
+      const pos = le.lexicalCategory?.id
+  
+      const features: string[] =
+      (le.entries ?? [])
+        .flatMap((e: any) => [
+          ...(e.notes ?? []),
+    
+          ...(e.senses ?? []).flatMap((s: any) => [
+            ...(s.notes ?? []),
+            ...(s.subsenses ?? []).flatMap((ss: any) => ss.notes ?? [])
+          ])
+        ])
+        .filter((n: any) => n.type === "grammaticalNote")
+        .map((n: any) => n.text)
+  
+      if (!features.length) return
+  
+      result[pos] = [...new Set(features)]
+  
+    })
+  
+    return result
+  
+  }, [dictionary])
   /* =========================
      保存状態
   ========================= */
@@ -100,18 +140,19 @@ export default function WordPageClient({
   ========================= */
 
   return (
-  <EntryCard
-    headword={word}
-    pronunciation={pronunciation}
-    etymology={etymology}
-    senses={senses}
-    patterns={patterns}
-    inflections={inflections}
-    synonyms={synonyms}
-    antonyms={antonyms}
-    grammarTags={grammarTags}   // ← これ追加
-    isBookmarked={savedWords.includes(word)}
-    onSave={handleSave}
-  />
+<EntryCard
+  headword={word}
+  pronunciation={pronunciation}
+  etymology={etymology}
+  senses={senses}
+  lexicalUnits={lexicalUnits}
+  inflections={inflections}
+  synonyms={synonyms}
+  derivatives={derivatives}
+  antonyms={antonyms}
+  grammarTags={grammarTags}
+  isBookmarked={savedWords.includes(word)}
+  onSave={handleSave}
+/>
   )
 }

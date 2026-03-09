@@ -25,50 +25,41 @@ import type { PartOfSpeech } from "@/types/WordInfo"
 
 type TagOption = { label: string; value: string }
 
-/**
- * Sense単位の最小構造
- * Oxford → WordPageClient → WordCard に渡される
- */
 type SenseInfo = {
+  pattern?: string
   meaning: string
   example?: string
   translation?: string
-  partOfSpeech?: PartOfSpeech[]  
+  partOfSpeech?: PartOfSpeech[]
   saved_id?: string
   tags?: string[]
+  usage?: string[]
 }
 
 type Props = {
-  /** sense単位のデータのみ受け取る */
   sense: SenseInfo
-
-  /** 表示順用 index */
   senseIndex: number
-
-  /** タグ編集関連 */
   isEditing?: boolean
   onFinishEdit?: (tags: string[]) => void
   allTags?: string[]
 }
 
-export default function WordCard({
+export default function SenseCard({
   sense,
   senseIndex,
   isEditing,
   onFinishEdit,
   allTags = [],
 }: Props) {
+
   if (!sense) return null
 
-  /** 保存済みかどうか */
   const canEditTags = Boolean(sense.saved_id)
 
-  /** ローカルタグ状態 */
   const [localTags, setLocalTags] = useState<TagOption[]>(
     sense.tags?.map((t) => ({ label: t, value: t })) ?? []
   )
 
-  /** sense変更時に同期 */
   useEffect(() => {
     setLocalTags(
       sense.tags?.map((t) => ({ label: t, value: t })) ?? []
@@ -79,21 +70,22 @@ export default function WordCard({
 
   return (
     <>
-      {/* ================= SENSE HEADER ================= */}
-      <div className="mt-4 flex items-center gap-2">
-        <span className="text-sm font-semibold text-gray-500">
-          意味 {senseIndex + 1}
-        </span>
+    {/* ================= HEADER ================= */}
+    <div className="mt-4 flex items-center gap-3">
 
-        {sense.partOfSpeech?.map((pos) => (
-          <span
-            key={pos}
-            className="text-xs bg-gray-100 border rounded-full px-2 py-0.5"
-          >
-            {POS_LABEL_JA[pos]}
-          </span>
-        ))}
-      </div>
+      {sense.pattern && (
+        <span className="text-xl font-semibold text-gray-900">
+          {sense.pattern}
+        </span>
+      )}
+
+      {sense.meaning && (
+        <span className="text-gray-600">
+          {sense.meaning}
+        </span>
+      )}
+
+    </div>
 
       {/* ================= MEANING ================= */}
       {sense.meaning && (
@@ -102,23 +94,43 @@ export default function WordCard({
         </div>
       )}
 
+      {/* ================= USAGE ================= */}
+      {sense.usage && sense.usage.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {sense.usage.map((u) => (
+            <span
+              key={u}
+              className="text-xs bg-gray-100 px-2 py-1 rounded"
+            >
+              {u}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* ================= EXAMPLE ================= */}
       {(sense.example || sense.translation) && (
-        <div className="mt-4 border-t pt-4">
+        <div className="mt-4 pt-4">
+
           {sense.example && (
-            <p className="italic">{sense.example}</p>
+            <p className="italic">
+              {sense.example}
+            </p>
           )}
+
           {sense.translation && (
             <p className="text-sm text-gray-600 mt-2">
               {sense.translation}
             </p>
           )}
+
         </div>
       )}
 
       {/* ================= TAGS ================= */}
       {canEditTags && (
         <div className="mt-6">
+
           {isEditing ? (
             <>
               <CreatableSelect
@@ -130,6 +142,7 @@ export default function WordCard({
                   value: t,
                 }))}
               />
+
               <button
                 className="mt-2 text-sm text-blue-600"
                 onClick={() => onFinishEdit?.(displayTags)}
@@ -149,6 +162,7 @@ export default function WordCard({
               ))}
             </div>
           )}
+
         </div>
       )}
     </>

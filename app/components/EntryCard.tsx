@@ -2,17 +2,12 @@
 
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
-import type { PartOfSpeech } from '@/types/WordInfo'
+import type { LexicalUnit } from "@/types/LexicalUnit"
+import SenceCard from '@/components/SenseCard'
 
 type Pronunciation = {
   phoneticSpelling?: string
   audioFile?: string
-}
-
-type Sense = {
-  meaning: string
-  example?: string
-  partOfSpeech?: PartOfSpeech | PartOfSpeech[]
 }
 
 type Props = {
@@ -26,11 +21,12 @@ type Props = {
       example?: string
     }[]
   >
-  patterns?: string[]
+  lexicalUnits?: LexicalUnit[]
   inflections?: string[]
   synonyms?: string[]
+  derivatives?: string[]
   antonyms?: string[]
-  grammarTags?: string[]
+  grammarTags?: Record<string, string[]>
   isBookmarked: boolean
   onSave?: () => void | Promise<void>
 }
@@ -40,11 +36,12 @@ export default function EntryCard({
   pronunciation,
   etymology,
   senses = {},
-  patterns = [],
+  lexicalUnits = [],
   inflections = [],
   synonyms = [],
   antonyms = [],
-  grammarTags = [],
+  derivatives = [],
+  grammarTags = {},
   isBookmarked,
   onSave,
 }: Props) {
@@ -58,10 +55,10 @@ export default function EntryCard({
     <div className="max-w-2xl mx-auto mt-6 px-4">
       <div className="rounded-2xl bg-white p-6">
 
-        {/* ===== HEADER ===== */}
+        {/* HEADER */}
         <div className="flex justify-between items-start">
-
           <div className="flex items-center gap-3">
+
             <h1 className="text-3xl font-semibold text-gray-900">
               {headword}
             </h1>
@@ -77,6 +74,7 @@ export default function EntryCard({
                 /{pronunciation.phoneticSpelling}/
               </span>
             )}
+
           </div>
 
           {onSave && (
@@ -93,28 +91,7 @@ export default function EntryCard({
           )}
         </div>
 
-        {/* ===== INFLECTIONS ===== */}
-        {inflections.length > 0 && (
-          <div className="text-sm text-gray-500 mt-2">
-            {inflections.join(' · ')}
-          </div>
-        )}
-
-        {/* ===== GRAMMAR TAGS ===== */}
-        {grammarTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {grammarTags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-gray-100 px-2 py-1 rounded"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* ===== ETYMOLOGY ===== */}
+        {/* ETYMOLOGY */}
         {etymology && (
           <div className="mt-6 bg-green-50 rounded-xl p-4">
             <div className="text-green-700 font-semibold text-sm">
@@ -126,53 +103,81 @@ export default function EntryCard({
           </div>
         )}
 
-{/* ===== SENSES ===== */}
-<div className="mt-6 space-y-8">
-  {Object.entries(senses).map(([pos, items]) => (
-    <div key={pos}>
-      
-      <div className="mb-3">
-        <span className="text-xs border rounded-full px-3 py-1 text-gray-600">
-        {POS_LABEL_JA[pos] ?? pos}
-        </span>
-      </div>
+        {/* SENSES */}
+        <div className="mt-6 space-y-8">
+          {Object.entries(senses)
+            .filter(([, items]) => items.length > 0)
+            .map(([pos, items]) => (
+              <div key={pos}>
 
-      <div className="space-y-4">
-        {items.map((sense, i) => (
-          <div key={i}>
-            <p className="text-gray-900">
-              <span className="font-semibold mr-2">
-                {i + 1}.
-              </span>
-              {sense.meaning}
-            </p>
+                <div className="flex items-center gap-3 mb-2">
+                <span className="text-xs rounded-full border px-3 py-1 text-gray-600">
+                    {POS_LABEL_JA[pos] ?? pos}
+                  </span>
 
-            {sense.example && (
-              <p className="mt-2 italic text-gray-600">
-                {sense.example}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  ))}
-</div>
+                  {grammarTags[pos]?.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs bg-gray-100 px-2 py-1 rounded"
+                    >
+                      {tag}
+                    </span>
+                  ))}
 
-        {/* ===== PATTERNS ===== */}
-        {patterns.length > 0 && (
-          <div className="mt-6 border-t pt-4 space-y-2">
-            {patterns.map((p, i) => (
-              <div key={i}>
-                <span className="underline text-gray-900">
-                  {p}
-                </span>
+                </div>
+
+                {pos === "verb" && inflections.length > 0 && (
+                  <span className="text-sm text-gray-500">
+                    {inflections.join(' · ')}
+                  </span>
+                )}
+
+                <div className="space-y-4 mt-4">
+                  {items.map((sense, i) => (
+                    <div key={i}>
+
+                      <p className="text-gray-900">
+                        <span className="font-semibold mr-2">
+                          {i + 1}.
+                        </span>
+                        {sense.meaning}
+                      </p>
+
+                      {sense.example && (
+                        <p className="mt-2 italic text-gray-600">
+                          {sense.example}
+                        </p>
+                      )}
+
+                    </div>
+                  ))}
+                </div>
+
               </div>
             ))}
+        </div>
+
+        {/* PATTERNS */}
+        {lexicalUnits.length > 0 && (
+          <div className="mt-6 pt-6 space-y-6">
+
+            {lexicalUnits.map((unit: LexicalUnit, i: number) => (
+              <SenceCard
+                key={unit.phrase}
+                sense={{
+                  pattern: unit.phrase,
+                  meaning: unit.meanings?.[0]?.meaning?.en ?? "",
+                  example: unit.meanings?.[0]?.examples?.[0]?.sentence ?? "",
+                  translation: unit.meanings?.[0]?.examples?.[0]?.translation ?? "",
+                }}
+                senseIndex={i}
+              />
+            ))}
+
           </div>
         )}
 
-        {/* ===== SYNONYMS ===== */}
+        {/* SYNONYMS */}
         {synonyms.length > 0 && (
           <div className="mt-6">
             <div className="text-xs text-gray-400 mb-1">
@@ -184,7 +189,7 @@ export default function EntryCard({
           </div>
         )}
 
-        {/* ===== ANTONYMS ===== */}
+        {/* ANTONYMS */}
         {antonyms.length > 0 && (
           <div className="mt-4">
             <div className="text-xs text-gray-400 mb-1">
@@ -192,6 +197,17 @@ export default function EntryCard({
             </div>
             <div className="text-gray-800">
               {antonyms.slice(0,8).join(', ')}
+            </div>
+          </div>
+        )}
+
+        {derivatives.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs text-gray-400 mb-1">
+              Derivatives
+            </div>
+            <div className="text-gray-800">
+              {derivatives.join(', ')}
             </div>
           </div>
         )}
