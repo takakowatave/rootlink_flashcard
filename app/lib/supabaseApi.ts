@@ -45,11 +45,11 @@ export const toggleSaveStatus = async (
   }
 
     // lib/supabaseApi.ts（toggleSaveStatus 内）
-  // words を作った直後に oxford_raw を upsert（dictionary が渡ってきた時だけ）
+  // words を作った直後に dictionary_cache を upsert（dictionary が渡ってきた時だけ）
   const raw = (word as any).dictionary
   if (raw) {
     const { error: upsertErr } = await supabase
-      .from("oxford_raw")
+      .from("dictionary_cache")
       .upsert(
         {
           word_id: wordId,
@@ -60,7 +60,7 @@ export const toggleSaveStatus = async (
       )
 
     if (upsertErr) {
-      console.error("oxford_raw upsert error:", upsertErr)
+      console.error("dictionary_cache upsert error:", upsertErr)
     }
   }
 
@@ -110,8 +110,8 @@ export const toggleSaveStatus = async (
  ② 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
- ② 保存一覧取得（saved_words + words + oxford_raw を返す）
-    ※ join名ズレでも動く: 2クエリで oxford_raw をマージ
+ ② 保存一覧取得（saved_words + words + dictionary_cache を返す）
+    ※ join名ズレでも動く: 2クエリで dictionary_cache をマージ
 ========================================= */
 export const fetchWordlists = async (userId: string) => {
   // 1) saved_words -> words（ここは安定）
@@ -147,15 +147,15 @@ export const fetchWordlists = async (userId: string) => {
     }))
   }
 
-  // 2) oxford_raw を word_id でまとめて取得（relation名に依存しない）
+  // 2) dictionary_cache を word_id でまとめて取得（relation名に依存しない）
   const { data: rawRows, error: rawErr } = await supabase
-    .from("oxford_raw")
+    .from("dictionary_cache")
     .select("word_id, payload")
     .in("word_id", wordIds)
 
   if (rawErr) {
-    console.error("fetchWordlists oxford_raw error:", rawErr)
-    // oxford_raw が取れなくても一覧は返す（dictionary=null）
+    console.error("fetchWordlists dictionary_cache error:", rawErr)
+    // dictionary_cache が取れなくても一覧は返す（dictionary=null）
     return (savedRows ?? []).map((row: any) => ({
       saved_id: row.id,
       word_id: row.word_id,
@@ -169,7 +169,7 @@ export const fetchWordlists = async (userId: string) => {
     if (r?.word_id) payloadByWordId.set(r.word_id, r.payload ?? null)
   })
 
-  // 3) saved_words と oxford_raw をマージして返す
+  // 3) saved_words と dictionary_cache をマージして返す
   return (savedRows ?? []).map((row: any) => ({
     saved_id: row.id,
     word_id: row.word_id,
