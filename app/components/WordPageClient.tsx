@@ -30,8 +30,10 @@ export default function WordPageClient({
     const senses: Record<
       string,
       {
+        senseId: string
         meaning: string
         example?: string
+        usage?: string[]
       }[]
     > = {}
 
@@ -39,15 +41,32 @@ export default function WordPageClient({
       const pos = String(group?.partOfSpeech ?? '').toLowerCase()
       if (!pos) return
 
-      const items =
-        (group?.senses ?? []).map((sense: any) => ({
-          meaning: sense?.definition ?? '',
+      const items: {
+        senseId: string
+        meaning: string
+        example?: string
+        usage?: string[]
+      }[] =
+        (group?.senses ?? []).map((sense: {
+          senseId: string
+          definition: string
+          example?: string
+          usage?: string[]
+        }) => ({
+          // backend で付与した senseId をそのまま使う
+          senseId: String(sense?.senseId ?? ''),
+          meaning: String(sense?.definition ?? ''),
           example: sense?.example ?? undefined,
+          usage: Array.isArray(sense?.usage) ? sense.usage : [],
         })) ?? []
 
-      if (items.length === 0) return
+      const validItems = items.filter(
+        (sense) => Boolean(sense.senseId && sense.meaning)
+      )
 
-      senses[pos] = items
+      if (validItems.length === 0) return
+
+      senses[pos] = validItems
     })
 
     return {

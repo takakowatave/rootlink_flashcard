@@ -20,12 +20,14 @@ type Props = {
   pronunciation?: Pronunciation
   etymology?: string
   senses?: Record<
-    string,
-    {
-      meaning: string
-      example?: string
-    }[]
-  >
+  string,
+  {
+    senseId: string
+    meaning: string
+    example?: string
+    usage?: string[]
+  }[]
+>
   lexicalUnits?: (LexicalUnit | SimpleLexicalUnit)[]
   inflections?: string[]
   synonyms?: string[]
@@ -144,9 +146,10 @@ export default function EntryCard({
                   </span>
                 )}
 
-                <div className="space-y-4 mt-4">
+<div className="space-y-4 mt-4">
                   {items.map((sense, i) => (
                     <div key={i}>
+                      {/* 各 sense の meaning を表示 */}
                       <p className="text-gray-900">
                         <span className="font-semibold mr-2">
                           {i + 1}.
@@ -154,10 +157,25 @@ export default function EntryCard({
                         {sense.meaning}
                       </p>
 
+                      {/* 例文があれば表示 */}
                       {sense.example && (
                         <p className="mt-2 italic text-gray-600">
                           {sense.example}
                         </p>
+                      )}
+
+                      {/* usage ラベルがあれば例文の下に表示 */}
+                      {sense.usage && sense.usage.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {sense.usage.map((usage) => (
+                            <span
+                              key={usage}
+                              className="text-xs rounded-full bg-gray-100 px-2 py-1 text-gray-600"
+                            >
+                              {usage}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   ))}

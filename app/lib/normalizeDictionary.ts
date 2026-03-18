@@ -12,6 +12,8 @@ import { normalizePOS } from "./pos"
 import type { LexicalUnit } from "../types/LexicalUnit"
 
 export type NormalizedSenseItem = {
+  // backend の sense と対応づけるためのID
+  senseId: string
   meaning: string
   example?: string
   usage?: string[]
@@ -97,7 +99,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
-function normalizeSenseItem(input: unknown): NormalizedSenseItem | null {
+// senseId 用：word / pos を安定したIDパーツに変換する
+function _normalizeSenseIdPart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+}
+
+function normalizeSenseItem(
+  input: unknown,
+  senseId: string
+): NormalizedSenseItem | null {
   if (!isRecord(input)) return null
 
   const meaning = readString(input.meaning)
@@ -108,6 +123,7 @@ function normalizeSenseItem(input: unknown): NormalizedSenseItem | null {
 
   if (example) {
     return {
+      senseId,
       meaning,
       example,
       usage,
@@ -115,13 +131,15 @@ function normalizeSenseItem(input: unknown): NormalizedSenseItem | null {
   }
 
   return {
+    senseId,
     meaning,
     usage,
   }
 }
 
 function normalizeSenses(
-  sensesInput: unknown
+  sensesInput: unknown,
+  word: string
 ): Record<string, NormalizedSenseItem[]> {
   if (!isRecord(sensesInput)) return {}
 
@@ -133,8 +151,14 @@ function normalizeSenses(
     const posRaw = normalizePOS(rawPos) ?? rawPos
     const posList = Array.isArray(posRaw) ? posRaw : [posRaw]
 
+    // 各 sense に headword + pos + index ベースのIDを付与する
     const items = value
-      .map((item) => normalizeSenseItem(item))
+      .map((item, index) =>
+        normalizeSenseItem(
+          item,
+          `${_normalizeSenseIdPart(word)}__${_normalizeSenseIdPart(rawPos)}__${index + 1}`
+        )
+      )
       .filter((item): item is NormalizedSenseItem => item !== null)
 
     if (items.length === 0) continue
@@ -147,7 +171,11 @@ function normalizeSenses(
         grouped[key] = []
       }
 
-      grouped[key].push(...items)
+      // 同じ senseId の重複追加を防ぐ
+      const existingIds = new Set(grouped[key].map((item) => item.senseId))
+      const dedupedItems = items.filter((item) => !existingIds.has(item.senseId))
+
+      grouped[key].push(...dedupedItems)
     }
   }
 
@@ -256,7 +284,7 @@ export function normalizeDictionary(
     derivatives: Array.isArray(dictionary.derivatives)
       ? uniqueStrings(dictionary.derivatives)
       : [],
-    senses: normalizeSenses(dictionary.senses),
+    senses: normalizeSenses(dictionary.senses, _word),
     lexicalUnits: normalizeLexicalUnits(dictionary.lexicalUnits),
     etymology: readString(dictionary.etymology),
   }
