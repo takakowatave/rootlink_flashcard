@@ -5,7 +5,6 @@ import EntryCard from '@/components/EntryCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import { normalizeDictionary } from '@/lib/normalizeDictionary'
-import type { LexicalUnit } from "@/types/LexicalUnit"
 
 export default function WordPageClient({
   word,
@@ -14,16 +13,55 @@ export default function WordPageClient({
   word: string
   dictionary: any
 }) {
-
-
   /* =========================
-     Oxford JSON 正規化
+     Oxford JSON / rewritten payload 正規化
   ========================= */
 
   const parsed = useMemo(() => {
-    return normalizeDictionary(dictionary, word)
+    const isRewrittenPayload =
+      dictionary &&
+      typeof dictionary === 'object' &&
+      Array.isArray(dictionary.senseGroups)
+
+    if (!isRewrittenPayload) {
+      return normalizeDictionary(dictionary, word)
+    }
+
+    const senses: Record<
+      string,
+      {
+        meaning: string
+        example?: string
+      }[]
+    > = {}
+
+    ;(dictionary.senseGroups ?? []).forEach((group: any) => {
+      const pos = String(group?.partOfSpeech ?? '').toLowerCase()
+      if (!pos) return
+
+      const items =
+        (group?.senses ?? []).map((sense: any) => ({
+          meaning: sense?.definition ?? '',
+          example: sense?.example ?? undefined,
+        })) ?? []
+
+      if (items.length === 0) return
+
+      senses[pos] = items
+    })
+
+    return {
+      inflections: dictionary?.inflections ?? [],
+      synonyms: dictionary?.synonyms ?? [],
+      antonyms: dictionary?.antonyms ?? [],
+      derivatives: dictionary?.derivatives ?? [],
+      senses,
+      lexicalUnits: dictionary?.lexicalUnits ?? [],
+      etymology: dictionary?.etymology ?? '',
+    }
   }, [dictionary, word])
-  console.log("parsed", parsed)
+
+  console.log('parsed', parsed)
 
   const {
     inflections,
@@ -42,39 +80,40 @@ export default function WordPageClient({
       2
     )
   )
-  const grammarTags = useMemo(() => {
 
-    const result: Record<string, string[]> = {}
-  
+  const grammarTags = useMemo(() => {
     const lexicalEntries =
       dictionary?.results?.flatMap((r: any) => r.lexicalEntries ?? []) ?? []
-  
+
+    if (lexicalEntries.length === 0) {
+      return {}
+    }
+
+    const result: Record<string, string[]> = {}
+
     lexicalEntries.forEach((le: any) => {
-  
       const pos = le.lexicalCategory?.id
-  
+
       const features: string[] =
-      (le.entries ?? [])
-        .flatMap((e: any) => [
-          ...(e.notes ?? []),
-    
-          ...(e.senses ?? []).flatMap((s: any) => [
-            ...(s.notes ?? []),
-            ...(s.subsenses ?? []).flatMap((ss: any) => ss.notes ?? [])
+        (le.entries ?? [])
+          .flatMap((e: any) => [
+            ...(e.notes ?? []),
+            ...(e.senses ?? []).flatMap((s: any) => [
+              ...(s.notes ?? []),
+              ...(s.subsenses ?? []).flatMap((ss: any) => ss.notes ?? []),
+            ]),
           ])
-        ])
-        .filter((n: any) => n.type === "grammaticalNote")
-        .map((n: any) => n.text)
-  
-      if (!features.length) return
-  
+          .filter((n: any) => n.type === 'grammaticalNote')
+          .map((n: any) => n.text)
+
+      if (!pos || !features.length) return
+
       result[pos] = [...new Set(features)]
-  
     })
-  
+
     return result
-  
   }, [dictionary])
+
   /* =========================
      保存状態
   ========================= */
@@ -98,7 +137,6 @@ export default function WordPageClient({
   ========================= */
 
   const handleSave = async () => {
-
     const result = await toggleSaveStatus({
       word,
       dictionary,
@@ -118,6 +156,12 @@ export default function WordPageClient({
   ========================= */
 
   const pronunciation = useMemo(() => {
+    if (dictionary?.ipa) {
+      return {
+        phoneticSpelling: dictionary.ipa,
+        audioFile: undefined,
+      }
+    }
 
     const lexicalEntries =
       dictionary?.results?.flatMap((r: any) => r.lexicalEntries ?? []) ?? []
@@ -132,7 +176,6 @@ export default function WordPageClient({
       phoneticSpelling: p?.phoneticSpelling,
       audioFile: p?.audioFile,
     }
-
   }, [dictionary])
 
   /* =========================
@@ -140,19 +183,19 @@ export default function WordPageClient({
   ========================= */
 
   return (
-<EntryCard
-  headword={word}
-  pronunciation={pronunciation}
-  etymology={etymology}
-  senses={senses}
-  lexicalUnits={lexicalUnits}
-  inflections={inflections}
-  synonyms={synonyms}
-  derivatives={derivatives}
-  antonyms={antonyms}
-  grammarTags={grammarTags}
-  isBookmarked={savedWords.includes(word)}
-  onSave={handleSave}
-/>
+    <EntryCard
+      headword={word}
+      pronunciation={pronunciation}
+      etymology={etymology}
+      senses={senses}
+      lexicalUnits={lexicalUnits}
+      inflections={inflections}
+      synonyms={synonyms}
+      derivatives={derivatives}
+      antonyms={antonyms}
+      grammarTags={grammarTags}
+      isBookmarked={savedWords.includes(word)}
+      onSave={handleSave}
+    />
   )
 }

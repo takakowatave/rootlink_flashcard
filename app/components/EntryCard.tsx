@@ -2,12 +2,17 @@
 
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
-import type { LexicalUnit } from "@/types/LexicalUnit"
+import type { LexicalUnit } from '@/types/LexicalUnit'
 import SenceCard from '@/components/SenseCard'
 
 type Pronunciation = {
   phoneticSpelling?: string
   audioFile?: string
+}
+
+type SimpleLexicalUnit = {
+  lexicalUnitId: string
+  text: string
 }
 
 type Props = {
@@ -21,7 +26,7 @@ type Props = {
       example?: string
     }[]
   >
-  lexicalUnits?: LexicalUnit[]
+  lexicalUnits?: (LexicalUnit | SimpleLexicalUnit)[]
   inflections?: string[]
   synonyms?: string[]
   derivatives?: string[]
@@ -45,20 +50,32 @@ export default function EntryCard({
   isBookmarked,
   onSave,
 }: Props) {
-
   const playAudio = () => {
     if (!pronunciation?.audioFile) return
     new Audio(pronunciation.audioFile).play()
   }
 
+  const isDetailedLexicalUnit = (
+    unit: LexicalUnit | SimpleLexicalUnit
+  ): unit is LexicalUnit => {
+    return 'phrase' in unit
+  }
+
+  const isSimpleLexicalUnit = (
+    unit: LexicalUnit | SimpleLexicalUnit
+  ): unit is SimpleLexicalUnit => {
+    return 'text' in unit
+  }
+
+  const detailedLexicalUnits = lexicalUnits.filter(isDetailedLexicalUnit)
+  const simpleLexicalUnits = lexicalUnits.filter(isSimpleLexicalUnit)
+
   return (
     <div className="max-w-2xl mx-auto mt-6 px-4">
       <div className="rounded-2xl bg-white p-6">
-
         {/* HEADER */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-
             <h1 className="text-3xl font-semibold text-gray-900">
               {headword}
             </h1>
@@ -74,7 +91,6 @@ export default function EntryCard({
                 /{pronunciation.phoneticSpelling}/
               </span>
             )}
-
           </div>
 
           {onSave && (
@@ -82,9 +98,7 @@ export default function EntryCard({
               <HiBookmark
                 className={
                   'w-6 h-6 ' +
-                  (isBookmarked
-                    ? 'text-blue-500'
-                    : 'text-gray-300')
+                  (isBookmarked ? 'text-blue-500' : 'text-gray-300')
                 }
               />
             </button>
@@ -109,9 +123,8 @@ export default function EntryCard({
             .filter(([, items]) => items.length > 0)
             .map(([pos, items]) => (
               <div key={pos}>
-
                 <div className="flex items-center gap-3 mb-2">
-                <span className="text-xs rounded-full border px-3 py-1 text-gray-600">
+                  <span className="text-xs rounded-full border px-3 py-1 text-gray-600">
                     {POS_LABEL_JA[pos] ?? pos}
                   </span>
 
@@ -123,10 +136,9 @@ export default function EntryCard({
                       {tag}
                     </span>
                   ))}
-
                 </div>
 
-                {pos === "verb" && inflections.length > 0 && (
+                {pos === 'verb' && inflections.length > 0 && (
                   <span className="text-sm text-gray-500">
                     {inflections.join(' · ')}
                   </span>
@@ -135,7 +147,6 @@ export default function EntryCard({
                 <div className="space-y-4 mt-4">
                   {items.map((sense, i) => (
                     <div key={i}>
-
                       <p className="text-gray-900">
                         <span className="font-semibold mr-2">
                           {i + 1}.
@@ -148,32 +159,40 @@ export default function EntryCard({
                           {sense.example}
                         </p>
                       )}
-
                     </div>
                   ))}
                 </div>
-
               </div>
             ))}
         </div>
 
-        {/* PATTERNS */}
+        {/* PATTERNS / LEXICAL UNITS */}
         {lexicalUnits.length > 0 && (
           <div className="mt-6 pt-6 space-y-6">
-
-            {lexicalUnits.map((unit: LexicalUnit, i: number) => (
+            {detailedLexicalUnits.map((unit: LexicalUnit, i: number) => (
               <SenceCard
                 key={unit.phrase}
                 sense={{
                   pattern: unit.phrase,
-                  meaning: unit.meanings?.[0]?.meaning?.en ?? "",
-                  example: unit.meanings?.[0]?.examples?.[0]?.sentence ?? "",
-                  translation: unit.meanings?.[0]?.examples?.[0]?.translation ?? "",
+                  meaning: unit.meanings?.[0]?.meaning?.en ?? '',
+                  example: unit.meanings?.[0]?.examples?.[0]?.sentence ?? '',
+                  translation:
+                    unit.meanings?.[0]?.examples?.[0]?.translation ?? '',
                 }}
                 senseIndex={i}
               />
             ))}
 
+            {simpleLexicalUnits.length > 0 && (
+              <div>
+                <div className="text-xs text-gray-400 mb-1">
+                  Lexical Units
+                </div>
+                <div className="text-gray-800">
+                  {simpleLexicalUnits.map((unit) => unit.text).join(', ')}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -184,7 +203,7 @@ export default function EntryCard({
               Synonyms
             </div>
             <div className="text-gray-800">
-              {synonyms.slice(0,8).join(', ')}
+              {synonyms.slice(0, 8).join(', ')}
             </div>
           </div>
         )}
@@ -196,7 +215,7 @@ export default function EntryCard({
               Antonyms
             </div>
             <div className="text-gray-800">
-              {antonyms.slice(0,8).join(', ')}
+              {antonyms.slice(0, 8).join(', ')}
             </div>
           </div>
         )}
@@ -211,7 +230,6 @@ export default function EntryCard({
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
