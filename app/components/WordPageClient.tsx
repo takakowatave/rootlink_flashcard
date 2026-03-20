@@ -28,46 +28,46 @@ export default function WordPageClient({
     }
 
     const senses: Record<
-      string,
-      {
-        senseId: string
-        meaning: string
-        example?: string
-        usage?: string[]
-      }[]
-    > = {}
-
-    ;(dictionary.senseGroups ?? []).forEach((group: any) => {
-      const pos = String(group?.partOfSpeech ?? '').toLowerCase()
-      if (!pos) return
-
-      const items: {
-        senseId: string
-        meaning: string
-        example?: string
-        usage?: string[]
-      }[] =
+    string,
+    {
+      senseId: string
+      meaning: string
+      example?: string
+      patterns?: string[]
+    }[]
+  > = {}
+  
+  ;(dictionary.senseGroups ?? []).forEach((group: any) => {
+    const pos = String(group?.partOfSpeech ?? '').toLowerCase()
+    if (!pos) return
+  
+    const items: {
+      senseId: string
+      meaning: string
+      example?: string
+      patterns?: string[]
+    }[] =
         (group?.senses ?? []).map((sense: {
           senseId: string
           definition: string
           example?: string
-          usage?: string[]
+          patterns?: string[]
         }) => ({
-          // backend で付与した senseId をそのまま使う
-          senseId: String(sense?.senseId ?? ''),
-          meaning: String(sense?.definition ?? ''),
-          example: sense?.example ?? undefined,
-          usage: Array.isArray(sense?.usage) ? sense.usage : [],
-        })) ?? []
-
-      const validItems = items.filter(
-        (sense) => Boolean(sense.senseId && sense.meaning)
-      )
-
-      if (validItems.length === 0) return
-
-      senses[pos] = validItems
-    })
+        // backend で付与した senseId をそのまま使う
+        senseId: String(sense?.senseId ?? ''),
+        meaning: String(sense?.definition ?? ''),
+        example: sense?.example ?? undefined,
+        patterns: Array.isArray(sense?.patterns) ? sense.patterns : [],
+      })) ?? []
+  
+    const validItems = items.filter(
+      (sense) => Boolean(sense.senseId && sense.meaning)
+    )
+  
+    if (validItems.length === 0) return
+  
+    senses[pos] = validItems
+  })
 
     return {
       inflections: dictionary?.inflections ?? [],
@@ -139,6 +139,24 @@ export default function WordPageClient({
 
   const [savedWords, setSavedWords] = useState<string[]>([])
 
+
+  /* pin機能の保存状態 */
+  const firstSenseId = useMemo(() => {
+    const firstGroup = Object.values(senses)[0] ?? []
+    return firstGroup[0]?.senseId ?? null
+  }, [senses])
+
+  const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setPinnedSenseId(firstSenseId)
+  }, [word, firstSenseId])
+
+  const handleTogglePin = (senseId: string) => {
+    if (senseId === pinnedSenseId) return
+    setPinnedSenseId(senseId)
+  }
+
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.auth.getUser()
@@ -150,6 +168,8 @@ export default function WordPageClient({
 
     load()
   }, [])
+
+
 
   /* =========================
      保存処理
@@ -215,6 +235,8 @@ export default function WordPageClient({
       grammarTags={grammarTags}
       isBookmarked={savedWords.includes(word)}
       onSave={handleSave}
+      pinnedSenseId={pinnedSenseId}
+      onTogglePin={handleTogglePin}
     />
   )
 }

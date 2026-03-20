@@ -1,5 +1,5 @@
 export const lexicalUnit = (phrase: string) => `
-You are generating a practical, usage-focused explanation
+You are generating a practical, patterns-focused explanation
 of an English expression for Japanese learners.
 
 The goal is to provide concise meanings that reflect
@@ -14,7 +14,7 @@ Step 1: Classification
 ────────────────────────
 
 Classify the expression into the most appropriate category
-based on common usage:
+based on common patterns:
 
 - phrasal_verb
 - idiom
@@ -33,7 +33,7 @@ Guidelines:
 - Write 1–2 meanings
 - Use concise, neutral, dictionary-style Japanese
 - Meanings may be close paraphrases
-- Focus on practical usage in conversation and work
+- Focus on practical patterns in conversation and work
 - Each meaning should be safe and natural to use
 
 For each meaning:

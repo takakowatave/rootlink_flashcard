@@ -1,9 +1,16 @@
 'use client'
 
+// wordページ全体のレイアウト
+// header / etymology / senses / lexicalUnits / synonyms などの sections を並べる
+// 各 section に適切な子コンポーネントを渡す
+
+
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit } from '@/types/LexicalUnit'
 import SenceCard from '@/components/SenseCard'
+import { BsPin, BsPinFill } from 'react-icons/bs'
+import LexicalUnitCard from '@/components/LexicalUnitCard'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -20,14 +27,14 @@ type Props = {
   pronunciation?: Pronunciation
   etymology?: string
   senses?: Record<
-  string,
-  {
-    senseId: string
-    meaning: string
-    example?: string
-    usage?: string[]
-  }[]
->
+    string,
+    {
+      senseId: string
+      meaning: string
+      example?: string
+      patterns?: string[]
+    }[]
+  >
   lexicalUnits?: (LexicalUnit | SimpleLexicalUnit)[]
   inflections?: string[]
   synonyms?: string[]
@@ -36,6 +43,10 @@ type Props = {
   grammarTags?: Record<string, string[]>
   isBookmarked: boolean
   onSave?: () => void | Promise<void>
+
+  // pin 用
+  pinnedSenseId: string | null
+  onTogglePin: (senseId: string) => void
 }
 
 export default function EntryCard({
@@ -50,6 +61,8 @@ export default function EntryCard({
   derivatives = [],
   grammarTags = {},
   isBookmarked,
+  pinnedSenseId,
+  onTogglePin,
   onSave,
 }: Props) {
   const playAudio = () => {
@@ -67,6 +80,16 @@ export default function EntryCard({
     unit: LexicalUnit | SimpleLexicalUnit
   ): unit is SimpleLexicalUnit => {
     return 'text' in unit
+  }
+
+  // lexical phrase を anchor 用 id に変換
+  const toLexicalAnchorId = (text: string) => {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/['’]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
   }
 
   const detailedLexicalUnits = lexicalUnits.filter(isDetailedLexicalUnit)
@@ -146,39 +169,63 @@ export default function EntryCard({
                   </span>
                 )}
 
-<div className="space-y-4 mt-4">
-                  {items.map((sense, i) => (
-                    <div key={i}>
-                      {/* 各 sense の meaning を表示 */}
-                      <p className="text-gray-900">
-                        <span className="font-semibold mr-2">
-                          {i + 1}.
-                        </span>
-                        {sense.meaning}
-                      </p>
+                <div className="space-y-4 mt-4">
+                  {items.map((sense, i) => {
+                    const isPinned = pinnedSenseId === sense.senseId
 
-                      {/* 例文があれば表示 */}
-                      {sense.example && (
-                        <p className="mt-2 italic text-gray-600">
-                          {sense.example}
-                        </p>
-                      )}
+                    return (
+                      <div
+                        key={sense.senseId}
+                        className="group flex items-start justify-between gap-3 py-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-gray-900">
+                          {sense.meaning}
+                          </p>
 
-                      {/* usage ラベルがあれば例文の下に表示 */}
-                      {sense.usage && sense.usage.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {sense.usage.map((usage) => (
-                            <span
-                              key={usage}
-                              className="text-xs rounded-full bg-gray-100 px-2 py-1 text-gray-600"
-                            >
-                              {usage}
-                            </span>
-                          ))}
+                          {sense.patterns && sense.patterns.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {sense.patterns.map((pattern) => (
+                                <span
+                                  key={pattern}
+                                  className="text-xs rounded-full bg-gray-100 px-2 py-1 text-gray-600"
+                                >
+                                  {pattern}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {sense.example && (
+                            <p className="mt-2 text-gray-600">
+                              {sense.example}
+                            </p>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        <div className="relative shrink-0 group/pin">
+                          <button
+                            type="button"
+                            onClick={() => onTogglePin(sense.senseId)}
+                            className="flex h-8 w-8 items-center justify-center"
+                          >
+                            {isPinned ? (
+                              <BsPinFill className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <BsPin className="h-5 w-5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100 group-hover/pin:text-gray-400" />
+                            )}
+                          </button>
+
+                          {!isPinned && (
+                            <span className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-gray-700 px-4 py-3 text-sm text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
+                              この意味をピン留め
+                              <span className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-gray-700" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             ))}
@@ -187,17 +234,10 @@ export default function EntryCard({
         {/* PATTERNS / LEXICAL UNITS */}
         {lexicalUnits.length > 0 && (
           <div className="mt-6 pt-6 space-y-6">
-            {detailedLexicalUnits.map((unit: LexicalUnit, i: number) => (
-              <SenceCard
+            {detailedLexicalUnits.map((unit) => (
+              <LexicalUnitCard
                 key={unit.phrase}
-                sense={{
-                  pattern: unit.phrase,
-                  meaning: unit.meanings?.[0]?.meaning?.en ?? '',
-                  example: unit.meanings?.[0]?.examples?.[0]?.sentence ?? '',
-                  translation:
-                    unit.meanings?.[0]?.examples?.[0]?.translation ?? '',
-                }}
-                senseIndex={i}
+                lexicalUnit={unit}
               />
             ))}
 

@@ -16,7 +16,7 @@ export type NormalizedSenseItem = {
   senseId: string
   meaning: string
   example?: string
-  usage?: string[]
+  patterns?: string[]
 }
 
 export type NormalizedDictionary = {
@@ -32,7 +32,7 @@ export type NormalizedDictionary = {
 type ServerNormalizedSenseItemInput = {
   meaning?: unknown
   example?: unknown
-  usage?: unknown
+  patterns?: unknown
 }
 
 type ServerNormalizedMeaningTextInput = {
@@ -119,21 +119,21 @@ function normalizeSenseItem(
   if (!meaning) return null
 
   const example = readString(input.example)
-  const usage = Array.isArray(input.usage) ? uniqueStrings(input.usage) : []
+  const patterns = Array.isArray(input.patterns) ? uniqueStrings(input.patterns) : []
 
   if (example) {
     return {
       senseId,
       meaning,
       example,
-      usage,
+      patterns,
     }
   }
 
   return {
     senseId,
     meaning,
-    usage,
+    patterns,
   }
 }
 
