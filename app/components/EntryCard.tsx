@@ -141,6 +141,17 @@ export default function EntryCard({
             </p>
           </div>
         )}
+        {/* DERIVATIVES */}
+        {derivatives.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs text-gray-400 mb-1">
+              Derivatives
+            </div>
+            <div className="text-gray-800">
+              {derivatives.join(', ')}
+            </div>
+          </div>
+        )}
 
         {/* SENSES */}
         <div className="mt-6 space-y-8">
@@ -274,17 +285,6 @@ export default function EntryCard({
             </div>
             <div className="text-gray-800">
               {antonyms.slice(0, 8).join(', ')}
-            </div>
-          </div>
-        )}
-
-        {derivatives.length > 0 && (
-          <div className="mt-4">
-            <div className="text-xs text-gray-400 mb-1">
-              Derivatives
-            </div>
-            <div className="text-gray-800">
-              {derivatives.join(', ')}
             </div>
           </div>
         )}
