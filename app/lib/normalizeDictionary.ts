@@ -27,6 +27,12 @@ export type NormalizedDictionary = {
   senses: Record<string, NormalizedSenseItem[]>
   lexicalUnits: LexicalUnit[]
   etymology: string
+  etymologyData: {
+    parts: {
+      text: string
+      meaning: string
+    }[]
+  }
 }
 
 type ServerNormalizedSenseItemInput = {
@@ -97,6 +103,33 @@ function readString(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
+}
+
+function extractEtymologyParts(
+  etymology: string
+): { text: string; meaning: string }[] {
+  if (!etymology) return []
+
+  // 例:
+  // from Latin com- ‘together with’ + panis ‘bread’
+  const parts: { text: string; meaning: string }[] = []
+  const regex = /([a-zA-Z-]+)\s+[‘']([^’']+)[’']/g
+
+  let match: RegExpExecArray | null = null
+
+  while ((match = regex.exec(etymology)) !== null) {
+    const rawText = match[1]?.trim() ?? ""
+    const meaning = match[2]?.trim() ?? ""
+
+    if (!rawText || !meaning) continue
+
+    parts.push({
+      text: rawText.replace(/-$/, ""),
+      meaning,
+    })
+  }
+
+  return parts
 }
 
 // senseId 用：word / pos を安定したIDパーツに変換する
@@ -271,6 +304,9 @@ export function normalizeDictionary(
   dictionary: ServerNormalizedDictionaryInput,
   _word: string
 ): NormalizedDictionary {
+  const etymology = readString(dictionary.etymology)
+  const etymologyParts = extractEtymologyParts(etymology)
+  
   return {
     inflections: Array.isArray(dictionary.inflections)
       ? uniqueStrings(dictionary.inflections)
@@ -286,6 +322,9 @@ export function normalizeDictionary(
       : [],
     senses: normalizeSenses(dictionary.senses, _word),
     lexicalUnits: normalizeLexicalUnits(dictionary.lexicalUnits),
-    etymology: readString(dictionary.etymology),
+    etymology,
+    etymologyData: {
+      parts: etymologyParts,
+    },
   }
 }
