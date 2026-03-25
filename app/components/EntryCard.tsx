@@ -20,15 +20,41 @@ type SimpleLexicalUnit = {
   text: string
 }
 
+type EtymologyPartType = 'prefix' | 'root' | 'suffix' | 'unknown'
+
+type OriginLanguage = {
+  key: string
+  labelEn: string
+  labelJa: string
+}
+
 type EtymologyPart = {
-  text?: string
-  type?: string
-  meaning?: string
+  text: string
+  partType: EtymologyPartType
+  meaning: string | null
+  meaningJa?: string | null
+  relatedWords: string[]
+  order: number
+}
+
+type PartsEtymologyStructure = {
+  type: 'parts'
+  parts: EtymologyPart[]
+  hook: string | null
+}
+
+type OriginEtymologyStructure = {
+  type: 'origin'
+  sourceWord: string | null
+  sourceMeaning: string | null
+  hook: string | null
 }
 
 type EtymologyData = {
-  originLanguage?: string[]
-  parts?: EtymologyPart[]
+  originLanguage: OriginLanguage | null
+  rawEtymology: string | null
+  wordFamily: string[]
+  structure: PartsEtymologyStructure | OriginEtymologyStructure
 }
 
 type SenseItem = {
@@ -96,21 +122,19 @@ export default function EntryCard({
   const simpleLexicalUnits = lexicalUnits.filter(isSimpleLexicalUnit)
 
   // Memory Hook 用の表示データ
-  const originLanguages = Array.isArray(etymologyData?.originLanguage)
-    ? etymologyData.originLanguage.filter(
-        (item): item is string => typeof item === 'string' && item.length > 0
+// origin language は object 1件で受ける
+const originLanguage = etymologyData?.originLanguage ?? null
+
+// parts は structure.type === 'parts' のときだけ使う
+const parts =
+  etymologyData?.structure.type === 'parts'
+    ? etymologyData.structure.parts.filter(
+        (part) => Boolean(part.text) || Boolean(part.meaning)
       )
     : []
 
-  const parts = Array.isArray(etymologyData?.parts)
-    ? etymologyData.parts.filter(
-        (part) => Boolean(part?.text) || Boolean(part?.meaning)
-      )
-    : []
-
-  const hasParts = parts.length > 0
-  const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
-
+const hasParts = parts.length > 0
+const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
   // derivatives の並びを最低限整える
   const orderedDerivatives = [...derivatives].sort((a, b) => {
     const score = (value: string) => {
@@ -160,26 +184,23 @@ export default function EntryCard({
 
         {/* MEMORY HOOK */}
         <div className="mt-6 rounded-2xl bg-green-50 p-4">
-          <div className="text-2xl font-semibold text-green-700">
+          <div className="font-semibold text-green-700">
             Memory Hook
           </div>
 
           {/* originLanguage */}
-          {originLanguages.length > 0 && (
+          {originLanguage && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="text-2xl font-semibold text-green-700">
+              <div className="font-semibold text-green-700">
                 originLanguage
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {originLanguages.map((language) => (
-                  <span
-                    key={language}
-                    className="rounded-xl border border-gray-300 bg-white px-4 py-1 text-xl text-gray-500"
-                  >
-                    {language}
-                  </span>
-                ))}
+                <span
+                  className="rounded-xs border border-gray-300 bg-white px-4 py-1 text-xs text-gray-500"
+                >
+                  {originLanguage.labelEn}
+                </span>
               </div>
             </div>
           )}
@@ -192,11 +213,11 @@ export default function EntryCard({
                   key={`${part.text ?? 'part'}-${index}`}
                   className="flex min-w-[260px] items-center gap-6 rounded-xl bg-green-100 px-4 py-4"
                 >
-                  <span className="rounded-xl border-2 border-green-500 bg-white px-5 py-1 text-2xl leading-none text-green-600">
+                  <span className="rounded-xl border-2 border-green-500 bg-white px-5 py-1 text-sm leading-none text-green-600">
                     {part.text}
                   </span>
 
-                  <span className="text-2xl text-green-700">
+                  <span className="text-sm text-green-700">
                     {part.meaning}
                   </span>
                 </div>
@@ -204,11 +225,11 @@ export default function EntryCard({
             </div>
           ) : hasEtymologyText ? (
             /* parts がない単語は Oxford etymology 文 */
-            <p className="mt-4 text-lg leading-8 text-green-900">
+            <p className="mt-4 text-xs leading-8 text-green-900">
               {etymology}
             </p>
           ) : (
-            <p className="mt-4 text-lg leading-8 text-green-900">
+            <p className="mt-4 text-xs leading-8 text-green-900">
               No memory hook available yet.
             </p>
           )}
@@ -216,7 +237,7 @@ export default function EntryCard({
           {/* derivatives */}
           {orderedDerivatives.length > 0 && (
             <div className="mt-6">
-              <div className="text-2xl font-semibold text-green-700">
+              <div className="text-xl font-semibold text-green-700">
                 derivatives
               </div>
 
@@ -224,7 +245,7 @@ export default function EntryCard({
                 {orderedDerivatives.map((derivative) => (
                   <span
                     key={derivative}
-                    className="text-2xl text-green-700 underline underline-offset-4"
+                    className="text-xs text-green-700 underline underline-offset-4"
                   >
                     {derivative}
                   </span>

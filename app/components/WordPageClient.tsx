@@ -12,30 +12,73 @@ type SimpleLexicalUnit = {
   text: string
 }
 
+// MVP で使う対応言語を表す。
+type SupportedLocale = 'ja'
+
+// 英語本文と翻訳群をまとめる shape を表す。
+type LocalizedText = {
+  en?: string
+  translations?: Partial<Record<SupportedLocale, string>>
+}
+
+// 英語例文と翻訳群をまとめる shape を表す。
+type LocalizedExample = {
+  en?: string | null
+  translations?: Partial<Record<SupportedLocale, string | null>>
+}
+
+// rewriteDictionary 後の 1 sense shape を表す。
 type RewrittenSense = {
   senseId?: string
-  definition?: string
-  example?: string
+  definition?: LocalizedText
+  example?: LocalizedExample
   patterns?: string[]
 }
 
+// rewriteDictionary 後の sense group shape を表す。
 type RewrittenSenseGroup = {
   partOfSpeech?: string
   senses?: RewrittenSense[]
 }
 
+type EtymologyPartType = 'prefix' | 'root' | 'suffix' | 'unknown'
+
+type OriginLanguage = {
+  key: string
+  labelEn: string
+  labelJa: string
+}
+
 type EtymologyPart = {
-  text?: string
-  type?: string
-  meaning?: string
-  relatedWords?: string[]
+  text: string
+  partType: EtymologyPartType
+  meaning: string | null
+  meaningJa: string | null
+  relatedWords: string[]
+  order: number
+}
+
+type PartsEtymologyStructure = {
+  type: 'parts'
+  parts: EtymologyPart[]
+  hook: string | null
+}
+
+type OriginEtymologyStructure = {
+  type: 'origin'
+  sourceWord: string | null
+  sourceMeaning: string | null
+  hook: string | null
 }
 
 type EtymologyData = {
-  originLanguage?: string[]
-  parts?: EtymologyPart[]
+  originLanguage: OriginLanguage | null
+  rawEtymology: string | null
+  wordFamily: string[]
+  structure: PartsEtymologyStructure | OriginEtymologyStructure
 }
 
+// EntryCard に渡すための簡易 sense shape を表す。
 type ParsedSenseItem = {
   senseId: string
   meaning: string
@@ -43,6 +86,7 @@ type ParsedSenseItem = {
   patterns?: string[]
 }
 
+// このコンポーネント内で扱う辞書データ shape を表す。
 type ParsedDictionary = {
   inflections: string[]
   synonyms: string[]
@@ -95,6 +139,7 @@ type OxfordPayload = {
   results?: OxfordResult[]
 }
 
+// rewriteDictionary 後に受け取る payload shape を表す。
 type RewrittenPayload = {
   senseGroups?: RewrittenSenseGroup[]
   inflections?: string[]
@@ -113,55 +158,131 @@ type WordlistItem = {
   word: string
 }
 
+// unknown が object かどうかを判定する。
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+// rewriteDictionary 後の payload かどうかを判定する。
 function isRewrittenPayload(value: DictionaryInput): value is RewrittenPayload {
   return isRecord(value) && 'senseGroups' in value && Array.isArray(value.senseGroups)
 }
 
+// Oxford raw payload かどうかを判定する。
 function isOxfordPayload(value: DictionaryInput): value is OxfordPayload {
   return isRecord(value) && 'results' in value
 }
 
+// lexical unit っぽい object かどうかを判定する。
 function isLexicalUnitLike(value: unknown): value is LexicalUnit | SimpleLexicalUnit {
   return isRecord(value)
 }
 
+// 語源パーツの種別が有効か判定する。
+function isEtymologyPartType(value: unknown): value is EtymologyPartType {
+  return (
+    value === 'prefix' ||
+    value === 'root' ||
+    value === 'suffix' ||
+    value === 'unknown'
+  )
+}
+
+// unknown から語源データを安全に整形する。
 function normalizeEtymologyData(value: unknown): EtymologyData | null {
   if (!isRecord(value)) return null
 
-  const originLanguage = Array.isArray(value.originLanguage)
-    ? value.originLanguage.filter(
+  const originLanguage = isRecord(value.originLanguage)
+    && typeof value.originLanguage.key === 'string'
+    && typeof value.originLanguage.labelEn === 'string'
+    && typeof value.originLanguage.labelJa === 'string'
+    ? {
+        key: value.originLanguage.key,
+        labelEn: value.originLanguage.labelEn,
+        labelJa: value.originLanguage.labelJa,
+      }
+    : null
+
+  const rawEtymology =
+    typeof value.rawEtymology === 'string' ? value.rawEtymology : null
+
+  const wordFamily = Array.isArray(value.wordFamily)
+    ? value.wordFamily.filter(
         (item): item is string => typeof item === 'string' && item.length > 0
       )
     : []
 
-  const parts = Array.isArray(value.parts)
-    ? value.parts.map((part) => {
-        const safePart = isRecord(part) ? part : {}
-
-        return {
-          text: typeof safePart.text === 'string' ? safePart.text : '',
-          type: typeof safePart.type === 'string' ? safePart.type : '',
-          meaning: typeof safePart.meaning === 'string' ? safePart.meaning : '',
-          relatedWords: Array.isArray(safePart.relatedWords)
-            ? safePart.relatedWords.filter(
-                (item): item is string =>
-                  typeof item === 'string' && item.length > 0
-              )
-            : [],
-        }
-      })
-    : []
-
-  return {
-    originLanguage,
-    parts,
+  if (!isRecord(value.structure) || typeof value.structure.type !== 'string') {
+    return null
   }
+
+  if (value.structure.type === 'parts') {
+    const parts = Array.isArray(value.structure.parts)
+      ? value.structure.parts
+          .map((part, index) => {
+            if (!isRecord(part) || typeof part.text !== 'string') return null
+
+            return {
+              text: part.text,
+              partType: isEtymologyPartType(part.partType)
+                ? part.partType
+                : 'unknown',
+              meaning: typeof part.meaning === 'string' ? part.meaning : null,
+              meaningJa:
+                typeof part.meaningJa === 'string' ? part.meaningJa : null,
+              relatedWords: Array.isArray(part.relatedWords)
+                ? part.relatedWords.filter(
+                    (item): item is string =>
+                      typeof item === 'string' && item.length > 0
+                  )
+                : [],
+              order: typeof part.order === 'number' ? part.order : index,
+            }
+          })
+          .filter((part): part is EtymologyPart => part !== null)
+      : []
+
+    return {
+      originLanguage,
+      rawEtymology,
+      wordFamily,
+      structure: {
+        type: 'parts',
+        parts,
+        hook: typeof value.structure.hook === 'string'
+          ? value.structure.hook
+          : null,
+      },
+    }
+  }
+
+  if (value.structure.type === 'origin') {
+    return {
+      originLanguage,
+      rawEtymology,
+      wordFamily,
+      structure: {
+        type: 'origin',
+        sourceWord:
+          typeof value.structure.sourceWord === 'string'
+            ? value.structure.sourceWord
+            : null,
+        sourceMeaning:
+          typeof value.structure.sourceMeaning === 'string'
+            ? value.structure.sourceMeaning
+            : null,
+        hook:
+          typeof value.structure.hook === 'string'
+            ? value.structure.hook
+            : null,
+      },
+    }
+  }
+
+  return null
 }
 
+// unknown から normalizeDictionary 済みの辞書 shape を安全に整形する。
 function normalizeParsedDictionary(value: unknown): ParsedDictionary {
   const safeValue = isRecord(value) ? value : {}
 
@@ -231,6 +352,7 @@ function normalizeParsedDictionary(value: unknown): ParsedDictionary {
   }
 }
 
+// raw payload を normalizeDictionary に通して既存表示 shape にそろえる。
 function callNormalizeDictionary(
   dictionary: DictionaryInput,
   word: string
@@ -242,6 +364,18 @@ function callNormalizeDictionary(
 
   const normalized = normalizeDictionary(payload, word)
   return normalizeParsedDictionary(normalized)
+}
+
+// unknown から LocalizedText を安全に読む。
+function readLocalizedText(value: unknown): string {
+  if (!isRecord(value)) return ''
+  return typeof value.en === 'string' ? value.en : ''
+}
+
+// unknown から LocalizedExample を安全に読む。
+function readLocalizedExample(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined
+  return typeof value.en === 'string' ? value.en : undefined
 }
 
 export default function WordPageClient({
@@ -268,8 +402,8 @@ export default function WordPageClient({
 
       const items: ParsedSenseItem[] = (group?.senses ?? []).map((sense) => ({
         senseId: String(sense?.senseId ?? ''),
-        meaning: String(sense?.definition ?? ''),
-        example: sense?.example ?? undefined,
+        meaning: readLocalizedText(sense?.definition),
+        example: readLocalizedExample(sense?.example),
         patterns: Array.isArray(sense?.patterns) ? sense.patterns : [],
       }))
 
