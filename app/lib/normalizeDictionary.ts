@@ -41,6 +41,12 @@ type ServerNormalizedSenseItemInput = {
   patterns?: unknown
 }
 
+type ServerNormalizedExampleObjectInput = {
+  sentence?: unknown
+  text?: unknown
+  en?: unknown
+}
+
 type ServerNormalizedMeaningTextInput = {
   en?: unknown
   ja?: unknown
@@ -142,6 +148,32 @@ function _normalizeSenseIdPart(value: string): string {
     .replace(/^_+|_+$/g, "")
 }
 
+function readExampleText(value: unknown): string {
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (!isRecord(value)) {
+    return ""
+  }
+
+  const exampleObject = value as ServerNormalizedExampleObjectInput
+
+  if (typeof exampleObject.sentence === "string") {
+    return exampleObject.sentence.trim()
+  }
+
+  if (typeof exampleObject.text === "string") {
+    return exampleObject.text.trim()
+  }
+
+  if (typeof exampleObject.en === "string") {
+    return exampleObject.en.trim()
+  }
+
+  return ""
+}
+
 function normalizeSenseItem(
   input: unknown,
   senseId: string
@@ -151,8 +183,12 @@ function normalizeSenseItem(
   const meaning = readString(input.meaning)
   if (!meaning) return null
 
-  const example = readString(input.example)
-  const patterns = Array.isArray(input.patterns) ? uniqueStrings(input.patterns) : []
+  // example は string だけでなく object shape も吸う
+  const example = readExampleText(input.example)
+
+  const patterns = Array.isArray(input.patterns)
+    ? uniqueStrings(input.patterns)
+    : []
 
   if (example) {
     return {
@@ -169,6 +205,7 @@ function normalizeSenseItem(
     patterns,
   }
 }
+
 
 function normalizeSenses(
   sensesInput: unknown,
@@ -250,9 +287,8 @@ function normalizeMeaning(input: unknown, index: number): NormalizedMeaning | nu
   if (typeof rawMeaning === "string") {
     meaningEn = rawMeaning.trim()
   } else if (isRecord(rawMeaning)) {
-    const meaningText = rawMeaning as ServerNormalizedMeaningTextInput
-    meaningEn = readString(meaningText.en)
-    meaningJa = readString(meaningText.ja)
+    meaningEn = readString(rawMeaning.en)
+    meaningJa = readString(rawMeaning.ja)
   }
 
   if (!meaningEn) return null

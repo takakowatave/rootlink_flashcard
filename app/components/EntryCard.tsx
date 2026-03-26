@@ -61,26 +61,35 @@ type SenseItem = {
   senseId: string
   meaning: string
   example?: string
+  exampleTranslation?: string
   patterns?: string[]
 }
 
 type Props = {
   headword: string
-  pronunciation?: Pronunciation
-  etymology?: string
-  etymologyData?: EtymologyData | null
-  senses?: Record<string, SenseItem[]>
-  lexicalUnits?: (LexicalUnit | SimpleLexicalUnit)[]
-  inflections?: string[]
-  synonyms?: string[]
-  derivatives?: string[]
-  antonyms?: string[]
-  grammarTags?: Record<string, string[]>
+  pronunciation: {
+    phoneticSpelling?: string
+    audioFile?: string
+  }
+  etymology: string
+  etymologyData: EtymologyData | null
+  senses: Record<string, SenseItem[]>
+  lexicalUnits: Array<LexicalUnit | SimpleLexicalUnit>
+  inflections: string[]
+  synonyms: string[]
+  derivatives: string[]
+  antonyms: string[]
+  grammarTags: Record<string, string[]>
   isBookmarked: boolean
-  onSave?: () => void | Promise<void>
+  onSave: () => void
   pinnedSenseId: string | null
   onTogglePin: (senseId: string) => void
+  displayLocale: DisplayLocale
+  onChangeDisplayLocale: (locale: DisplayLocale) => void
 }
+
+// 画面表示で切り替える言語を表す。
+type DisplayLocale = 'en' | 'ja'
 
 function isDetailedLexicalUnit(
   unit: LexicalUnit | SimpleLexicalUnit
@@ -108,6 +117,8 @@ export default function EntryCard({
   grammarTags = {},
   isBookmarked,
   pinnedSenseId,
+  displayLocale,
+  onChangeDisplayLocale,
   onTogglePin,
   onSave,
 }: Props) {
@@ -307,11 +318,21 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
                             </div>
                           )}
 
-                          {sense.example && (
-                            <p className="mt-2 text-gray-600">
-                              {sense.example}
-                            </p>
-                          )}
+                        {(sense.example || sense.exampleTranslation) && (
+                          <div className="mt-2 space-y-1">
+                            {sense.example && (
+                              <p className="text-gray-600">
+                                {sense.example}
+                              </p>
+                            )}
+
+                            {sense.exampleTranslation && (
+                              <p className="text-gray-500">
+                                {sense.exampleTranslation}
+                              </p>
+                            )}
+                          </div>
+                        )}
                         </div>
 
                         <div className="group/pin relative shrink-0">
@@ -341,29 +362,6 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
               </div>
             ))}
         </div>
-
-        {/* PATTERNS / LEXICAL UNITS */}
-        {lexicalUnits.length > 0 && (
-          <div className="mt-6 space-y-6 pt-6">
-            {detailedLexicalUnits.map((unit) => (
-              <LexicalUnitCard
-                key={unit.phrase}
-                lexicalUnit={unit}
-              />
-            ))}
-
-            {simpleLexicalUnits.length > 0 && (
-              <div>
-                <div className="mb-1 text-xs text-gray-400">
-                  Lexical Units
-                </div>
-                <div className="text-gray-800">
-                  {simpleLexicalUnits.map((unit) => unit.text).join(', ')}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* SYNONYMS */}
         {synonyms.length > 0 && (
