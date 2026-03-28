@@ -12,25 +12,26 @@ type SimpleLexicalUnit = {
   text: string
 }
 
-// 画面表示で切り替える言語を表す。
+// 画面表示で切り替える言語
 type DisplayLocale = 'en' | 'ja'
 
-// Header と共有する localStorage key。
+// Header と共有する localStorage key / event name
 const DISPLAY_LOCALE_STORAGE_KEY = 'displayLocale'
+const DISPLAY_LOCALE_EVENT_NAME = 'display-locale-change'
 
-// 内部で保持する多言語 meaning shape。
+// 内部で保持する多言語 meaning shape
 type LocalizedText = {
   en: string
   ja?: string
 }
 
-// 内部で保持する多言語 example shape。
+// 内部で保持する多言語 example shape
 type LocalizedExample = {
   en?: string
   ja?: string
 }
 
-// 内部の sense shape。
+// 内部の sense shape
 type ParsedLocalizedSenseItem = {
   senseId: string
   meaning: LocalizedText
@@ -38,16 +39,15 @@ type ParsedLocalizedSenseItem = {
   patterns?: string[]
 }
 
-// EntryCard に渡す表示用 sense shape。
+// EntryCard に渡す表示用 sense shape
 type DisplaySenseItem = {
   senseId: string
   meaning: string
   example?: string
-  exampleTranslation?: string
   patterns?: string[]
 }
 
-// rewriteDictionary 後の 1 sense shape。
+// rewriteDictionary 後の 1 sense shape
 type RewrittenSense = {
   senseId?: string
   definition?: unknown
@@ -55,7 +55,7 @@ type RewrittenSense = {
   patterns?: unknown
 }
 
-// rewriteDictionary 後の sense group shape。
+// rewriteDictionary 後の sense group shape
 type RewrittenSenseGroup = {
   partOfSpeech?: string
   senses?: RewrittenSense[]
@@ -98,7 +98,7 @@ type EtymologyData = {
   structure: PartsEtymologyStructure | OriginEtymologyStructure
 }
 
-// このコンポーネント内で扱う辞書データ shape。
+// このコンポーネント内で扱う辞書データ shape
 type ParsedDictionary = {
   inflections: string[]
   synonyms: string[]
@@ -151,7 +151,7 @@ type OxfordPayload = {
   results?: OxfordResult[]
 }
 
-// rewriteDictionary 後に受け取る payload shape。
+// rewriteDictionary 後に受け取る payload shape
 type RewrittenPayload = {
   senseGroups?: RewrittenSenseGroup[]
   inflections?: string[]
@@ -170,12 +170,12 @@ type WordlistItem = {
   word: string
 }
 
-// unknown が object かどうかを判定する。
+// unknown が object かどうかを判定
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-// rewriteDictionary 後の payload かどうかを判定する。
+// rewriteDictionary 後の payload かどうかを判定
 function isRewrittenPayload(value: DictionaryInput): value is RewrittenPayload {
   return (
     isRecord(value) &&
@@ -184,19 +184,23 @@ function isRewrittenPayload(value: DictionaryInput): value is RewrittenPayload {
   )
 }
 
-// Oxford raw payload かどうかを判定する。
+// Oxford raw payload かどうかを判定
 function isOxfordPayload(value: DictionaryInput): value is OxfordPayload {
   return isRecord(value) && 'results' in value
 }
 
-// lexical unit っぽい object かどうかを判定する。
+// lexical unit として最低限必要な shape を持つか判定
 function isLexicalUnitLike(
   value: unknown
 ): value is LexicalUnit | SimpleLexicalUnit {
-  return isRecord(value)
+  return (
+    isRecord(value) &&
+    typeof value.lexicalUnitId === 'string' &&
+    typeof value.text === 'string'
+  )
 }
 
-// 語源パーツの種別が有効か判定する。
+// 語源パーツの種別が有効か判定
 function isEtymologyPartType(value: unknown): value is EtymologyPartType {
   return (
     value === 'prefix' ||
@@ -206,7 +210,12 @@ function isEtymologyPartType(value: unknown): value is EtymologyPartType {
   )
 }
 
-// string 配列を安全に読む。
+// string を安全に読む
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+// string 配列を安全に読む
 function readStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
 
@@ -215,7 +224,24 @@ function readStringArray(value: unknown): string[] {
   )
 }
 
-// unknown から語源データを安全に整形する。
+// ja 翻訳を { ja } / { translations: { ja } } の両方から拾う
+function readJaValue(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined
+
+  if (typeof value.ja === 'string' && value.ja.length > 0) {
+    return value.ja
+  }
+
+  const translations = isRecord(value.translations) ? value.translations : null
+
+  if (translations && typeof translations.ja === 'string' && translations.ja.length > 0) {
+    return translations.ja
+  }
+
+  return undefined
+}
+
+// unknown から語源データを安全に整形
 function normalizeEtymologyData(value: unknown): EtymologyData | null {
   if (!isRecord(value)) return null
 
@@ -298,7 +324,7 @@ function normalizeEtymologyData(value: unknown): EtymologyData | null {
   return null
 }
 
-// unknown から多言語テキストを安全に読む。
+// unknown から多言語テキストを安全に読む
 function readLocalizedText(value: unknown): LocalizedText {
   if (typeof value === 'string') {
     return { en: value }
@@ -308,27 +334,13 @@ function readLocalizedText(value: unknown): LocalizedText {
     return { en: '' }
   }
 
-  const translations = isRecord(value.translations) ? value.translations : {}
-
-  const en =
-    typeof value.en === 'string'
-      ? value.en
-      : typeof value.text === 'string'
-        ? value.text
-        : ''
-
-  const ja =
-    typeof value.ja === 'string'
-      ? value.ja
-      : typeof value.translation === 'string'
-        ? value.translation
-        : typeof translations.ja === 'string'
-          ? translations.ja
-          : undefined
-
-  return { en, ja }
+  return {
+    en: typeof value.en === 'string' ? value.en : '',
+    ja: readJaValue(value),
+  }
 }
 
+// unknown から多言語例文を安全に読む
 function readLocalizedExample(value: unknown): LocalizedExample | undefined {
   if (typeof value === 'string') {
     return { en: value }
@@ -336,33 +348,47 @@ function readLocalizedExample(value: unknown): LocalizedExample | undefined {
 
   if (!isRecord(value)) return undefined
 
-  const translations = isRecord(value.translations) ? value.translations : {}
-
-  const en =
-    typeof value.en === 'string'
-      ? value.en
-      : typeof value.sentence === 'string'
-        ? value.sentence
-        : typeof value.text === 'string'
-          ? value.text
-          : undefined
-
-  const ja =
-    typeof value.ja === 'string'
-      ? value.ja
-      : typeof value.translation === 'string'
-        ? value.translation
-        : typeof translations.ja === 'string'
-          ? translations.ja
-          : undefined
+  const en = readString(value.en)
+  const ja = readJaValue(value)
 
   if (!en && !ja) return undefined
 
-  return { en, ja }
+  return {
+    en,
+    ja,
+  }
 }
 
+// sense 1件を内部 shape に寄せる
+function readParsedSenseItem(value: unknown): ParsedLocalizedSenseItem | null {
+  if (!isRecord(value)) return null
 
-// normalizeDictionary 済みの辞書 shape を内部の多言語 shape にそろえる。
+  const senseId = typeof value.senseId === 'string' ? value.senseId : ''
+  if (!senseId) return null
+
+  const meaningFromMeaning = readLocalizedText(value.meaning)
+  const meaningFromDefinition = readLocalizedText(value.definition)
+
+  const meaning =
+    meaningFromMeaning.en.length > 0 ? meaningFromMeaning : meaningFromDefinition
+
+  if (!meaning.en) return null
+
+  const exampleFromExample = readLocalizedExample(value.example)
+  const exampleFromExampleTranslation = readLocalizedExample(value.exampleTranslation)
+
+  const example =
+    exampleFromExample ?? exampleFromExampleTranslation ?? undefined
+
+  return {
+    senseId,
+    meaning,
+    example,
+    patterns: readStringArray(value.patterns),
+  }
+}
+
+// normalizeDictionary 済みの辞書 shape を内部の多言語 shape にそろえる
 function normalizeParsedDictionary(value: unknown): ParsedDictionary {
   const safeValue = isRecord(value) ? value : {}
 
@@ -374,41 +400,13 @@ function normalizeParsedDictionary(value: unknown): ParsedDictionary {
     Object.entries(rawSenses).map(([pos, items]) => {
       const safeItems = Array.isArray(items)
         ? items
-            .map((item) => {
-              const safeItem = isRecord(item) ? item : {}
-
-              const senseId =
-                typeof safeItem.senseId === 'string' ? safeItem.senseId : ''
-
-                const meaningEn =
-                typeof safeItem.meaning === 'string'
-                  ? safeItem.meaning
-                  : typeof safeItem.definition === 'string'
-                    ? safeItem.definition
-                    : ''
-
-              const exampleEn =
-                typeof safeItem.example === 'string'
-                  ? safeItem.example
-                  : undefined
-
-              return {
-                senseId,
-                meaning: {
-                  en: meaningEn,
-                },
-                example: exampleEn
-                  ? {
-                      en: exampleEn,
-                    }
-                  : undefined,
-                patterns: readStringArray(safeItem.patterns),
-              }
-            })
-            .filter((item) => item.senseId && item.meaning.en)
+            .map((item) => readParsedSenseItem(item))
+            .filter(
+              (item): item is ParsedLocalizedSenseItem => item !== null
+            )
         : []
 
-      return [pos, safeItems]
+      return [String(pos).toLowerCase(), safeItems]
     })
   ) as Record<string, ParsedLocalizedSenseItem[]>
 
@@ -427,7 +425,7 @@ function normalizeParsedDictionary(value: unknown): ParsedDictionary {
   }
 }
 
-// raw payload を normalizeDictionary に通して既存表示 shape にそろえる。
+// raw payload を normalizeDictionary に通して既存表示 shape にそろえる
 function callNormalizeDictionary(
   dictionary: DictionaryInput,
   word: string
@@ -447,7 +445,7 @@ export default function WordPageClient({
   word: string
   dictionary: DictionaryInput
 }) {
-  // Header と共有する表示言語を localStorage から読む。
+  // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('en')
 
   useEffect(() => {
@@ -463,16 +461,22 @@ export default function WordPageClient({
 
     syncDisplayLocale()
 
-    window.addEventListener('display-locale-change', syncDisplayLocale)
+    window.addEventListener(
+      DISPLAY_LOCALE_EVENT_NAME,
+      syncDisplayLocale as EventListener
+    )
     window.addEventListener('storage', syncDisplayLocale)
 
     return () => {
-      window.removeEventListener('display-locale-change', syncDisplayLocale)
+      window.removeEventListener(
+        DISPLAY_LOCALE_EVENT_NAME,
+        syncDisplayLocale as EventListener
+      )
       window.removeEventListener('storage', syncDisplayLocale)
     }
   }, [])
 
-  // Oxford raw / rewriteDictionary 後の両方を内部の共通 shape にそろえる。
+  // Oxford raw / rewriteDictionary 後の両方を内部の共通 shape にそろえる
   const parsed = useMemo<ParsedDictionary>(() => {
     if (!isRewrittenPayload(dictionary)) {
       return callNormalizeDictionary(dictionary, word)
@@ -488,22 +492,24 @@ export default function WordPageClient({
       const pos = String(group.partOfSpeech ?? '').toLowerCase()
       if (!pos) return
 
-      const items: ParsedLocalizedSenseItem[] = (group.senses ?? []).map(
-        (sense) => ({
-          senseId: String(sense.senseId ?? ''),
-          meaning: readLocalizedText(sense.definition),
-          example: readLocalizedExample(sense.example),
-          patterns: readStringArray(sense.patterns),
-        })
-      )
+      const items = Array.isArray(group.senses)
+        ? group.senses
+            .map((sense) =>
+              readParsedSenseItem({
+                senseId: sense.senseId,
+                meaning: sense.definition,
+                example: sense.example,
+                patterns: sense.patterns,
+              })
+            )
+            .filter(
+              (item): item is ParsedLocalizedSenseItem => item !== null
+            )
+        : []
 
-      const validItems = items.filter(
-        (sense) => Boolean(sense.senseId && sense.meaning.en)
-      )
+      if (items.length === 0) return
 
-      if (validItems.length === 0) return
-
-      senses[pos] = validItems
+      senses[pos] = items
     })
 
     return {
@@ -532,7 +538,7 @@ export default function WordPageClient({
     etymologyData,
   } = parsed
 
-  // 表示言語に応じて EntryCard 用の string shape に落とす。
+  // 表示言語に応じて EntryCard 用の string shape に落とす
   const displaySenses = useMemo<Record<string, DisplaySenseItem[]>>(() => {
     return Object.fromEntries(
       Object.entries(senses).map(([pos, items]) => [
@@ -543,26 +549,23 @@ export default function WordPageClient({
             displayLocale === 'ja'
               ? sense.meaning.ja ?? sense.meaning.en
               : sense.meaning.en,
-          // 英文は常に残す
-          example: sense.example?.en,
-          // 和訳は JA のときだけ出す
-          exampleTranslation:
+          example:
             displayLocale === 'ja'
-              ? sense.example?.ja
-              : undefined,
+              ? sense.example?.ja ?? sense.example?.en
+              : sense.example?.en,
           patterns: sense.patterns,
         })),
       ])
     ) as Record<string, DisplaySenseItem[]>
   }, [displayLocale, senses])
 
-  const grammarTags = useMemo(() => {
+  // Oxford raw から grammatical note を抽出
+  const grammarTags = useMemo<Record<string, string[]>>(() => {
     if (!isOxfordPayload(dictionary)) {
       return {}
     }
 
     const results = Array.isArray(dictionary.results) ? dictionary.results : []
-
     const lexicalEntries = results.flatMap(
       (result) => result.lexicalEntries ?? []
     )
@@ -574,7 +577,7 @@ export default function WordPageClient({
     const result: Record<string, string[]> = {}
 
     lexicalEntries.forEach((lexicalEntry) => {
-      const pos = lexicalEntry.lexicalCategory?.id
+      const pos = String(lexicalEntry.lexicalCategory?.id ?? '').toLowerCase()
 
       const features: string[] = (lexicalEntry.entries ?? [])
         .flatMap((entry) => [
@@ -618,11 +621,11 @@ export default function WordPageClient({
     setPinnedSenseId(senseId)
   }
 
-  // EntryCard の言語トグル変更を state / localStorage / Header 連携に反映する。
+  // EntryCard の言語トグル変更を state / localStorage / Header 連携に反映
   const handleChangeDisplayLocale = (nextLocale: DisplayLocale) => {
     setDisplayLocale(nextLocale)
     window.localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, nextLocale)
-    window.dispatchEvent(new Event('display-locale-change'))
+    window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME))
   }
 
   useEffect(() => {
@@ -652,6 +655,7 @@ export default function WordPageClient({
     setSavedWords(list.map((item) => item.word))
   }
 
+  // IPA / audio を決定
   const pronunciation = useMemo(() => {
     if (dictionary?.ipa) {
       return {
@@ -668,7 +672,6 @@ export default function WordPageClient({
     }
 
     const results = Array.isArray(dictionary.results) ? dictionary.results : []
-
     const lexicalEntries = results.flatMap(
       (result) => result.lexicalEntries ?? []
     )
@@ -676,7 +679,7 @@ export default function WordPageClient({
     const pronunciationItem = lexicalEntries
       .flatMap((lexicalEntry) => lexicalEntry.entries ?? [])
       .flatMap((entry) => entry.pronunciations ?? [])
-      .find((item) => item.audioFile)
+      .find((item) => item.audioFile || item.phoneticSpelling)
 
     return {
       phoneticSpelling: pronunciationItem?.phoneticSpelling,
