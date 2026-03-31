@@ -1,14 +1,15 @@
 'use client'
 
-// wordページ全体のレイアウト
-// header / memory hook / senses / lexicalUnits / synonyms などの sections を並べる
-// 各 section に適切な子コンポーネントを渡す
+// wordページ全体のレイアウト担当
+// header / memory hook / senses / synonyms などの sections を並べる
+// WordPageClient から渡された表示用データを locale に応じて描画する
 
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit } from '@/types/LexicalUnit'
 import { BsPin, BsPinFill } from 'react-icons/bs'
-import LexicalUnitCard from '@/components/LexicalUnitCard'
+import LanguageToggle from '@/components/LanguageToggle'
+import GrammarTags from '@/components/GrammarTags'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -19,6 +20,8 @@ type SimpleLexicalUnit = {
   lexicalUnitId: string
   text: string
 }
+
+type DisplayLocale = 'en' | 'ja'
 
 type EtymologyPartType = 'prefix' | 'root' | 'suffix' | 'unknown'
 
@@ -57,22 +60,26 @@ type EtymologyData = {
   structure: PartsEtymologyStructure | OriginEtymologyStructure
 }
 
+type LocalizedEtymologyJa = {
+  originLanguageLabel?: string
+  description?: string
+  sourceMeaning?: string
+  hook?: string
+}
+
 type SenseItem = {
   senseId: string
   meaning: string
   example?: string
   exampleTranslation?: string
-  patterns?: string[]
 }
 
 type Props = {
   headword: string
-  pronunciation: {
-    phoneticSpelling?: string
-    audioFile?: string
-  }
+  pronunciation: Pronunciation
   etymology: string
   etymologyData: EtymologyData | null
+  localizedEtymologyJa: LocalizedEtymologyJa | null
   senses: Record<string, SenseItem[]>
   lexicalUnits: Array<LexicalUnit | SimpleLexicalUnit>
   inflections: string[]
@@ -88,19 +95,24 @@ type Props = {
   onChangeDisplayLocale: (locale: DisplayLocale) => void
 }
 
-// 画面表示で切り替える言語を表す。
-type DisplayLocale = 'en' | 'ja'
-
-function isDetailedLexicalUnit(
-  unit: LexicalUnit | SimpleLexicalUnit
-): unit is LexicalUnit {
-  return 'phrase' in unit
+const POS_LABEL_EN: Record<string, string> = {
+  noun: 'noun',
+  verb: 'verb',
+  adjective: 'adjective',
+  adverb: 'adverb',
+  pronoun: 'pronoun',
+  preposition: 'preposition',
+  conjunction: 'conjunction',
+  determiner: 'determiner',
+  interjection: 'interjection',
 }
 
-function isSimpleLexicalUnit(
-  unit: LexicalUnit | SimpleLexicalUnit
-): unit is SimpleLexicalUnit {
-  return 'text' in unit
+function getPosLabel(pos: string, locale: DisplayLocale): string {
+  if (locale === 'ja') {
+    return POS_LABEL_JA[pos] ?? pos
+  }
+
+  return POS_LABEL_EN[pos] ?? pos
 }
 
 export default function EntryCard({
@@ -108,8 +120,8 @@ export default function EntryCard({
   pronunciation,
   etymology,
   etymologyData,
+  localizedEtymologyJa,
   senses = {},
-  lexicalUnits = [],
   inflections = [],
   synonyms = [],
   antonyms = [],
@@ -122,32 +134,65 @@ export default function EntryCard({
   onTogglePin,
   onSave,
 }: Props) {
-  // 音声再生
+  // 音声再生担当
   const playAudio = () => {
     if (!pronunciation?.audioFile) return
     new Audio(pronunciation.audioFile).play()
   }
 
-  // lexical unit の型絞り込み
-  const detailedLexicalUnits = lexicalUnits.filter(isDetailedLexicalUnit)
-  const simpleLexicalUnits = lexicalUnits.filter(isSimpleLexicalUnit)
+  // ラベル切り替え担当
+  const labels =
+    displayLocale === 'ja'
+      ? {
+          memoryHook: '語源フック',
+          originLanguage: '語源言語',
+          derivatives: '派生語',
+          synonyms: '類義語',
+          antonyms: '対義語',
+          noMemoryHook: 'まだ語源フックはありません。',
+          pinThisSense: 'この意味をピン留め',
+        }
+      : {
+          memoryHook: 'Memory Hook',
+          originLanguage: 'originLanguage',
+          derivatives: 'derivatives',
+          synonyms: 'Synonyms',
+          antonyms: 'Antonyms',
+          noMemoryHook: 'No memory hook available yet.',
+          pinThisSense: 'Pin this sense',
+        }
 
   // Memory Hook 用の表示データ
-// origin language は object 1件で受ける
-const originLanguage = etymologyData?.originLanguage ?? null
+  const originLanguage = etymologyData?.originLanguage ?? null
 
-// parts は structure.type === 'parts' のときだけ使う
-const parts =
-  etymologyData?.structure.type === 'parts'
-    ? etymologyData.structure.parts.filter(
-        (part) => Boolean(part.text) || Boolean(part.meaning)
-      )
-    : []
+  const parts =
+    etymologyData?.structure.type === 'parts'
+      ? etymologyData.structure.parts.filter(
+          (part) => Boolean(part.text) || Boolean(part.meaning)
+        )
+      : []
 
-const hasParts = parts.length > 0
-const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
+  const displayedOriginLanguageLabel =
+    displayLocale === 'ja'
+      ? localizedEtymologyJa?.originLanguageLabel ??
+        originLanguage?.labelJa ??
+        originLanguage?.labelEn
+      : originLanguage?.labelEn ?? originLanguage?.labelJa
+
+  const displayedEtymologyDescription =
+    displayLocale === 'ja'
+      ? localizedEtymologyJa?.description ?? etymology
+      : etymology
+
+  const hasParts = parts.length > 0
+  const hasEtymologyText = Boolean(
+    displayedEtymologyDescription &&
+      displayedEtymologyDescription.trim().length > 0
+  )
+  
+
   // derivatives の並びを最低限整える
-  const orderedDerivatives = [...derivatives].sort((a, b) => {
+  const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
     const score = (value: string) => {
       if (value.endsWith('ing')) return 3
       if (value.endsWith('ed')) return 2
@@ -162,14 +207,14 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
     <div className="mx-auto mt-6 max-w-2xl px-4">
       <div className="rounded-2xl bg-white p-6">
         {/* HEADER */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-semibold text-gray-900">
               {headword}
             </h1>
 
             {pronunciation?.audioFile && (
-              <button onClick={playAudio}>
+              <button type="button" onClick={playAudio}>
                 <HiSpeakerWave className="h-5 w-5 text-gray-500" />
               </button>
             )}
@@ -181,8 +226,13 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
             )}
           </div>
 
-          {onSave && (
-            <button onClick={onSave}>
+          <div className="flex items-center gap-3">
+            <LanguageToggle
+              value={displayLocale}
+              onChange={onChangeDisplayLocale}
+            />
+
+            <button type="button" onClick={onSave}>
               <HiBookmark
                 className={
                   'h-6 w-6 ' +
@@ -190,58 +240,66 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
                 }
               />
             </button>
-          )}
+          </div>
         </div>
 
         {/* MEMORY HOOK */}
+        {/* MEMORY HOOK */}
         <div className="mt-6 rounded-2xl bg-green-50 p-4">
           <div className="font-semibold text-green-700">
-            Memory Hook
+            {labels.memoryHook}
           </div>
 
           {/* originLanguage */}
-          {originLanguage && (
+          {displayedOriginLanguageLabel && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <div className="font-semibold text-green-700">
-                originLanguage
+                {labels.originLanguage}
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <span
-                  className="rounded-xs border border-gray-300 bg-white px-4 py-1 text-xs text-gray-500"
-                >
-                  {originLanguage.labelEn}
+                <span className="rounded-xs border border-gray-300 bg-white px-4 py-1 text-xs text-gray-500">
+                  {displayedOriginLanguageLabel}
                 </span>
               </div>
             </div>
           )}
 
-          {/* parts がある単語 */}
-          {hasParts ? (
+          {/* parts は補助表示 */}
+          {hasParts && (
             <div className="mt-4 flex flex-wrap gap-4">
-              {parts.map((part, index) => (
-                <div
-                  key={`${part.text ?? 'part'}-${index}`}
-                  className="flex min-w-[260px] items-center gap-6 rounded-xl bg-green-100 px-4 py-4"
-                >
-                  <span className="rounded-xl border-2 border-green-500 bg-white px-5 py-1 text-sm leading-none text-green-600">
-                    {part.text}
-                  </span>
+              {parts.map((part, index) => {
+                const displayedMeaning =
+                  displayLocale === 'ja'
+                    ? part.meaningJa ?? part.meaning ?? ''
+                    : part.meaning ?? part.meaningJa ?? ''
 
-                  <span className="text-sm text-green-700">
-                    {part.meaning}
-                  </span>
-                </div>
-              ))}
+                return (
+                  <div
+                    key={`${part.text ?? 'part'}-${index}`}
+                    className="flex min-w-[260px] items-center gap-6 rounded-xl bg-green-100 px-4 py-4"
+                  >
+                    <span className="rounded-xl border-2 border-green-500 bg-white px-5 py-1 text-sm leading-none text-green-600">
+                      {part.text}
+                    </span>
+
+                    <span className="text-sm text-green-700">
+                      {displayedMeaning}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-          ) : hasEtymologyText ? (
-            /* parts がない単語は Oxford etymology 文 */
+          )}
+
+          {/* 語源文は常時表示 */}
+          {hasEtymologyText ? (
             <p className="mt-4 text-xs leading-8 text-green-900">
-              {etymology}
+              {displayedEtymologyDescription}
             </p>
           ) : (
             <p className="mt-4 text-xs leading-8 text-green-900">
-              No memory hook available yet.
+              {labels.noMemoryHook}
             </p>
           )}
 
@@ -249,7 +307,7 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
           {orderedDerivatives.length > 0 && (
             <div className="mt-6">
               <div className="text-xl font-semibold text-green-700">
-                derivatives
+                {labels.derivatives}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3">
@@ -274,17 +332,8 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
               <div key={pos}>
                 <div className="mb-2 flex items-center gap-3">
                   <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
-                    {POS_LABEL_JA[pos] ?? pos}
+                    {getPosLabel(pos, displayLocale)}
                   </span>
-
-                  {grammarTags[pos]?.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded bg-gray-100 px-2 py-1 text-xs"
-                    >
-                      {tag}
-                    </span>
-                  ))}
                 </div>
 
                 {pos === 'verb' && inflections.length > 0 && (
@@ -305,34 +354,31 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
                         <div className="min-w-0 flex-1">
                           <p className="text-gray-900">{sense.meaning}</p>
 
-                          {sense.patterns && sense.patterns.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {sense.patterns.map((pattern) => (
-                                <span
-                                  key={pattern}
-                                  className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600"
-                                >
-                                  {pattern}
-                                </span>
-                              ))}
+                          {grammarTags[sense.senseId] &&
+                            grammarTags[sense.senseId].length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <GrammarTags
+                                  tags={grammarTags[sense.senseId]}
+                                  displayLocale={displayLocale}
+                                />
+                              </div>
+                            )}
+
+                          {(sense.example || sense.exampleTranslation) && (
+                            <div className="mt-2 space-y-1">
+                              {sense.example && (
+                                <p className="text-gray-600">
+                                  {sense.example}
+                                </p>
+                              )}
+
+                              {sense.exampleTranslation && (
+                                <p className="text-gray-500">
+                                  {sense.exampleTranslation}
+                                </p>
+                              )}
                             </div>
                           )}
-
-                        {(sense.example || sense.exampleTranslation) && (
-                          <div className="mt-2 space-y-1">
-                            {sense.example && (
-                              <p className="text-gray-600">
-                                {sense.example}
-                              </p>
-                            )}
-
-                            {sense.exampleTranslation && (
-                              <p className="text-gray-500">
-                                {sense.exampleTranslation}
-                              </p>
-                            )}
-                          </div>
-                        )}
                         </div>
 
                         <div className="group/pin relative shrink-0">
@@ -350,7 +396,7 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
 
                           {!isPinned && (
                             <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-gray-700 px-4 py-3 text-sm text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
-                              この意味をピン留め
+                              {labels.pinThisSense}
                               <span className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-gray-700" />
                             </span>
                           )}
@@ -367,7 +413,7 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
         {synonyms.length > 0 && (
           <div className="mt-6">
             <div className="mb-1 text-xs text-gray-400">
-              Synonyms
+              {labels.synonyms}
             </div>
             <div className="text-gray-800">
               {synonyms.slice(0, 8).join(', ')}
@@ -379,7 +425,7 @@ const hasEtymologyText = Boolean(etymology && etymology.trim().length > 0)
         {antonyms.length > 0 && (
           <div className="mt-4">
             <div className="mb-1 text-xs text-gray-400">
-              Antonyms
+              {labels.antonyms}
             </div>
             <div className="text-gray-800">
               {antonyms.slice(0, 8).join(', ')}

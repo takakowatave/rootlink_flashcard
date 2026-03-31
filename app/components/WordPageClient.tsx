@@ -1,10 +1,12 @@
 'use client'
 
+// wordページのデータ整形担当
+// Oxford / rewritten / normalized の辞書データを画面表示用 shape にそろえて EntryCard に渡す
+
 import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
 import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
-import { normalizeDictionary } from '@/lib/normalizeDictionary'
 import type { LexicalUnit } from '@/types/LexicalUnit'
 
 type SimpleLexicalUnit = {
@@ -31,12 +33,19 @@ type LocalizedExample = {
   ja?: string
 }
 
+// EntryCard に渡す語源日本語補助データ
+type LocalizedEtymologyJa = {
+  originLanguageLabel?: string
+  description?: string
+  sourceMeaning?: string
+  hook?: string
+}
+
 // 内部の sense shape
 type ParsedLocalizedSenseItem = {
   senseId: string
   meaning: LocalizedText
   example?: LocalizedExample
-  patterns?: string[]
 }
 
 // EntryCard に渡す表示用 sense shape
@@ -44,7 +53,7 @@ type DisplaySenseItem = {
   senseId: string
   meaning: string
   example?: string
-  patterns?: string[]
+  exampleTranslation?: string
 }
 
 // rewriteDictionary 後の 1 sense shape
@@ -108,6 +117,7 @@ type ParsedDictionary = {
   lexicalUnits: Array<LexicalUnit | SimpleLexicalUnit>
   etymology: string
   etymologyData: EtymologyData | null
+  localizedEtymologyJa: LocalizedEtymologyJa | null
 }
 
 type OxfordNote = {
@@ -115,11 +125,31 @@ type OxfordNote = {
   text?: string
 }
 
+type OxfordExample = {
+  text?: string
+}
+
+type OxfordInflection = {
+  inflectedForm?: string
+}
+
+type OxfordPhrase = {
+  text?: string
+}
+
 type OxfordSubsense = {
+  id?: string
+  definitions?: string[]
+  shortDefinitions?: string[]
+  examples?: OxfordExample[]
   notes?: OxfordNote[]
 }
 
 type OxfordSense = {
+  id?: string
+  definitions?: string[]
+  shortDefinitions?: string[]
+  examples?: OxfordExample[]
   notes?: OxfordNote[]
   subsenses?: OxfordSubsense[]
 }
@@ -133,6 +163,8 @@ type OxfordEntry = {
   notes?: OxfordNote[]
   senses?: OxfordSense[]
   pronunciations?: OxfordPronunciation[]
+  etymologies?: string[]
+  inflections?: OxfordInflection[]
 }
 
 type OxfordLexicalEntry = {
@@ -140,6 +172,7 @@ type OxfordLexicalEntry = {
     id?: string
   }
   entries?: OxfordEntry[]
+  phrases?: OxfordPhrase[]
 }
 
 type OxfordResult = {
@@ -162,6 +195,24 @@ type RewrittenPayload = {
   etymology?: string
   etymologyData?: EtymologyData | null
   ipa?: string
+  locales?: {
+    ja?: {
+      senses?: Record<
+      string,
+      {
+        meaning?: string | null
+        exampleTranslation?: string | null
+        grammarTags?: string[] | null
+      }
+    >
+      etymology?: {
+        originLanguageLabel?: string | null
+        description?: string | null
+        sourceMeaning?: string | null
+        hook?: string | null
+      }
+    }
+  }
 }
 
 type DictionaryInput = OxfordPayload | RewrittenPayload | null | undefined
@@ -169,6 +220,9 @@ type DictionaryInput = OxfordPayload | RewrittenPayload | null | undefined
 type WordlistItem = {
   word: string
 }
+
+// senseId ごとの grammatical note
+type GrammarTagsBySense = Record<string, string[]>
 
 // unknown が object かどうかを判定
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -210,11 +264,6 @@ function isEtymologyPartType(value: unknown): value is EtymologyPartType {
   )
 }
 
-// string を安全に読む
-function readString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined
-}
-
 // string 配列を安全に読む
 function readStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -222,6 +271,28 @@ function readStringArray(value: unknown): string[] {
   return value.filter(
     (item): item is string => typeof item === 'string' && item.length > 0
   )
+}
+
+// grammatical note を "no object, with adverbial" -> ["no object", "with adverbial"] に分解
+function splitGrammarNoteText(text: string): string[] {
+  return text
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 0)
+}
+
+// notes 配列から grammatical note だけを抽出
+function readGrammarNoteTexts(notes: OxfordNote[] | undefined): string[] {
+  if (!Array.isArray(notes)) return []
+
+  return notes
+    .filter(
+      (note): note is OxfordNote =>
+        note.type === 'grammaticalNote' &&
+        typeof note.text === 'string' &&
+        note.text.trim().length > 0
+    )
+    .flatMap((note) => splitGrammarNoteText(note.text ?? ''))
 }
 
 // ja 翻訳を { ja } / { translations: { ja } } の両方から拾う
@@ -234,7 +305,11 @@ function readJaValue(value: unknown): string | undefined {
 
   const translations = isRecord(value.translations) ? value.translations : null
 
-  if (translations && typeof translations.ja === 'string' && translations.ja.length > 0) {
+  if (
+    translations &&
+    typeof translations.ja === 'string' &&
+    translations.ja.length > 0
+  ) {
     return translations.ja
   }
 
@@ -343,19 +418,106 @@ function readLocalizedText(value: unknown): LocalizedText {
 // unknown から多言語例文を安全に読む
 function readLocalizedExample(value: unknown): LocalizedExample | undefined {
   if (typeof value === 'string') {
-    return { en: value }
+    return value.trim().length > 0 ? { en: value } : undefined
   }
 
   if (!isRecord(value)) return undefined
 
-  const en = readString(value.en)
-  const ja = readJaValue(value)
+  const translations = isRecord(value.translations) ? value.translations : {}
+  const en = typeof value.en === 'string' ? value.en : undefined
+  const ja =
+    typeof value.ja === 'string'
+      ? value.ja
+      : typeof translations.ja === 'string'
+        ? translations.ja
+        : undefined
 
   if (!en && !ja) return undefined
 
   return {
     en,
     ja,
+  }
+}
+
+// locales.ja.senses を senseId で引ける形にする
+function readJaLocaleSenseMap(
+  value: unknown
+): Record<
+  string,
+  {
+    meaning?: string
+    exampleTranslation?: string
+  }
+> {
+  if (!isRecord(value)) return {}
+
+  const locales = isRecord(value.locales) ? value.locales : null
+  const jaLocale = locales && isRecord(locales.ja) ? locales.ja : null
+  const rawSenses =
+    jaLocale && isRecord(jaLocale.senses)
+      ? (jaLocale.senses as Record<string, unknown>)
+      : {}
+
+  return Object.fromEntries(
+    Object.entries(rawSenses).map(([senseId, senseValue]) => {
+      const safeSense = isRecord(senseValue) ? senseValue : {}
+
+      return [
+        senseId,
+        {
+          meaning:
+            typeof safeSense.meaning === 'string'
+              ? safeSense.meaning
+              : undefined,
+          exampleTranslation:
+            typeof safeSense.exampleTranslation === 'string'
+              ? safeSense.exampleTranslation
+              : undefined,
+        },
+      ]
+    })
+  )
+}
+
+// locales.ja.etymology を読む
+function readLocalizedEtymologyJa(value: unknown): LocalizedEtymologyJa | null {
+  if (!isRecord(value)) return null
+
+  const locales = isRecord(value.locales) ? value.locales : null
+  const jaLocale = locales && isRecord(locales.ja) ? locales.ja : null
+  const etymology =
+    jaLocale && isRecord(jaLocale.etymology) ? jaLocale.etymology : null
+
+  if (!etymology) return null
+
+  const originLanguageLabel =
+    typeof etymology.originLanguageLabel === 'string'
+      ? etymology.originLanguageLabel
+      : undefined
+
+  const description =
+    typeof etymology.description === 'string'
+      ? etymology.description
+      : undefined
+
+  const sourceMeaning =
+    typeof etymology.sourceMeaning === 'string'
+      ? etymology.sourceMeaning
+      : undefined
+
+  const hook =
+    typeof etymology.hook === 'string' ? etymology.hook : undefined
+
+  if (!originLanguageLabel && !description && !sourceMeaning && !hook) {
+    return null
+  }
+
+  return {
+    originLanguageLabel,
+    description,
+    sourceMeaning,
+    hook,
   }
 }
 
@@ -375,7 +537,9 @@ function readParsedSenseItem(value: unknown): ParsedLocalizedSenseItem | null {
   if (!meaning.en) return null
 
   const exampleFromExample = readLocalizedExample(value.example)
-  const exampleFromExampleTranslation = readLocalizedExample(value.exampleTranslation)
+  const exampleFromExampleTranslation = readLocalizedExample(
+    value.exampleTranslation
+  )
 
   const example =
     exampleFromExample ?? exampleFromExampleTranslation ?? undefined
@@ -384,11 +548,10 @@ function readParsedSenseItem(value: unknown): ParsedLocalizedSenseItem | null {
     senseId,
     meaning,
     example,
-    patterns: readStringArray(value.patterns),
   }
 }
 
-// normalizeDictionary 済みの辞書 shape を内部の多言語 shape にそろえる
+// normalize 済みの辞書 shape を内部の多言語 shape にそろえる
 function normalizeParsedDictionary(value: unknown): ParsedDictionary {
   const safeValue = isRecord(value) ? value : {}
 
@@ -422,20 +585,150 @@ function normalizeParsedDictionary(value: unknown): ParsedDictionary {
     etymology:
       typeof safeValue.etymology === 'string' ? safeValue.etymology : '',
     etymologyData: normalizeEtymologyData(safeValue.etymologyData),
+    localizedEtymologyJa: readLocalizedEtymologyJa(safeValue),
   }
 }
 
-// raw payload を normalizeDictionary に通して既存表示 shape にそろえる
-function callNormalizeDictionary(
-  dictionary: DictionaryInput,
+// Oxford raw payload を画面用 shape に変換
+function toStableId(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function readFirstString(values: unknown): string {
+  if (!Array.isArray(values)) return ''
+
+  const first = values.find(
+    (item): item is string => typeof item === 'string' && item.trim().length > 0
+  )
+
+  return first?.trim() ?? ''
+}
+
+function readFirstExampleText(values: unknown): string | undefined {
+  if (!Array.isArray(values)) return undefined
+
+  const first = values.find(
+    (item): item is OxfordExample =>
+      isRecord(item) &&
+      typeof item.text === 'string' &&
+      item.text.trim().length > 0
+  )
+
+  return first?.text?.trim()
+}
+
+function parseOxfordPayload(
+  dictionary: OxfordPayload,
   word: string
 ): ParsedDictionary {
-  type NormalizeDictionaryInput = Parameters<typeof normalizeDictionary>[0]
+  const results = Array.isArray(dictionary.results) ? dictionary.results : []
+  const lexicalEntries = results.flatMap((result) => result.lexicalEntries ?? [])
 
-  const payload = (dictionary ?? {}) as NormalizeDictionaryInput
-  const normalized = normalizeDictionary(payload, word)
+  const senses: Record<string, ParsedLocalizedSenseItem[]> = {}
 
-  return normalizeParsedDictionary(normalized)
+  lexicalEntries.forEach((lexicalEntry) => {
+    const pos = String(lexicalEntry.lexicalCategory?.id ?? '').toLowerCase()
+    if (!pos) return
+
+    const items: ParsedLocalizedSenseItem[] = []
+
+    ;(lexicalEntry.entries ?? []).forEach((entry) => {
+      ;(entry.senses ?? []).forEach((sense, senseIndex) => {
+        const senseId =
+          typeof sense.id === 'string' && sense.id.length > 0
+            ? sense.id
+            : `${toStableId(word)}__${toStableId(pos)}__${senseIndex + 1}`
+
+        const meaning =
+          readFirstString(sense.definitions) ||
+          readFirstString(sense.shortDefinitions)
+
+        const example = readFirstExampleText(sense.examples)
+
+        if (meaning) {
+          items.push({
+            senseId,
+            meaning: { en: meaning },
+            example: example ? { en: example } : undefined,
+          })
+        }
+
+        ;(sense.subsenses ?? []).forEach((subsense, subsenseIndex) => {
+          const subsenseId =
+            typeof subsense.id === 'string' && subsense.id.length > 0
+              ? subsense.id
+              : `${senseId}__sub__${subsenseIndex + 1}`
+
+          const subsenseMeaning =
+            readFirstString(subsense.definitions) ||
+            readFirstString(subsense.shortDefinitions)
+
+          const subsenseExample = readFirstExampleText(subsense.examples)
+
+          if (!subsenseMeaning) return
+
+          items.push({
+            senseId: subsenseId,
+            meaning: { en: subsenseMeaning },
+            example: subsenseExample ? { en: subsenseExample } : undefined,
+          })
+        })
+      })
+    })
+
+    if (items.length > 0) {
+      senses[pos] = items
+    }
+  })
+
+  const inflections = lexicalEntries.flatMap((lexicalEntry) =>
+    (lexicalEntry.entries ?? []).flatMap((entry) =>
+      (entry.inflections ?? [])
+        .map((item) =>
+          typeof item.inflectedForm === 'string' ? item.inflectedForm : ''
+        )
+        .filter((item): item is string => item.length > 0)
+    )
+  )
+
+  const etymology =
+    lexicalEntries
+      .flatMap((lexicalEntry) => lexicalEntry.entries ?? [])
+      .flatMap((entry) => entry.etymologies ?? [])
+      .find(
+        (item): item is string => typeof item === 'string' && item.length > 0
+      ) ?? ''
+
+  const lexicalUnits: Array<LexicalUnit | SimpleLexicalUnit> = lexicalEntries
+    .flatMap((lexicalEntry) => lexicalEntry.phrases ?? [])
+    .map((phrase) => {
+      const text = typeof phrase.text === 'string' ? phrase.text.trim() : ''
+
+      if (!text) return null
+
+      return {
+        lexicalUnitId: toStableId(text),
+        text,
+      }
+    })
+    .filter((item): item is SimpleLexicalUnit => item !== null)
+
+  return {
+    inflections: [...new Set(inflections)],
+    synonyms: [],
+    antonyms: [],
+    derivatives: [],
+    senses,
+    lexicalUnits,
+    etymology,
+    etymologyData: null,
+    localizedEtymologyJa: null,
+  }
 }
 
 export default function WordPageClient({
@@ -476,55 +769,78 @@ export default function WordPageClient({
     }
   }, [])
 
-  // Oxford raw / rewriteDictionary 後の両方を内部の共通 shape にそろえる
+  // Oxford raw / rewritten payload / normalized payload を共通 shape にそろえる
   const parsed = useMemo<ParsedDictionary>(() => {
-    if (!isRewrittenPayload(dictionary)) {
-      return callNormalizeDictionary(dictionary, word)
+    if (isOxfordPayload(dictionary)) {
+      return parseOxfordPayload(dictionary, word)
     }
 
-    const senseGroups = Array.isArray(dictionary.senseGroups)
-      ? dictionary.senseGroups
-      : []
-
-    const senses: Record<string, ParsedLocalizedSenseItem[]> = {}
-
-    senseGroups.forEach((group) => {
-      const pos = String(group.partOfSpeech ?? '').toLowerCase()
-      if (!pos) return
-
-      const items = Array.isArray(group.senses)
-        ? group.senses
-            .map((sense) =>
-              readParsedSenseItem({
-                senseId: sense.senseId,
-                meaning: sense.definition,
-                example: sense.example,
-                patterns: sense.patterns,
-              })
-            )
-            .filter(
-              (item): item is ParsedLocalizedSenseItem => item !== null
-            )
+    if (isRewrittenPayload(dictionary)) {
+      const senseGroups = Array.isArray(dictionary.senseGroups)
+        ? dictionary.senseGroups
         : []
 
-      if (items.length === 0) return
+      const jaLocaleSenseMap = readJaLocaleSenseMap(dictionary)
 
-      senses[pos] = items
-    })
+      const senses: Record<string, ParsedLocalizedSenseItem[]> = {}
 
-    return {
-      inflections: readStringArray(dictionary.inflections),
-      synonyms: readStringArray(dictionary.synonyms),
-      antonyms: readStringArray(dictionary.antonyms),
-      derivatives: readStringArray(dictionary.derivatives),
-      senses,
-      lexicalUnits: Array.isArray(dictionary.lexicalUnits)
-        ? dictionary.lexicalUnits.filter(isLexicalUnitLike)
-        : [],
-      etymology:
-        typeof dictionary.etymology === 'string' ? dictionary.etymology : '',
-      etymologyData: normalizeEtymologyData(dictionary.etymologyData),
+      senseGroups.forEach((group) => {
+        const pos = String(group.partOfSpeech ?? '').toLowerCase()
+        if (!pos) return
+
+        const items: ParsedLocalizedSenseItem[] = (group.senses ?? []).map(
+          (sense) => {
+            const senseId = String(sense.senseId ?? '')
+            const jaLocaleSense = jaLocaleSenseMap[senseId]
+
+            const meaningEn = readLocalizedText(sense.definition)
+            const exampleEn = readLocalizedExample(sense.example)
+
+            const example =
+              exampleEn?.en || jaLocaleSense?.exampleTranslation
+                ? {
+                    en: exampleEn?.en,
+                    ja: jaLocaleSense?.exampleTranslation,
+                  }
+                : undefined
+
+            return {
+              senseId,
+              meaning: {
+                en: meaningEn.en,
+                ja: jaLocaleSense?.meaning,
+              },
+              example,
+            }
+          }
+        )
+
+        const validItems = items.filter(
+          (sense) => Boolean(sense.senseId && sense.meaning.en)
+        )
+
+        if (validItems.length === 0) return
+
+        senses[pos] = validItems
+      })
+
+      return {
+        inflections: readStringArray(dictionary.inflections),
+        synonyms: readStringArray(dictionary.synonyms),
+        antonyms: readStringArray(dictionary.antonyms),
+        derivatives: readStringArray(dictionary.derivatives),
+        senses,
+        lexicalUnits: Array.isArray(dictionary.lexicalUnits)
+          ? dictionary.lexicalUnits.filter(isLexicalUnitLike)
+          : [],
+        etymology:
+          typeof dictionary.etymology === 'string' ? dictionary.etymology : '',
+        etymologyData: normalizeEtymologyData(dictionary.etymologyData),
+        localizedEtymologyJa: readLocalizedEtymologyJa(dictionary),
+      }
     }
+
+    return normalizeParsedDictionary(dictionary)
   }, [dictionary, word])
 
   const {
@@ -536,6 +852,7 @@ export default function WordPageClient({
     lexicalUnits,
     etymology,
     etymologyData,
+    localizedEtymologyJa,
   } = parsed
 
   // 表示言語に応じて EntryCard 用の string shape に落とす
@@ -549,59 +866,101 @@ export default function WordPageClient({
             displayLocale === 'ja'
               ? sense.meaning.ja ?? sense.meaning.en
               : sense.meaning.en,
-          example:
-            displayLocale === 'ja'
-              ? sense.example?.ja ?? sense.example?.en
-              : sense.example?.en,
-          patterns: sense.patterns,
+          // 英語例文は常に保持する
+          example: sense.example?.en,
+          // 日本語モードのときだけ和訳を別フィールドで渡す
+          exampleTranslation:
+            displayLocale === 'ja' ? sense.example?.ja : undefined,
         })),
       ])
     ) as Record<string, DisplaySenseItem[]>
   }, [displayLocale, senses])
 
-  // Oxford raw から grammatical note を抽出
-  const grammarTags = useMemo<Record<string, string[]>>(() => {
-    if (!isOxfordPayload(dictionary)) {
-      return {}
-    }
+  // Oxford raw から grammatical note を senseId ごとに抽出
+// =========================
+// grammarTags を senseId 単位で生成する
+// - rewritten / normalized を優先
+// - なければ Oxford raw fallback
+// =========================
+const grammarTags = useMemo<GrammarTagsBySense>(() => {
+  const result: GrammarTagsBySense = {}
 
-    const results = Array.isArray(dictionary.results) ? dictionary.results : []
-    const lexicalEntries = results.flatMap(
-      (result) => result.lexicalEntries ?? []
-    )
+  // =========================
+  // ① rewritten / normalized
+  // =========================
+  if (isRewrittenPayload(dictionary)) {
+    // ---- ja locale から取得 ----
+    const locales = isRecord(dictionary.locales) ? dictionary.locales : null
+    const jaLocale = locales && isRecord(locales.ja) ? locales.ja : null
 
-    if (lexicalEntries.length === 0) {
-      return {}
-    }
+    const jaSenses =
+      jaLocale && isRecord(jaLocale.senses)
+        ? (jaLocale.senses as Record<string, unknown>)
+        : {}
 
-    const result: Record<string, string[]> = {}
+    Object.entries(jaSenses).forEach(([senseId, value]) => {
+      if (!isRecord(value)) return
 
-    lexicalEntries.forEach((lexicalEntry) => {
-      const pos = String(lexicalEntry.lexicalCategory?.id ?? '').toLowerCase()
+      if (Array.isArray(value.grammarTags)) {
+        const tags = value.grammarTags
+          .filter((item): item is string => typeof item === 'string')
+          .flatMap((item) => splitGrammarNoteText(item))
 
-      const features: string[] = (lexicalEntry.entries ?? [])
-        .flatMap((entry) => [
-          ...(entry.notes ?? []),
-          ...(entry.senses ?? []).flatMap((sense) => [
-            ...(sense.notes ?? []),
-            ...(sense.subsenses ?? []).flatMap(
-              (subsense) => subsense.notes ?? []
-            ),
-          ]),
-        ])
-        .filter((note) => note.type === 'grammaticalNote')
-        .map((note) => note.text)
-        .filter(
-          (text): text is string => typeof text === 'string' && text.length > 0
-        )
-
-      if (!pos || features.length === 0) return
-
-      result[pos] = [...new Set(features)]
+        if (tags.length > 0) {
+          result[senseId] = [...new Set(tags)]
+        }
+      }
     })
 
     return result
-  }, [dictionary])
+  }
+
+  // =========================
+  // ② Oxford raw fallback
+  // =========================
+  if (!isOxfordPayload(dictionary)) {
+    return {}
+  }
+
+  const results = Array.isArray(dictionary.results) ? dictionary.results : []
+  const lexicalEntries = results.flatMap(
+    (result) => result.lexicalEntries ?? []
+  )
+
+  lexicalEntries.forEach((lexicalEntry) => {
+    const pos = String(lexicalEntry.lexicalCategory?.id ?? '').toLowerCase()
+
+    ;(lexicalEntry.entries ?? []).forEach((entry) => {
+      ;(entry.senses ?? []).forEach((sense, senseIndex) => {
+        const senseId =
+          typeof sense.id === 'string' && sense.id.length > 0
+            ? sense.id
+            : `${toStableId(word)}__${toStableId(pos)}__${senseIndex + 1}`
+
+        const senseTags = readGrammarNoteTexts(sense.notes)
+
+        if (senseTags.length > 0) {
+          result[senseId] = [...new Set(senseTags)]
+        }
+
+        ;(sense.subsenses ?? []).forEach((subsense, subsenseIndex) => {
+          const subsenseId =
+            typeof subsense.id === 'string' && subsense.id.length > 0
+              ? subsense.id
+              : `${senseId}__sub__${subsenseIndex + 1}`
+
+          const subsenseTags = readGrammarNoteTexts(subsense.notes)
+
+          if (subsenseTags.length > 0) {
+            result[subsenseId] = [...new Set(subsenseTags)]
+          }
+        })
+      })
+    })
+  })
+
+  return result
+}, [dictionary, word])
 
   const [savedWords, setSavedWords] = useState<string[]>([])
 
@@ -616,6 +975,7 @@ export default function WordPageClient({
     setPinnedSenseId(firstSenseId)
   }, [word, firstSenseId])
 
+  // sense のピン留め切り替え担当
   const handleTogglePin = (senseId: string) => {
     if (senseId === pinnedSenseId) return
     setPinnedSenseId(senseId)
@@ -640,6 +1000,7 @@ export default function WordPageClient({
     load()
   }, [])
 
+  // 単語の保存状態切り替え担当
   const handleSave = async () => {
     const result = await toggleSaveStatus({
       word,
@@ -693,6 +1054,7 @@ export default function WordPageClient({
       pronunciation={pronunciation}
       etymology={etymology}
       etymologyData={etymologyData}
+      localizedEtymologyJa={localizedEtymologyJa}
       senses={displaySenses}
       lexicalUnits={lexicalUnits}
       inflections={inflections}

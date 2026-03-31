@@ -1,22 +1,30 @@
 /**
  * normalizeDictionary.ts
  *
- * resolveQuery.ts から受け取った Oxford raw と補助データを、
- * rewriteDictionary に渡すための NormalizedDictionary に整形する。
- *
- * Oxford raw から ipa・etymology・senseGroups・lexicalUnits を抽出し、
- * lexicalUnit 候補は constructions → wordFormNote → examples の順で拾う。
+ * Oxford raw → NormalizedDictionary
+ * ・phrase と grammar label を完全分離
+ * ・grammar label は Oxford 全構造から抽出（sense / subsense）
  */
 
 import { normalizePOS } from "./pos"
 import type { LexicalUnit } from "../types/LexicalUnit"
 
+/** =========================
+ * 型
+ * ========================= */
+
+export type GrammarLabel = {
+  key: string
+  en: string
+  ja: string
+}
+
 export type NormalizedSenseItem = {
-  // backend の sense と対応づけるためのID
   senseId: string
   meaning: string
   example?: string
   patterns?: string[]
+  grammarLabels: GrammarLabel[]
 }
 
 export type NormalizedDictionary = {
@@ -35,21 +43,23 @@ export type NormalizedDictionary = {
   }
 }
 
+/** =========================
+ * 入力型
+ * ========================= */
+
 type ServerNormalizedSenseItemInput = {
   meaning?: unknown
   example?: unknown
   patterns?: unknown
+  grammaticalFeatures?: unknown
+  notes?: unknown
+  subsenses?: unknown
 }
 
 type ServerNormalizedExampleObjectInput = {
   sentence?: unknown
   text?: unknown
   en?: unknown
-}
-
-type ServerNormalizedMeaningTextInput = {
-  en?: unknown
-  ja?: unknown
 }
 
 type ServerNormalizedExampleInput = {
@@ -78,19 +88,25 @@ type ServerNormalizedDictionaryInput = {
   etymology?: unknown
 }
 
-type NormalizedExample = {
-  sentence: string
-  translation: string
+/** =========================
+ * ラベル辞書
+ * ========================= */
+
+const GRAMMAR_LABEL_MAP: Record<string, { en: string; ja: string }> = {
+  "no object": { en: "no object", ja: "目的語を取らない" },
+  "with object": { en: "with object", ja: "目的語を取る" },
+  "transitive": { en: "transitive", ja: "他動詞" },
+  "intransitive": { en: "intransitive", ja: "自動詞" },
+  "mass noun": { en: "mass noun", ja: "不可算名詞" },
+  "uncountable noun": { en: "uncountable noun", ja: "不可算名詞" },
+  "count noun": { en: "count noun", ja: "可算名詞" },
+  "predicative": { en: "predicative", ja: "叙述用法" },
+  "attributive": { en: "attributive", ja: "限定用法" },
 }
 
-type NormalizedMeaning = {
-  id: number
-  meaning: {
-    en: string
-    ja: string
-  }
-  examples: NormalizedExample[]
-}
+/** =========================
+ * util
+ * ========================= */
 
 function uniqueStrings(values: unknown[]): string[] {
   return [
@@ -111,13 +127,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
+/** =========================
+ * etymology
+ * ========================= */
+
 function extractEtymologyParts(
   etymology: string
 ): { text: string; meaning: string }[] {
   if (!etymology) return []
 
-  // 例:
-  // from Latin com- ‘together with’ + panis ‘bread’
   const parts: { text: string; meaning: string }[] = []
   const regex = /([a-zA-Z-]+)\s+[‘']([^’']+)[’']/g
 
@@ -138,15 +156,46 @@ function extractEtymologyParts(
   return parts
 }
 
-// senseId 用：word / pos を安定したIDパーツに変換する
-function _normalizeSenseIdPart(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
+/** =========================
+ * grammar label 抽出（重要）
+ * ========================= */
+
+function readLabelText(value: unknown): string[] {
+  if (typeof value === "string") return [value]
+
+  if (Array.isArray(value)) {
+    return value.flatMap((v) => readLabelText(v))
+  }
+
+  if (isRecord(value)) {
+    if (typeof value.text === "string") {
+      return [value.text]
+    }
+  }
+
+  return []
 }
+
+function extractGrammarLabelsDeep(input: Record<string, unknown>): string[] {
+  const result: string[] = []
+
+  result.push(...readLabelText(input.grammaticalFeatures))
+  result.push(...readLabelText(input.notes))
+
+  if (Array.isArray(input.subsenses)) {
+    for (const sub of input.subsenses) {
+      if (isRecord(sub)) {
+        result.push(...extractGrammarLabelsDeep(sub))
+      }
+    }
+  }
+
+  return result
+}
+
+/** =========================
+ * example
+ * ========================= */
 
 function readExampleText(value: unknown): string {
   if (typeof value === "string") {
@@ -174,6 +223,19 @@ function readExampleText(value: unknown): string {
   return ""
 }
 
+/** =========================
+ * sense
+ * ========================= */
+
+function _normalizeSenseIdPart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+}
+
 function normalizeSenseItem(
   input: unknown,
   senseId: string
@@ -183,29 +245,28 @@ function normalizeSenseItem(
   const meaning = readString(input.meaning)
   if (!meaning) return null
 
-  // example は string だけでなく object shape も吸う
   const example = readExampleText(input.example)
 
-  const patterns = Array.isArray(input.patterns)
-    ? uniqueStrings(input.patterns)
-    : []
+  // 🔥 grammar抽出（完全版）
+  const rawLabels = extractGrammarLabelsDeep(input)
 
-  if (example) {
-    return {
-      senseId,
-      meaning,
-      example,
-      patterns,
-    }
-  }
+  const grammarLabels: GrammarLabel[] = rawLabels
+    .map((label) => label.toLowerCase().trim())
+    .filter((label) => GRAMMAR_LABEL_MAP[label])
+    .map((label) => ({
+      key: label,
+      en: GRAMMAR_LABEL_MAP[label].en,
+      ja: GRAMMAR_LABEL_MAP[label].ja,
+    }))
 
   return {
     senseId,
     meaning,
-    patterns,
+    example,
+    patterns: [],
+    grammarLabels,
   }
 }
-
 
 function normalizeSenses(
   sensesInput: unknown,
@@ -221,7 +282,6 @@ function normalizeSenses(
     const posRaw = normalizePOS(rawPos) ?? rawPos
     const posList = Array.isArray(posRaw) ? posRaw : [posRaw]
 
-    // 各 sense に headword + pos + index ベースのIDを付与する
     const items = value
       .map((item, index) =>
         normalizeSenseItem(
@@ -241,7 +301,6 @@ function normalizeSenses(
         grouped[key] = []
       }
 
-      // 同じ senseId の重複追加を防ぐ
       const existingIds = new Set(grouped[key].map((item) => item.senseId))
       const dedupedItems = items.filter((item) => !existingIds.has(item.senseId))
 
@@ -252,34 +311,33 @@ function normalizeSenses(
   return grouped
 }
 
-function normalizeExample(input: unknown): NormalizedExample | null {
+/** =========================
+ * lexicalUnits（触らない）
+ * ========================= */
+
+function normalizeExample(input: unknown) {
   if (typeof input === "string") {
     const sentence = input.trim()
     if (!sentence) return null
 
-    return {
-      sentence,
-      translation: "",
-    }
+    return { sentence, translation: "" }
   }
 
   if (!isRecord(input)) return null
 
-  const exampleInput = input as ServerNormalizedExampleInput
-  const sentence = readString(exampleInput.sentence)
+  const sentence = readString(input.sentence)
   if (!sentence) return null
 
   return {
     sentence,
-    translation: readString(exampleInput.translation),
+    translation: readString(input.translation),
   }
 }
 
-function normalizeMeaning(input: unknown, index: number): NormalizedMeaning | null {
+function normalizeMeaning(input: unknown, index: number) {
   if (!isRecord(input)) return null
 
-  const meaningInput = input as ServerNormalizedMeaningInput
-  const rawMeaning = meaningInput.meaning
+  const rawMeaning = input.meaning
 
   let meaningEn = ""
   let meaningJa = ""
@@ -293,18 +351,15 @@ function normalizeMeaning(input: unknown, index: number): NormalizedMeaning | nu
 
   if (!meaningEn) return null
 
-  const examples = Array.isArray(meaningInput.examples)
-    ? meaningInput.examples
+  const examples = Array.isArray(input.examples)
+    ? input.examples
         .map((example) => normalizeExample(example))
-        .filter((example): example is NormalizedExample => example !== null)
+        .filter(Boolean)
     : []
 
   return {
-    id: typeof meaningInput.id === "number" ? meaningInput.id : index,
-    meaning: {
-      en: meaningEn,
-      ja: meaningJa,
-    },
+    id: typeof input.id === "number" ? input.id : index,
+    meaning: { en: meaningEn, ja: meaningJa },
     examples,
   }
 }
@@ -316,14 +371,13 @@ function normalizeLexicalUnits(lexicalUnitsInput: unknown): LexicalUnit[] {
     .map((unit) => {
       if (!isRecord(unit)) return null
 
-      const lexicalUnitInput = unit as ServerNormalizedLexicalUnitInput
-      const phrase = readString(lexicalUnitInput.phrase).toLowerCase()
+      const phrase = readString(unit.phrase).toLowerCase()
       if (!phrase) return null
 
-      const meanings = Array.isArray(lexicalUnitInput.meanings)
-        ? lexicalUnitInput.meanings
+      const meanings = Array.isArray(unit.meanings)
+        ? unit.meanings
             .map((meaning, index) => normalizeMeaning(meaning, index))
-            .filter((meaning): meaning is NormalizedMeaning => meaning !== null)
+            .filter(Boolean)
         : []
 
       if (meanings.length === 0) return null
@@ -333,8 +387,12 @@ function normalizeLexicalUnits(lexicalUnitsInput: unknown): LexicalUnit[] {
         meanings,
       }
     })
-    .filter((unit): unit is LexicalUnit => unit !== null)
+    .filter(Boolean) as LexicalUnit[]
 }
+
+/** =========================
+ * main
+ * ========================= */
 
 export function normalizeDictionary(
   dictionary: ServerNormalizedDictionaryInput,
@@ -342,7 +400,7 @@ export function normalizeDictionary(
 ): NormalizedDictionary {
   const etymology = readString(dictionary.etymology)
   const etymologyParts = extractEtymologyParts(etymology)
-  
+
   return {
     inflections: Array.isArray(dictionary.inflections)
       ? uniqueStrings(dictionary.inflections)
