@@ -78,21 +78,21 @@ type Props = {
   headword: string
   pronunciation: Pronunciation
   etymology: string
-  etymologyData: EtymologyData | null
-  localizedEtymologyJa: LocalizedEtymologyJa | null
+  etymologyData?: EtymologyData | null
+  localizedEtymologyJa?: LocalizedEtymologyJa | null
   senses: Record<string, SenseItem[]>
-  lexicalUnits: Array<LexicalUnit | SimpleLexicalUnit>
-  inflections: string[]
-  synonyms: string[]
-  derivatives: string[]
-  antonyms: string[]
-  grammarTags: Record<string, string[]>
+  lexicalUnits?: Array<LexicalUnit | SimpleLexicalUnit>
+  inflections?: string[]
+  synonyms?: string[]
+  derivatives?: string[]
+  antonyms?: string[]
+  grammarTags?: Record<string, string[]>
   isBookmarked: boolean
   onSave: () => void
-  pinnedSenseId: string | null
-  onTogglePin: (senseId: string) => void
-  displayLocale: DisplayLocale
-  onChangeDisplayLocale: (locale: DisplayLocale) => void
+  pinnedSenseId?: string | null
+  onTogglePin?: (senseId: string) => void
+  displayLocale?: DisplayLocale
+  onChangeDisplayLocale?: (locale: DisplayLocale) => void
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -128,10 +128,10 @@ export default function EntryCard({
   derivatives = [],
   grammarTags = {},
   isBookmarked,
-  pinnedSenseId,
-  displayLocale,
-  onChangeDisplayLocale,
-  onTogglePin,
+  pinnedSenseId = null,
+  displayLocale = 'en',
+  onChangeDisplayLocale = () => {},
+  onTogglePin = () => {},
   onSave,
 }: Props) {
   // 音声再生担当
