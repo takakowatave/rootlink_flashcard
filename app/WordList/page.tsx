@@ -211,7 +211,7 @@ export default function WordListPage() {
       pronunciation={pronunciation}
       etymology={etymology}
       senses={grouped}
-      grammarTags={item.grammarTags}   // ←追加
+      grammarTags={item.grammarTags ?? {}}   // ←追加
       isBookmarked={savedWords.includes(item.word)}
       onSave={() => handleToggleSave(item)}
     />

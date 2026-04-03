@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '@/lib/apiClient'
+import { supabase } from '@/lib/supabaseClient'
 
 /**
  * useAiEntry
@@ -57,8 +58,12 @@ export function useAiEntry<T>({ prompt }: UseAiEntryParams) {
 
     const run = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+
         const res = await apiRequest('/chat', {
           method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify({ prompt }),
         })
 
