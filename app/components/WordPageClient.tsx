@@ -320,15 +320,45 @@ function readJaValue(value: unknown): string | undefined {
 function normalizeEtymologyData(value: unknown): EtymologyData | null {
   if (!isRecord(value)) return null
 
+  // originLanguage は key さえあれば保持する。
+  // labelEn / labelJa は片方しかなくても落とさず、ある方で補完する。
+  const rawOriginLanguage = isRecord(value.originLanguage)
+    ? value.originLanguage
+    : null
+
+  const originLanguageKey =
+    rawOriginLanguage &&
+    typeof rawOriginLanguage.key === 'string' &&
+    rawOriginLanguage.key.trim().length > 0
+      ? rawOriginLanguage.key.trim()
+      : null
+
+  const originLanguageLabelEn =
+    rawOriginLanguage &&
+    typeof rawOriginLanguage.labelEn === 'string' &&
+    rawOriginLanguage.labelEn.trim().length > 0
+      ? rawOriginLanguage.labelEn.trim()
+      : null
+
+  const originLanguageLabelJa =
+    rawOriginLanguage &&
+    typeof rawOriginLanguage.labelJa === 'string' &&
+    rawOriginLanguage.labelJa.trim().length > 0
+      ? rawOriginLanguage.labelJa.trim()
+      : null
+
   const originLanguage =
-    isRecord(value.originLanguage) &&
-    typeof value.originLanguage.key === 'string' &&
-    typeof value.originLanguage.labelEn === 'string' &&
-    typeof value.originLanguage.labelJa === 'string'
+    originLanguageKey
       ? {
-          key: value.originLanguage.key,
-          labelEn: value.originLanguage.labelEn,
-          labelJa: value.originLanguage.labelJa,
+          key: originLanguageKey,
+          labelEn:
+            originLanguageLabelEn ??
+            originLanguageLabelJa ??
+            originLanguageKey,
+          labelJa:
+            originLanguageLabelJa ??
+            originLanguageLabelEn ??
+            originLanguageKey,
         }
       : null
 

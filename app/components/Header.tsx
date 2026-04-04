@@ -76,7 +76,7 @@ const Header = () => {
           />
 
           {!profile && (
-            <Link href="login">
+            <Link href="/login">
               <Button text="ログイン" variant="secondary" />
             </Link>
           )}
