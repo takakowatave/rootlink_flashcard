@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import EntryCard from "@/components/EntryCard"
-import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
+import { fetchWordlists, toggleSaveStatus, updatePinnedSense } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 
@@ -12,6 +12,7 @@ export type SavedWordRow = {
   word: string
   saved_id?: string
   dictionary?: any
+  pinned_sense_id?: string | null
 }
 
 function buildPronunciation(dictionary: any) {
@@ -93,7 +94,9 @@ export default function WordListPage() {
         const pronunciation = buildPronunciation(d)
         const senses = buildSenses(d)
         const inflections: string[] = d?.inflections ?? []
-        const firstSenseId = Object.values(senses)[0]?.[0]?.senseId ?? null
+        const allSenses = Object.values(senses).flat()
+        const firstSenseId = allSenses[0]?.senseId ?? null
+        const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
 
         return (
           <Link key={item.saved_id ?? item.word_id} href={`/word/${item.word}`} className="block">
@@ -106,7 +109,7 @@ export default function WordListPage() {
               grammarTags={{}}
               isBookmarked={savedWords.includes(item.word)}
               onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
-              pinnedSenseId={firstSenseId}
+              pinnedSenseId={pinnedSenseId}
               displayLocale="ja"
               compact
             />

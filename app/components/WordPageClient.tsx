@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
-import { toggleSaveStatus, fetchWordlists } from '@/lib/supabaseApi'
+import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit } from '@/types/LexicalUnit'
 
@@ -221,6 +221,8 @@ type DictionaryInput = OxfordPayload | RewrittenPayload | null | undefined
 
 type WordlistItem = {
   word: string
+  saved_id?: string
+  pinned_sense_id?: string | null
 }
 
 // senseId ごとの grammatical note
@@ -766,9 +768,13 @@ function parseOxfordPayload(
 export default function WordPageClient({
   word,
   dictionary,
+  savedId,
+  initialPinnedSenseId,
 }: {
   word: string
   dictionary: DictionaryInput
+  savedId?: string | null
+  initialPinnedSenseId?: string | null
 }) {
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
@@ -995,22 +1001,31 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 }, [dictionary, word])
 
   const [savedWords, setSavedWords] = useState<string[]>([])
+  const [resolvedSavedId, setResolvedSavedId] = useState<string | null>(savedId ?? null)
+  const [resolvedPinnedSenseId, setResolvedPinnedSenseId] = useState<string | null>(initialPinnedSenseId ?? null)
 
   const firstSenseId = useMemo(() => {
     const firstGroup = Object.values(displaySenses)[0] ?? []
     return firstGroup[0]?.senseId ?? null
   }, [displaySenses])
 
-  const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(null)
+  const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(
+    initialPinnedSenseId ?? null
+  )
 
   useEffect(() => {
-    setPinnedSenseId(firstSenseId)
-  }, [word, firstSenseId])
+    if (!initialPinnedSenseId) {
+      setPinnedSenseId(firstSenseId)
+    }
+  }, [word, firstSenseId, initialPinnedSenseId])
 
   // sense のピン留め切り替え担当
-  const handleTogglePin = (senseId: string) => {
+  const handleTogglePin = async (senseId: string) => {
     if (senseId === pinnedSenseId) return
     setPinnedSenseId(senseId)
+    if (resolvedSavedId) {
+      await updatePinnedSense(resolvedSavedId, senseId)
+    }
   }
 
 
@@ -1021,10 +1036,20 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
       const list = (await fetchWordlists(data.user.id)) as WordlistItem[]
       setSavedWords(list.map((item) => item.word))
+
+      // この単語のsavedIdとpinnedSenseIdを取得
+      const thisItem = list.find((item) => item.word === word)
+      if (thisItem) {
+        setResolvedSavedId(thisItem.saved_id ?? null)
+        if (thisItem.pinned_sense_id) {
+          setResolvedPinnedSenseId(thisItem.pinned_sense_id)
+          setPinnedSenseId(thisItem.pinned_sense_id)
+        }
+      }
     }
 
     load()
-  }, [])
+  }, [word])
 
   // 単語の保存状態切り替え担当
   const handleSave = async () => {

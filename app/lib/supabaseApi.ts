@@ -107,7 +107,24 @@ export const toggleSaveStatus = async (
 };
 
 /* =========================================
- ② 保存一覧取得（辞書データは取らない）
+ ② ピン留め更新
+========================================= */
+export const updatePinnedSense = async (
+  savedId: string,
+  senseId: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from("saved_words")
+    .update({ pinned_sense_id: senseId })
+    .eq("id", savedId)
+
+  if (error) {
+    console.error("updatePinnedSense error:", error)
+  }
+}
+
+/* =========================================
+ ③ 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
  ② 保存一覧取得（saved_words + words + dictionary_cache を返す）
@@ -121,6 +138,7 @@ export const fetchWordlists = async (userId: string) => {
       `
       id,
       word_id,
+      pinned_sense_id,
       words (
         id,
         word
@@ -175,5 +193,6 @@ export const fetchWordlists = async (userId: string) => {
     word_id: row.word_id,
     word: row.words?.word,
     dictionary: payloadByWordId.get(row.word_id) ?? null,
+    pinned_sense_id: row.pinned_sense_id ?? null,
   }))
 }
