@@ -181,6 +181,7 @@ type OxfordResult = {
 
 type OxfordPayload = {
   ipa?: string
+  audio?: { audioPath: string }
   results?: OxfordResult[]
 }
 
@@ -195,6 +196,7 @@ type RewrittenPayload = {
   etymology?: string
   etymologyData?: EtymologyData | null
   ipa?: string
+  audio?: { audioPath: string }
   locales?: {
     ja?: {
       senses?: Record<
@@ -769,7 +771,7 @@ export default function WordPageClient({
   dictionary: DictionaryInput
 }) {
   // Header と共有する表示言語
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('en')
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
 
   useEffect(() => {
     const syncDisplayLocale = () => {
@@ -1011,12 +1013,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     setPinnedSenseId(senseId)
   }
 
-  // EntryCard の言語トグル変更を state / localStorage / Header 連携に反映
-  const handleChangeDisplayLocale = (nextLocale: DisplayLocale) => {
-    setDisplayLocale(nextLocale)
-    window.localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, nextLocale)
-    window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME))
-  }
 
   useEffect(() => {
     const load = async () => {
@@ -1048,6 +1044,16 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // IPA / audio を決定
   const pronunciation = useMemo(() => {
+    // Supabase Storage に保存済みの audioPath があれば優先する
+    if (dictionary?.audio?.audioPath) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const audioUrl = `${supabaseUrl}/storage/v1/object/public/${dictionary.audio.audioPath}`
+      return {
+        phoneticSpelling: dictionary.ipa ?? undefined,
+        audioFile: audioUrl,
+      }
+    }
+
     if (dictionary?.ipa) {
       return {
         phoneticSpelling: dictionary.ipa,
@@ -1097,7 +1103,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       pinnedSenseId={pinnedSenseId}
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
-      onChangeDisplayLocale={handleChangeDisplayLocale}
     />
   )
 }

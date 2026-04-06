@@ -7,36 +7,11 @@ import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
 import Button from "../components/button";
 import EditProfileModal from "@/components/EditProfileModal";
-import LanguageToggle from "@/components/LanguageToggle";
-
-type DisplayLocale = "en" | "ja";
-
-const DISPLAY_LOCALE_STORAGE_KEY = "displayLocale";
 
 const Header = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("en");
 
-  // localStorage から表示言語を読む
-  useEffect(() => {
-    const savedLocale = window.localStorage.getItem(
-      DISPLAY_LOCALE_STORAGE_KEY
-    );
-
-    if (savedLocale === "en" || savedLocale === "ja") {
-      setDisplayLocale(savedLocale);
-    }
-  }, []);
-
-  // 表示言語を localStorage と他コンポーネントへ同期する
-  const handleChangeDisplayLocale = (locale: DisplayLocale) => {
-    setDisplayLocale(locale);
-    window.localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
-    window.dispatchEvent(new CustomEvent("display-locale-change"));
-  };
-
-  // プロフィール読み込み
   useEffect(() => {
     const load = async () => {
       const {
@@ -68,13 +43,8 @@ const Header = () => {
           />
         </Link>
 
-        {/* 右：日英トグル + 既存操作 */}
+        {/* 右：操作 */}
         <div className="flex items-center gap-4">
-          <LanguageToggle
-            value={displayLocale}
-            onChange={handleChangeDisplayLocale}
-          />
-
           {!profile && (
             <Link href="/login">
               <Button text="ログイン" variant="secondary" />
@@ -87,7 +57,6 @@ const Header = () => {
                 <Button text="単語リスト" variant="secondary" />
               </Link>
 
-              {/* プロフィールアイコン → モーダル */}
               <div
                 className="cursor-pointer"
                 onClick={() => setIsModalOpen(true)}
@@ -106,7 +75,6 @@ const Header = () => {
         </div>
       </header>
 
-      {/* プロフィール編集モーダル */}
       <EditProfileModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

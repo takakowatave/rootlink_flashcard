@@ -8,7 +8,6 @@ import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit } from '@/types/LexicalUnit'
 import { BsPin, BsPinFill } from 'react-icons/bs'
-import LanguageToggle from '@/components/LanguageToggle'
 import GrammarTags from '@/components/GrammarTags'
 
 type Pronunciation = {
@@ -92,7 +91,7 @@ type Props = {
   pinnedSenseId?: string | null
   onTogglePin?: (senseId: string) => void
   displayLocale?: DisplayLocale
-  onChangeDisplayLocale?: (locale: DisplayLocale) => void
+  compact?: boolean
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -130,9 +129,9 @@ export default function EntryCard({
   isBookmarked,
   pinnedSenseId = null,
   displayLocale = 'en',
-  onChangeDisplayLocale = () => {},
   onTogglePin = () => {},
   onSave,
+  compact = false,
 }: Props) {
   // 音声再生担当
   const playAudio = () => {
@@ -227,11 +226,6 @@ export default function EntryCard({
           </div>
 
           <div className="flex items-center gap-3">
-            <LanguageToggle
-              value={displayLocale}
-              onChange={onChangeDisplayLocale}
-            />
-
             <button type="button" onClick={onSave}>
               <HiBookmark
                 className={
@@ -244,8 +238,7 @@ export default function EntryCard({
         </div>
 
         {/* MEMORY HOOK */}
-        {/* MEMORY HOOK */}
-        <div className="mt-6 rounded-2xl bg-green-50 p-4">
+        {!compact && <div className="mt-6 rounded-2xl bg-green-50 p-4">
           <div className="font-semibold text-green-700">
             {labels.memoryHook}
           </div>
@@ -322,91 +315,104 @@ export default function EntryCard({
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* SENSES */}
         <div className="mt-6 space-y-8">
           {Object.entries(senses)
             .filter(([, items]) => items.length > 0)
-            .map(([pos, items]) => (
-              <div key={pos}>
-                <div className="mb-2 flex items-center gap-3">
-                  <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
-                    {getPosLabel(pos, displayLocale)}
-                  </span>
-                </div>
+            .map(([pos, items]) => {
+              // compactモード: pinnedSenseのみ表示（なければ先頭）
+              const displayItems = compact
+                ? items.filter((s) => s.senseId === pinnedSenseId).slice(0, 1).concat(
+                    items.filter((s) => s.senseId === pinnedSenseId).length === 0 ? items.slice(0, 1) : []
+                  )
+                : items
 
-                {pos === 'verb' && inflections.length > 0 && (
-                  <span className="text-sm text-gray-500">
-                    {inflections.join(' · ')}
-                  </span>
-                )}
+              if (displayItems.length === 0) return null
 
-                <div className="mt-4 space-y-4">
-                  {items.map((sense) => {
-                    const isPinned = pinnedSenseId === sense.senseId
+              return (
+                <div key={pos}>
+                  <div className="mb-2 flex items-center gap-3">
+                    <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
+                      {getPosLabel(pos, displayLocale)}
+                    </span>
+                  </div>
 
-                    return (
-                      <div
-                        key={sense.senseId}
-                        className="group flex items-start justify-between gap-3 py-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-gray-900">{sense.meaning}</p>
+                  {pos === 'verb' && inflections.length > 0 && (
+                    <span className="text-sm text-gray-500">
+                      {inflections.join(' · ')}
+                    </span>
+                  )}
 
-                          {grammarTags[sense.senseId] &&
-                            grammarTags[sense.senseId].length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <GrammarTags
-                                  tags={grammarTags[sense.senseId]}
-                                  displayLocale={displayLocale}
-                                />
-                              </div>
-                            )}
+                  <div className="mt-4 space-y-4">
+                    {displayItems.map((sense) => {
+                      const isPinned = pinnedSenseId === sense.senseId
 
-                          {(sense.example || sense.exampleTranslation) && (
-                            <div className="mt-2 space-y-1">
-                              {sense.example && (
-                                <p className="text-gray-600">
-                                  {sense.example}
-                                </p>
+                      return (
+                        <div
+                          key={sense.senseId}
+                          className="group flex items-start justify-between gap-3 py-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-gray-900">{sense.meaning}</p>
+
+                            {grammarTags[sense.senseId] &&
+                              grammarTags[sense.senseId].length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <GrammarTags
+                                    tags={grammarTags[sense.senseId]}
+                                    displayLocale={displayLocale}
+                                  />
+                                </div>
                               )}
 
-                              {sense.exampleTranslation && (
-                                <p className="text-gray-500">
-                                  {sense.exampleTranslation}
-                                </p>
+                            {(sense.example || sense.exampleTranslation) && (
+                              <div className="mt-2 space-y-1">
+                                {sense.example && (
+                                  <p className="text-gray-600">
+                                    {sense.example}
+                                  </p>
+                                )}
+
+                                {sense.exampleTranslation && (
+                                  <p className="text-gray-500">
+                                    {sense.exampleTranslation}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {!compact && (
+                            <div className="group/pin relative shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => onTogglePin(sense.senseId)}
+                                className="flex h-8 w-8 items-center justify-center"
+                              >
+                                {isPinned ? (
+                                  <BsPinFill className="h-5 w-5 text-gray-400" />
+                                ) : (
+                                  <BsPin className="h-5 w-5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100 group-hover/pin:text-gray-400" />
+                                )}
+                              </button>
+
+                              {!isPinned && (
+                                <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-gray-700 px-4 py-3 text-sm text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
+                                  {labels.pinThisSense}
+                                  <span className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-gray-700" />
+                                </span>
                               )}
                             </div>
                           )}
                         </div>
-
-                        <div className="group/pin relative shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => onTogglePin(sense.senseId)}
-                            className="flex h-8 w-8 items-center justify-center"
-                          >
-                            {isPinned ? (
-                              <BsPinFill className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <BsPin className="h-5 w-5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100 group-hover/pin:text-gray-400" />
-                            )}
-                          </button>
-
-                          {!isPinned && (
-                            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-gray-700 px-4 py-3 text-sm text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
-                              {labels.pinThisSense}
-                              <span className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-gray-700" />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
         </div>
 
         {/* SYNONYMS */}
