@@ -87,7 +87,7 @@ type Props = {
   antonyms?: string[]
   grammarTags?: Record<string, string[]>
   isBookmarked: boolean
-  onSave: () => void
+  onSave: (e?: React.MouseEvent) => void
   pinnedSenseId?: string | null
   onTogglePin?: (senseId: string) => void
   displayLocale?: DisplayLocale
@@ -319,16 +319,60 @@ export default function EntryCard({
 
         {/* SENSES */}
         <div className="mt-6 space-y-8">
-          {Object.entries(senses)
-            .filter(([, items]) => items.length > 0)
-            .map(([pos, items]) => {
-              // compactモード: pinnedSenseのみ表示（なければ先頭）
-              const displayItems = compact
-                ? items.filter((s) => s.senseId === pinnedSenseId).slice(0, 1).concat(
-                    items.filter((s) => s.senseId === pinnedSenseId).length === 0 ? items.slice(0, 1) : []
-                  )
-                : items
+          {(() => {
+            const allEntries = Object.entries(senses).filter(([, items]) => items.length > 0)
 
+            // compactモード: pinnedSenseが属するPOSのみ、その1件だけ表示
+            if (compact) {
+              // pinnedSenseIdを含むPOSを探す
+              const pinnedEntry = allEntries.find(([, items]) =>
+                items.some((s) => s.senseId === pinnedSenseId)
+              ) ?? allEntries[0]
+
+              if (!pinnedEntry) return null
+
+              const [pos, items] = pinnedEntry
+              const sense = items.find((s) => s.senseId === pinnedSenseId) ?? items[0]
+              if (!sense) return null
+
+              return [(
+                <div key={pos}>
+                  <div className="mb-2 flex items-center gap-3">
+                    <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
+                      {getPosLabel(pos, displayLocale)}
+                    </span>
+                  </div>
+                  {pos === 'verb' && inflections.length > 0 && (
+                    <span className="text-sm text-gray-500">
+                      {inflections.join(' · ')}
+                    </span>
+                  )}
+                  <div className="mt-4">
+                    <div className="flex items-start justify-between gap-3 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-gray-900">{sense.meaning}</p>
+                        {(sense.example || sense.exampleTranslation) && (
+                          <div className="mt-2 space-y-1">
+                            {sense.example && (
+                              <p className="text-gray-600">{sense.example}</p>
+                            )}
+                            {sense.exampleTranslation && (
+                              <p className="text-gray-500">{sense.exampleTranslation}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="shrink-0">
+                        <BsPinFill className="h-4 w-4 text-gray-300" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )]
+            }
+
+            return allEntries.map(([pos, items]) => {
+              const displayItems = items
               if (displayItems.length === 0) return null
 
               return (
@@ -412,7 +456,8 @@ export default function EntryCard({
                   </div>
                 </div>
               )
-            })}
+            })
+          })()}
         </div>
 
         {/* SYNONYMS */}

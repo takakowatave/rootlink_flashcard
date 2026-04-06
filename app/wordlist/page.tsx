@@ -96,7 +96,7 @@ export default function WordListPage() {
         const firstSenseId = Object.values(senses)[0]?.[0]?.senseId ?? null
 
         return (
-          <div key={item.saved_id ?? item.word_id} className="relative">
+          <Link key={item.saved_id ?? item.word_id} href={`/word/${item.word}`} className="block">
             <EntryCard
               headword={item.word}
               pronunciation={pronunciation}
@@ -105,18 +105,12 @@ export default function WordListPage() {
               inflections={inflections}
               grammarTags={{}}
               isBookmarked={savedWords.includes(item.word)}
-              onSave={() => handleToggleSave(item)}
+              onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
               pinnedSenseId={firstSenseId}
               displayLocale="ja"
               compact
             />
-            <Link
-              href={`/word/${item.word}`}
-              className="absolute bottom-6 right-8 text-sm text-blue-500 hover:underline"
-            >
-              more +
-            </Link>
-          </div>
+          </Link>
         )
       })}
     </>
