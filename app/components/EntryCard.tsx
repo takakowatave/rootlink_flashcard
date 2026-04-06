@@ -4,6 +4,7 @@
 // header / memory hook / senses / synonyms などの sections を並べる
 // WordPageClient から渡された表示用データを locale に応じて描画する
 
+import { useState } from 'react'
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit } from '@/types/LexicalUnit'
@@ -133,10 +134,37 @@ export default function EntryCard({
   onSave,
   compact = false,
 }: Props) {
-  // 音声再生担当
-  const playAudio = () => {
-    if (!pronunciation?.audioFile) return
-    new Audio(pronunciation.audioFile).play()
+  const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation?.audioFile ?? null)
+  const [audioLoading, setAudioLoading] = useState(false)
+
+  // 音声再生担当（キャッシュなければオンデマンド生成）
+  const playAudio = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (audioUrl) {
+      new Audio(audioUrl).play()
+      return
+    }
+
+    setAudioLoading(true)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
+      const res = await fetch(`${apiUrl}/audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: headword }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) {
+        setAudioUrl(data.audioUrl)
+        new Audio(data.audioUrl).play()
+      }
+    } catch {
+      // 失敗しても何もしない
+    } finally {
+      setAudioLoading(false)
+    }
   }
 
   // ラベル切り替え担当
@@ -212,11 +240,14 @@ export default function EntryCard({
               {headword}
             </h1>
 
-            {pronunciation?.audioFile && (
-              <button type="button" onClick={playAudio}>
-                <HiSpeakerWave className="h-5 w-5 text-gray-500" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={playAudio}
+              disabled={audioLoading}
+              className="shrink-0"
+            >
+              <HiSpeakerWave className={`h-5 w-5 ${audioLoading ? 'text-gray-300 animate-pulse' : 'text-gray-500'}`} />
+            </button>
 
             {pronunciation?.phoneticSpelling && (
               <span className="text-gray-500">
