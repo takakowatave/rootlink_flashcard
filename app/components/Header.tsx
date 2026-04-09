@@ -57,6 +57,10 @@ const Header = () => {
                 <Button text="単語リスト" variant="secondary" />
               </Link>
 
+              <Link href="/quiz">
+                <Button text="クイズ" variant="secondary" />
+              </Link>
+
               <div
                 className="cursor-pointer"
                 onClick={() => setIsModalOpen(true)}
