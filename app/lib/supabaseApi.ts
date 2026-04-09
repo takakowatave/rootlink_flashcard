@@ -124,7 +124,29 @@ export const updatePinnedSense = async (
 }
 
 /* =========================================
- ③ 保存一覧取得（辞書データは取らない）
+ ③ クイズ結果を記録
+========================================= */
+export const saveQuizResult = async (
+  word: string,
+  correct: boolean
+): Promise<void> => {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) return
+
+  const { error } = await supabase.from("quiz_results").insert({
+    user_id: user.id,
+    word,
+    correct,
+  })
+
+  if (error) {
+    console.error("saveQuizResult error:", error)
+  }
+}
+
+/* =========================================
+ ④ 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
  ② 保存一覧取得（saved_words + words + dictionary_cache を返す）

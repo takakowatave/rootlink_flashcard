@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchWordlists } from '@/lib/supabaseApi'
+import { fetchWordlists, saveQuizResult } from '@/lib/supabaseApi'
 import { BsVolumeUp } from 'react-icons/bs'
 import toast from 'react-hot-toast'
 
@@ -272,6 +272,8 @@ export default function QuizClient() {
   const handleReveal = () => setRevealed(true)
 
   const handleAnswer = (correct: boolean) => {
+    const card = cards[currentIndex]
+    saveQuizResult(card.word, correct) // fire-and-forget
     const newResults = [...results, correct]
     setResults(newResults)
     if (currentIndex + 1 >= cards.length) {
