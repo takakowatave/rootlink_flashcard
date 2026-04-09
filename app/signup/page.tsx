@@ -10,6 +10,7 @@ import { supabase } from "../lib/supabaseClient";
 interface FormData {
     email: string;
     password: string;
+    agreeToPrivacy: boolean;
     }
 
     export default function AuthSignup() {
@@ -95,6 +96,23 @@ interface FormData {
                 半角アルファベット、大文字、数字、記号を組み合わせて8文字以上で設定してください。
                 </p>
             </div>
+
+            {/* プライバシーポリシー同意 */}
+            <div className="flex items-start gap-2">
+                <input
+                type="checkbox"
+                id="agreeToPrivacy"
+                className="mt-0.5 accent-green-600"
+                {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
+                />
+                <label htmlFor="agreeToPrivacy" className="text-xs text-gray-600 leading-relaxed">
+                <a href="/privacy" target="_blank" className="text-green-600 underline">プライバシーポリシー</a>
+                に同意する
+                </label>
+            </div>
+            {errors.agreeToPrivacy && (
+                <p className="text-xs text-red-500 -mt-2">{errors.agreeToPrivacy.message}</p>
+            )}
 
             <Button
                 type="submit"
