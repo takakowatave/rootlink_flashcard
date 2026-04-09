@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchWordlists } from '@/lib/supabaseApi'
 import { BsVolumeUp } from 'react-icons/bs'
+import toast from 'react-hot-toast'
 
 type QuizCard = {
   word: string
@@ -72,39 +73,75 @@ function ResultScreen({
   cards,
   results,
   onRestart,
+  onRetryWrong,
 }: {
   cards: QuizCard[]
   results: boolean[]
   onRestart: () => void
+  onRetryWrong: () => void
 }) {
   const correct = results.filter(Boolean).length
+  const correctCards = cards.filter((_, i) => results[i])
+  const wrongCards = cards.filter((_, i) => !results[i])
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-10 text-center">
-      <h2 className="text-xl font-bold text-gray-700 mb-1">結果</h2>
-      <p className="text-6xl font-bold text-green-600 my-6">
-        {correct}
-        <span className="text-2xl text-gray-400 font-normal"> / {cards.length}</span>
-      </p>
-
-      <div className="text-left mb-8 space-y-2">
-        {cards.map((card, i) => (
-          <div key={`${card.word}-${i}`} className="flex items-center gap-3 py-1.5 border-b border-gray-50">
-            <span className={`text-lg font-bold ${results[i] ? 'text-green-500' : 'text-red-400'}`}>
-              {results[i] ? '○' : '×'}
-            </span>
-            <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
-            <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
-          </div>
-        ))}
+    <div className="max-w-lg mx-auto px-4 py-10">
+      {/* スコア */}
+      <div className="text-center mb-8">
+        <h2 className="text-xl font-bold text-gray-700 mb-1">結果</h2>
+        <p className="text-6xl font-bold text-green-600 my-4">
+          {correct}
+          <span className="text-2xl text-gray-400 font-normal"> / {cards.length}</span>
+        </p>
       </div>
 
-      <button
-        onClick={onRestart}
-        className="bg-green-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors"
-      >
-        もう一度
-      </button>
+      {/* まだ */}
+      {wrongCards.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-red-400 mb-2">× まだ（{wrongCards.length}語）</h3>
+          <div className="bg-red-50 rounded-xl overflow-hidden">
+            {wrongCards.map((card, i) => (
+              <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-red-100 last:border-0">
+                <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
+                <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 覚えた */}
+      {correctCards.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-green-500 mb-2">○ 覚えた（{correctCards.length}語）</h3>
+          <div className="bg-green-50 rounded-xl overflow-hidden">
+            {correctCards.map((card, i) => (
+              <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-green-100 last:border-0">
+                <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
+                <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ボタン */}
+      <div className="flex gap-3">
+        {wrongCards.length > 0 && (
+          <button
+            onClick={onRetryWrong}
+            className="flex-1 py-3 rounded-full border-2 border-red-400 text-red-400 font-semibold hover:bg-red-50 transition-colors"
+          >
+            × だけもう一度
+          </button>
+        )}
+        <button
+          onClick={onRestart}
+          className="flex-1 py-3 rounded-full bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
+        >
+          全部もう一度
+        </button>
+      </div>
     </div>
   )
 }
@@ -227,7 +264,10 @@ export default function QuizClient() {
     setLoading(false)
   }
 
-  useEffect(() => { loadCards() }, [])
+  useEffect(() => {
+    toast.dismiss() // 前ページからの残存トーストを消す
+    loadCards()
+  }, [])
 
   const handleReveal = () => setRevealed(true)
 
@@ -250,6 +290,15 @@ export default function QuizClient() {
     setDone(false)
   }
 
+  const handleRetryWrong = () => {
+    const wrongCards = cards.filter((_, i) => !results[i])
+    setCards(shuffle(wrongCards))
+    setCurrentIndex(0)
+    setRevealed(false)
+    setResults([])
+    setDone(false)
+  }
+
   if (loading) {
     return <div className="py-20 text-center text-gray-400">読み込み中...</div>
   }
@@ -264,7 +313,7 @@ export default function QuizClient() {
   }
 
   if (done) {
-    return <ResultScreen cards={cards} results={results} onRestart={handleRestart} />
+    return <ResultScreen cards={cards} results={results} onRestart={handleRestart} onRetryWrong={handleRetryWrong} />
   }
 
   return (
