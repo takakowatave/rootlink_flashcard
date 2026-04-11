@@ -1,5 +1,18 @@
 import { supabase } from "./supabaseClient";
 import type { WordInfo } from "@/types/WordInfo";
+import type { SavedWordDictionary } from "@/types/Dictionary";
+
+type SavedWordQueryRow = {
+  id: string
+  word_id: string
+  pinned_sense_id: string | null
+  words: { id: string; word: string } | null
+}
+
+type DictionaryCacheQueryRow = {
+  word_id: string
+  payload: unknown
+}
 
 /* =========================================
  ① 保存トグル（DBは保存状態のみ）
@@ -44,9 +57,8 @@ export const toggleSaveStatus = async (
     wordId = existingWord.id;
   }
 
-    // lib/supabaseApi.ts（toggleSaveStatus 内）
   // words を作った直後に dictionary_cache を upsert（dictionary が渡ってきた時だけ）
-  const raw = (word as any).dictionary
+  const raw = word.dictionary
   if (raw) {
     const { error: upsertErr } = await supabase
       .from("dictionary_cache")
@@ -174,16 +186,16 @@ export const fetchWordlists = async (userId: string) => {
     return []
   }
 
-  const wordIds = (savedRows ?? [])
-    .map((row: any) => row.word_id)
-    .filter(Boolean)
+  // Supabase のジョイン結果は TypeScript の推論型と実態が乖離するため unknown 経由でキャスト
+  const savedTyped = (savedRows ?? []) as unknown as SavedWordQueryRow[]
+  const wordIds = savedTyped.map((row) => row.word_id).filter(Boolean)
 
   if (wordIds.length === 0) {
-    return (savedRows ?? []).map((row: any) => ({
+    return savedTyped.map((row) => ({
       saved_id: row.id,
       word_id: row.word_id,
-      word: row.words?.word,
-      dictionary: null,
+      word: row.words?.word ?? '',
+      dictionary: null as SavedWordDictionary | null,
     }))
   }
 
@@ -196,24 +208,25 @@ export const fetchWordlists = async (userId: string) => {
   if (rawErr) {
     console.error("fetchWordlists dictionary_cache error:", rawErr)
     // dictionary_cache が取れなくても一覧は返す（dictionary=null）
-    return (savedRows ?? []).map((row: any) => ({
+    return savedTyped.map((row) => ({
       saved_id: row.id,
       word_id: row.word_id,
-      word: row.words?.word,
-      dictionary: null,
+      word: row.words?.word ?? '',
+      dictionary: null as SavedWordDictionary | null,
     }))
   }
 
-  const payloadByWordId = new Map<string, any>()
-  ;(rawRows ?? []).forEach((r: any) => {
-    if (r?.word_id) payloadByWordId.set(r.word_id, r.payload ?? null)
+  const cacheTyped = (rawRows ?? []) as DictionaryCacheQueryRow[]
+  const payloadByWordId = new Map<string, SavedWordDictionary | null>()
+  cacheTyped.forEach((r) => {
+    if (r?.word_id) payloadByWordId.set(r.word_id, (r.payload as SavedWordDictionary) ?? null)
   })
 
   // 3) saved_words と dictionary_cache をマージして返す
-  return (savedRows ?? []).map((row: any) => ({
+  return savedTyped.map((row) => ({
     saved_id: row.id,
     word_id: row.word_id,
-    word: row.words?.word,
+    word: row.words?.word ?? '',
     dictionary: payloadByWordId.get(row.word_id) ?? null,
     pinned_sense_id: row.pinned_sense_id ?? null,
   }))

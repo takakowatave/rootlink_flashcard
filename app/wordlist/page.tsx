@@ -7,16 +7,19 @@ import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import { BsX } from "react-icons/bs"
+import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
 
 export type SavedWordRow = {
   word_id: string
   word: string
   saved_id?: string
-  dictionary?: any
+  dictionary?: SavedWordDictionary | null
   pinned_sense_id?: string | null
 }
 
-function buildPronunciation(dictionary: any) {
+type DisplaySense = { senseId: string; meaning: string; example?: string; exampleTranslation?: string }
+
+function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
   if (dictionary?.audio?.audioPath) {
     return {
@@ -30,18 +33,18 @@ function buildPronunciation(dictionary: any) {
   }
 }
 
-function buildSenses(dictionary: any): Record<string, { senseId: string; meaning: string; example?: string; exampleTranslation?: string }[]> {
-  const senseGroups: any[] = dictionary?.senseGroups ?? []
-  const jaLocales: Record<string, any> = dictionary?.locales?.ja?.senses ?? {}
+function buildSenses(dictionary: SavedWordDictionary | null | undefined): Record<string, DisplaySense[]> {
+  const senseGroups: SavedWordSenseGroup[] = dictionary?.senseGroups ?? []
+  const jaLocales = dictionary?.locales?.ja?.senses ?? {}
 
-  const result: Record<string, any[]> = {}
+  const result: Record<string, DisplaySense[]> = {}
 
   for (const group of senseGroups) {
     const pos = String(group.partOfSpeech ?? '').toLowerCase()
     if (!pos) continue
 
-    const senses = (group.senses ?? [])
-      .map((sense: any) => {
+    const senses: DisplaySense[] = (group.senses ?? [])
+      .map((sense) => {
         const senseId = String(sense.senseId ?? '')
         const ja = jaLocales[senseId]
         return {
@@ -51,7 +54,7 @@ function buildSenses(dictionary: any): Record<string, { senseId: string; meaning
           exampleTranslation: ja?.exampleTranslation ?? undefined,
         }
       })
-      .filter((s: any) => s.senseId && s.meaning)
+      .filter((s) => s.senseId && s.meaning)
 
     if (senses.length > 0) result[pos] = senses
   }

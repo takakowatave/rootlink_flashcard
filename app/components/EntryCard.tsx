@@ -7,64 +7,15 @@
 import { useState } from 'react'
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
 import { POS_LABEL_JA } from '@/lib/pos'
-import type { LexicalUnit } from '@/types/LexicalUnit'
+import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
+import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 import { BsPin, BsPinFill } from 'react-icons/bs'
 import GrammarTags from '@/components/GrammarTags'
 
 type Pronunciation = {
   phoneticSpelling?: string
   audioFile?: string
-}
-
-type SimpleLexicalUnit = {
-  lexicalUnitId: string
-  text: string
-}
-
-type DisplayLocale = 'en' | 'ja'
-
-type EtymologyPartType = 'prefix' | 'root' | 'suffix' | 'unknown'
-
-type OriginLanguage = {
-  key: string
-  labelEn: string
-  labelJa: string
-}
-
-type EtymologyPart = {
-  text: string
-  partType: EtymologyPartType
-  meaning: string | null
-  meaningJa?: string | null
-  relatedWords: string[]
-  order: number
-}
-
-type PartsEtymologyStructure = {
-  type: 'parts'
-  parts: EtymologyPart[]
-  hook: string | null
-}
-
-type OriginEtymologyStructure = {
-  type: 'origin'
-  sourceWord: string | null
-  sourceMeaning: string | null
-  hook: string | null
-}
-
-type EtymologyData = {
-  originLanguage: OriginLanguage | null
-  rawEtymology: string | null
-  wordFamily: string[]
-  structure: PartsEtymologyStructure | OriginEtymologyStructure
-}
-
-type LocalizedEtymologyJa = {
-  originLanguageLabel?: string
-  description?: string
-  sourceMeaning?: string
-  hook?: string
 }
 
 type SenseItem = {

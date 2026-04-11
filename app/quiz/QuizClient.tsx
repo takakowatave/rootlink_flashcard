@@ -5,6 +5,13 @@ import { supabase } from '@/lib/supabaseClient'
 import { fetchWordlists, saveQuizResult } from '@/lib/supabaseApi'
 import { BsVolumeUp } from 'react-icons/bs'
 import toast from 'react-hot-toast'
+import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
+
+type WordlistEntry = {
+  word?: string
+  dictionary?: SavedWordDictionary | null
+  pinned_sense_id?: string | null
+}
 
 type QuizCard = {
   word: string
@@ -16,19 +23,20 @@ type QuizCard = {
   exampleJa?: string    // JA例文訳
 }
 
-function buildQuizCards(wordList: any[]): QuizCard[] {
+function buildQuizCards(wordList: WordlistEntry[]): QuizCard[] {
   const cards: QuizCard[] = []
 
   for (const item of wordList) {
+    if (!item.word) continue
     const d = item.dictionary
     if (!d) continue
 
-    const senseGroups: any[] = d.senseGroups ?? []
-    const jaLocales: Record<string, any> = d.locales?.ja?.senses ?? {}
+    const senseGroups: SavedWordSenseGroup[] = d.senseGroups ?? []
+    const jaLocales = d.locales?.ja?.senses ?? {}
     const pinnedSenseId: string | null = item.pinned_sense_id ?? null
 
     // ピン留めされた sense を探す（なければ最初の sense）
-    let targetSense: any = null
+    let targetSense: SavedWordSense | null = null
     outer: for (const group of senseGroups) {
       for (const sense of group.senses ?? []) {
         if (!targetSense) targetSense = sense
@@ -41,7 +49,8 @@ function buildQuizCards(wordList: any[]): QuizCard[] {
 
     if (!targetSense) continue
 
-    const ja = jaLocales[targetSense.senseId] ?? {}
+    const senseId = targetSense.senseId ?? ''
+    const ja = jaLocales[senseId] ?? {}
     const meaning = ja.meaning ?? targetSense.definition ?? ''
     if (!meaning) continue
 
@@ -51,7 +60,7 @@ function buildQuizCards(wordList: any[]): QuizCard[] {
       : undefined
 
     cards.push({
-      word: item.word,
+      word: item.word!,
       ipa: d.ipa ?? undefined,
       audioPath: audioFile,
       meaning,
