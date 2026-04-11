@@ -41,6 +41,17 @@
 - **Tailwind CSS**
 - TypeScript strict
 
+### リポジトリ責務の分担
+
+| リポジトリ | 場所 | 作業内容 |
+|-----------|------|---------|
+| `rootlink_flashcard` | `/Users/takakowatabe/github/rootlink_flashcard` | UI・画面・Supabase連携・Vercelデプロイ。**通常の作業はここ** |
+| `rootlink_server` | `/Users/takakowatabe/github/rootlink_server` | 辞書取得・AI rewrite・TTS・語源抽出。API変更・プロンプト修正時にここを開く |
+
+CoworkやCodeで開くフォルダは基本 `rootlink_flashcard`。サーバー側の変更が必要な時だけ `rootlink_server` に切り替える。
+
+---
+
 ### バックエンド（別リポジトリ: `rootlink_server`）
 - **Hono** on **Google Cloud Run**
 - Oxford Dictionaries API — 辞書データ取得
