@@ -36,6 +36,9 @@ export default function HomePage() {
   // エラー表示状態
   const [error, setError] = useState<string | null>(null)
 
+  // ローディング状態
+  const [isLoading, setIsLoading] = useState(false)
+
   /**
    * 検索送信処理
    *
@@ -51,6 +54,9 @@ export default function HomePage() {
     const trimmed = value.trim()
     if (!trimmed) return
 
+    setIsLoading(true)
+    setError(null)
+
     try {
       const res = await fetch(`${API_BASE}/resolve`, {
         method: 'POST',
@@ -63,6 +69,7 @@ export default function HomePage() {
       // HTTPエラー
       if (!res.ok) {
         setError('NOT_EXIST')
+        setIsLoading(false)
         return
       }
 
@@ -76,14 +83,16 @@ export default function HomePage() {
         typeof r.redirectTo !== 'string'
       ) {
         setError('NOT_EXIST')
+        setIsLoading(false)
         return
       }
 
-      setError(null)
       router.push(r.redirectTo)
+      // 遷移後はローディングをリセットしない（画面が変わるため）
     } catch {
       // 通信エラー
       setError('NOT_EXIST')
+      setIsLoading(false)
     }
   }
 
@@ -93,6 +102,7 @@ export default function HomePage() {
         value={value}
         onChange={setValue}
         onSubmit={handleSubmit}
+        isLoading={isLoading}
       />
 
       {error && (

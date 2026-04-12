@@ -5,10 +5,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
+import UpgradeModal from '@/components/UpgradeModal'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
-import type { EtymologyData, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
+import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload } from '@/types/Dictionary'
@@ -294,7 +295,7 @@ function normalizeEtymologyData(value: unknown): EtymologyData | null {
               order: typeof part.order === 'number' ? part.order : index,
             }
           })
-          .filter((part): part is EtymologyPart => part !== null)
+          .filter((part): part is NonNullable<typeof part> => part !== null)
       : []
 
     return {
@@ -913,6 +914,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(
     initialPinnedSenseId ?? null
   )
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   useEffect(() => {
     if (!initialPinnedSenseId) {
@@ -954,18 +956,25 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // 単語の保存状態切り替え担当
   const handleSave = async () => {
+    const isSaved = savedWords.includes(word)
+
+    // 楽観的更新：API応答を待たずに即時UI反映
+    setSavedWords((prev) =>
+      isSaved ? prev.filter((w) => w !== word) : [...prev, word]
+    )
+
     const result = await toggleSaveStatus({
       word,
       dictionary,
     } as Parameters<typeof toggleSaveStatus>[0])
 
-    if (!result.success) return
-
-    const { data } = await supabase.auth.getUser()
-    if (!data.user) return
-
-    const list = (await fetchWordlists(data.user.id)) as WordlistItem[]
-    setSavedWords(list.map((item) => item.word))
+    if (!result.success) {
+      // 失敗したらロールバック
+      setSavedWords((prev) =>
+        isSaved ? [...prev, word] : prev.filter((w) => w !== word)
+      )
+      if (result.limitReached) setShowUpgradeModal(true)
+    }
   }
 
   // IPA / audio を決定
@@ -1011,6 +1020,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [dictionary])
 
   return (
+    <>
+    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     <EntryCard
       headword={word}
       pronunciation={pronunciation}
@@ -1030,5 +1041,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
     />
+    </>
   )
 }
