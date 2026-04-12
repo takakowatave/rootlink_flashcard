@@ -7,7 +7,7 @@ export default function Footer() {
         <Link href="/privacy" className="hover:text-gray-600 transition-colors">
           プライバシーポリシー
         </Link>
-        <a href="mailto:rootlink.japan@gmail.com" className="hover:text-gray-600 transition-colors">
+        <a href="https://tally.so/r/ODJoEY" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">
           お問い合わせ
         </a>
       </div>
