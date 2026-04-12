@@ -1,3 +1,12 @@
+/**
+ * WordPageClient と EntryCard で共有するシンプルな熟語型
+ * （Oxford raw 形式の phrase のみのフォールバック用）
+ */
+export type SimpleLexicalUnit = {
+  lexicalUnitId: string
+  text: string
+}
+
 export type LexicalUnitType =
   | 'idiom'
   | 'phrasal_verb'

@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Bash(git commit*)",
+            "prompt": "git commit が完了した。以下の手順でCLAUDE.mdを最新状態に保て。\n\n1. git log -1 --format='%s' で最新コミットのメッセージを確認する。メッセージに 'auto: CLAUDE.md更新' が含まれていたら何もせず終了する（無限ループ防止）。\n2. git diff HEAD~1 HEAD -- で変更内容を確認する。\n3. /Users/takakowatabe/github/rootlink_flashcard/CLAUDE.md を読む。\n4. 変更内容に応じてCLAUDE.mdの該当セクションを更新する:\n   - 新機能が追加されたら「実装済み機能」に追記\n   - 設計方針が変わったら「設計方針・決定事項」を更新\n   - ロードマップに関する変更はROADMAP.mdと整合させる\n5. CLAUDE.mdを更新したら、git add CLAUDE.md && git commit -m 'auto: CLAUDE.md更新' を実行する。\n6. 変更がなければ何もしない。",
+            "timeout": 120,
+            "statusMessage": "CLAUDE.md を更新中..."
+          }
+        ]
+      }
+    ]
+  }
+}

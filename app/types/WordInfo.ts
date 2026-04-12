@@ -3,6 +3,7 @@
  * 辞書表示・保存・UIで共通使用する単語型。
  * 「保存一覧」でも使えるよう必須項目を最小化。
  */
+import type { SavedWordDictionary } from './Dictionary'
 
 export type PartOfSpeech =
   | 'noun' | 'verb' | 'adjective' | 'adverb'
@@ -60,4 +61,7 @@ export type WordInfo = {
   patterns?: string[]
   etymologyHook?: EtymologyHook
   derivedWords?: WordInfo[]
+
+  /** dictionary_cache に保存された辞書ペイロード（保存トグル時に upsert する） */
+  dictionary?: SavedWordDictionary | null
 }

@@ -7,19 +7,11 @@ import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
-import type { LexicalUnit } from '@/types/LexicalUnit'
-
-type SimpleLexicalUnit = {
-  lexicalUnitId: string
-  text: string
-}
-
-// 画面表示で切り替える言語
-type DisplayLocale = 'en' | 'ja'
-
-// Header と共有する localStorage key / event name
-const DISPLAY_LOCALE_STORAGE_KEY = 'displayLocale'
-const DISPLAY_LOCALE_EVENT_NAME = 'display-locale-change'
+import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
+import type { EtymologyData, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
+import type { DisplayLocale } from '@/types/DisplayLocale'
+import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
+import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload } from '@/types/Dictionary'
 
 // 内部で保持する多言語 meaning shape
 type LocalizedText = {
@@ -31,14 +23,6 @@ type LocalizedText = {
 type LocalizedExample = {
   en?: string
   ja?: string
-}
-
-// EntryCard に渡す語源日本語補助データ
-type LocalizedEtymologyJa = {
-  originLanguageLabel?: string
-  description?: string
-  sourceMeaning?: string
-  hook?: string
 }
 
 // 内部の sense shape
@@ -54,57 +38,6 @@ type DisplaySenseItem = {
   meaning: string
   example?: string
   exampleTranslation?: string
-}
-
-// rewriteDictionary 後の 1 sense shape
-type RewrittenSense = {
-  senseId?: string
-  definition?: unknown
-  example?: unknown
-  patterns?: unknown
-}
-
-// rewriteDictionary 後の sense group shape
-type RewrittenSenseGroup = {
-  partOfSpeech?: string
-  senses?: RewrittenSense[]
-}
-
-type EtymologyPartType = 'prefix' | 'root' | 'suffix' | 'unknown'
-
-type OriginLanguage = {
-  key: string
-  labelEn: string
-  labelJa: string
-}
-
-type EtymologyPart = {
-  text: string
-  partType: EtymologyPartType
-  meaning: string | null
-  meaningJa: string | null
-  relatedWords: string[]
-  order: number
-}
-
-type PartsEtymologyStructure = {
-  type: 'parts'
-  parts: EtymologyPart[]
-  hook: string | null
-}
-
-type OriginEtymologyStructure = {
-  type: 'origin'
-  sourceWord: string | null
-  sourceMeaning: string | null
-  hook: string | null
-}
-
-type EtymologyData = {
-  originLanguage: OriginLanguage | null
-  rawEtymology: string | null
-  wordFamily: string[]
-  structure: PartsEtymologyStructure | OriginEtymologyStructure
 }
 
 // このコンポーネント内で扱う辞書データ shape
@@ -183,38 +116,6 @@ type OxfordPayload = {
   ipa?: string
   audio?: { audioPath: string }
   results?: OxfordResult[]
-}
-
-// rewriteDictionary 後に受け取る payload shape
-type RewrittenPayload = {
-  senseGroups?: RewrittenSenseGroup[]
-  inflections?: string[]
-  synonyms?: string[]
-  antonyms?: string[]
-  derivatives?: string[]
-  lexicalUnits?: Array<LexicalUnit | SimpleLexicalUnit>
-  etymology?: string
-  etymologyData?: EtymologyData | null
-  ipa?: string
-  audio?: { audioPath: string }
-  locales?: {
-    ja?: {
-      senses?: Record<
-      string,
-      {
-        meaning?: string | null
-        exampleTranslation?: string | null
-        grammarTags?: string[] | null
-      }
-    >
-      etymology?: {
-        originLanguageLabel?: string | null
-        description?: string | null
-        sourceMeaning?: string | null
-        hook?: string | null
-      }
-    }
-  }
 }
 
 type DictionaryInput = OxfordPayload | RewrittenPayload | null | undefined
