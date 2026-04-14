@@ -8,7 +8,7 @@ import EntryCard from '@/components/EntryCard'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
-import type { EtymologyData, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
+import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload } from '@/types/Dictionary'
@@ -294,7 +294,7 @@ function normalizeEtymologyData(value: unknown): EtymologyData | null {
               order: typeof part.order === 'number' ? part.order : index,
             }
           })
-          .filter((part): part is EtymologyPart => part !== null)
+          .filter((part): part is NonNullable<typeof part> => part !== null)
       : []
 
     return {
