@@ -672,11 +672,13 @@ export default function WordPageClient({
   dictionary,
   savedId,
   initialPinnedSenseId,
+  correctedFrom,
 }: {
   word: string
   dictionary: DictionaryInput
   savedId?: string | null
   initialPinnedSenseId?: string | null
+  correctedFrom?: string
 }) {
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
@@ -915,6 +917,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     initialPinnedSenseId ?? null
   )
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
   useEffect(() => {
     if (!initialPinnedSenseId) {
@@ -1022,6 +1025,21 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   return (
     <>
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    {showCorrectionBanner && correctedFrom && (
+      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-4 mx-4 mt-2">
+        <span>
+          <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span> を{' '}
+          <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span> に補正して検索しました
+        </span>
+        <button
+          onClick={() => setShowCorrectionBanner(false)}
+          className="ml-3 text-amber-600 hover:text-amber-800 text-lg leading-none"
+          aria-label="閉じる"
+        >
+          ×
+        </button>
+      </div>
+    )}
     <EntryCard
       headword={word}
       pronunciation={pronunciation}
