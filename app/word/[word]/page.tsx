@@ -9,7 +9,8 @@ export default async function Page({
 
   let dictionary = null
   let resolvedWord = raw
-console.log("PAGE SERVER EXECUTION")
+  let correctedFrom: string | undefined = undefined
+  console.log("PAGE SERVER EXECUTION")
 
   try {
     const res = await fetch(
@@ -25,12 +26,13 @@ console.log("PAGE SERVER EXECUTION")
     if (res.ok) {
       const data = await res.json()
       console.log("RESOLVE RESPONSE:", data)
-      console.log("RAW FROM SERVER:", data.raw)
-      console.log("DICTIONARY FROM SERVER:", data.dictionary)
-    
+
       if (data.ok) {
         resolvedWord = data.resolved
         dictionary = data.dictionary ?? data.raw ?? null
+        if (typeof data.correctedFrom === "string") {
+          correctedFrom = data.correctedFrom
+        }
       }
     }
   } catch (e) {
@@ -41,6 +43,7 @@ console.log("PAGE SERVER EXECUTION")
     <WordPageClient
       word={resolvedWord}
       dictionary={dictionary}
+      correctedFrom={correctedFrom}
     />
   )
 }

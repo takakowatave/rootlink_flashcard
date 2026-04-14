@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
+import UpgradeModal from '@/components/UpgradeModal'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
@@ -671,11 +672,13 @@ export default function WordPageClient({
   dictionary,
   savedId,
   initialPinnedSenseId,
+  correctedFrom,
 }: {
   word: string
   dictionary: DictionaryInput
   savedId?: string | null
   initialPinnedSenseId?: string | null
+  correctedFrom?: string
 }) {
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
@@ -913,6 +916,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(
     initialPinnedSenseId ?? null
   )
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
   useEffect(() => {
     if (!initialPinnedSenseId) {
@@ -954,18 +959,25 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // 単語の保存状態切り替え担当
   const handleSave = async () => {
+    const isSaved = savedWords.includes(word)
+
+    // 楽観的更新：API応答を待たずに即時UI反映
+    setSavedWords((prev) =>
+      isSaved ? prev.filter((w) => w !== word) : [...prev, word]
+    )
+
     const result = await toggleSaveStatus({
       word,
       dictionary,
     } as Parameters<typeof toggleSaveStatus>[0])
 
-    if (!result.success) return
-
-    const { data } = await supabase.auth.getUser()
-    if (!data.user) return
-
-    const list = (await fetchWordlists(data.user.id)) as WordlistItem[]
-    setSavedWords(list.map((item) => item.word))
+    if (!result.success) {
+      // 失敗したらロールバック
+      setSavedWords((prev) =>
+        isSaved ? [...prev, word] : prev.filter((w) => w !== word)
+      )
+      if (result.limitReached) setShowUpgradeModal(true)
+    }
   }
 
   // IPA / audio を決定
@@ -1011,6 +1023,23 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [dictionary])
 
   return (
+    <>
+    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    {showCorrectionBanner && correctedFrom && (
+      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-4 mx-4 mt-2">
+        <span>
+          <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span> を{' '}
+          <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span> に補正して検索しました
+        </span>
+        <button
+          onClick={() => setShowCorrectionBanner(false)}
+          className="ml-3 text-amber-600 hover:text-amber-800 text-lg leading-none"
+          aria-label="閉じる"
+        >
+          ×
+        </button>
+      </div>
+    )}
     <EntryCard
       headword={word}
       pronunciation={pronunciation}
@@ -1030,5 +1059,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
     />
+    </>
   )
 }

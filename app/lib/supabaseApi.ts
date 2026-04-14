@@ -17,9 +17,11 @@ type DictionaryCacheQueryRow = {
 /* =========================================
  ① 保存トグル（DBは保存状態のみ）
 ========================================= */
+export const FREE_PLAN_LIMIT = 100
+
 export const toggleSaveStatus = async (
   word: WordInfo
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean; limitReached?: boolean }> => {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user;
   if (!user) return { success: false };
@@ -104,7 +106,21 @@ export const toggleSaveStatus = async (
     return { success: true };
   }
 
-  // ⑤ 未保存なら保存
+  // ⑤ 未保存なら保存（制限チェック）
+  const { count, error: countError } = await supabase
+    .from("saved_words")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+
+  if (countError) {
+    console.error("saved_words count error:", countError)
+    return { success: false }
+  }
+
+  if ((count ?? 0) >= FREE_PLAN_LIMIT) {
+    return { success: false, limitReached: true }
+  }
+
   const { error: saveError } = await supabase.from("saved_words").insert({
     user_id: user.id,
     word_id: wordId,

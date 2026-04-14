@@ -2,15 +2,45 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
 import Button from "../components/button";
 import EditProfileModal from "@/components/EditProfileModal";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
+  'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
+
 const Header = () => {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = searchValue.trim();
+    if (!trimmed || isSearching) return;
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`${API_BASE}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: trimmed }),
+      });
+      if (!res.ok) return;
+      const r = await res.json();
+      if (r?.ok === true && typeof r.redirectTo === 'string') {
+        router.push(r.redirectTo);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +72,27 @@ const Header = () => {
             className="h-6 md:h-8 cursor-pointer"
           />
         </Link>
+
+        {/* 中央：PC用検索フォーム（ログイン済みのみ） */}
+        {profile && (
+          <form onSubmit={handleSearch} className="hidden md:flex items-center relative w-64 lg:w-80">
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Search a word"
+              disabled={isSearching}
+              className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-sm focus:outline-none focus:border-gray-400 disabled:opacity-50"
+            />
+            {isSearching && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                <svg className="h-3.5 w-3.5 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </span>
+            )}
+          </form>
+        )}
 
         {/* 右：操作 */}
         <div className="flex items-center gap-4">
