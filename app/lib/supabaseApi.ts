@@ -106,19 +106,22 @@ export const toggleSaveStatus = async (
     return { success: true };
   }
 
-  // ⑤ 未保存なら保存（制限チェック）
-  const { count, error: countError } = await supabase
-    .from("saved_words")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
+  // ⑤ 未保存なら保存（制限チェック — Premiumユーザーはスキップ）
+  const plan = await getUserPlan()
+  if (plan === "free") {
+    const { count, error: countError } = await supabase
+      .from("saved_words")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
 
-  if (countError) {
-    console.error("saved_words count error:", countError)
-    return { success: false }
-  }
+    if (countError) {
+      console.error("saved_words count error:", countError)
+      return { success: false }
+    }
 
-  if ((count ?? 0) >= FREE_PLAN_LIMIT) {
-    return { success: false, limitReached: true }
+    if ((count ?? 0) >= FREE_PLAN_LIMIT) {
+      return { success: false, limitReached: true }
+    }
   }
 
   const { error: saveError } = await supabase.from("saved_words").insert({
@@ -174,7 +177,36 @@ export const saveQuizResult = async (
 }
 
 /* =========================================
- ④ 保存一覧取得（辞書データは取らない）
+ ④ Premium判定（subscriptions or is_tester）
+========================================= */
+export const getUserPlan = async (): Promise<"premium" | "free"> => {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) return "free"
+
+  // is_tester チェック
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_tester")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.is_tester) return "premium"
+
+  // subscriptions チェック
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("status")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (sub?.status === "active") return "premium"
+
+  return "free"
+}
+
+/* =========================================
+ ⑤ 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
  ② 保存一覧取得（saved_words + words + dictionary_cache を返す）
