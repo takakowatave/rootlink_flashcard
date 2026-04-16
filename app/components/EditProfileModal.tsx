@@ -32,6 +32,35 @@ export default function EditProfileModal({
     formState: { isSubmitting },
   } = useForm<FormData>();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null)
+  const [isPortalLoading, setIsPortalLoading] = useState(false)
+
+  const API_BASE =
+    process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
+    "https://rootlink-server-v2-774622345521.asia-northeast1.run.app"
+
+  const handleManagePlan = async () => {
+    setIsPortalLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch(`${API_BASE}/stripe/portal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ origin: window.location.origin }),
+      })
+      const data = await res.json()
+      if (data.ok && data.url) {
+        window.location.href = data.url
+      }
+    } catch (e) {
+      toast.error("エラーが発生しました")
+    } finally {
+      setIsPortalLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (profile) {
@@ -83,18 +112,39 @@ export default function EditProfileModal({
         </div>
 
         {/* プラン */}
-        <div className="mb-4 px-1">
-          <p className="text-xs text-gray-500 mb-1">現在のプラン</p>
-          {plan === null ? (
-            <p className="text-sm text-gray-400">読み込み中...</p>
-          ) : plan === "premium" ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-sm font-medium border border-amber-200">
-              ✦ Premium
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium border border-gray-200">
-              Free
-            </span>
+        <div className="mb-4 px-1 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">現在のプラン</p>
+            {plan === null ? (
+              <p className="text-sm text-gray-400">読み込み中...</p>
+            ) : plan === "premium" ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-sm font-medium border border-amber-200">
+                ✦ Premium
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium border border-gray-200">
+                Free
+              </span>
+            )}
+          </div>
+          {plan === "premium" && (
+            <button
+              type="button"
+              onClick={handleManagePlan}
+              disabled={isPortalLoading}
+              className="text-xs text-gray-500 underline hover:text-gray-700 disabled:opacity-50"
+            >
+              {isPortalLoading ? "..." : "プランを管理"}
+            </button>
+          )}
+          {plan === "free" && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-amber-600 underline hover:text-amber-800 font-medium"
+            >
+              アップグレード →
+            </button>
           )}
         </div>
 
