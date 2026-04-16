@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /word/
+
+Disallow: /wordlist
+Disallow: /quiz
+Disallow: /profile
+
+Sitemap: https://www.rootlink.app/sitemap.xml
