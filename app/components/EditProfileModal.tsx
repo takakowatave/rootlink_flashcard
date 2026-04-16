@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabaseClient";
+import { getUserPlan } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
@@ -30,12 +31,19 @@ export default function EditProfileModal({
     setValue,
     formState: { isSubmitting },
   } = useForm<FormData>();
+  const [plan, setPlan] = useState<"premium" | "free" | null>(null)
 
   useEffect(() => {
     if (profile) {
       setValue("display_name", profile.username ?? "");
     }
   }, [profile, setValue]);
+
+  useEffect(() => {
+    if (isOpen) {
+      getUserPlan().then(setPlan)
+    }
+  }, [isOpen]);
 
   if (!isOpen || !profile) return null;
 
@@ -72,6 +80,22 @@ export default function EditProfileModal({
               <FaUserCircle className="w-20 h-20 text-gray-300" />
             )}
           </div>
+        </div>
+
+        {/* プラン */}
+        <div className="mb-4 px-1">
+          <p className="text-xs text-gray-500 mb-1">現在のプラン</p>
+          {plan === null ? (
+            <p className="text-sm text-gray-400">読み込み中...</p>
+          ) : plan === "premium" ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-sm font-medium border border-amber-200">
+              ✦ Premium
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium border border-gray-200">
+              Free
+            </span>
+          )}
         </div>
 
         {/* Form */}
