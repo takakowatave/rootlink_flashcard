@@ -28,7 +28,7 @@ export default function UpgradeModal({ onClose }: Props) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ plan: selectedPlan }),
+        body: JSON.stringify({ plan: selectedPlan, origin: window.location.origin }),
       })
 
       const data = await res.json()
