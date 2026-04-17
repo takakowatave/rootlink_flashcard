@@ -20,7 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const wordEntries: MetadataRoute.Sitemap =
     (words ?? [])
       .map((row) => {
-        const word = (row.words as { word: string } | null)?.word
+        const wordsData = row.words as unknown as { word: string } | { word: string }[] | null
+        const word = Array.isArray(wordsData) ? wordsData[0]?.word : wordsData?.word
         if (!word) return null
         return {
           url: `${BASE_URL}/word/${encodeURIComponent(word)}`,
