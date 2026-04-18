@@ -194,13 +194,15 @@ export const getUserPlan = async (): Promise<"premium" | "free"> => {
   if (profile?.is_tester) return "premium"
 
   // subscriptions チェック
+  // Stripe status: active / trialing / past_due / canceled / incomplete / ...
+  // premium 扱い: active と trialing のみ（past_due は支払い失敗中なので premium から外す）
   const { data: sub } = await supabase
     .from("subscriptions")
     .select("status")
     .eq("user_id", user.id)
     .maybeSingle()
 
-  if (sub?.status === "active") return "premium"
+  if (sub?.status === "active" || sub?.status === "trialing") return "premium"
 
   return "free"
 }
