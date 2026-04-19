@@ -104,7 +104,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       </div>
 
       {/* Etymology trees */}
-      <div className="flex gap-16 md:gap-28">
+      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
         {ROOTS.map((root, ri) => (
           <div key={root.key} className="flex flex-col">
             {/* Root pill + meaning */}

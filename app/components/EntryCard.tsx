@@ -242,7 +242,7 @@ export default function EntryCard({
 
           {/* parts は補助表示 */}
           {hasParts && (
-            <div className="mt-4 flex flex-wrap gap-4">
+            <div className="mt-4 flex flex-wrap gap-4 overflow-x-auto pb-1">
               {parts.map((part, index) => {
                 const displayedMeaning =
                   displayLocale === 'ja'

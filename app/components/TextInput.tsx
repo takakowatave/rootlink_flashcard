@@ -47,7 +47,7 @@ export function TextInput({
             <input
             {...props}
             type={inputType}
-            className={`border p-2 rounded w-full pr-10 ${
+            className={`border py-3 px-3 rounded w-full pr-10 ${
                 error ? "border-red-500" : "border-gray-300"
             }`}
             />
