@@ -226,7 +226,7 @@ function CardView({
           <div className="border-t border-gray-50 px-6 py-5 text-center">
             <button
               onClick={onReveal}
-              className="text-gray-400 border border-gray-200 px-6 py-2 rounded-full text-sm hover:bg-gray-50 transition-colors"
+              className="text-gray-400 border border-gray-200 px-6 py-4 rounded-full text-sm hover:bg-gray-50 transition-colors"
             >
               答えを見る
             </button>
