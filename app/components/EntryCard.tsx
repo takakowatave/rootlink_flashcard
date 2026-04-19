@@ -182,8 +182,8 @@ export default function EntryCard({
   })
 
   return (
-    <div className="mx-auto mt-6 max-w-2xl px-4">
-      <div className="rounded-2xl bg-white p-6">
+    <div className="mx-auto mt-6 max-w-2xl px-2">
+      <div className="rounded-2xl bg-white p-4 md:p-6">
         {/* HEADER */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
