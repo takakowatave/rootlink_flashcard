@@ -16,41 +16,20 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import SearchForm from '@/components/search-form'
+import LPHero from '@/components/LPHero'
 
-/**
- * APIベースURL
- * - NEXT_PUBLIC_API_BASE_URL があればそれを使用
- * - なければCloud Run本番URLを使用
- */
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
   'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
 
 export default function HomePage() {
   const router = useRouter()
-
-  // 検索入力値
   const [value, setValue] = useState('')
-
-  // エラー表示状態
   const [error, setError] = useState<string | null>(null)
-
-  // ローディング状態
   const [isLoading, setIsLoading] = useState(false)
 
-  /**
-   * 検索送信処理
-   *
-   * フロー:
-   * 1. 入力値をtrim
-   * 2. /resolve にPOST
-   * 3. { ok: true, redirectTo: string } を期待
-   * 4. redirectTo へ遷移
-   */
   const handleSubmit = async () => {
     if (!value) return
-
     const trimmed = value.trim()
     if (!trimmed) return
 
@@ -60,37 +39,19 @@ export default function HomePage() {
     try {
       const res = await fetch(`${API_BASE}/resolve`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: trimmed }),
       })
 
-      // HTTPエラー
-      if (!res.ok) {
-        setError('NOT_EXIST')
-        setIsLoading(false)
-        return
-      }
+      if (!res.ok) { setError('NOT_EXIST'); setIsLoading(false); return }
 
       const r = await res.json()
-
-      // 期待レスポンス形式チェック
-      if (
-        !r ||
-        typeof r !== 'object' ||
-        r.ok !== true ||
-        typeof r.redirectTo !== 'string'
-      ) {
-        setError('NOT_EXIST')
-        setIsLoading(false)
-        return
+      if (!r || r.ok !== true || typeof r.redirectTo !== 'string') {
+        setError('NOT_EXIST'); setIsLoading(false); return
       }
 
       router.push(r.redirectTo)
-      // 遷移後はローディングをリセットしない（画面が変わるため）
     } catch {
-      // 通信エラー
       setError('NOT_EXIST')
       setIsLoading(false)
     }
@@ -98,18 +59,13 @@ export default function HomePage() {
 
   return (
     <main>
-      <SearchForm
+      <LPHero
         value={value}
         onChange={setValue}
         onSubmit={handleSubmit}
         isLoading={isLoading}
+        error={error}
       />
-
-      {error && (
-        <p className="mt-2 text-sm text-red-600">
-          英語として確認できませんでした
-        </p>
-      )}
     </main>
   )
 }
