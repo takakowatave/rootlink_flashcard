@@ -63,9 +63,9 @@ interface FormData {
     return (
         <div className="relative flex min-h-[calc(100vh-40px)] items-center justify-center bg-gray-100 px-4 py-12">
         <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md">
-            <h1 className="text-3xl font-bold text-center text-green-700 mb-2">
-            RootLink
-            </h1>
+            <div className="flex justify-center mb-3">
+              <img src="/logo.svg" alt="RootLink" className="h-[17px] w-auto" />
+            </div>
             <h2 className="text-lg font-semibold text-center mb-6">
             アカウント新規作成
             </h2>
