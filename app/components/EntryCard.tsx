@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
+import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { BsPin, BsPinFill } from 'react-icons/bs'
 import { POS_LABEL_JA } from '@/lib/pos'
@@ -128,7 +128,10 @@ export default function EntryCard({
             </button>
           </div>
           <button type="button" onClick={onSave} className="shrink-0">
-            <HiBookmark className={`size-6 ${isBookmarked ? 'text-[#00AD82]' : 'text-[#90a1b9]'}`} />
+            {isBookmarked
+              ? <HiBookmark className="size-6 text-[#90a1b9]" />
+              : <HiOutlineBookmark className="size-6 text-[#00AD82]" />
+            }
           </button>
         </div>
 
