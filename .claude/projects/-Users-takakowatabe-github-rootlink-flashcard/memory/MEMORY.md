@@ -1,1 +1,0 @@
-- [User profile](user_profile.md) — コーディング歴1年半、2025年7月から個人開発、ほぼ毎日コード
