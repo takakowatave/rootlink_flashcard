@@ -12,6 +12,7 @@ import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { BsPin, BsPinFill } from 'react-icons/bs'
 import GrammarTags from '@/components/GrammarTags'
+import EtymologyPartNode from '@/components/EtymologyPartNode'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -240,9 +241,9 @@ export default function EntryCard({
             </div>
           )}
 
-          {/* parts は補助表示 */}
+          {/* parts — DBにデータがあれば + アイコンで展開 */}
           {hasParts && (
-            <div className="mt-4 flex flex-wrap gap-4 overflow-x-auto pb-1">
+            <div className="mt-4 flex flex-col gap-3">
               {parts.map((part, index) => {
                 const displayedMeaning =
                   displayLocale === 'ja'
@@ -250,18 +251,12 @@ export default function EntryCard({
                     : part.meaning ?? part.meaningJa ?? ''
 
                 return (
-                  <div
+                  <EtymologyPartNode
                     key={`${part.text ?? 'part'}-${index}`}
-                    className="flex min-w-[260px] items-center gap-6 rounded-xl bg-green-100 px-4 py-4"
-                  >
-                    <span className="rounded-xl border-2 border-green-500 bg-white px-5 py-1 text-sm leading-none text-green-600">
-                      {part.text}
-                    </span>
-
-                    <span className="text-sm text-green-700">
-                      {displayedMeaning}
-                    </span>
-                  </div>
+                    partText={part.text ?? ''}
+                    meaning={displayedMeaning}
+                    headword={headword}
+                  />
                 )
               })}
             </div>
