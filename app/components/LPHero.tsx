@@ -1,6 +1,8 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import LPHeroTree from '@/components/LPHeroTree'
+import { DEMO } from '@/lib/lp-data'
 
 interface Props {
   value: string
@@ -8,31 +10,6 @@ interface Props {
   onSubmit: () => void
   isLoading: boolean
   error: string | null
-}
-
-const ROOTS = [
-  {
-    key: 'per',
-    meaning: '完全に',
-    words: ['perturbation', 'perceive', 'persist'],
-  },
-  {
-    key: 'turb',
-    meaning: '乱れる',
-    words: ['perturbation', 'turbulent', 'disturb'],
-  },
-]
-
-function highlightRoot(word: string, root: string): ReactNode {
-  const idx = word.toLowerCase().indexOf(root.toLowerCase())
-  if (idx === -1) return <span>{word}</span>
-  return (
-    <>
-      {word.slice(0, idx)}
-      <span className="font-bold text-teal-500">{word.slice(idx, idx + root.length)}</span>
-      {word.slice(idx + root.length)}
-    </>
-  )
 }
 
 export default function LPHero({ value, onChange, onSubmit, isLoading, error }: Props) {
@@ -104,33 +81,14 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       </div>
 
       {/* Etymology trees */}
-      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
-        {ROOTS.map((root, ri) => (
-          <div key={root.key} className="flex flex-col">
-            {/* Root pill + meaning */}
-            <div className="mb-5 flex items-center gap-3" style={anim(0.3 + ri * 0.1)}>
-              <span
-                className="rounded-full px-5 py-2 text-lg font-bold text-white shadow-sm"
-                style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
-              >
-                {root.key}
-              </span>
-              <span className="text-base text-gray-400">{root.meaning}</span>
-            </div>
-
-            {/* Word cards */}
-            <div className="flex flex-col gap-3 border-l-2 border-teal-200 pl-6">
-              {root.words.map((word, wi) => (
-                <div key={`${root.key}-${wi}`} className="relative" style={anim(0.5 + ri * 0.1 + wi * 0.12)}>
-                  {/* horizontal branch */}
-                  <div className="absolute -left-6 top-1/2 h-px w-5 -translate-y-1/2 bg-teal-200" />
-                  <div className="rounded-2xl border border-teal-200 bg-white px-5 py-2.5 text-base text-gray-700 shadow-sm">
-                    {highlightRoot(word, root.key)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28" style={anim(0.3)}>
+        {DEMO[0].roots.map((root) => (
+          <LPHeroTree
+            key={root.root}
+            root={root.root}
+            gloss={root.gloss}
+            words={root.words}
+          />
         ))}
       </div>
     </div>
