@@ -106,11 +106,18 @@ const Header = () => {
         {/* 右：アクション */}
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {!profile && (
-            <Link href="/login">
-              <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
-                ログイン
-              </button>
-            </Link>
+            <>
+              <Link href="/signup">
+                <button className="h-8 px-4 rounded-full bg-[#009689] text-white text-xs font-medium">
+                  新規登録
+                </button>
+              </Link>
+              <Link href="/login">
+                <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
+                  ログイン
+                </button>
+              </Link>
+            </>
           )}
 
           {profile && (
