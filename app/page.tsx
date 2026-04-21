@@ -3,6 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import LPHero from '@/components/LPHero'
+import LPAbout from '@/components/LPAbout'
+import LPFeatures from '@/components/LPFeatures'
+import LPCta from '@/components/LPCta'
+import LPFooter from '@/components/LPFooter'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -52,6 +56,10 @@ export default function HomePage() {
         isLoading={isLoading}
         error={error}
       />
+      <LPAbout wordIdx={0} />
+      <LPFeatures />
+      <LPCta />
+      <LPFooter />
     </main>
   )
 }
