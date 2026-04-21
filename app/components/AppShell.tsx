@@ -10,7 +10,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isLP && <Header />}
+      <Header />
       {children}
       {!isLP && <Footer />}
     </>

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import LPHeroTree from '@/components/LPHeroTree'
 import { DEMO } from '@/lib/lp-data'
 
 interface Props {
@@ -17,7 +16,7 @@ const TYPING_MS  = 90
 
 export default function LPHero({ value, onChange, onSubmit, isLoading, error }: Props) {
   const [ready,    setReady]    = useState(false)
-  const [wordIdx,  setWordIdx]  = useState(0)
+  const [,         setWordIdx]  = useState(0)
   const [typed,    setTyped]    = useState('')
   const [showCursor, setShowCursor] = useState(true)
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -130,17 +129,6 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
-      {/* Etymology trees — wordIdxが変わるたびにre-mountしてアニメーションリセット */}
-      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
-        {DEMO[wordIdx].roots.map((root) => (
-          <LPHeroTree
-            key={`${wordIdx}-${root.root}`}
-            root={root.root}
-            gloss={root.gloss}
-            words={root.words}
-          />
-        ))}
-      </div>
     </div>
   )
 }
