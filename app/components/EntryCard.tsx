@@ -1,18 +1,15 @@
 'use client'
 
-// wordページ全体のレイアウト担当
-// header / memory hook / senses / synonyms などの sections を並べる
-// WordPageClient から渡された表示用データを locale に応じて描画する
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { HiSpeakerWave, HiBookmark } from 'react-icons/hi2'
+import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
+import { BsPin, BsPinFill } from 'react-icons/bs'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import { BsPin, BsPinFill } from 'react-icons/bs'
 import GrammarTags from '@/components/GrammarTags'
-import EtymologyPartNode from '@/components/EtymologyPartNode'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -48,23 +45,13 @@ type Props = {
 }
 
 const POS_LABEL_EN: Record<string, string> = {
-  noun: 'noun',
-  verb: 'verb',
-  adjective: 'adjective',
-  adverb: 'adverb',
-  pronoun: 'pronoun',
-  preposition: 'preposition',
-  conjunction: 'conjunction',
-  determiner: 'determiner',
-  interjection: 'interjection',
+  noun: 'noun', verb: 'verb', adjective: 'adjective', adverb: 'adverb',
+  pronoun: 'pronoun', preposition: 'preposition', conjunction: 'conjunction',
+  determiner: 'determiner', interjection: 'interjection',
 }
 
 function getPosLabel(pos: string, locale: DisplayLocale): string {
-  if (locale === 'ja') {
-    return POS_LABEL_JA[pos] ?? pos
-  }
-
-  return POS_LABEL_EN[pos] ?? pos
+  return locale === 'ja' ? (POS_LABEL_JA[pos] ?? pos) : (POS_LABEL_EN[pos] ?? pos)
 }
 
 export default function EntryCard({
@@ -86,377 +73,333 @@ export default function EntryCard({
   onSave,
   compact = false,
 }: Props) {
+  const parts = etymologyData?.structure.type === 'parts'
+    ? etymologyData.structure.parts.filter(p => p.text || p.meaning)
+    : []
+
+  const router = useRouter()
+  const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation?.audioFile ?? null)
   const [audioLoading, setAudioLoading] = useState(false)
+  const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => true))
 
-  // 音声再生担当（キャッシュなければオンデマンド生成）
   const playAudio = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
-    if (audioUrl) {
-      new Audio(audioUrl).play()
-      return
-    }
-
+    if (audioUrl) { new Audio(audioUrl).play(); return }
     setAudioLoading(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
-      const res = await fetch(`${apiUrl}/audio`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: headword }),
       })
       const data = await res.json()
-      if (data.ok && data.audioUrl) {
-        setAudioUrl(data.audioUrl)
-        new Audio(data.audioUrl).play()
-      }
-    } catch {
-      // 失敗しても何もしない
-    } finally {
-      setAudioLoading(false)
-    }
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
-  // ラベル切り替え担当
-  const labels =
-    displayLocale === 'ja'
-      ? {
-          memoryHook: '語源フック',
-          originLanguage: '語源言語',
-          derivatives: '派生語',
-          synonyms: '類義語',
-          antonyms: '対義語',
-          noMemoryHook: 'まだ語源フックはありません。',
-          pinThisSense: 'この意味をピン留め',
-        }
-      : {
-          memoryHook: 'Memory Hook',
-          originLanguage: 'originLanguage',
-          derivatives: 'derivatives',
-          synonyms: 'Synonyms',
-          antonyms: 'Antonyms',
-          noMemoryHook: 'No memory hook available yet.',
-          pinThisSense: 'Pin this sense',
-        }
+  const labels = displayLocale === 'ja'
+    ? { synonyms: '類義語', antonyms: '対義語', derivatives: '派生語', pinThisSense: 'この意味をピン留め' }
+    : { synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives', pinThisSense: 'Pin this sense' }
 
-  // Memory Hook 用の表示データ
-  const originLanguage = etymologyData?.originLanguage ?? null
-
-  const parts =
-    etymologyData?.structure.type === 'parts'
-      ? etymologyData.structure.parts.filter(
-          (part) => Boolean(part.text) || Boolean(part.meaning)
-        )
-      : []
-
-  const displayedOriginLanguageLabel =
-    displayLocale === 'ja'
-      ? localizedEtymologyJa?.originLanguageLabel ??
-        originLanguage?.labelJa ??
-        originLanguage?.labelEn
-      : originLanguage?.labelEn ?? originLanguage?.labelJa
-
-  const displayedEtymologyDescription =
-    displayLocale === 'ja'
-      ? localizedEtymologyJa?.description ?? etymology
-      : etymology
+  const displayedEtymologyDescription = displayLocale === 'ja'
+    ? localizedEtymologyJa?.description ?? etymology
+    : etymology
 
   const hasParts = parts.length > 0
-  const hasEtymologyText = Boolean(
-    displayedEtymologyDescription &&
-      displayedEtymologyDescription.trim().length > 0
-  )
-  
+  const hasEtymologyText = Boolean(displayedEtymologyDescription?.trim())
 
-  // derivatives の並びを最低限整える
   const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
-    const score = (value: string) => {
-      if (value.endsWith('ing')) return 3
-      if (value.endsWith('ed')) return 2
-      if (value.endsWith('s')) return 1
-      return 0
-    }
-
+    const score = (v: string) => v.endsWith('ing') ? 3 : v.endsWith('ed') ? 2 : v.endsWith('s') ? 1 : 0
     return score(a) - score(b)
   })
 
   return (
-    <div className="mx-auto mt-6 max-w-2xl px-2">
-      <div className="rounded-2xl bg-white p-4 md:p-6">
-        {/* HEADER */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-semibold text-gray-900">
-              {headword}
-            </h1>
+    <div className="mx-auto max-w-[600px] px-4 py-3">
+      <div className="bg-white rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2">
 
-            <button
-              type="button"
-              onClick={playAudio}
-              disabled={audioLoading}
-              className="shrink-0"
-            >
-              <HiSpeakerWave className={`h-5 w-5 ${audioLoading ? 'text-gray-300 animate-pulse' : 'text-gray-500'}`} />
-            </button>
-
-            {pronunciation?.phoneticSpelling && (
-              <span className="text-gray-500">
-                /{pronunciation.phoneticSpelling}/
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={onSave}>
-              <HiBookmark
-                className={
-                  'h-6 w-6 ' +
-                  (isBookmarked ? 'text-blue-500' : 'text-gray-300')
-                }
-              />
+        {/* ── HEADER ── */}
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-semibold leading-8 text-black">{headword}</h1>
+            <button type="button" onClick={playAudio} disabled={audioLoading} className="shrink-0">
+              <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-[#90a1b9] animate-pulse' : 'text-[#90a1b9]'}`} />
             </button>
           </div>
+          <button type="button" onClick={onSave} className="shrink-0">
+            <HiBookmark className={`size-6 ${isBookmarked ? 'text-[#009689]' : 'text-[#90a1b9]'}`} />
+          </button>
         </div>
 
-        {/* MEMORY HOOK */}
-        {!compact && <div className="mt-6 rounded-2xl bg-green-50 p-4">
-          <div className="font-semibold text-green-700">
-            {labels.memoryHook}
+        {/* IPA */}
+        {pronunciation?.phoneticSpelling && (
+          <div className="px-2 flex items-center">
+            <span className="text-base font-medium text-[#90a1b9]">
+              /{pronunciation.phoneticSpelling}/
+            </span>
           </div>
+        )}
 
-          {/* originLanguage */}
-          {displayedOriginLanguageLabel && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="font-semibold text-green-700">
-                {labels.originLanguage}
-              </div>
+        {/* ── ETYMOLOGY HOOK ── */}
+        {!compact && hasParts && (
+          <div className="mt-2 bg-[#f0fdfa] rounded-sm px-2 py-2 flex flex-col gap-2">
+            {/* Root panels */}
+            {parts.map((part, idx) => {
+              const gloss = displayLocale === 'ja'
+                ? (part.meaningJa ?? part.meaning ?? '')
+                : (part.meaning ?? part.meaningJa ?? '')
 
-              <div className="flex flex-wrap gap-3">
-                <span className="rounded-xs border border-gray-300 bg-white px-4 py-1 text-xs text-gray-500">
-                  {displayedOriginLanguageLabel}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* parts — DBにデータがあれば + アイコンで展開 */}
-          {hasParts && (
-            <div className="mt-4 flex flex-col gap-3">
-              {parts.map((part, index) => {
-                const displayedMeaning =
-                  displayLocale === 'ja'
-                    ? part.meaningJa ?? part.meaning ?? ''
-                    : part.meaning ?? part.meaningJa ?? ''
-
-                return (
-                  <EtymologyPartNode
-                    key={`${part.text ?? 'part'}-${index}`}
-                    partText={part.text ?? ''}
-                    meaning={displayedMeaning}
-                    headword={headword}
-                  />
+              const filteredWords = [...new Set(
+                part.relatedWords.filter(w =>
+                  w.toLowerCase() !== headword.toLowerCase() &&
+                  w.toLowerCase().startsWith(headword.toLowerCase())
                 )
-              })}
-            </div>
-          )}
+              )].slice(0, 3)
 
-          {/* 語源文は常時表示 */}
-          {hasEtymologyText ? (
-            <p className="mt-4 text-xs leading-8 text-green-900">
-              {displayedEtymologyDescription}
-            </p>
-          ) : (
-            <p className="mt-4 text-xs leading-8 text-green-900">
-              {labels.noMemoryHook}
-            </p>
-          )}
+              const isFirst = idx === 0
 
-          {/* derivatives */}
-          {orderedDerivatives.length > 0 && (
-            <div className="mt-6">
-              <div className="text-xl font-semibold text-green-700">
-                {labels.derivatives}
-              </div>
+              return (
+                <div
+                  key={idx}
+                  className="bg-[#cbfbf1] rounded-lg px-3.5 py-2 flex flex-col gap-2"
+                >
+                  {/* Badge + gloss */}
+                  <div className="flex items-center gap-2">
+                    {isFirst ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
+                        className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
+                      >
+                        {expandedParts[idx]
+                          ? <MdRemoveCircle className="size-5 text-[#00786f]" />
+                          : <MdAddCircle    className="size-5 text-[#00786f]" />
+                        }
+                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                      </button>
+                    ) : (
+                      <div className="bg-white border-2 border-[#00d5be] rounded-3xl px-3 py-1 shrink-0">
+                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-[#00786f] whitespace-nowrap">{gloss}</span>
+                  </div>
 
-              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3">
-                {orderedDerivatives.map((derivative) => (
-                  <span
-                    key={derivative}
-                    className="text-xs text-green-700 underline underline-offset-4"
-                  >
-                    {derivative}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>}
+                  {/* Related words tree — first panel only */}
+                  {isFirst && expandedParts[idx] && filteredWords.length > 0 && (() => {
+                    const ITEM_H = 48
+                    const TX = 5
+                    const R = 12
+                    const lastMidY = (filteredWords.length - 1) * ITEM_H + ITEM_H / 2
+                    const trunkEnd = lastMidY - R
+                    return (
+                      <div className="relative ml-1" style={{ paddingLeft: 48 }}>
+                        <svg
+                          className="absolute left-0 top-0 pointer-events-none overflow-visible"
+                          width={44}
+                          height={filteredWords.length * ITEM_H}
+                          fill="none"
+                        >
+                          <path
+                            d={`M ${TX},0 L ${TX},${trunkEnd}`}
+                            stroke="#00d5be"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            pathLength="1"
+                            strokeDasharray="1"
+                            strokeDashoffset="1"
+                            style={{ animation: 'draw-path 0.4s ease forwards' }}
+                          />
+                          {filteredWords.map((_, wi) => {
+                            const midY = wi * ITEM_H + ITEM_H / 2
+                            return (
+                              <path
+                                key={wi}
+                                d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 42,${midY}`}
+                                stroke="#00d5be"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                fill="none"
+                                pathLength="1"
+                                strokeDasharray="1"
+                                strokeDashoffset="1"
+                                style={{ animation: `draw-path 0.35s ease ${0.12 + wi * 0.12}s forwards` }}
+                              />
+                            )
+                          })}
+                        </svg>
+                        {filteredWords.map((rw, wi) => (
+                          <div key={wi} className="flex items-center gap-2" style={{ height: ITEM_H }}>
+                            <div className="group/chip relative shrink-0">
+                              <button
+                                type="button"
+                                disabled={navigatingWord !== null}
+                                onClick={async () => {
+                                  setNavigatingWord(rw)
+                                  try {
+                                    const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ query: rw }),
+                                    })
+                                    if (!res.ok) return
+                                    const data = await res.json()
+                                    if (data?.ok && typeof data.redirectTo === 'string') {
+                                      router.push(data.redirectTo)
+                                    }
+                                  } finally {
+                                    setNavigatingWord(null)
+                                  }
+                                }}
+                                className="bg-[#f0fdfa] px-2 py-1 rounded-3xl transition-opacity disabled:opacity-50"
+                              >
+                                {navigatingWord === rw ? (
+                                  <svg className="size-4 animate-spin text-[#009689]" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                  </svg>
+                                ) : (
+                                  <span className="text-sm font-medium text-[#009689] leading-4">{rw}</span>
+                                )}
+                              </button>
+                              <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
+                                {displayLocale === 'ja' ? 'この単語を検索' : 'Search this word'}
+                              </span>
+                            </div>
+                            {part.relatedWordMeanings?.[rw] && (
+                              <span className="text-xs text-[#009689] whitespace-nowrap">{part.relatedWordMeanings[rw]}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )
+            })}
 
-        {/* SENSES */}
-        <div className="mt-6 space-y-8">
+            {/* Etymology description */}
+            {hasEtymologyText && (
+              <p className="text-sm text-[#00786f] leading-5">{displayedEtymologyDescription}</p>
+            )}
+          </div>
+        )}
+
+        {/* ── SENSES ── */}
+        <div className="mt-2 flex flex-col gap-4">
           {(() => {
             const allEntries = Object.entries(senses).filter(([, items]) => items.length > 0)
 
-            // compactモード: pinnedSenseが属するPOSのみ、その1件だけ表示
             if (compact) {
-              // pinnedSenseIdを含むPOSを探す
               const pinnedEntry = allEntries.find(([, items]) =>
-                items.some((s) => s.senseId === pinnedSenseId)
+                items.some(s => s.senseId === pinnedSenseId)
               ) ?? allEntries[0]
-
               if (!pinnedEntry) return null
 
               const [pos, items] = pinnedEntry
-              const sense = items.find((s) => s.senseId === pinnedSenseId) ?? items[0]
+              const sense = items.find(s => s.senseId === pinnedSenseId) ?? items[0]
               if (!sense) return null
 
               return [(
-                <div key={pos}>
-                  <div className="mb-2 flex items-center gap-3">
-                    <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
-                      {getPosLabel(pos, displayLocale)}
-                    </span>
+                <div key={pos} className="px-2">
+                  <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
+                    {getPosLabel(pos, displayLocale)}
+                  </span>
+                  <div className="mt-2 flex items-start gap-2">
+                    <p className="flex-1 text-base font-medium text-black">{sense.meaning}</p>
+                    <BsPinFill className="size-4 text-[#90a1b9] shrink-0 mt-1" />
                   </div>
-                  {pos === 'verb' && inflections.length > 0 && (
-                    <span className="text-sm text-gray-500">
-                      {inflections.join(' · ')}
-                    </span>
-                  )}
-                  <div className="mt-4">
-                    <div className="flex items-start justify-between gap-3 py-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-gray-900">{sense.meaning}</p>
-                        {(sense.example || sense.exampleTranslation) && (
-                          <div className="mt-2 space-y-1">
-                            {sense.example && (
-                              <p className="text-gray-600">{sense.example}</p>
-                            )}
-                            {sense.exampleTranslation && (
-                              <p className="text-gray-500">{sense.exampleTranslation}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="shrink-0">
-                        <BsPinFill className="h-4 w-4 text-gray-300" />
-                      </div>
+                  {(sense.example || sense.exampleTranslation) && (
+                    <div className="mt-2 flex flex-col gap-1 text-sm text-black">
+                      {sense.example && <p>{sense.example}</p>}
+                      {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                     </div>
-                  </div>
+                  )}
                 </div>
               )]
             }
 
-            return allEntries.map(([pos, items]) => {
-              const displayItems = items
-              if (displayItems.length === 0) return null
+            return allEntries.map(([pos, items]) => (
+              <div key={pos} className="px-2">
+                <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
+                  {getPosLabel(pos, displayLocale)}
+                </span>
 
-              return (
-                <div key={pos}>
-                  <div className="mb-2 flex items-center gap-3">
-                    <span className="rounded-full border px-3 py-1 text-xs text-gray-600">
-                      {getPosLabel(pos, displayLocale)}
-                    </span>
-                  </div>
+                {pos === 'verb' && inflections.length > 0 && (
+                  <p className="mt-1 text-sm text-[#90a1b9]">{inflections.join(' · ')}</p>
+                )}
 
-                  {pos === 'verb' && inflections.length > 0 && (
-                    <span className="text-sm text-gray-500">
-                      {inflections.join(' · ')}
-                    </span>
-                  )}
+                <div className="mt-2 flex flex-col gap-4">
+                  {items.map((sense) => {
+                    const isPinned = pinnedSenseId === sense.senseId
+                    return (
+                      <div key={sense.senseId} className="group flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-medium text-black">{sense.meaning}</p>
 
-                  <div className="mt-4 space-y-4">
-                    {displayItems.map((sense) => {
-                      const isPinned = pinnedSenseId === sense.senseId
+                          {grammarTags[sense.senseId]?.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <GrammarTags tags={grammarTags[sense.senseId]} displayLocale={displayLocale} />
+                            </div>
+                          )}
 
-                      return (
-                        <div
-                          key={sense.senseId}
-                          className="group flex items-start justify-between gap-3 py-3"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-gray-900">{sense.meaning}</p>
-
-                            {grammarTags[sense.senseId] &&
-                              grammarTags[sense.senseId].length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <GrammarTags
-                                    tags={grammarTags[sense.senseId]}
-                                    displayLocale={displayLocale}
-                                  />
-                                </div>
-                              )}
-
-                            {(sense.example || sense.exampleTranslation) && (
-                              <div className="mt-2 space-y-1">
-                                {sense.example && (
-                                  <p className="text-gray-600">
-                                    {sense.example}
-                                  </p>
-                                )}
-
-                                {sense.exampleTranslation && (
-                                  <p className="text-gray-500">
-                                    {sense.exampleTranslation}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {!compact && (
-                            <div className="group/pin relative shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => onTogglePin(sense.senseId)}
-                                className="flex h-8 w-8 items-center justify-center"
-                              >
-                                {isPinned ? (
-                                  <BsPinFill className="h-5 w-5 text-gray-400" />
-                                ) : (
-                                  <BsPin className="h-5 w-5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100 group-hover/pin:text-gray-400" />
-                                )}
-                              </button>
-
-                              {!isPinned && (
-                                <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-gray-700 px-4 py-3 text-sm text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
-                                  {labels.pinThisSense}
-                                  <span className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-gray-700" />
-                                </span>
-                              )}
+                          {(sense.example || sense.exampleTranslation) && (
+                            <div className="mt-1.5 flex flex-col gap-1 text-sm text-black opacity-70">
+                              {sense.example && <p>{sense.example}</p>}
+                              {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                             </div>
                           )}
                         </div>
-                      )
-                    })}
-                  </div>
+
+                        <div className="group/pin relative shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => onTogglePin(sense.senseId)}
+                            className="flex size-8 items-center justify-center"
+                          >
+                            {isPinned
+                              ? <BsPinFill className="size-4 text-[#009689]" />
+                              : <BsPin className="size-4 text-[#90a1b9] opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
+                            }
+                          </button>
+                          {!isPinned && (
+                            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
+                              {labels.pinThisSense}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })
+              </div>
+            ))
           })()}
         </div>
 
-        {/* SYNONYMS */}
+        {/* ── SYNONYMS / ANTONYMS ── */}
         {synonyms.length > 0 && (
-          <div className="mt-6">
-            <div className="mb-1 text-xs text-gray-400">
-              {labels.synonyms}
-            </div>
-            <div className="text-gray-800">
-              {synonyms.slice(0, 8).join(', ')}
-            </div>
+          <div className="mt-4 px-2">
+            <p className="text-xs text-[#90a1b9] mb-1">{labels.synonyms}</p>
+            <p className="text-sm text-black">{synonyms.slice(0, 8).join(', ')}</p>
+          </div>
+        )}
+        {antonyms.length > 0 && (
+          <div className="mt-3 px-2">
+            <p className="text-xs text-[#90a1b9] mb-1">{labels.antonyms}</p>
+            <p className="text-sm text-black">{antonyms.slice(0, 8).join(', ')}</p>
           </div>
         )}
 
-        {/* ANTONYMS */}
-        {antonyms.length > 0 && (
-          <div className="mt-4">
-            <div className="mb-1 text-xs text-gray-400">
-              {labels.antonyms}
-            </div>
-            <div className="text-gray-800">
-              {antonyms.slice(0, 8).join(', ')}
+        {/* ── DERIVATIVES ── */}
+        {orderedDerivatives.length > 0 && (
+          <div className="mt-3 px-2">
+            <p className="text-xs text-[#90a1b9] mb-1.5">{labels.derivatives}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {orderedDerivatives.map(d => (
+                <span key={d} className="text-sm text-[#009689] underline underline-offset-2">{d}</span>
+              ))}
             </div>
           </div>
         )}

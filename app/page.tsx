@@ -1,19 +1,5 @@
 'use client'
 
-/**
- * app/page.tsx
- *
- * RootLink トップページ。
- *
- * 責務:
- * - ユーザーの検索入力を受け取る
- * - サーバーの /resolve エンドポイントに問い合わせる
- * - サーバーから返された redirectTo に基づいてページ遷移する
- *
- * ※ 辞書判定・フィルタリング・AI生成ロジックは持たない
- *    すべてサーバー側に委譲する
- */
-
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import LPHero from '@/components/LPHero'

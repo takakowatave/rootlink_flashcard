@@ -18,6 +18,7 @@ export type EtymologyPart = {
   meaning: string | null
   meaningJa?: string | null
   relatedWords: string[]
+  relatedWordMeanings?: Record<string, string>
   order: number
 }
 

@@ -1,8 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import AppShell from "@/components/AppShell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -32,9 +31,9 @@ export default function RootLayout({
         <html lang="ja">
         <body>
             <Toaster position="top-center" />
-            <Header />
-            {children}
-            <Footer />
+            <AppShell>
+                {children}
+            </AppShell>
         </body>
         </html>
     );

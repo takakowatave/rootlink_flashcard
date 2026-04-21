@@ -92,6 +92,7 @@ export default async function Page({
 
   return (
     <WordPageClient
+      key={resolvedWord}
       word={resolvedWord}
       dictionary={dictionary}
       correctedFrom={correctedFrom}

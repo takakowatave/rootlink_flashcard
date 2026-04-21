@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { FaUserCircle } from "react-icons/fa";
+import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
-import Button from "../components/button";
 import EditProfileModal from "@/components/EditProfileModal";
 
 const API_BASE =
@@ -15,6 +15,7 @@ const API_BASE =
 
 const Header = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -22,11 +23,15 @@ const Header = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const match = pathname.match(/^\/word\/(.+)$/)
+    if (match) setSearchValue(decodeURIComponent(match[1]))
+  }, [pathname]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = searchValue.trim();
     if (!trimmed || isSearching) return;
-
     setIsSearching(true);
     try {
       const res = await fetch(`${API_BASE}/resolve`, {
@@ -52,61 +57,59 @@ const Header = () => {
 
   useEffect(() => {
     const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { data } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single<Profile>();
-
       if (data) setProfile(data);
     };
-
     load();
   }, []);
 
   return (
     <>
-      <header className="bg-white text-black py-2 px-4 md:px-8 flex justify-between items-center">
-        {/* 左：ロゴ */}
-        <Link href="/">
-          <img
-            src="/logo.svg"
-            alt="logo"
-            className="h-6 md:h-8 cursor-pointer"
-          />
+      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
+        {/* ロゴ */}
+        <Link href="/" className="shrink-0">
+          <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
 
-        {/* 中央：PC用検索フォーム（ログイン済みのみ） */}
+        {/* 中央：検索フォーム（ログイン済みのみ） */}
         {profile && (
-          <form onSubmit={handleSearch} className="hidden md:flex items-center relative w-64 lg:w-80">
-            <input
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Search a word"
-              disabled={isSearching}
-              className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-sm focus:outline-none focus:border-gray-400 disabled:opacity-50"
-            />
-            {isSearching && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                <svg className="h-3.5 w-3.5 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 items-center justify-center"
+          >
+            <div className="flex items-center w-full max-w-[400px] h-8 bg-white border border-[#e2e8f0] rounded-full pl-4 pr-2 gap-2">
+              <input
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder=""
+                disabled={isSearching}
+                className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
+              />
+              {isSearching ? (
+                <svg className="size-5 animate-spin text-[#90a1b9] shrink-0" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-              </span>
-            )}
+              ) : (
+                <HiSearch className="size-5 text-[#90a1b9] shrink-0" />
+              )}
+            </div>
           </form>
         )}
 
-        {/* 右：操作 */}
-        <div className="flex items-center gap-4">
+        {/* 右：アクション */}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           {!profile && (
             <Link href="/login">
-              <Button text="ログイン" variant="secondary" />
+              <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
+                ログイン
+              </button>
             </Link>
           )}
 
@@ -114,10 +117,9 @@ const Header = () => {
             <>
               {/* PC only nav */}
               <Link href="/wordlist" className="hidden md:block">
-                <Button text="単語リスト" variant="secondary" />
-              </Link>
-              <Link href="/quiz" className="hidden md:block">
-                <Button text="クイズ" variant="secondary" />
+                <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
+                  単語リスト
+                </button>
               </Link>
 
               {/* SP: 検索アイコン */}
@@ -132,19 +134,13 @@ const Header = () => {
                 </svg>
               </button>
 
-              <div
-                className="cursor-pointer"
-                onClick={() => setIsModalOpen(true)}
-              >
+              <button onClick={() => setIsModalOpen(true)}>
                 {profile.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                  <img src={profile.avatar_url} className="size-8 rounded-full object-cover" alt="avatar" />
                 ) : (
-                  <FaUserCircle className="w-8 h-8 text-gray-400" />
+                  <FaUserCircle className="size-8 text-[#90a1b9]" />
                 )}
-              </div>
+              </button>
             </>
           )}
         </div>
@@ -189,17 +185,13 @@ const Header = () => {
         onClose={() => setIsModalOpen(false)}
         profile={profile}
         onUpdated={async () => {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
+          const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
-
           const { data } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", user.id)
             .single<Profile>();
-
           if (data) setProfile(data);
         }}
       />

@@ -208,7 +208,58 @@ export const getUserPlan = async (): Promise<"premium" | "free"> => {
 }
 
 /* =========================================
- ⑤ 保存一覧取得（辞書データは取らない）
+ ⑤ etymology_parts テーブルから同じルートを持つ単語を取得
+    partText: "com" / "pon" など
+========================================= */
+export const fetchWordsByEtymologyPart = async (
+  partText: string
+): Promise<{ word: string; meaning: string }[]> => {
+  if (!partText) return []
+
+  const { data: partRows, error } = await supabase
+    .from('etymology_parts')
+    .select('word_id')
+    .ilike('text', partText)
+
+  if (error || !partRows || partRows.length === 0) return []
+
+  const wordIds = [...new Set(
+    (partRows as { word_id: string }[]).map(r => r.word_id).filter(Boolean)
+  )]
+  if (wordIds.length === 0) return []
+
+  // word_id → word 文字列
+  const { data: wordRows } = await supabase
+    .from('words')
+    .select('id, word')
+    .in('id', wordIds)
+    .limit(6)
+
+  const words = ((wordRows ?? []) as { id: string; word: string }[]).filter(r => r.word)
+  if (words.length === 0) return []
+
+  // dictionary_cache から最初の meaning を取得
+  const ids = words.map(r => r.id)
+  const { data: cacheRows } = await supabase
+    .from('dictionary_cache')
+    .select('word_id, payload')
+    .in('word_id', ids)
+
+  type CacheRow = { word_id: string; payload: { senseGroups?: { senses?: { definition?: string }[] }[] } }
+  const meaningMap = new Map<string, string>()
+  for (const row of ((cacheRows ?? []) as CacheRow[])) {
+    const def = row.payload?.senseGroups?.[0]?.senses?.[0]?.definition
+    if (def) meaningMap.set(row.word_id, def)
+  }
+
+  return words.map(r => ({
+    word: r.word,
+    meaning: meaningMap.get(r.id) ?? '',
+  }))
+}
+
+/* =========================================
+ ⑥ 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
  ② 保存一覧取得（saved_words + words + dictionary_cache を返す）

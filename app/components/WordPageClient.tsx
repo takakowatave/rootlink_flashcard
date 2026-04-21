@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
-import { toggleSaveStatus, fetchWordlists, updatePinnedSense } from '@/lib/supabaseApi'
+import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
@@ -919,6 +919,37 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
+  // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
+  const [enrichedEtymologyData, setEnrichedEtymologyData] = useState<EtymologyData | null>(null)
+
+  useEffect(() => {
+    if (etymologyData?.structure.type !== 'parts') {
+      setEnrichedEtymologyData(etymologyData)
+      return
+    }
+    const parts = etymologyData.structure.parts
+    Promise.all(parts.map(p => fetchWordsByEtymologyPart(p.text)))
+      .then(relatedPerPart => {
+        setEnrichedEtymologyData({
+          ...etymologyData,
+          structure: {
+            ...etymologyData.structure,
+            parts: parts.map((p, i) => {
+              const fetched = relatedPerPart[i]
+              if (fetched.length === 0) return p
+              const meanings: Record<string, string> = {}
+              fetched.forEach(({ word, meaning }) => { if (meaning) meanings[word] = meaning })
+              return {
+                ...p,
+                relatedWords: fetched.map(r => r.word),
+                relatedWordMeanings: meanings,
+              }
+            }),
+          },
+        } as EtymologyData)
+      })
+  }, [etymologyData])
+
   useEffect(() => {
     if (!initialPinnedSenseId) {
       setPinnedSenseId(firstSenseId)
@@ -1023,10 +1054,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [dictionary])
 
   return (
-    <>
+    <div className="min-h-screen bg-[#f8fafc]">
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     {showCorrectionBanner && correctedFrom && (
-      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-4 mx-4 mt-2">
+      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-0 mx-4 mt-3">
         <span>
           <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span> を{' '}
           <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span> に補正して検索しました
@@ -1044,7 +1075,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       headword={word}
       pronunciation={pronunciation}
       etymology={etymology}
-      etymologyData={etymologyData}
+      etymologyData={enrichedEtymologyData ?? etymologyData}
       localizedEtymologyJa={localizedEtymologyJa}
       senses={displaySenses}
       lexicalUnits={lexicalUnits}
@@ -1059,6 +1090,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
     />
-    </>
+    </div>
   )
 }
