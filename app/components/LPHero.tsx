@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import LPHeroTree from '@/components/LPHeroTree'
 import { DEMO } from '@/lib/lp-data'
 
 interface Props {
@@ -15,21 +16,23 @@ const CYCLE_MS   = 3800
 const TYPING_MS  = 90
 
 export default function LPHero({ value, onChange, onSubmit, isLoading, error }: Props) {
-  const [ready,    setReady]    = useState(false)
-  const [,         setWordIdx]  = useState(0)
-  const [typed,    setTyped]    = useState('')
+  const [ready,     setReady]     = useState(false)
+  const [wordIdx,   setWordIdx]   = useState(0)
+  const [typed,     setTyped]     = useState('')
   const [showCursor, setShowCursor] = useState(true)
+  const [showTree,  setShowTree]  = useState(false)
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { setReady(true) }, [])
 
-  // タイピングアニメーション
+  // タイピングアニメーション — 完了後にツリーを表示
   const startTyping = (idx: number) => {
     if (typingRef.current) clearInterval(typingRef.current)
     const word = DEMO[idx].word
     setTyped('')
     setShowCursor(true)
+    setShowTree(false)
     let i = 0
     typingRef.current = setInterval(() => {
       i++
@@ -37,6 +40,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       if (i >= word.length) {
         clearInterval(typingRef.current!)
         typingRef.current = null
+        setShowTree(true)
       }
     }, TYPING_MS)
   }
@@ -129,6 +133,19 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
+      {/* Etymology trees — タイピング完了後に表示、ユーザー入力中は非表示 */}
+      {!value && showTree && (
+        <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
+          {DEMO[wordIdx].roots.map((root) => (
+            <LPHeroTree
+              key={`${wordIdx}-${root.root}`}
+              root={root.root}
+              gloss={root.gloss}
+              words={root.words}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
