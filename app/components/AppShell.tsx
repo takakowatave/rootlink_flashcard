@@ -7,12 +7,13 @@ import Footer from './Footer'
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLP = pathname === '/'
+  const isAuth = pathname === '/login' || pathname === '/signup'
 
   return (
     <>
       <Header />
       {children}
-      {!isLP && <Footer />}
+      {!isLP && !isAuth && <Footer />}
     </>
   )
 }

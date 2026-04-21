@@ -61,7 +61,7 @@ interface FormData {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-12">
+        <div className="relative flex min-h-[calc(100vh-40px)] items-center justify-center bg-gray-100 px-4 py-12">
         <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md">
             <h1 className="text-3xl font-bold text-center text-green-700 mb-2">
             RootLink
@@ -138,10 +138,16 @@ interface FormData {
             Googleでログイン / 新規作成
             </button>
 
-            <p className="text-center text-xs text-gray-400 mt-6">
-            ©Rootlink2025. All rights reserved.
-            </p>
         </div>
+
+        {/* 絶対配置フッター */}
+        <footer className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-xs text-gray-400">
+          <div className="flex gap-6">
+            <a href="/privacy" className="hover:text-gray-600 transition-colors">プライバシーポリシー</a>
+            <a href="https://tally.so/r/ODJoEY" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">お問い合わせ</a>
+          </div>
+          <p>© 2026 RootLink. All rights reserved.</p>
+        </footer>
         </div>
     );
 }
