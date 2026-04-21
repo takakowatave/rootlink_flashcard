@@ -7,13 +7,13 @@ const FEATURES = [
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <circle cx="16" cy="9" r="5" fill="url(#g1)" />
-        <circle cx="6" cy="26" r="4" fill="#e7f8f5" stroke="#01C3A0" strokeWidth="1.5" />
-        <circle cx="26" cy="26" r="4" fill="#e7f8f5" stroke="#01C3A0" strokeWidth="1.5" />
-        <line x1="16" y1="14" x2="6" y2="22" stroke="#01C3A0" strokeWidth="1.5" />
-        <line x1="16" y1="14" x2="26" y2="22" stroke="#01C3A0" strokeWidth="1.5" />
+        <circle cx="6" cy="26" r="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
+        <circle cx="26" cy="26" r="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
+        <line x1="16" y1="14" x2="6" y2="22" stroke="#00AD82" strokeWidth="1.5" />
+        <line x1="16" y1="14" x2="26" y2="22" stroke="#00AD82" strokeWidth="1.5" />
         <defs>
           <linearGradient id="g1" x1="11" y1="4" x2="21" y2="14" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#01C3A0" />
+            <stop stopColor="#00AD82" />
             <stop offset="1" stopColor="#7DE265" />
           </linearGradient>
         </defs>
@@ -25,13 +25,13 @@ const FEATURES = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="3" y="8" width="26" height="18" rx="4" fill="#e7f8f5" stroke="#01C3A0" strokeWidth="1.5" />
+        <rect x="3" y="8" width="26" height="18" rx="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
         <rect x="8" y="3" width="16" height="6" rx="2" fill="url(#g2)" />
-        <line x1="10" y1="16" x2="22" y2="16" stroke="#01C3A0" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="10" y1="16" x2="22" y2="16" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round" />
         <line x1="10" y1="21" x2="18" y2="21" stroke="#7DE265" strokeWidth="1.5" strokeLinecap="round" />
         <defs>
           <linearGradient id="g2" x1="8" y1="3" x2="24" y2="9" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#01C3A0" />
+            <stop stopColor="#00AD82" />
             <stop offset="1" stopColor="#7DE265" />
           </linearGradient>
         </defs>
@@ -43,13 +43,13 @@ const FEATURES = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="4" y="6" width="24" height="20" rx="4" fill="#e7f8f5" stroke="#01C3A0" strokeWidth="1.5" />
-        <path d="M12 16 L15 19 L20 13" stroke="#01C3A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="4" y="6" width="24" height="20" rx="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
+        <path d="M12 16 L15 19 L20 13" stroke="#00AD82" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         <circle cx="24" cy="8" r="4" fill="url(#g3)" />
         <path d="M22.5 8 L23.5 9 L25.5 7" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         <defs>
           <linearGradient id="g3" x1="20" y1="4" x2="28" y2="12" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#01C3A0" />
+            <stop stopColor="#00AD82" />
             <stop offset="1" stopColor="#7DE265" />
           </linearGradient>
         </defs>
@@ -62,16 +62,16 @@ const FEATURES = [
   {
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M6 10 C6 7.8 7.8 6 10 6 L22 6 C24.2 6 26 7.8 26 10 L26 22 C26 24.2 24.2 26 22 26 L10 26 C7.8 26 6 24.2 6 22 Z" fill="#e7f8f5" stroke="#01C3A0" strokeWidth="1.5" />
-        <circle cx="11" cy="13" r="1.5" fill="#01C3A0" />
+        <path d="M6 10 C6 7.8 7.8 6 10 6 L22 6 C24.2 6 26 7.8 26 10 L26 22 C26 24.2 24.2 26 22 26 L10 26 C7.8 26 6 24.2 6 22 Z" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
+        <circle cx="11" cy="13" r="1.5" fill="#00AD82" />
         <circle cx="16" cy="13" r="1.5" fill="#7DE265" />
-        <circle cx="21" cy="13" r="1.5" fill="#01C3A0" />
-        <line x1="10" y1="19" x2="22" y2="19" stroke="#01C3A0" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
+        <circle cx="21" cy="13" r="1.5" fill="#00AD82" />
+        <line x1="10" y1="19" x2="22" y2="19" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
         <circle cx="26" cy="6" r="4" fill="url(#g4)" />
         <path d="M24 6 L26 8 L28 5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         <defs>
           <linearGradient id="g4" x1="22" y1="2" x2="30" y2="10" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#01C3A0" />
+            <stop stopColor="#00AD82" />
             <stop offset="1" stopColor="#7DE265" />
           </linearGradient>
         </defs>
@@ -88,7 +88,7 @@ export default function LPFeatures() {
       <div className="mx-auto max-w-[980px] px-4 md:px-6">
         <h2 className="mb-12 text-center text-[28px] font-bold text-[#1a2438] md:text-[36px]">
           RootLinkの
-          <span className="bg-gradient-to-r from-[#01C3A0] to-[#7DE265] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#00AD82] to-[#7DE265] bg-clip-text text-transparent">
             4つの特徴
           </span>
         </h2>

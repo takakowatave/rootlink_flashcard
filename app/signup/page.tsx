@@ -51,7 +51,7 @@ export default function AuthSignup() {
 
         {done ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <p className="text-[#009689] font-medium">確認メールを送信しました</p>
+            <p className="text-[#00AD82] font-medium">確認メールを送信しました</p>
             <p className="text-sm text-gray-500">メールのリンクをクリックして登録を完了してください。</p>
           </div>
         ) : (
@@ -62,7 +62,7 @@ export default function AuthSignup() {
                 <input
                   type="email"
                   {...register("email", { required: "メールアドレスは必須です" })}
-                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-400"
+                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#00AD82]"
                 />
                 {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
               </div>
@@ -71,7 +71,7 @@ export default function AuthSignup() {
                 <input
                   type="password"
                   {...register("password", { required: "パスワードは必須です", minLength: { value: 8, message: "8文字以上で設定してください" } })}
-                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-400"
+                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#00AD82]"
                 />
                 {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
               </div>
@@ -79,18 +79,18 @@ export default function AuthSignup() {
                 <input
                   type="checkbox"
                   id="agreeToPrivacy"
-                  className="mt-0.5 accent-[#009689]"
+                  className="mt-0.5 accent-[#00AD82]"
                   {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
                 />
                 <label htmlFor="agreeToPrivacy" className="text-xs text-gray-600 leading-relaxed">
-                  <Link href="/privacy" target="_blank" className="text-[#009689] underline">プライバシーポリシー</Link>に同意する
+                  <Link href="/privacy" target="_blank" className="text-[#00AD82] underline">プライバシーポリシー</Link>に同意する
                 </label>
               </div>
               {errors.agreeToPrivacy && <p className="text-xs text-red-500 -mt-2">{errors.agreeToPrivacy.message}</p>}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 rounded-lg bg-[#009689] text-white text-sm font-medium disabled:opacity-50"
+                className="w-full py-2.5 rounded-lg bg-[#00AD82] text-white text-sm font-medium disabled:opacity-50"
               >
                 {isSubmitting ? "登録中..." : "新規作成"}
               </button>
@@ -112,7 +112,7 @@ export default function AuthSignup() {
 
             <p className="text-center text-xs text-gray-400 mt-4">
               すでにアカウントをお持ちの方は{" "}
-              <Link href="/login" className="text-[#009689] underline">ログイン</Link>
+              <Link href="/login" className="text-[#00AD82] underline">ログイン</Link>
             </p>
           </>
         )}

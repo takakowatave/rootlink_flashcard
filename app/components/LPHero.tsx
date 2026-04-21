@@ -85,7 +85,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         className="mb-10 text-center text-4xl font-bold leading-tight tracking-tight text-gray-800 md:text-6xl"
         style={anim(0)}
       >
-        関連性で単語を<span className="text-teal-400">芋づる式</span>に覚えよう
+        関連性で単語を<span className="text-[#00AD82]">芋づる式</span>に覚えよう
       </h1>
 
       {/* Search bar */}
@@ -105,14 +105,14 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
                 {!value && (
                   <div className="pointer-events-none absolute inset-0 flex items-center text-xl text-gray-700">
                     <span>{typed}</span>
-                    <span className={`lp-cursor ml-[1px] inline-block h-5 w-[2px] bg-teal-400 ${showCursor ? '' : 'opacity-0'}`} />
+                    <span className={`lp-cursor ml-[1px] inline-block h-5 w-[2px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`} />
                   </div>
                 )}
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="ml-3 text-gray-300 transition-colors hover:text-teal-400 disabled:opacity-50"
+                className="ml-3 text-gray-300 transition-colors hover:text-[#00AD82] disabled:opacity-50"
               >
                 {isLoading ? (
                   <svg className="h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

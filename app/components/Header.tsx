@@ -108,12 +108,12 @@ const Header = () => {
           {!profile && (
             <>
               <Link href="/signup">
-                <button className="h-8 px-4 rounded-full bg-[#009689] text-white text-xs font-medium">
+                <button className="h-8 px-4 rounded-full bg-[#00AD82] text-white text-xs font-medium">
                   新規登録
                 </button>
               </Link>
               <Link href="/login">
-                <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
+                <button className="h-8 px-4 rounded-full border border-[#00AD82] text-[#00AD82] text-xs font-medium">
                   ログイン
                 </button>
               </Link>
@@ -124,7 +124,7 @@ const Header = () => {
             <>
               {/* PC only nav */}
               <Link href="/wordlist" className="hidden md:block">
-                <button className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">
+                <button className="h-8 px-4 rounded-full border border-[#00AD82] text-[#00AD82] text-xs font-medium">
                   単語リスト
                 </button>
               </Link>
@@ -133,7 +133,7 @@ const Header = () => {
               <button
                 type="button"
                 onClick={openMobileSearch}
-                className="md:hidden p-2 text-gray-400 hover:text-teal-500 transition-colors"
+                className="md:hidden p-2 text-gray-400 hover:text-[#00AD82] transition-colors"
                 aria-label="検索"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +164,7 @@ const Header = () => {
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Search a word"
                 disabled={isSearching}
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base focus:outline-none focus:border-teal-400 disabled:opacity-50"
+                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base focus:outline-none focus:border-[#00AD82] disabled:opacity-50"
               />
               {isSearching && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">

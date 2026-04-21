@@ -99,9 +99,9 @@ export default function LPHeroTree({ root, gloss, words }: Props) {
       >
         <defs>
           <linearGradient id={`cg-${root}`} gradientUnits="userSpaceOnUse" x1="2" y1="0" x2="41" y2="189">
-            <stop offset="0%"   stopColor="#01C3A0" />
+            <stop offset="0%"   stopColor="#00AD82" />
             <stop offset="50%"  stopColor="#7DE265" />
-            <stop offset="100%" stopColor="#01C3A0" />
+            <stop offset="100%" stopColor="#00AD82" />
           </linearGradient>
         </defs>
         <path

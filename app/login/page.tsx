@@ -54,7 +54,7 @@ export default function AuthLogin() {
             <input
               type="email"
               {...register("email", { required: "メールアドレスは必須です" })}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-400"
+              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#00AD82]"
             />
             {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
           </div>
@@ -63,14 +63,14 @@ export default function AuthLogin() {
             <input
               type="password"
               {...register("password", { required: "パスワードは必須です" })}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-400"
+              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#00AD82]"
             />
             {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
           </div>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2.5 rounded-lg bg-[#009689] text-white text-sm font-medium disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg bg-[#00AD82] text-white text-sm font-medium disabled:opacity-50"
           >
             {isSubmitting ? "ログイン中..." : "ログイン"}
           </button>
@@ -92,7 +92,7 @@ export default function AuthLogin() {
 
         <p className="text-center text-xs text-gray-400 mt-4">
           アカウントをお持ちでない方は{" "}
-          <Link href="/signup" className="text-[#009689] underline">新規登録</Link>
+          <Link href="/signup" className="text-[#00AD82] underline">新規登録</Link>
         </p>
       </div>
 

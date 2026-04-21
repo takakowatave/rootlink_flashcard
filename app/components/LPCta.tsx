@@ -8,7 +8,7 @@ export default function LPCta() {
       <div className="mx-auto flex max-w-[980px] flex-col items-center gap-8 px-4 md:px-6">
 
         {/* バッジ */}
-        <span className="rounded-full bg-[#e7f8f5] px-4 py-1.5 text-[13px] font-semibold text-[#01C3A0]">
+        <span className="rounded-full bg-[#e7f8f5] px-4 py-1.5 text-[13px] font-semibold text-[#00AD82]">
           Coming Soon
         </span>
 
@@ -25,11 +25,11 @@ export default function LPCta() {
 
         {/* リリース時期 */}
         <div className="flex items-center gap-3">
-          <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#01C3A0]" />
-          <span className="text-[22px] font-bold tracking-widest text-[#01C3A0] md:text-[26px]">
+          <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#00AD82]" />
+          <span className="text-[22px] font-bold tracking-widest text-[#00AD82] md:text-[26px]">
             2026.06
           </span>
-          <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#01C3A0]" />
+          <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#00AD82]" />
         </div>
 
         {/* ストアバッジ */}

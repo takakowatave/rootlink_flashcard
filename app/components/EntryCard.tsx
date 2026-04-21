@@ -128,7 +128,7 @@ export default function EntryCard({
             </button>
           </div>
           <button type="button" onClick={onSave} className="shrink-0">
-            <HiBookmark className={`size-6 ${isBookmarked ? 'text-[#009689]' : 'text-[#90a1b9]'}`} />
+            <HiBookmark className={`size-6 ${isBookmarked ? 'text-[#00AD82]' : 'text-[#90a1b9]'}`} />
           </button>
         </div>
 
@@ -255,12 +255,12 @@ export default function EntryCard({
                                 className="bg-[#f0fdfa] px-2 py-1 rounded-3xl transition-opacity disabled:opacity-50"
                               >
                                 {navigatingWord === rw ? (
-                                  <svg className="size-4 animate-spin text-[#009689]" fill="none" viewBox="0 0 24 24">
+                                  <svg className="size-4 animate-spin text-[#00AD82]" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                   </svg>
                                 ) : (
-                                  <span className="text-sm font-medium text-[#009689] leading-4">{rw}</span>
+                                  <span className="text-sm font-medium text-[#00AD82] leading-4">{rw}</span>
                                 )}
                               </button>
                               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
@@ -268,7 +268,7 @@ export default function EntryCard({
                               </span>
                             </div>
                             {part.relatedWordMeanings?.[rw] && (
-                              <span className="text-xs text-[#009689] whitespace-nowrap">{part.relatedWordMeanings[rw]}</span>
+                              <span className="text-xs text-[#00AD82] whitespace-nowrap">{part.relatedWordMeanings[rw]}</span>
                             )}
                           </div>
                         ))}
@@ -359,7 +359,7 @@ export default function EntryCard({
                             className="flex size-8 items-center justify-center"
                           >
                             {isPinned
-                              ? <BsPinFill className="size-4 text-[#009689]" />
+                              ? <BsPinFill className="size-4 text-[#00AD82]" />
                               : <BsPin className="size-4 text-[#90a1b9] opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
                             }
                           </button>
@@ -398,7 +398,7 @@ export default function EntryCard({
             <p className="text-xs text-[#90a1b9] mb-1.5">{labels.derivatives}</p>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
-                <span key={d} className="text-sm text-[#009689] underline underline-offset-2">{d}</span>
+                <span key={d} className="text-sm text-[#00AD82] underline underline-offset-2">{d}</span>
               ))}
             </div>
           </div>
