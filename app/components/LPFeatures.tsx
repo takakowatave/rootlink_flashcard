@@ -86,7 +86,7 @@ export default function LPFeatures() {
   return (
     <section className="w-full bg-[#f8fafb] py-16 md:py-20">
       <div className="mx-auto max-w-[980px] px-4 md:px-6">
-        <h2 className="mb-12 text-center text-[28px] font-bold text-[#1a2438] md:text-[36px]">
+        <h2 className="mb-8 text-center text-[22px] font-bold text-[#1a2438] md:mb-12 md:text-[36px]">
           RootLinkの
           <span className="bg-gradient-to-r from-[#00AD82] to-[#7DE265] bg-clip-text text-transparent">
             4つの特徴

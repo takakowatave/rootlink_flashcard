@@ -28,16 +28,16 @@ export default function LPAbout({ wordIdx }: Props) {
 
   return (
     <section className="flex w-full flex-col items-center gap-10 bg-white py-16 md:py-[60px]">
-      <h2 className="text-[32px] font-bold text-[#14b8a6] md:text-[42px]">
+      <h2 className="text-[26px] font-bold text-[#14b8a6] md:text-[42px]">
         RootLinkとは？
       </h2>
 
       <div className="flex w-full max-w-[980px] flex-col items-center gap-10 px-4 md:flex-row md:items-center md:gap-12 md:px-0">
 
-        {/* ── ネットワーク図 ── */}
+        {/* ── ネットワーク図 — スマホ非表示 ── */}
         <div
           key={wordIdx}
-          className="relative shrink-0"
+          className="relative hidden shrink-0 md:block"
           style={{ width: W, height: H }}
         >
           {/* 軌道グループ：SVG ラインと周辺ノードがまとめて回転 */}
@@ -115,8 +115,8 @@ export default function LPAbout({ wordIdx }: Props) {
         </div>
 
         {/* ── テキスト ── */}
-        <div className="flex flex-col gap-6">
-          <p className="text-[16px] leading-[32px] tracking-[0.64px] text-[#333] md:text-[18px] md:tracking-[0.72px]">
+        <div className="flex flex-col gap-6 px-4 md:px-0">
+          <p className="text-[15px] leading-[30px] tracking-[0.6px] text-[#333] md:text-[18px] md:leading-[32px] md:tracking-[0.72px]">
             RootLinkは
             <strong className="text-[#494f56]">関連性で英単語を理解し、</strong>
             <br />

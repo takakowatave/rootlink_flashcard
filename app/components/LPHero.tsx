@@ -82,14 +82,14 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
     >
       {/* Headline */}
       <h1
-        className="mb-10 text-center text-4xl font-bold leading-tight tracking-tight text-gray-800 md:text-6xl"
+        className="mb-8 text-center text-3xl font-bold leading-tight tracking-tight text-gray-800 sm:text-4xl md:text-6xl"
         style={anim(0)}
       >
         関連性で単語を<span className="text-[#00AD82]">芋づる式</span>に覚えよう
       </h1>
 
       {/* Search bar */}
-      <div className="mb-16 w-full max-w-xl" style={anim(0.15)}>
+      <div className="mb-10 w-full max-w-xl sm:mb-16" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
           <div className="lp-search-glow rounded-full p-[2.5px] shadow-sm">
             <div className="flex items-center rounded-full bg-white px-6 py-3.5">
@@ -133,9 +133,9 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
-      {/* Etymology trees — 常にスペース確保、opacityで表示切替（heightジャンプ防止） */}
+      {/* Etymology trees — スマホ非表示、常にスペース確保、opacityで表示切替 */}
       <div
-        className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28 transition-opacity duration-500"
+        className="hidden sm:flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28 transition-opacity duration-500"
         style={{ opacity: (!value && showTree) ? 1 : 0 }}
       >
         {DEMO[wordIdx].roots.map((root) => (
