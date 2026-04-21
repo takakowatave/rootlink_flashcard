@@ -8,6 +8,9 @@ import { getUserPlan } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
+import LanguageToggle from "@/components/LanguageToggle";
+import type { DisplayLocale } from "@/types/DisplayLocale";
+import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
 interface Props {
   isOpen: boolean;
@@ -34,6 +37,7 @@ export default function EditProfileModal({
   } = useForm<FormData>();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -80,8 +84,16 @@ export default function EditProfileModal({
   useEffect(() => {
     if (isOpen) {
       getUserPlan().then(setPlan)
+      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY)
+      if (saved === 'en' || saved === 'ja') setDisplayLocale(saved)
     }
   }, [isOpen]);
+
+  const handleLocaleChange = (locale: DisplayLocale) => {
+    setDisplayLocale(locale)
+    localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale)
+    window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME))
+  }
 
   if (!isOpen || !profile) return null;
 
@@ -155,6 +167,15 @@ export default function EditProfileModal({
               アップグレード →
             </button>
           )}
+        </div>
+
+        {/* 表示言語 */}
+        <div className="mb-4 px-1 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">辞書の表示言語</p>
+            <p className="text-xs text-gray-400">英英 / 和英</p>
+          </div>
+          <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
         </div>
 
         {/* Form */}
