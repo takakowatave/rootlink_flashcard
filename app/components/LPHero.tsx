@@ -46,7 +46,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
 
   return (
     <div
-      className="flex min-h-[calc(100vh-56px)] flex-col items-center px-6 pb-24 pt-14"
+      className="flex min-h-screen flex-col items-center px-6 pb-24 pt-14"
       style={{
         backgroundColor: '#edfafa',
         backgroundImage: `
