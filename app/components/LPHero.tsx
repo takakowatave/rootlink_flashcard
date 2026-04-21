@@ -1,6 +1,8 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import LPHeroTree from '@/components/LPHeroTree'
+import { DEMO } from '@/lib/lp-data'
 
 interface Props {
   value: string
@@ -10,39 +12,60 @@ interface Props {
   error: string | null
 }
 
-const ROOTS = [
-  {
-    key: 'per',
-    meaning: '完全に',
-    words: ['perturbation', 'perceive', 'persist'],
-  },
-  {
-    key: 'turb',
-    meaning: '乱れる',
-    words: ['perturbation', 'turbulent', 'disturb'],
-  },
-]
-
-function highlightRoot(word: string, root: string): ReactNode {
-  const idx = word.toLowerCase().indexOf(root.toLowerCase())
-  if (idx === -1) return <span>{word}</span>
-  return (
-    <>
-      {word.slice(0, idx)}
-      <span className="font-bold text-teal-500">{word.slice(idx, idx + root.length)}</span>
-      {word.slice(idx + root.length)}
-    </>
-  )
-}
+const CYCLE_MS   = 3800
+const TYPING_MS  = 90
 
 export default function LPHero({ value, onChange, onSubmit, isLoading, error }: Props) {
-  const [ready, setReady] = useState(false)
+  const [ready,    setReady]    = useState(false)
+  const [wordIdx,  setWordIdx]  = useState(0)
+  const [typed,    setTyped]    = useState('')
+  const [showCursor, setShowCursor] = useState(true)
+  const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+
   useEffect(() => { setReady(true) }, [])
+
+  // タイピングアニメーション
+  const startTyping = (idx: number) => {
+    if (typingRef.current) clearInterval(typingRef.current)
+    const word = DEMO[idx].word
+    setTyped('')
+    setShowCursor(true)
+    let i = 0
+    typingRef.current = setInterval(() => {
+      i++
+      setTyped(word.slice(0, i))
+      if (i >= word.length) {
+        clearInterval(typingRef.current!)
+        typingRef.current = null
+      }
+    }, TYPING_MS)
+  }
+
+  // ワードサイクリング
+  useEffect(() => {
+    if (value) return // ユーザーが入力中はアニメーション停止
+    startTyping(0)
+    cycleRef.current = setInterval(() => {
+      setWordIdx(prev => {
+        const next = (prev + 1) % DEMO.length
+        startTyping(next)
+        return next
+      })
+    }, CYCLE_MS)
+    return () => {
+      if (cycleRef.current)  clearInterval(cycleRef.current)
+      if (typingRef.current) clearInterval(typingRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
 
   const anim = (delay: number): React.CSSProperties =>
     ready
       ? { animation: `lp-sprout 0.5s ease-out ${delay}s both` }
       : { opacity: 0 }
+
+  const displayText = value || typed
 
   return (
     <div
@@ -69,13 +92,22 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
           <div className="lp-search-glow rounded-full p-[2.5px] shadow-sm">
             <div className="flex items-center rounded-full bg-white px-6 py-3.5">
-              <input
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder="perturb"
-                disabled={isLoading}
-                className="flex-1 bg-transparent text-xl text-gray-700 outline-none placeholder:text-gray-300 disabled:opacity-50"
-              />
+              <div className="relative flex-1">
+                <input
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full bg-transparent text-xl text-gray-700 outline-none disabled:opacity-50"
+                  style={{ caretColor: 'transparent' }}
+                />
+                {/* タイピングアニメーション表示（ユーザー未入力時） */}
+                {!value && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center text-xl text-gray-700">
+                    <span>{typed}</span>
+                    <span className={`lp-cursor ml-[1px] inline-block h-5 w-[2px] bg-teal-400 ${showCursor ? '' : 'opacity-0'}`} />
+                  </div>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={isLoading}
@@ -100,30 +132,15 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
-      {/* Etymology trees */}
-      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
-        {ROOTS.map((root, ri) => (
-          <div key={root.key} className="flex flex-col">
-            <div className="mb-5 flex items-center gap-3" style={anim(0.3 + ri * 0.1)}>
-              <span
-                className="rounded-full px-5 py-2 text-lg font-bold text-white shadow-sm"
-                style={{ background: 'linear-gradient(135deg, #34d399, #059669)' }}
-              >
-                {root.key}
-              </span>
-              <span className="text-base text-gray-400">{root.meaning}</span>
-            </div>
-            <div className="flex flex-col gap-3 border-l-2 border-teal-200 pl-6">
-              {root.words.map((word, wi) => (
-                <div key={`${root.key}-${wi}`} className="relative" style={anim(0.5 + ri * 0.1 + wi * 0.12)}>
-                  <div className="absolute -left-6 top-1/2 h-px w-5 -translate-y-1/2 bg-teal-200" />
-                  <div className="rounded-2xl border border-teal-200 bg-white px-5 py-2.5 text-base text-gray-700 shadow-sm">
-                    {highlightRoot(word, root.key)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Etymology trees — wordIdxが変わるたびにre-mountしてアニメーションリセット */}
+      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28" style={anim(0.3)}>
+        {DEMO[wordIdx].roots.map((root) => (
+          <LPHeroTree
+            key={`${wordIdx}-${root.root}`}
+            root={root.root}
+            gloss={root.gloss}
+            words={root.words}
+          />
         ))}
       </div>
     </div>
