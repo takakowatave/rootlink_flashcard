@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
@@ -33,6 +34,14 @@ export default function EditProfileModal({
   } = useForm<FormData>();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    onClose()
+    router.push("/")
+    router.refresh()
+  }
 
   const API_BASE =
     process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -160,21 +169,30 @@ export default function EditProfileModal({
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex items-center justify-between pt-4">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border"
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-lg text-sm text-red-500 hover:text-red-700"
             >
-              Cancel
+              ログアウト
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg bg-black text-white"
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-lg bg-black text-white"
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
