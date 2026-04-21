@@ -65,11 +65,9 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       ? { animation: `lp-sprout 0.5s ease-out ${delay}s both` }
       : { opacity: 0 }
 
-  const displayText = value || typed
-
   return (
     <div
-      className="flex min-h-screen flex-col items-center px-6 pb-24 pt-14"
+      className="flex flex-col items-center px-6 pb-16 pt-14"
       style={{
         backgroundColor: '#edfafa',
         backgroundImage: `
@@ -133,7 +131,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       </div>
 
       {/* Etymology trees — wordIdxが変わるたびにre-mountしてアニメーションリセット */}
-      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28" style={anim(0.3)}>
+      <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
         {DEMO[wordIdx].roots.map((root) => (
           <LPHeroTree
             key={`${wordIdx}-${root.root}`}
