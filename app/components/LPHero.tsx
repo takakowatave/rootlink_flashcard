@@ -133,19 +133,20 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
-      {/* Etymology trees — タイピング完了後に表示、ユーザー入力中は非表示 */}
-      {!value && showTree && (
-        <div className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28">
-          {DEMO[wordIdx].roots.map((root) => (
-            <LPHeroTree
-              key={`${wordIdx}-${root.root}`}
-              root={root.root}
-              gloss={root.gloss}
-              words={root.words}
-            />
-          ))}
-        </div>
-      )}
+      {/* Etymology trees — 常にスペース確保、opacityで表示切替（heightジャンプ防止） */}
+      <div
+        className="flex flex-col gap-10 sm:flex-row sm:gap-16 md:gap-28 transition-opacity duration-500"
+        style={{ opacity: (!value && showTree) ? 1 : 0 }}
+      >
+        {DEMO[wordIdx].roots.map((root) => (
+          <LPHeroTree
+            key={`${wordIdx}-${root.root}`}
+            root={root.root}
+            gloss={root.gloss}
+            words={root.words}
+          />
+        ))}
+      </div>
     </div>
   )
 }
