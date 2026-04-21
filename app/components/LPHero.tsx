@@ -85,7 +85,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         className="mb-8 text-center text-3xl font-bold leading-tight tracking-tight text-gray-800 sm:text-4xl md:text-6xl"
         style={anim(0)}
       >
-        関連性で単語を<span className="text-[#00AD82]">芋づる式</span>に覚えよう
+        関連性で単語を<br className="md:hidden" /><span className="text-[#00AD82]">芋づる式</span>に覚えよう
       </h1>
 
       {/* Search bar */}
