@@ -109,7 +109,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - [x] 100件保存制限 + UpgradeModal — 5月分を前倒し
 - [x] スペルミス自動補正・保存ボタン即時反映・PCヘッダー検索
 - [ ] Stripeテスト（Webhook secret設定 → テストカードで動作確認）
-- [ ] LP作成（EN/JA自動切り替え）
+- [x] LP作成（日本語のみ。EN/JA自動切り替えは当面スコープ外）
 - [ ] 単語ページSEO対応（認証なし公開・OGP・メタディスクリプション）
 - [ ] サイトマップ生成
 - [ ] **クローズドWeb版公開**
@@ -155,7 +155,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - **語源抽出**: CSVカタログではなくAIが `rawEtymology` テキストから直接抽出（精度が高い）
 - **辞書キャッシュ**: `RewrittenPayload` 形式で `dictionary_cache` に保存。first-write-wins
 - **型安全**: `any` 型は禁止。共有型は `/app/types/` に集約（Dictionary.ts / Etymology.ts / DisplayLocale.ts など）
-- **LP言語**: グローバル設計。ブラウザ言語設定に応じてEN/JA自動切り替え
+- **LP言語**: 当面は日本語のみ。グローバル展開時にEN/JA切り替えを検討
 - **課金**: Stripe、月500円プランを予定
 - **本番直送**: 現段階はmainブランチ → Vercel本番で運用。ユーザーが増えたらdev/prodブランチ分離を検討
 
