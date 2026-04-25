@@ -155,8 +155,7 @@ export default function EntryCard({
 
               const filteredWords = [...new Set(
                 part.relatedWords.filter(w =>
-                  w.toLowerCase() !== headword.toLowerCase() &&
-                  w.toLowerCase().startsWith(headword.toLowerCase())
+                  w.toLowerCase() !== headword.toLowerCase()
                 )
               )].slice(0, 3)
 
