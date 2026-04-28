@@ -1,0 +1,690 @@
+# 語源シード単語リスト
+# Cloud Run /resolve に投げて dictionary_cache を蓄積する
+# トリガー sync_etymology_part_words により etymology_part_words も自動展開される
+# コメント行（#）と空行は無視される
+
+# === ラテン語根 ===
+
+# spect / spec — to look
+inspect
+expect
+respect
+aspect
+suspect
+prospect
+spectacle
+spectator
+spectrum
+species
+specific
+specimen
+speculation
+perspective
+introspect
+
+# port — to carry
+import
+export
+transport
+report
+support
+portable
+deport
+import
+portfolio
+portage
+porter
+
+# dict — to say
+predict
+contradict
+dictate
+verdict
+indict
+diction
+dictator
+dictionary
+edict
+benediction
+malediction
+dictation
+
+# duct / duc — to lead
+conduct
+produce
+reduce
+introduce
+deduce
+educate
+abduct
+induce
+seduce
+viaduct
+aqueduct
+ductile
+educator
+
+# ject — to throw
+inject
+reject
+project
+subject
+object
+eject
+trajectory
+conjecture
+adjective
+projectile
+interject
+
+# scrib / script — to write
+describe
+prescribe
+subscribe
+manuscript
+inscription
+transcribe
+scribble
+scripture
+postscript
+ascribe
+proscribe
+conscript
+scribe
+
+# ven / vent — to come
+prevent
+invent
+convention
+intervene
+advent
+circumvent
+revenue
+avenue
+souvenir
+venue
+event
+adventure
+convene
+
+# mit / miss — to send
+submit
+commit
+permit
+transmit
+mission
+dismiss
+emit
+omit
+admit
+remit
+intermittent
+emissary
+missive
+promise
+compromise
+
+# cred — to believe
+credit
+incredible
+credible
+discredit
+credential
+creed
+credulous
+accreditation
+
+# rupt — to break
+disrupt
+corrupt
+interrupt
+erupt
+abrupt
+bankrupt
+rupture
+eruption
+corruption
+
+# fer — to carry, bear
+transfer
+refer
+prefer
+infer
+defer
+confer
+suffer
+offer
+fertile
+conference
+preference
+reference
+indifferent
+
+# tract — to pull, draw
+attract
+distract
+extract
+contract
+subtract
+abstract
+retract
+traction
+tractor
+protract
+
+# vert / vers — to turn
+convert
+divert
+invert
+revert
+subvert
+advertise
+adversary
+verse
+reverse
+universe
+diverse
+controversy
+introvert
+extrovert
+versatile
+
+# pos / pon — to place
+position
+deposit
+compose
+expose
+impose
+oppose
+propose
+suppose
+postpone
+component
+opponent
+proponent
+exposition
+
+# ten / tain — to hold
+contain
+maintain
+obtain
+retain
+sustain
+detain
+attain
+tenant
+content
+intent
+tense
+extend
+intend
+pretend
+
+# pel / puls — to drive
+compel
+expel
+propel
+repel
+dispel
+impulse
+pulse
+expulsion
+compulsion
+propeller
+
+# struct — to build
+construct
+instruct
+destruct
+obstruct
+infrastructure
+structure
+construction
+instructor
+
+# vid / vis — to see
+video
+provide
+evidence
+visible
+invisible
+vision
+revise
+supervise
+visual
+visit
+visitor
+advise
+television
+visa
+
+# cap / cept / cip — to take
+accept
+except
+concept
+receipt
+deception
+intercept
+participate
+capable
+captive
+capture
+caption
+
+# fac / fec / fic — to make
+factory
+manufacture
+benefactor
+defect
+effect
+perfect
+infect
+fiction
+efficient
+sufficient
+proficient
+artificial
+
+# spir — to breathe
+inspire
+expire
+respire
+conspire
+aspire
+perspire
+spirit
+spiritual
+respiration
+
+# voc / vok — to call
+vocal
+vocation
+provoke
+revoke
+invoke
+advocate
+evocative
+equivocal
+
+# sect — to cut
+section
+intersect
+dissect
+bisect
+sector
+insect
+
+# clud / clus — to close
+include
+exclude
+conclude
+seclude
+preclude
+inclusive
+exclusive
+recluse
+
+# leg — law
+legal
+illegal
+legislate
+legitimate
+delegate
+allegation
+legacy
+
+# ann / enn — year
+annual
+anniversary
+biennial
+centennial
+millennium
+perennial
+
+# sens / sent — to feel
+sense
+sensation
+sensitive
+sentiment
+consent
+dissent
+resent
+assent
+nonsense
+sensor
+
+# son — sound
+sonic
+dissonant
+resonance
+sonata
+unison
+sound
+
+# lit — letter
+literal
+literature
+literacy
+illiterate
+obliterate
+
+# sol — alone
+solo
+solitude
+desolate
+solitary
+sole
+
+# === ギリシャ語根 ===
+
+# graph — to write
+photograph
+biography
+autograph
+paragraph
+geography
+graphic
+telegraph
+choreography
+calligraphy
+
+# log — word, study
+biology
+psychology
+sociology
+geology
+ecology
+ideology
+analogy
+catalog
+dialogue
+monologue
+prologue
+epilogue
+logic
+apology
+
+# phon — sound
+phone
+phonetic
+symphony
+cacophony
+megaphone
+saxophone
+microphone
+telephone
+homophone
+
+# scope — to see
+microscope
+telescope
+periscope
+horoscope
+kaleidoscope
+endoscope
+
+# meter — measure
+diameter
+parameter
+thermometer
+barometer
+speedometer
+geometry
+symmetry
+perimeter
+
+# bio — life
+biology
+biography
+biochemistry
+biodegradable
+antibiotic
+biotic
+symbiosis
+
+# auto — self
+automatic
+automobile
+autonomy
+autograph
+autocracy
+authentic
+
+# tele — far
+television
+telephone
+telegraph
+telepathy
+telescope
+telecommunication
+
+# psych — mind, soul
+psychology
+psychic
+psychotherapy
+psychiatrist
+
+# astr / aster — star
+astronomy
+astrology
+disaster
+asteroid
+astronaut
+astronomical
+
+# chron — time
+chronicle
+chronological
+synchronize
+anachronism
+chronic
+
+# dem — people
+democracy
+demographic
+epidemic
+pandemic
+demagogue
+
+# hydr — water
+hydrogen
+hydraulic
+dehydrate
+hydrate
+hydroelectric
+
+# therm — heat
+thermal
+thermometer
+thermos
+hypothermia
+thermostat
+
+# geo — earth
+geography
+geology
+geometry
+geothermal
+geocentric
+
+# poly — many
+polygon
+polygamy
+polyglot
+polynomial
+polyester
+
+# mono — one
+monopoly
+monologue
+monotone
+monogamy
+monarchy
+monolith
+
+# theo / the — god
+theology
+atheist
+monotheism
+theocracy
+pantheon
+
+# anthrop — human
+anthropology
+philanthropy
+anthropomorphic
+misanthrope
+
+# path — feeling, suffering
+sympathy
+empathy
+apathy
+pathology
+telepathy
+psychopath
+
+# === 接頭辞バリエーション ===
+
+# pre- (before)
+prepare
+predict
+preview
+prevent
+preserve
+prefer
+prescribe
+precede
+predecessor
+prelude
+
+# post- (after)
+postpone
+postscript
+posterior
+posthumous
+postwar
+postpartum
+
+# anti- (against)
+antibiotic
+antisocial
+antidote
+antibody
+antiseptic
+antithesis
+antioxidant
+
+# trans- (across)
+transport
+translate
+transition
+transfer
+transform
+transmit
+transcend
+transparent
+
+# inter- (between)
+international
+internet
+interrupt
+intervene
+interact
+intercept
+intermediate
+interpersonal
+
+# super- (above)
+supervise
+superior
+supernatural
+supersonic
+superficial
+superstition
+superstar
+supermarket
+
+# sub- (under)
+submarine
+submit
+subtitle
+suburb
+subway
+subterranean
+subordinate
+subsidize
+
+# === 高頻度学習語 ===
+
+# academic
+analyze
+synthesize
+hypothesis
+theory
+empirical
+methodology
+quantitative
+qualitative
+paradigm
+philosophy
+
+# emotional / cognitive
+acknowledge
+appreciate
+comprehend
+contemplate
+deliberate
+distinguish
+elaborate
+evaluate
+fascinate
+investigate
+manipulate
+overcome
+perceive
+recognize
+regulate
+
+# describing
+ambiguous
+arbitrary
+authentic
+coherent
+comprehensive
+conventional
+crucial
+explicit
+fundamental
+implicit
+inherent
+intricate
+profound
+relevant
+significant
+sophisticated
+subjective
+substantial
+superficial
+versatile
+
+# action / process
+accommodate
+accomplish
+acquire
+collaborate
+compensate
+consolidate
+constitute
+demonstrate
+distribute
+emphasize
+establish
+generate
+implement
+incorporate
+maintain
+participate
+proceed
+sustain
+transform
+validate
