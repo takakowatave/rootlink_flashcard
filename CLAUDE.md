@@ -158,6 +158,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - **LP言語**: グローバル設計。ブラウザ言語設定に応じてEN/JA自動切り替え
 - **課金**: Stripe、月500円プランを予定
 - **本番直送**: 現段階はmainブランチ → Vercel本番で運用。ユーザーが増えたらdev/prodブランチ分離を検討
+- **語源ツリーのインデックス**: `etymology_part_words`（part_text, word）はSupabaseトリガーで `dictionary_cache` から自動展開する。トリガー関数 `sync_etymology_part_words()` が `payload.etymologyData.structure.parts[]` を読んで UPSERT。ユーザーが単語を検索 → `dictionary_cache` 蓄積 → 自動で語根インデックスも育つ。手動シードは不要（ハイブリッド戦略：初期は主要語をCoworkで先行検索して厚みを出す、以降はユーザー検索で自然成長）
 
 ---
 
