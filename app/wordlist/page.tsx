@@ -6,7 +6,7 @@ import WordPageClient from "@/components/WordPageClient"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
-import { BsX } from "react-icons/bs"
+import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
 import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
 
 export type SavedWordRow = {
@@ -151,13 +151,22 @@ export default function WordListPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
               <span className="font-semibold text-gray-700">{selectedItem.word}</span>
-              <button
-                onClick={handleCloseModal}
-                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
-                aria-label="閉じる"
-              >
-                <BsX size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                <a
+                  href={`/word/${selectedItem.word}`}
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
+                  aria-label="単語ページへ"
+                >
+                  <BsArrowUpRightSquare size={18} />
+                </a>
+                <button
+                  onClick={handleCloseModal}
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
+                  aria-label="閉じる"
+                >
+                  <BsX size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
