@@ -87,20 +87,21 @@ export default function EntryCard({
 
   useEffect(() => {
     if (parts.length === 0) return
-    const firstPart = parts[0]
-    if (!firstPart?.text) return
-    const partText = firstPart.text.toLowerCase()
-    supabase
-      .from('etymology_part_words')
-      .select('word')
-      .eq('part_text', partText)
-      .neq('word', headword.toLowerCase())
-      .limit(8)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setPartWordMap(prev => ({ ...prev, [partText]: data.map(d => d.word) }))
-        }
-      })
+    parts.forEach(part => {
+      if (!part?.text) return
+      const partText = part.text.toLowerCase()
+      supabase
+        .from('etymology_part_words')
+        .select('word')
+        .eq('part_text', partText)
+        .neq('word', headword.toLowerCase())
+        .limit(8)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setPartWordMap(prev => ({ ...prev, [partText]: data.map(d => d.word) }))
+          }
+        })
+    })
   }, [parts, headword])
 
   const playAudio = async (e: React.MouseEvent) => {
@@ -175,9 +176,7 @@ export default function EntryCard({
 
               const isFirst = idx === 0
 
-              const filteredWords = isFirst
-                ? (partWordMap[part.text.toLowerCase()] ?? []).slice(0, 6)
-                : []
+              const filteredWords = (partWordMap[part.text.toLowerCase()] ?? []).slice(0, 6)
 
               return (
                 <div
@@ -186,28 +185,22 @@ export default function EntryCard({
                 >
                   {/* Badge + gloss */}
                   <div className="flex items-center gap-2">
-                    {isFirst ? (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
-                        className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
-                      >
-                        {expandedParts[idx]
-                          ? <MdRemoveCircle className="size-5 text-[#00786f]" />
-                          : <MdAddCircle    className="size-5 text-[#00786f]" />
-                        }
-                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
-                      </button>
-                    ) : (
-                      <div className="bg-white border-2 border-[#00d5be] rounded-3xl px-3 py-1 shrink-0">
-                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
+                      className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
+                    >
+                      {expandedParts[idx]
+                        ? <MdRemoveCircle className="size-5 text-[#00786f]" />
+                        : <MdAddCircle    className="size-5 text-[#00786f]" />
+                      }
+                      <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                    </button>
                     <span className="text-sm font-medium text-[#00786f] whitespace-nowrap">{gloss}</span>
                   </div>
 
-                  {/* Related words tree — first panel only */}
-                  {isFirst && expandedParts[idx] && filteredWords.length > 0 && (() => {
+                  {/* Related words tree */}
+                  {expandedParts[idx] && filteredWords.length > 0 && (() => {
                     const ITEM_H = 48
                     const TX = 5
                     const R = 12
