@@ -3,40 +3,32 @@ import Image from 'next/image'
 export default function LPCta() {
   return (
     <section
-      className="relative w-full overflow-hidden py-14 md:py-0 md:h-[432px]"
+      className="relative w-full overflow-hidden"
       style={{ backgroundImage: 'linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)' }}
     >
-      {/* Phone mockup — desktop: absolute left, mobile: centered above text */}
-      <div className="flex flex-col items-center gap-8 px-5 md:hidden">
-        <div className="relative h-[320px] w-[240px] overflow-hidden rounded-2xl shadow-xl">
-          <Image
-            src="/lp/mock2.png"
-            alt="RootLink アプリ"
-            fill
-            className="object-cover object-top"
-            sizes="240px"
-          />
-        </div>
+      {/* ── SP layout ── */}
+      <div className="flex flex-col items-center gap-6 px-5 py-14 md:hidden">
         <CtaText />
       </div>
 
-      {/* Desktop layout */}
-      <div className="relative hidden h-full w-full md:block">
+      {/* ── Desktop layout ── */}
+      <div className="relative hidden h-[432px] w-full md:block">
         {/* Phone mockup */}
         <div
-          className="absolute overflow-hidden rounded-2xl shadow-xl"
+          className="absolute"
           style={{ left: 257, top: 18, width: 308, height: 414 }}
         >
           <Image
-            src="/lp/mock2.png"
+            src="/lp/cta-phone.png"
             alt="RootLink アプリ"
-            fill
-            className="object-cover object-top"
+            width={308}
+            height={414}
+            className="h-full w-full object-contain"
             sizes="308px"
           />
         </div>
 
-        {/* Text + badges — positioned right side */}
+        {/* Text + badges */}
         <div className="absolute flex flex-col gap-5" style={{ left: 634, top: 128, width: 449 }}>
           <CtaText />
         </div>

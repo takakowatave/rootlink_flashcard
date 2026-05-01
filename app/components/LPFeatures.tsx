@@ -8,7 +8,7 @@ function EtymologyCard() {
   return (
     <div className="relative h-[200px] w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
       <Image
-        src="/lp/mock2.png"
+        src="/lp/about-phone.png"
         alt="語源パーツ画面"
         fill
         className="object-cover object-top"
@@ -18,20 +18,33 @@ function EtymologyCard() {
   )
 }
 
-// ── Feature 2: あ/A トグル — アニメなし ───────────────────
+// ── Feature 2: あ/A トグル — Figma 実装 ───────────────────
 function ToggleCard() {
   return (
-    <div className="relative w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
-      <div className="flex items-center justify-center gap-8 p-8 md:h-[243px]">
-        <div className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-b-[6px] border-r-[6px] border-[#99f6e4] bg-[#f0fdfa]">
-          <span className="text-center text-5xl font-medium leading-none text-[#115e59]">あ</span>
+    <div className="relative h-[243px] w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:w-[358px]">
+      {/* autorenew 背景 */}
+      <div
+        className="absolute flex items-center justify-center"
+        style={{ left: 6.43, top: -46.44, width: 336.12, height: 336.12 }}
+      >
+        <div style={{ transform: 'rotate(35.47deg)' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/lp/autorenew.png" alt="" style={{ width: 241, height: 241, opacity: 0.61 }} />
         </div>
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="#14b8a6" className="shrink-0 opacity-50">
-          <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
-        </svg>
-        <div className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-b-[6px] border-r-[6px] border-[#38bdf8] bg-[#e0f2fe]">
-          <span className="text-center text-5xl font-medium leading-none text-[#0369a1]">A</span>
-        </div>
+      </div>
+      {/* あ タイル */}
+      <div
+        className="absolute flex items-center justify-center rounded-[8px] border-b-[6px] border-r-[6px] border-[#99f6e4] bg-[#f0fdfa]"
+        style={{ left: 39.99, top: 125.12, width: 92, height: 98 }}
+      >
+        <span className="text-[60px] font-medium leading-none text-[#115e59]">あ</span>
+      </div>
+      {/* A タイル */}
+      <div
+        className="absolute flex items-center justify-center rounded-[8px] border-b-[6px] border-r-[6px] border-[#38bdf8] bg-[#e0f2fe]"
+        style={{ left: 216.99, top: 12.12, width: 92, height: 98 }}
+      >
+        <span className="text-[60px] font-medium leading-none text-[#0369a1]">A</span>
       </div>
     </div>
   )

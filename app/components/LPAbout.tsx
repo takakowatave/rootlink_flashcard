@@ -4,17 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 import LPHeroTree from '@/components/LPHeroTree'
 import { DEMO } from '@/lib/lp-data'
 
-const CYCLE_MS  = 4200
+const CYCLE_MS  = 4500
 const TYPING_MS = 95
-
-const SCALE     = 0.65
-const TREE_W    = 310
-const TREE_H    = 290
+// スケール後のツリーコンテナサイズ
+const SCALE     = 0.62
+const TREE_W    = 310   // LPHeroTree defaultLayout.containerW
+const TREE_H    = 290   // LPHeroTree defaultLayout.containerH
 
 export default function LPAbout() {
-  const [wordIdx,    setWordIdx]    = useState(0)
-  const [typed,      setTyped]      = useState('')
-  const [showTree,   setShowTree]   = useState(false)
+  const [wordIdx,     setWordIdx]     = useState(0)
+  const [typed,       setTyped]       = useState('')
+  const [showTree,    setShowTree]    = useState(false)
+  const [treeOpacity, setTreeOpacity] = useState(0)
+
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -23,6 +25,7 @@ export default function LPAbout() {
     const word = DEMO[idx].word
     setTyped('')
     setShowTree(false)
+    setTreeOpacity(0)
     let i = 0
     typingRef.current = setInterval(() => {
       i++
@@ -30,7 +33,12 @@ export default function LPAbout() {
       if (i >= word.length) {
         clearInterval(typingRef.current!)
         typingRef.current = null
-        setTimeout(() => setShowTree(true), 250)
+        // ツリーをマウント
+        setTimeout(() => {
+          setShowTree(true)
+          // useLayoutEffect が落ち着いてから表示（幅ぶれを隠す）
+          setTimeout(() => setTreeOpacity(1), 80)
+        }, 200)
       }
     }, TYPING_MS)
   }
@@ -51,7 +59,9 @@ export default function LPAbout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const demo = DEMO[wordIdx]
+  const demo     = DEMO[wordIdx]
+  const treeBoxW = Math.round(TREE_W * SCALE)
+  const treeBoxH = Math.round(TREE_H * SCALE)
 
   return (
     <section className="flex w-full flex-col items-center gap-8 bg-white py-16 md:gap-10 md:py-[60px]">
@@ -61,17 +71,15 @@ export default function LPAbout() {
 
       <div className="flex w-full max-w-[980px] flex-col items-center gap-8 px-5 md:flex-row md:items-center md:gap-12 md:px-6 lg:px-0">
 
-        {/* ── アプリモックアップ（アニメ） ── */}
-        <div className="w-full shrink-0 md:w-auto">
-          <div
-            className="mx-auto overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_40px_rgba(0,173,130,0.12)]"
-            style={{ width: 'min(480px, 100%)' }}
-          >
-            {/* ヘッダー・検索バー */}
+        {/* ── アプリモックアップ ── */}
+        <div className="w-full shrink-0 md:w-[480px]">
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_40px_rgba(0,173,130,0.12)]">
+
+            {/* ヘッダー */}
             <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-2.5">
               <span className="shrink-0 text-sm font-bold text-[#00AD82]">RootLink</span>
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-[#01c3a0] bg-gray-50 px-3 py-1.5">
-                <span className="flex-1 text-sm text-gray-700">{typed}</span>
+              <div className="flex flex-1 items-center gap-1.5 rounded-full border border-[#01c3a0] bg-gray-50 px-3 py-1.5">
+                <span className="flex-1 text-sm text-gray-700 font-['Roboto',sans-serif]">{typed}</span>
                 <span className="inline-block h-3.5 w-[2px] animate-pulse bg-[#00AD82]" />
                 <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -79,11 +87,11 @@ export default function LPAbout() {
               </div>
             </div>
 
-            {/* 語源ツリーエリア */}
+            {/* ツリーエリア — 固定高さ・overflow-hidden でぶれを隠す */}
             <div
-              className="flex items-start justify-center gap-6 px-4 py-5"
+              className="flex items-start justify-center gap-8 px-6 py-5"
               style={{
-                minHeight: Math.round(TREE_H * SCALE) + 40,
+                height: treeBoxH + 40,
                 backgroundImage: 'linear-gradient(223.03deg, rgb(231,253,247) 4.88%, rgb(240,252,241) 102.37%)',
               }}
             >
@@ -91,10 +99,12 @@ export default function LPAbout() {
                 <div
                   key={`${wordIdx}-${root.root}`}
                   style={{
-                    width:    Math.round(TREE_W * SCALE),
-                    height:   Math.round(TREE_H * SCALE),
+                    width:      treeBoxW,
+                    height:     treeBoxH,
+                    overflow:   'hidden',
                     flexShrink: 0,
-                    overflow: 'hidden',
+                    opacity:    treeOpacity,
+                    transition: 'opacity 0.4s ease',
                   }}
                 >
                   <div style={{ transform: `scale(${SCALE})`, transformOrigin: 'top left' }}>
@@ -104,7 +114,7 @@ export default function LPAbout() {
               ))}
 
               {!showTree && (
-                <div style={{ height: Math.round(TREE_H * SCALE) }} className="flex w-full items-center justify-center">
+                <div style={{ height: treeBoxH }} className="flex w-full items-center justify-center">
                   <span className="text-sm text-gray-300">検索中…</span>
                 </div>
               )}
