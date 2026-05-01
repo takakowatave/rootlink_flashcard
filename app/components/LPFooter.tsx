@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export default function LPFooter() {
   return (
-    <footer className="w-full bg-[#1a2438] py-10">
+    <footer className="w-full bg-[#202020] py-10">
       <div className="mx-auto flex max-w-[980px] flex-col items-center gap-6 px-4 md:px-6">
         <Image
           src="/lp/logo-white.svg"
@@ -13,7 +13,10 @@ export default function LPFooter() {
           className="h-7 w-auto"
         />
 
-        <div className="flex items-center gap-6 text-[13px] text-[#8899aa]">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-[13px] text-[#8899aa]">
+          <Link href="/privacy" className="transition-colors hover:text-white">
+            利用規約
+          </Link>
           <Link href="/privacy" className="transition-colors hover:text-white">
             プライバシーポリシー
           </Link>

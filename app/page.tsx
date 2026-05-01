@@ -56,7 +56,7 @@ export default function HomePage() {
         isLoading={isLoading}
         error={error}
       />
-      <LPAbout wordIdx={0} />
+      <LPAbout />
       <LPFeatures />
       <LPCta />
       <LPFooter />

@@ -1,127 +1,157 @@
 'use client'
 
 import Image from 'next/image'
+import type { ReactNode } from 'react'
 
-const FEATURES = [
+// ── Feature 1: 語源パーツ card ─────────────────────────────
+const ETYMOLOGY_PARTS = [
+  { root: 'com', meaning: '共に', words: ['combine', 'compete', 'commit'] },
+  { root: 'pon', meaning: '置く', words: ['compose', 'deposit', 'expose'] },
+]
+
+function EtymologyCard() {
+  return (
+    <div className="flex h-auto w-full flex-col items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-[#f0fdfa] p-3 shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
+      <p className="text-xl font-semibold text-black md:text-2xl">component</p>
+      <div className="flex w-full gap-2">
+        {ETYMOLOGY_PARTS.map(part => (
+          <div key={part.root} className="flex flex-1 flex-col items-start gap-1.5 rounded-lg bg-[#cbfbf1] p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-3xl border-2 border-[#00d5be] bg-white pl-1.5 pr-2.5 py-0.5 text-sm font-medium text-[#00786f]">
+                {part.root}
+              </span>
+              <span className="text-xs font-medium text-[#00786f]">{part.meaning}</span>
+            </div>
+            <div className="ml-1.5 flex flex-col gap-1 border-l-2 border-[#99f6e4] pl-2">
+              {part.words.map(w => (
+                <div key={w} className="flex items-center gap-1.5">
+                  <span className="rounded-2xl bg-[#f0fdfa] px-2 py-0.5 text-xs font-medium text-[#009689]">{w}</span>
+                  <span className="text-xs text-[#009689]">{part.meaning}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Feature 2: あ/A toggle card ────────────────────────────
+function ToggleCard() {
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
+      {/* Desktop layout — absolute tiles */}
+      <div className="hidden md:block">
+        {/* Autorenew icon background */}
+        <div
+          className="absolute left-[6px] top-[-46px] flex size-[336px] items-center justify-center opacity-[0.61]"
+          style={{ animation: 'orbit-spin 70s linear infinite' }}
+        >
+          <div style={{ transform: 'rotate(35deg)' }}>
+            <svg width="241" height="241" viewBox="0 0 24 24" fill="#14b8a6">
+              <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
+            </svg>
+          </div>
+        </div>
+        {/* あ tile */}
+        <div className="absolute left-10 top-[125px] flex h-[98px] w-[92px] flex-col items-center justify-center rounded-lg border-b-[6px] border-r-[6px] border-[#99f6e4] bg-[#f0fdfa]">
+          <span className="text-center text-[60px] font-medium leading-none text-[#115e59]">あ</span>
+        </div>
+        {/* A tile */}
+        <div className="absolute left-[217px] top-3 flex h-[98px] w-[92px] flex-col items-center justify-center rounded-lg border-b-[6px] border-r-[6px] border-[#38bdf8] bg-[#e0f2fe]">
+          <span className="text-center text-[60px] font-medium leading-none text-[#0369a1]">A</span>
+        </div>
+      </div>
+
+      {/* Mobile/tablet layout — flex tiles */}
+      <div className="flex items-center justify-center gap-8 p-6 md:hidden">
+        <div className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-b-4 border-r-4 border-[#99f6e4] bg-[#f0fdfa]">
+          <span className="text-center text-5xl font-medium leading-none text-[#115e59]">あ</span>
+        </div>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="#14b8a6" className="shrink-0 opacity-60">
+          <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" />
+        </svg>
+        <div className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border-b-4 border-r-4 border-[#38bdf8] bg-[#e0f2fe]">
+          <span className="text-center text-5xl font-medium leading-none text-[#0369a1]">A</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Feature 3: クイズカード ────────────────────────────────
+function QuizCard() {
+  return (
+    <div className="relative h-[200px] w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
+      <Image
+        src="/lp/screenshot-quiz.png"
+        alt="フラッシュカード画面"
+        fill
+        className="object-cover object-top"
+        sizes="(max-width: 768px) 100vw, 358px"
+      />
+    </div>
+  )
+}
+
+// ── Features list ──────────────────────────────────────────
+const FEATURES: {
+  card: ReactNode
+  reverse: boolean
+  title: string
+  body: string
+}[] = [
   {
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="9" r="5" fill="url(#g1)" />
-        <circle cx="6" cy="26" r="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
-        <circle cx="26" cy="26" r="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
-        <line x1="16" y1="14" x2="6" y2="22" stroke="#00AD82" strokeWidth="1.5" />
-        <line x1="16" y1="14" x2="26" y2="22" stroke="#00AD82" strokeWidth="1.5" />
-        <defs>
-          <linearGradient id="g1" x1="11" y1="4" x2="21" y2="14" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00AD82" />
-            <stop offset="1" stopColor="#7DE265" />
-          </linearGradient>
-        </defs>
-      </svg>
-    ),
-    title: '語源ツリーで\n単語を理解する',
-    body: '単語を語根・接頭辞・接尾辞に分解。なぜその意味になるのかを語源から把握できます。',
+    card: <EtymologyCard />,
+    reverse: false,
+    title: '語源パーツで未知語を推測',
+    body: '初めて見た単語でも、語根がわかれば意味が推測できます。知らない単語を「なんとなく読む」から「構造で読む」へ。',
   },
   {
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="3" y="8" width="26" height="18" rx="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
-        <rect x="8" y="3" width="16" height="6" rx="2" fill="url(#g2)" />
-        <line x1="10" y1="16" x2="22" y2="16" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="10" y1="21" x2="18" y2="21" stroke="#7DE265" strokeWidth="1.5" strokeLinecap="round" />
-        <defs>
-          <linearGradient id="g2" x1="8" y1="3" x2="24" y2="9" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00AD82" />
-            <stop offset="1" stopColor="#7DE265" />
-          </linearGradient>
-        </defs>
-      </svg>
-    ),
-    title: '英英辞書 × AI で\n深く学ぶ',
-    body: 'Oxford辞書のデータをAIが学習者向けにリライト。語義・用例・ニュアンスをわかりやすく提示します。',
+    card: <ToggleCard />,
+    reverse: true,
+    title: '和英⇄英英のモード切り替え',
+    body: 'ボタン一つで和英⇄英英を切り替えられます。まずは日本語で意味をつかみ、慣れてきたら英英モードで英語のまま考える力をつけられます。',
   },
   {
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect x="4" y="6" width="24" height="20" rx="4" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
-        <path d="M12 16 L15 19 L20 13" stroke="#00AD82" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="24" cy="8" r="4" fill="url(#g3)" />
-        <path d="M22.5 8 L23.5 9 L25.5 7" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        <defs>
-          <linearGradient id="g3" x1="20" y1="4" x2="28" y2="12" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00AD82" />
-            <stop offset="1" stopColor="#7DE265" />
-          </linearGradient>
-        </defs>
-      </svg>
-    ),
-    title: 'フラッシュカードで\n記憶を定着',
-    body: '保存した単語をクイズ形式で確認。正解・不正解を記録し、苦手な単語を重点的に復習できます。',
-    img: '/lp/screenshot-quiz.png',
-  },
-  {
-    icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M6 10 C6 7.8 7.8 6 10 6 L22 6 C24.2 6 26 7.8 26 10 L26 22 C26 24.2 24.2 26 22 26 L10 26 C7.8 26 6 24.2 6 22 Z" fill="#e7f8f5" stroke="#00AD82" strokeWidth="1.5" />
-        <circle cx="11" cy="13" r="1.5" fill="#00AD82" />
-        <circle cx="16" cy="13" r="1.5" fill="#7DE265" />
-        <circle cx="21" cy="13" r="1.5" fill="#00AD82" />
-        <line x1="10" y1="19" x2="22" y2="19" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
-        <circle cx="26" cy="6" r="4" fill="url(#g4)" />
-        <path d="M24 6 L26 8 L28 5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        <defs>
-          <linearGradient id="g4" x1="22" y1="2" x2="30" y2="10" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00AD82" />
-            <stop offset="1" stopColor="#7DE265" />
-          </linearGradient>
-        </defs>
-      </svg>
-    ),
-    title: '同語根の単語を\nまとめて習得',
-    body: '同じ語根を持つ単語を芋づる式に探索。関連語のネットワークを広げながら語彙を増やせます。',
+    card: <QuizCard />,
+    reverse: false,
+    title: 'フラッシュカードで記憶を定着',
+    body: 'せっかくストックした単語を眠らせていませんか？保存した単語はそのままクイズ形式でテストできます。検索するだけで復習の仕組みが自然にできあがります。',
   },
 ]
 
+// ── Section ────────────────────────────────────────────────
 export default function LPFeatures() {
   return (
-    <section className="w-full bg-[#f8fafb] py-16 md:py-20">
-      <div className="mx-auto max-w-[980px] px-4 md:px-6">
-        <h2 className="mb-8 text-center text-[22px] font-bold text-[#1a2438] md:mb-12 md:text-[36px]">
-          RootLinkの
-          <span className="bg-gradient-to-r from-[#00AD82] to-[#7DE265] bg-clip-text text-transparent">
-            4つの特徴
-          </span>
-        </h2>
+    <section
+      className="flex w-full flex-col items-center gap-10 py-16 md:gap-[42px] md:py-[80px]"
+      style={{ backgroundImage: 'linear-gradient(41.06deg, rgba(0,235,180,0.1) 4.63%, rgba(108,222,109,0.1) 100%)' }}
+    >
+      <h2 className="text-[24px] font-bold text-[#00ad82] md:text-[42px]">
+        RootLinkの3つの特徴
+      </h2>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          {FEATURES.map((f, i) => (
-            <div
-              key={i}
-              className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-[0_2px_12px_0_rgba(0,0,0,0.06)]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#f0faf8]">
-                  {f.icon}
-                </div>
-                <h3 className="text-[16px] font-bold leading-snug text-[#1a2438] whitespace-pre-line">
-                  {f.title}
-                </h3>
-              </div>
-              <p className="text-[14px] leading-[26px] text-[#5a6a7e]">{f.body}</p>
-              {f.img && (
-                <div className="overflow-hidden rounded-xl border border-[#e7edf4]">
-                  <Image
-                    src={f.img}
-                    alt={f.title}
-                    width={480}
-                    height={240}
-                    className="w-full object-cover"
-                  />
-                </div>
-              )}
+      <div className="flex w-full max-w-[800px] flex-col gap-8 px-5 md:px-6 lg:px-0">
+        {FEATURES.map((f, i) => (
+          <div
+            key={i}
+            className={`flex flex-col items-center gap-6 rounded-lg md:flex-row md:gap-6 ${
+              f.reverse ? 'md:flex-row-reverse' : ''
+            }`}
+          >
+            {f.card}
+            <div className="flex flex-1 flex-col items-start gap-4 text-[#333]">
+              <p className="text-[20px] font-bold leading-[34px] text-center md:text-[27px] md:text-left">
+                {f.title}
+              </p>
+              <p className="text-[15px] leading-[26px] tracking-[0.6px] md:text-[18px] md:leading-[28px] md:tracking-[0.72px]">
+                {f.body}
+              </p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </section>
   )
