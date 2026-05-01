@@ -10,6 +10,7 @@ import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import GrammarTags from '@/components/GrammarTags'
+import { supabase } from '@/lib/supabaseClient'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -82,6 +83,25 @@ export default function EntryCard({
   const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation?.audioFile ?? null)
   const [audioLoading, setAudioLoading] = useState(false)
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => true))
+  const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
+
+  useEffect(() => {
+    if (parts.length === 0) return
+    const firstPart = parts[0]
+    if (!firstPart?.text) return
+    const partText = firstPart.text.toLowerCase()
+    supabase
+      .from('etymology_part_words')
+      .select('word')
+      .eq('part_text', partText)
+      .neq('word', headword.toLowerCase())
+      .limit(8)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setPartWordMap(prev => ({ ...prev, [partText]: data.map(d => d.word) }))
+        }
+      })
+  }, [parts, headword])
 
   const playAudio = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -153,13 +173,11 @@ export default function EntryCard({
                 ? (part.meaningJa ?? part.meaning ?? '')
                 : (part.meaning ?? part.meaningJa ?? '')
 
-              const filteredWords = [...new Set(
-                part.relatedWords.filter(w =>
-                  w.toLowerCase() !== headword.toLowerCase()
-                )
-              )].slice(0, 3)
-
               const isFirst = idx === 0
+
+              const filteredWords = isFirst
+                ? (partWordMap[part.text.toLowerCase()] ?? []).slice(0, 6)
+                : []
 
               return (
                 <div
