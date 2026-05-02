@@ -86,8 +86,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       {/* Search bar */}
       <div className="mb-10 w-full max-w-xl sm:mb-16" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
-          <div className="lp-search-glow rounded-full p-[2.5px] shadow-sm">
-            <div className="flex items-center rounded-full bg-white px-6 py-3.5">
+          <div className="flex items-center rounded-full bg-white border-[5px] border-[#01c3a0] px-6 py-3 md:py-4 shadow-sm">
               <div className="relative flex-1">
                 <input
                   value={value}
@@ -120,7 +119,6 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
                   </svg>
                 )}
               </button>
-            </div>
           </div>
         </form>
         {error && (

@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import type { ReactNode } from 'react'
+import { MdAddCircle } from 'react-icons/md'
 
 // ── Feature 1: 語源パーツ — 画像 ──────────────────────────
 function EtymologyCard() {
@@ -50,17 +51,34 @@ function ToggleCard() {
   )
 }
 
-// ── Feature 3: クイズ — 画像 ──────────────────────────────
+// ── Feature 3: フラッシュカード — 語源カード ─────────────
 function QuizCard() {
+  const roots = [
+    { root: 'com', gloss: '共に', words: ['combine', 'compare', 'compete'] },
+    { root: 'pon', gloss: '置く', words: ['opponent', 'postpone', 'proponent'] },
+  ]
   return (
-    <div className="relative h-[200px] w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
-      <Image
-        src="/lp/screenshot-quiz.png"
-        alt="フラッシュカード画面"
-        fill
-        className="object-cover object-top"
-        sizes="(max-width: 768px) 100vw, 358px"
-      />
+    <div className="flex h-[200px] w-full flex-col gap-2 rounded-xl bg-[#f0fdfa] p-3 shadow-[0_0_20px_rgba(0,0,0,0.08)] md:h-[243px] md:w-[358px]">
+      <div className="flex flex-1 gap-2">
+        {roots.map(root => (
+          <div key={root.root} className="flex flex-1 flex-col gap-2 rounded-lg bg-[#cbfbf1] px-2 py-2">
+            <div className="flex flex-wrap items-center gap-1">
+              <div className="flex items-center gap-0.5 rounded-full border-2 border-[#00d5be] bg-white pl-1 pr-2.5 py-0.5">
+                <MdAddCircle className="size-[18px] shrink-0 text-[#00786f]" />
+                <span className="text-[13px] font-medium text-[#00786f]">{root.root}</span>
+              </div>
+              <span className="text-[12px] font-medium text-[#00786f]">{root.gloss}</span>
+            </div>
+            <div className="flex flex-col gap-1.5 pl-2">
+              {root.words.map(word => (
+                <span key={word} className="rounded-full bg-[#f0fdfa] px-2.5 py-1 text-[12px] text-[#009689]">
+                  {word}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

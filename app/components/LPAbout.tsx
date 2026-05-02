@@ -1,21 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import LPHeroTree from '@/components/LPHeroTree'
+import { MdAddCircle } from 'react-icons/md'
+import { HiSpeakerWave, HiOutlineBookmark } from 'react-icons/hi2'
 import { DEMO } from '@/lib/lp-data'
 
 const CYCLE_MS  = 4500
-const TYPING_MS = 95
-// スケール後のツリーコンテナサイズ
-const SCALE     = 0.62
-const TREE_W    = 310   // LPHeroTree defaultLayout.containerW
-const TREE_H    = 290   // LPHeroTree defaultLayout.containerH
+const TYPING_MS = 90
 
 export default function LPAbout() {
-  const [wordIdx,     setWordIdx]     = useState(0)
-  const [typed,       setTyped]       = useState('')
-  const [showTree,    setShowTree]    = useState(false)
-  const [treeOpacity, setTreeOpacity] = useState(0)
+  const [wordIdx,  setWordIdx]  = useState(0)
+  const [typed,    setTyped]    = useState('')
+  const [showTree, setShowTree] = useState(false)
+  const [treeKey,  setTreeKey]  = useState(0)
 
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -25,7 +22,6 @@ export default function LPAbout() {
     const word = DEMO[idx].word
     setTyped('')
     setShowTree(false)
-    setTreeOpacity(0)
     let i = 0
     typingRef.current = setInterval(() => {
       i++
@@ -33,12 +29,7 @@ export default function LPAbout() {
       if (i >= word.length) {
         clearInterval(typingRef.current!)
         typingRef.current = null
-        // ツリーをマウント
-        setTimeout(() => {
-          setShowTree(true)
-          // useLayoutEffect が落ち着いてから表示（幅ぶれを隠す）
-          setTimeout(() => setTreeOpacity(1), 80)
-        }, 200)
+        setTimeout(() => { setTreeKey(k => k + 1); setShowTree(true) }, 250)
       }
     }, TYPING_MS)
   }
@@ -59,9 +50,7 @@ export default function LPAbout() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const demo     = DEMO[wordIdx]
-  const treeBoxW = Math.round(TREE_W * SCALE)
-  const treeBoxH = Math.round(TREE_H * SCALE)
+  const demo = DEMO[wordIdx]
 
   return (
     <section className="flex w-full flex-col items-center gap-8 bg-white py-16 md:gap-10 md:py-[60px]">
@@ -71,53 +60,82 @@ export default function LPAbout() {
 
       <div className="flex w-full max-w-[980px] flex-col items-center gap-8 px-5 md:flex-row md:items-center md:gap-12 md:px-6 lg:px-0">
 
-        {/* ── アプリモックアップ ── */}
-        <div className="w-full shrink-0 md:w-[480px]">
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_40px_rgba(0,173,130,0.12)]">
-
-            {/* ヘッダー */}
-            <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-2.5">
-              <span className="shrink-0 text-sm font-bold text-[#00AD82]">RootLink</span>
-              <div className="flex flex-1 items-center gap-1.5 rounded-full border border-[#01c3a0] bg-gray-50 px-3 py-1.5">
-                <span className="flex-1 text-sm text-gray-700 font-['Roboto',sans-serif]">{typed}</span>
-                <span className="inline-block h-3.5 w-[2px] animate-pulse bg-[#00AD82]" />
-                <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        {/* ── Phone mockup ── */}
+        <div className="shrink-0">
+          <div
+            className="mx-auto overflow-hidden rounded-[36px] border border-[#d1d5db] bg-white"
+            style={{
+              width: 300,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04)',
+            }}
+          >
+            {/* App header */}
+            <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-white px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="5" r="4" fill="#00AD82" />
+                  <circle cx="4"  cy="15" r="2.5" fill="none" stroke="#00AD82" strokeWidth="1.5" />
+                  <circle cx="16" cy="15" r="2.5" fill="none" stroke="#00AD82" strokeWidth="1.5" />
+                  <line x1="10" y1="9" x2="4"  y2="12.5" stroke="#00AD82" strokeWidth="1.5" />
+                  <line x1="10" y1="9" x2="16" y2="12.5" stroke="#00AD82" strokeWidth="1.5" />
                 </svg>
+                <span className="text-[13px] font-bold text-[#00AD82]">RootLink</span>
               </div>
+              <span className="rounded-full border border-[#00AD82] px-2.5 py-0.5 text-[10px] font-medium text-[#00AD82]">
+                単語リスト
+              </span>
             </div>
 
-            {/* ツリーエリア — 固定高さ・overflow-hidden でぶれを隠す */}
-            <div
-              className="flex items-start justify-center gap-8 px-6 py-5"
-              style={{
-                height: treeBoxH + 40,
-                backgroundImage: 'linear-gradient(223.03deg, rgb(231,253,247) 4.88%, rgb(240,252,241) 102.37%)',
-              }}
-            >
-              {showTree && demo.roots.map(root => (
-                <div
-                  key={`${wordIdx}-${root.root}`}
-                  style={{
-                    width:      treeBoxW,
-                    height:     treeBoxH,
-                    overflow:   'hidden',
-                    flexShrink: 0,
-                    opacity:    treeOpacity,
-                    transition: 'opacity 0.4s ease',
-                  }}
-                >
-                  <div style={{ transform: `scale(${SCALE})`, transformOrigin: 'top left' }}>
-                    <LPHeroTree {...root} />
-                  </div>
+            {/* Screen content */}
+            <div className="flex flex-col gap-2.5 px-4 py-4">
+              {/* Word + icons */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[22px] font-semibold leading-8 text-black">
+                    {typed}
+                    <span className="ml-px inline-block h-5 w-[2px] animate-pulse bg-[#00AD82] align-middle" />
+                  </span>
+                  <HiSpeakerWave className="size-5 text-[#90a1b9]" />
                 </div>
-              ))}
+                <HiOutlineBookmark className="size-5 text-[#00AD82]" />
+              </div>
 
-              {!showTree && (
-                <div style={{ height: treeBoxH }} className="flex w-full items-center justify-center">
-                  <span className="text-sm text-gray-300">検索中…</span>
+              {/* Etymology hook card */}
+              <div
+                key={treeKey}
+                className="flex flex-col gap-2 rounded-lg bg-[#f0fdfa] p-2"
+                style={{ opacity: showTree ? 1 : 0, transition: 'opacity 0.5s ease' }}
+              >
+                <div className="flex gap-2">
+                  {demo.roots.map((root, ri) => (
+                    <div key={root.root} className="flex flex-1 flex-col gap-1.5 rounded-lg bg-[#cbfbf1] px-2 py-2">
+                      {/* Root badge */}
+                      <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex items-center gap-0.5 rounded-full border-2 border-[#00d5be] bg-white pl-0.5 pr-2 py-0.5">
+                          <MdAddCircle className="size-4 shrink-0 text-[#00786f]" />
+                          <span className="text-[11px] font-medium text-[#00786f]">{root.root}</span>
+                        </div>
+                        <span className="text-[11px] font-medium text-[#00786f]">{root.gloss}</span>
+                      </div>
+                      {/* Related words */}
+                      <div className="flex flex-col gap-1 pl-1">
+                        {root.words.map((word, wi) => (
+                          <span
+                            key={word}
+                            className="rounded-full bg-[#f0fdfa] px-2 py-0.5 text-[11px] text-[#009689]"
+                            style={{
+                              opacity: showTree ? 1 : 0,
+                              transition: `opacity 0.35s ease ${0.1 + ri * 0.12 + wi * 0.08}s`,
+                            }}
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

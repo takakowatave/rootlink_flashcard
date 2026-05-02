@@ -23,7 +23,7 @@ export default function LPCta() {
             alt="RootLink アプリ"
             width={308}
             height={414}
-            className="h-full w-full object-contain"
+            className="h-full w-full object-contain drop-shadow-xl"
             sizes="308px"
           />
         </div>
