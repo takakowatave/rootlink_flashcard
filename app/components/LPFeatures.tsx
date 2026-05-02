@@ -22,14 +22,24 @@ function EtymologyCard() {
 function ToggleCard() {
   return (
     <div className="relative h-[243px] w-full overflow-hidden rounded-xl bg-white shadow-[0_0_20px_rgba(0,0,0,0.08)] md:w-[358px]">
-      {/* autorenew 背景 */}
+      {/* Exchange arrows — teal gradient SVG */}
       <div
         className="absolute flex items-center justify-center"
         style={{ left: 6.43, top: -46.44, width: 336.12, height: 336.12 }}
       >
         <div style={{ transform: 'rotate(35.47deg)' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lp/autorenew.png" alt="" style={{ width: 241, height: 241, opacity: 0.61 }} />
+          <svg width="241" height="241" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient id="syncGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#01c3a0"/>
+                <stop offset="100%" stopColor="#38bdf8"/>
+              </linearGradient>
+            </defs>
+            <path
+              d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"
+              fill="url(#syncGrad)"
+            />
+          </svg>
         </div>
       </div>
       {/* あ タイル */}

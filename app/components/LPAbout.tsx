@@ -60,17 +60,11 @@ export default function LPAbout() {
 
       <div className="flex w-full max-w-[980px] flex-col items-center gap-8 px-5 md:flex-row md:items-center md:gap-12 md:px-6 lg:px-0">
 
-        {/* ── Phone mockup ── */}
-        <div className="shrink-0">
-          <div
-            className="mx-auto overflow-hidden rounded-[36px] border border-[#d1d5db] bg-white"
-            style={{
-              width: 300,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.04)',
-            }}
-          >
+        {/* ── App card ── */}
+        <div className="w-full shrink-0 md:w-[400px]">
+          <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_40px_rgba(0,173,130,0.12)]">
             {/* App header */}
-            <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-white px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-white px-4 py-3">
               <div className="flex items-center gap-1.5">
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
                   <circle cx="10" cy="5" r="4" fill="#00AD82" />
@@ -117,20 +111,32 @@ export default function LPAbout() {
                         </div>
                         <span className="text-[11px] font-medium text-[#00786f]">{root.gloss}</span>
                       </div>
-                      {/* Related words */}
-                      <div className="flex flex-col gap-1 pl-1">
-                        {root.words.map((word, wi) => (
-                          <span
-                            key={word}
-                            className="rounded-full bg-[#f0fdfa] px-2 py-0.5 text-[11px] text-[#009689]"
-                            style={{
-                              opacity: showTree ? 1 : 0,
-                              transition: `opacity 0.35s ease ${0.1 + ri * 0.12 + wi * 0.08}s`,
-                            }}
-                          >
-                            {word}
-                          </span>
-                        ))}
+                      {/* Related words with connector */}
+                      <div className="flex items-start gap-1">
+                        <svg
+                          width="10" height="66" viewBox="0 0 10 66" fill="none"
+                          className="shrink-0 mt-[3px]"
+                          style={{ opacity: showTree ? 1 : 0, transition: `opacity 0.3s ease ${0.1 + ri * 0.12}s` }}
+                        >
+                          <line x1="2" y1="0" x2="2" y2="63" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="2" y1="11" x2="10" y2="11" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="2" y1="37" x2="10" y2="37" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="2" y1="63" x2="10" y2="63" stroke="#00AD82" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                        <div className="flex flex-col gap-1">
+                          {root.words.map((word, wi) => (
+                            <span
+                              key={word}
+                              className="rounded-full bg-[#f0fdfa] px-2 py-0.5 text-[11px] text-[#009689]"
+                              style={{
+                                opacity: showTree ? 1 : 0,
+                                transition: `opacity 0.35s ease ${0.1 + ri * 0.12 + wi * 0.08}s`,
+                              }}
+                            >
+                              {word}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
