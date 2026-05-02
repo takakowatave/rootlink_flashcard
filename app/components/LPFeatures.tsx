@@ -6,45 +6,42 @@ import type { ReactNode } from 'react'
 // ── Feature 1: 語源パーツ — 画像 ──────────────────────────
 function EtymologyCard() {
   return (
-    <div className="relative h-[200px] w-full md:h-[243px] md:w-[358px]">
-      <Image
-        src="/lp/01.png"
-        alt="語源パーツ画面"
-        fill
-        className="object-contain"
-        sizes="(max-width: 768px) 100vw, 358px"
-      />
-    </div>
+    <Image
+      src="/lp/01.png"
+      alt="語源パーツ画面"
+      width={358}
+      height={290}
+      className="w-full h-auto"
+      sizes="(max-width: 768px) 100vw, 358px"
+    />
   )
 }
 
 // ── Feature 2: あ/A トグル — 画像 ─────────────────────────
 function ToggleCard() {
   return (
-    <div className="relative h-[200px] w-full md:h-[243px] md:w-[358px]">
-      <Image
-        src="/lp/02.png"
-        alt="和英・英英切り替え画面"
-        fill
-        className="object-contain"
-        sizes="(max-width: 768px) 100vw, 358px"
-      />
-    </div>
+    <Image
+      src="/lp/02.png"
+      alt="和英・英英切り替え画面"
+      width={358}
+      height={290}
+      className="w-full h-auto"
+      sizes="(max-width: 768px) 100vw, 358px"
+    />
   )
 }
 
 // ── Feature 3: フラッシュカード — 画像 ───────────────────
 function QuizCard() {
   return (
-    <div className="relative h-[200px] w-full md:h-[243px] md:w-[358px]">
-      <Image
-        src="/lp/03.png"
-        alt="フラッシュカード画面"
-        fill
-        className="object-contain"
-        sizes="(max-width: 768px) 100vw, 358px"
-      />
-    </div>
+    <Image
+      src="/lp/03.png"
+      alt="フラッシュカード画面"
+      width={358}
+      height={290}
+      className="w-full h-auto"
+      sizes="(max-width: 768px) 100vw, 358px"
+    />
   )
 }
 
