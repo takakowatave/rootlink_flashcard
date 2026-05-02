@@ -15,9 +15,6 @@ export default function LPFooter() {
 
         <div className="flex flex-wrap items-center justify-center gap-6 text-[13px] text-[#8899aa]">
           <Link href="/privacy" className="transition-colors hover:text-white">
-            利用規約
-          </Link>
-          <Link href="/privacy" className="transition-colors hover:text-white">
             プライバシーポリシー
           </Link>
           <a
