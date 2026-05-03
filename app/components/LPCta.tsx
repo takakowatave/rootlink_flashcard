@@ -19,7 +19,7 @@ export default function LPCta() {
           style={{ left: 257, top: 18, width: 308, height: 414 }}
         >
           <Image
-            src="/lp/cta-phone.png"
+            src="/lp/mock_.png"
             alt="RootLink アプリ"
             width={308}
             height={414}
