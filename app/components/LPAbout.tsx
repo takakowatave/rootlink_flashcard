@@ -2,7 +2,7 @@ import Image from 'next/image'
 
 export default function LPAbout() {
   return (
-    <section className="flex w-full flex-col items-center gap-8 bg-white py-0 md:gap-10">
+    <section className="flex w-full flex-col items-center gap-8 bg-white pt-[60px] md:gap-10">
       <h2 className="text-[26px] font-bold text-[#14b8a6] md:text-[42px]">
         RootLinkとは？
       </h2>

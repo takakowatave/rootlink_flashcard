@@ -6,8 +6,8 @@ export default function LPCta() {
       className="flex w-full flex-col items-center overflow-hidden pt-[60px]"
       style={{
         backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+          linear-gradient(rgba(0,60,50,0.18) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,60,50,0.18) 1px, transparent 1px),
           linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)
         `,
         backgroundSize: '32px 32px, 32px 32px, 100% 100%',
