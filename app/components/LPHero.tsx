@@ -91,39 +91,41 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       {/* Search bar */}
       <div className="mb-10 w-full max-w-[600px] sm:mb-16" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
-          <div className="flex items-center rounded-full bg-white border-[5px] border-[#01c3a0] px-6 py-3 md:py-4 shadow-sm">
+          <div className="p-[6px] rounded-[90px]" style={{ backgroundImage: 'linear-gradient(87deg, #01c3a0 0%, #7de265 100%)' }}>
+          <div className="flex items-center rounded-[84px] bg-white pl-6 pr-4 py-3 md:pl-8 md:pr-6 md:h-[68px]">
               <div className="relative flex-1">
                 <input
                   value={value}
                   onChange={(e) => onChange(e.target.value)}
                   disabled={isLoading}
-                  className="w-full bg-transparent text-xl text-gray-700 outline-none disabled:opacity-50"
+                  className="w-full bg-transparent text-[22px] md:text-[38px] text-gray-800 outline-none disabled:opacity-50"
                   style={{ caretColor: 'transparent' }}
                 />
                 {/* タイピングアニメーション表示（ユーザー未入力時） */}
                 {!value && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center text-xl text-gray-700">
+                  <div className="pointer-events-none absolute inset-0 flex items-center text-[22px] md:text-[38px] text-gray-800">
                     <span>{typed}</span>
-                    <span className={`lp-cursor ml-[1px] inline-block h-5 w-[2px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`} />
+                    <span className={`lp-cursor ml-[1px] inline-block h-6 w-[2px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`} />
                   </div>
                 )}
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="ml-3 text-gray-300 transition-colors hover:text-[#00AD82] disabled:opacity-50"
+                className="ml-3 text-[#01c3a0] transition-colors hover:text-[#00AD82] disabled:opacity-50"
               >
                 {isLoading ? (
-                  <svg className="h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="h-8 w-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
                 ) : (
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 )}
               </button>
+          </div>
           </div>
         </form>
         {error && (
