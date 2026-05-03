@@ -89,7 +89,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       </h1>
 
       {/* Search bar */}
-      <div className="mb-10 w-full max-w-xl sm:mb-16" style={anim(0.15)}>
+      <div className="mb-10 w-full max-w-[600px] sm:mb-16" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
           <div className="flex items-center rounded-full bg-white border-[5px] border-[#01c3a0] px-6 py-3 md:py-4 shadow-sm">
               <div className="relative flex-1">
@@ -133,7 +133,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
 
       {/* Etymology trees — 常にスペース確保、opacityで表示切替 */}
       <div
-        className="flex w-full max-w-full flex-row items-start justify-center gap-8 overflow-x-auto sm:gap-16 md:gap-28 transition-opacity duration-500"
+        className="flex w-full max-w-[600px] flex-row items-start justify-between overflow-x-auto transition-opacity duration-500"
         style={{ opacity: (!value && showTree) ? 1 : 0 }}
       >
         {DEMO[wordIdx].roots.map((root) => (
