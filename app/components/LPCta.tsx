@@ -3,17 +3,17 @@ import Image from 'next/image'
 export default function LPCta() {
   return (
     <section
-      className="w-full overflow-hidden"
+      className="flex w-full flex-col items-center overflow-hidden"
       style={{ backgroundImage: 'linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)' }}
     >
-      <div className="mx-auto flex w-full max-w-[800px] flex-col items-center gap-8 px-5 py-12 md:flex-row md:items-end md:gap-12 md:px-6 md:py-0 lg:px-0">
+      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 py-12 md:flex-row md:items-end md:gap-12 md:px-6 md:py-0 lg:px-0">
         {/* Phone mockup */}
         <div className="w-[240px] shrink-0 md:w-[300px]">
           <Image
             src="/lp/mock_.png"
             alt="RootLink アプリ"
-            width={600}
-            height={720}
+            width={874}
+            height={936}
             className="w-full h-auto block"
             sizes="(max-width: 768px) 240px, 300px"
           />

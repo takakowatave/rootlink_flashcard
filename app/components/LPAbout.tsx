@@ -2,20 +2,20 @@ import Image from 'next/image'
 
 export default function LPAbout() {
   return (
-    <section className="w-full bg-white py-16 md:py-[60px]">
-      <h2 className="mb-8 text-center text-[26px] font-bold text-[#14b8a6] md:mb-10 md:text-[42px]">
+    <section className="flex w-full flex-col items-center gap-8 bg-white py-16 md:gap-10 md:py-[60px]">
+      <h2 className="text-[26px] font-bold text-[#14b8a6] md:text-[42px]">
         RootLinkとは？
       </h2>
 
-      <div className="mx-auto flex w-full max-w-[800px] flex-col items-center gap-8 px-5 md:flex-row md:items-start md:gap-12 md:px-6 lg:px-0">
+      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 md:flex-row md:items-start md:gap-12 md:px-6 lg:px-0">
 
         {/* ── Phone mockup ── */}
         <div className="w-full shrink-0 md:w-[340px]">
           <Image
             src="/lp/mock_.png"
             alt="RootLink アプリ画面"
-            width={680}
-            height={820}
+            width={874}
+            height={936}
             className="w-full h-auto block"
             sizes="(max-width: 768px) 80vw, 340px"
           />
@@ -32,9 +32,7 @@ export default function LPAbout() {
           </p>
           <p className="text-[15px] leading-[36px] tracking-[0.6px] text-[#333] md:text-[18px] md:leading-[38px] md:tracking-[0.72px]">
             「語源のつながり」から学べる辞書×単語帳です。
-            <br />
             検索した単語をその場で意味だけでなく
-            <br />
             語源パーツまで分解して理解できるから、
           </p>
           <p className="text-[18px] font-bold leading-[34px] tracking-[0.72px] text-[#14b8a6] md:text-[23px] md:leading-[36px] md:tracking-[0.92px]">
