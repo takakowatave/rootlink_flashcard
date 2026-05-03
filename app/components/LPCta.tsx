@@ -3,32 +3,25 @@ import Image from 'next/image'
 export default function LPCta() {
   return (
     <section
-      className="relative w-full overflow-hidden"
+      className="flex w-full flex-col items-center overflow-hidden"
       style={{ backgroundImage: 'linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)' }}
     >
-      {/* ── SP layout ── */}
-      <div className="flex flex-col items-center gap-6 px-5 py-14 md:hidden">
-        <CtaText />
-      </div>
+      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 py-12 md:flex-row md:items-end md:gap-12 md:px-6 md:py-0 lg:px-0">
+        {/* Phone mockup */}
+        <div className="w-[240px] shrink-0 md:w-[300px]">
+          <Image
+            src="/lp/mock_.png"
+            alt="RootLink アプリ"
+            width={600}
+            height={720}
+            className="w-full h-auto block"
+            sizes="(max-width: 768px) 240px, 300px"
+          />
+        </div>
 
-      {/* ── Desktop layout ── */}
-      <div className="hidden md:flex w-full justify-center py-10">
-        <div className="flex w-full max-w-[800px] items-center gap-10 px-6 lg:px-0">
-          {/* Phone mockup */}
-          <div className="shrink-0 w-[280px]">
-            <Image
-              src="/lp/mock_.png"
-              alt="RootLink アプリ"
-              width={560}
-              height={670}
-              className="w-full h-auto block"
-              sizes="280px"
-            />
-          </div>
-          {/* Text + badges */}
-          <div className="flex flex-col gap-5">
-            <CtaText />
-          </div>
+        {/* Text + badges */}
+        <div className="flex flex-col gap-5 pb-12 text-center md:text-left">
+          <CtaText />
         </div>
       </div>
     </section>
@@ -38,7 +31,7 @@ export default function LPCta() {
 function CtaText() {
   return (
     <>
-      <div className="flex flex-col gap-2 text-center md:text-left">
+      <div className="flex flex-col gap-2">
         <p className="text-[36px] font-bold leading-none text-white md:text-[44px]">2026.06</p>
         <p className="text-[24px] font-bold leading-tight text-white md:text-[34px]">
           公式アプリリリース予定

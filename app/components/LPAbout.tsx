@@ -7,22 +7,22 @@ export default function LPAbout() {
         RootLinkとは？
       </h2>
 
-      <div className="flex w-full max-w-[980px] flex-col items-center gap-8 px-5 md:flex-row md:items-center md:gap-12 md:px-6 lg:px-0">
+      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 md:flex-row md:items-start md:gap-12 md:px-6 lg:px-0">
 
-        {/* ── Phone mockup image ── */}
-        <div className="w-full shrink-0 overflow-hidden md:w-[380px]">
+        {/* ── Phone mockup ── */}
+        <div className="w-full shrink-0 md:w-[340px]">
           <Image
             src="/lp/mock_.png"
             alt="RootLink アプリ画面"
-            width={760}
-            height={900}
+            width={680}
+            height={820}
             className="w-full h-auto block"
-            sizes="(max-width: 768px) 100vw, 380px"
+            sizes="(max-width: 768px) 80vw, 340px"
           />
         </div>
 
         {/* ── テキスト ── */}
-        <div className="flex flex-col gap-5 md:gap-6">
+        <div className="flex flex-col gap-5 md:gap-6 md:pt-4">
           <p className="text-[15px] leading-[30px] tracking-[0.6px] text-[#333] md:text-[18px] md:leading-[32px] md:tracking-[0.72px]">
             RootLinkは
             <strong className="text-[#494f56]">関連性で英単語を理解し、</strong>
