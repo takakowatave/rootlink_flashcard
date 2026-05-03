@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
@@ -74,9 +74,13 @@ export default function EntryCard({
   onSave,
   compact = false,
 }: Props) {
-  const parts = etymologyData?.structure.type === 'parts'
-    ? etymologyData.structure.parts.filter(p => p.text || p.meaning)
-    : []
+  const parts = useMemo(
+    () => etymologyData?.structure.type === 'parts'
+      ? etymologyData.structure.parts.filter(p => p.text || p.meaning)
+      : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [etymologyData]
+  )
 
   const router = useRouter()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
