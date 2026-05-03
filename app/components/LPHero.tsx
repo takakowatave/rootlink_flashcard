@@ -133,7 +133,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
 
       {/* Etymology trees — 常にスペース確保、opacityで表示切替 */}
       <div
-        className="flex w-full max-w-[600px] flex-row items-start justify-between overflow-x-auto transition-opacity duration-500"
+        className="flex w-full max-w-[600px] flex-row items-start justify-between transition-opacity duration-500"
         style={{ opacity: (!value && showTree) ? 1 : 0 }}
       >
         {DEMO[wordIdx].roots.map((root) => (
