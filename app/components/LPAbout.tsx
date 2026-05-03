@@ -2,12 +2,12 @@ import Image from 'next/image'
 
 export default function LPAbout() {
   return (
-    <section className="flex w-full flex-col items-center gap-8 bg-white py-16 md:gap-10 md:py-[60px]">
-      <h2 className="text-[26px] font-bold text-[#14b8a6] md:text-[42px]">
+    <section className="w-full bg-white py-16 md:py-[60px]">
+      <h2 className="mb-8 text-center text-[26px] font-bold text-[#14b8a6] md:mb-10 md:text-[42px]">
         RootLinkとは？
       </h2>
 
-      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 md:flex-row md:items-start md:gap-12 md:px-6 lg:px-0">
+      <div className="mx-auto flex w-full max-w-[800px] flex-col items-center gap-8 px-5 md:flex-row md:items-start md:gap-12 md:px-6 lg:px-0">
 
         {/* ── Phone mockup ── */}
         <div className="w-full shrink-0 md:w-[340px]">
