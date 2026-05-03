@@ -21,12 +21,19 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
   const [typed,     setTyped]     = useState('')
   const [showCursor, setShowCursor] = useState(true)
   const [showTree,  setShowTree]  = useState(false)
+  const [isCompact, setIsCompact] = useState(true)
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { setReady(true) }, [])
 
-  // タイピングアニメーション — 完了後にツリーを表示
+  useEffect(() => {
+    const check = () => setIsCompact(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   const startTyping = (idx: number) => {
     if (typingRef.current) clearInterval(typingRef.current)
     const word = DEMO[idx].word
@@ -45,9 +52,8 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
     }, TYPING_MS)
   }
 
-  // ワードサイクリング
   useEffect(() => {
-    if (value) return // ユーザーが入力中はアニメーション停止
+    if (value) return
     startTyping(0)
     cycleRef.current = setInterval(() => {
       setWordIdx(prev => {
@@ -60,7 +66,6 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       if (cycleRef.current)  clearInterval(cycleRef.current)
       if (typingRef.current) clearInterval(typingRef.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   const anim = (delay: number): React.CSSProperties =>
@@ -82,30 +87,37 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
     >
       {/* Headline */}
       <h1
-        className="mb-8 text-center text-3xl font-bold leading-tight tracking-tight text-gray-800 sm:text-4xl md:text-6xl"
+        className="mb-8 text-center text-[38px] font-bold leading-tight tracking-tight text-gray-800 md:text-6xl"
         style={anim(0)}
       >
         関連性で単語を<br className="md:hidden" /><span className="text-[#00AD82]">芋づる式</span>に覚えよう
       </h1>
 
       {/* Search bar */}
-      <div className="mb-10 w-full max-w-[600px] sm:mb-16" style={anim(0.15)}>
+      <div className="mb-6 w-full max-w-[600px]" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
-          <div className="p-[6px] rounded-[90px]" style={{ backgroundImage: 'linear-gradient(87deg, #01c3a0 0%, #7de265 100%)' }}>
-          <div className="flex items-center rounded-[84px] bg-white pl-6 pr-4 py-3 md:pl-8 md:pr-6 md:h-[68px]">
+          {/* mobile: solid border / desktop: gradient wrapper */}
+          <div
+            className="rounded-[90px] border-4 border-[#01c3a0] md:border-0 md:p-[6px]"
+            style={{
+              backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)`
+            }}
+          >
+            <div className="flex items-center rounded-[86px] bg-white pl-8 pr-6 h-[50px] md:rounded-[84px] md:h-[68px] md:pl-8 md:pr-6">
               <div className="relative flex-1">
                 <input
                   value={value}
                   onChange={(e) => onChange(e.target.value)}
                   disabled={isLoading}
-                  className="w-full bg-transparent text-[22px] md:text-[38px] text-gray-800 outline-none disabled:opacity-50"
+                  className="w-full bg-transparent text-[26px] md:text-[38px] text-gray-800 outline-none disabled:opacity-50"
                   style={{ caretColor: 'transparent' }}
                 />
-                {/* タイピングアニメーション表示（ユーザー未入力時） */}
                 {!value && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center text-[22px] md:text-[38px] text-gray-800">
+                  <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] md:text-[38px] text-gray-800">
                     <span>{typed}</span>
-                    <span className={`lp-cursor ml-[1px] inline-block h-6 w-[2px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`} />
+                    <span
+                      className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`}
+                    />
                   </div>
                 )}
               </div>
@@ -125,7 +137,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
                   </svg>
                 )}
               </button>
-          </div>
+            </div>
           </div>
         </form>
         {error && (
@@ -133,7 +145,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         )}
       </div>
 
-      {/* Etymology trees — 常にスペース確保、opacityで表示切替 */}
+      {/* Trees */}
       <div
         className="flex w-full max-w-[600px] flex-row items-start justify-between transition-opacity duration-500"
         style={{ opacity: (!value && showTree) ? 1 : 0 }}
@@ -144,6 +156,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
             root={root.root}
             gloss={root.gloss}
             words={root.words}
+            compact={isCompact}
           />
         ))}
       </div>

@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     default: "RootLink — Learn English Through Etymology",
     template: "%s | RootLink",
   },
+  icons: {
+    icon: "/favicon.svg",
+  },
   description:
     "Understand English words deeply by exploring their roots and origins. A vocabulary app for serious learners.",
   metadataBase: new URL("https://www.rootlink.app"),

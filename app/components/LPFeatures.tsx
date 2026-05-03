@@ -61,14 +61,14 @@ const FEATURES: {
 export default function LPFeatures() {
   return (
     <section
-      className="flex w-full flex-col items-center gap-10 py-16 md:gap-[42px] md:py-[80px]"
+      className="flex w-full flex-col items-center gap-[32px] py-[42px] md:gap-[42px] md:py-[80px]"
       style={{ backgroundImage: 'linear-gradient(41.06deg, rgba(0,235,180,0.1) 4.63%, rgba(108,222,109,0.1) 100%)' }}
     >
-      <h2 className="text-[24px] font-bold text-[#00ad82] md:text-[42px]">
+      <h2 className="text-[32px] font-bold text-[#00ad82] md:text-[42px]">
         RootLinkの3つの特徴
       </h2>
 
-      <div className="flex w-full max-w-[800px] flex-col gap-8 px-5 md:px-6 lg:px-0">
+      <div className="flex w-full max-w-[800px] flex-col gap-[24px] px-2 md:px-6 lg:px-0">
         {FEATURES.map((f, i) => (
           <div
             key={i}
@@ -77,11 +77,11 @@ export default function LPFeatures() {
             }`}
           >
             {f.card}
-            <div className="flex flex-1 flex-col items-start gap-4 text-[#333]">
-              <p className="w-full text-center text-[20px] font-bold leading-[34px] md:text-left md:text-[27px]">
+            <div className="flex flex-1 flex-col items-center gap-4 text-[#333] md:items-start">
+              <p className="w-full text-center text-[24px] font-bold leading-[34px] md:text-left md:text-[27px]">
                 {f.title}
               </p>
-              <p className="text-[15px] leading-[26px] tracking-[0.6px] md:text-[18px] md:leading-[28px] md:tracking-[0.72px]">
+              <p className="text-[16px] leading-[28px] tracking-[0.64px] md:text-[18px] md:leading-[28px] md:tracking-[0.72px]">
                 {f.body}
               </p>
             </div>
