@@ -96,14 +96,13 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
       {/* Search bar */}
       <div className="mb-6 w-full max-w-[600px]" style={anim(0.15)}>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
-          {/* mobile: solid border / desktop: gradient wrapper */}
           <div
-            className="rounded-[90px] border-4 border-[#01c3a0] md:border-0 md:p-[6px]"
+            className="p-[6px] rounded-[90px]"
             style={{
               backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)`
             }}
           >
-            <div className="flex items-center rounded-[86px] bg-white pl-8 pr-6 h-[50px] md:rounded-[84px] md:h-[68px] md:pl-8 md:pr-6">
+            <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[50px] md:h-[68px]">
               <div className="relative flex-1">
                 <input
                   value={value}
