@@ -75,6 +75,18 @@ export default function SenseCard({
   onFinishEdit,
   allTags = [],
 }: Props) {
+  // react-select 用のローカル状態
+  const [localTags, setLocalTags] = useState<TagOption[]>(
+    sense?.tags?.map((tag) => ({ label: tag, value: tag })) ?? []
+  )
+
+  // 外から tags が変わったらローカル状態も同期
+  useEffect(() => {
+    setLocalTags(
+      sense?.tags?.map((tag) => ({ label: tag, value: tag })) ?? []
+    )
+  }, [sense?.tags])
+
   if (!sense) return null
 
   // 現在は未使用だが、Props 互換維持のため受け取る
@@ -82,18 +94,6 @@ export default function SenseCard({
 
   // saved_id があるものだけ tag 編集 UI を出す
   const canEditTags = Boolean(sense.saved_id)
-
-  // react-select 用のローカル状態
-  const [localTags, setLocalTags] = useState<TagOption[]>(
-    sense.tags?.map((tag) => ({ label: tag, value: tag })) ?? []
-  )
-
-  // 外から tags が変わったらローカル状態も同期
-  useEffect(() => {
-    setLocalTags(
-      sense.tags?.map((tag) => ({ label: tag, value: tag })) ?? []
-    )
-  }, [sense.tags])
 
   const displayTags = localTags.map((tag) => tag.value)
 
