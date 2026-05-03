@@ -72,7 +72,12 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
     <div
       className="flex flex-col items-center px-6 pb-16 pt-14"
       style={{
-        backgroundImage: 'linear-gradient(223.03deg, rgb(231,253,247) 4.88%, rgb(240,252,241) 102.37%)',
+        backgroundImage: `
+          linear-gradient(rgba(0,150,137,0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,150,137,0.07) 1px, transparent 1px),
+          linear-gradient(223.03deg, rgb(231,253,247) 4.88%, rgb(240,252,241) 102.37%)
+        `,
+        backgroundSize: '32px 32px, 32px 32px, 100% 100%',
       }}
     >
       {/* Headline */}
