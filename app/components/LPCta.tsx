@@ -3,8 +3,15 @@ import Image from 'next/image'
 export default function LPCta() {
   return (
     <section
-      className="flex w-full flex-col items-center overflow-hidden"
-      style={{ backgroundImage: 'linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)' }}
+      className="flex w-full flex-col items-center overflow-hidden pt-[60px]"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+          linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)
+        `,
+        backgroundSize: '32px 32px, 32px 32px, 100% 100%',
+      }}
     >
       <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 py-0 md:flex-row md:items-end md:gap-12 md:px-6 lg:px-0">
         {/* Phone mockup */}
@@ -31,14 +38,14 @@ export default function LPCta() {
 function CtaText() {
   return (
     <>
-      <div className="flex flex-col gap-2 mt-10">
+      <div className="flex flex-col gap-2">
         <p className="text-[36px] font-bold leading-none text-white md:text-[44px]">2026.06</p>
         <p className="text-[24px] font-bold leading-tight text-white md:text-[34px]">
           公式アプリリリース予定
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4 md:justify-start">
+      <div className="flex flex-wrap items-center justify-center gap-4 md:justify-start pb-[80px]">
         <div className="relative h-[54px] w-[145px]">
           <Image
             src="/lp/appstore.png"
