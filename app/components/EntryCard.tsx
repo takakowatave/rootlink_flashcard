@@ -185,17 +185,23 @@ export default function EntryCard({
                 >
                   {/* Badge + gloss */}
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
-                      className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
-                    >
-                      {expandedParts[idx]
-                        ? <MdRemoveCircle className="size-5 text-[#00786f]" />
-                        : <MdAddCircle    className="size-5 text-[#00786f]" />
-                      }
-                      <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
-                    </button>
+                    {filteredWords.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
+                        className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
+                      >
+                        {expandedParts[idx]
+                          ? <MdRemoveCircle className="size-5 text-[#00786f]" />
+                          : <MdAddCircle    className="size-5 text-[#00786f]" />
+                        }
+                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                      </button>
+                    ) : (
+                      <div className="bg-white border-2 border-[#00d5be] rounded-3xl px-3 py-1 shrink-0">
+                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                      </div>
+                    )}
                     <span className="text-sm font-medium text-[#00786f] whitespace-nowrap">{gloss}</span>
                   </div>
 
