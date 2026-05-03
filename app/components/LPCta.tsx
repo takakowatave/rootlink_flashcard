@@ -6,7 +6,7 @@ export default function LPCta() {
       className="flex w-full flex-col items-center overflow-hidden"
       style={{ backgroundImage: 'linear-gradient(85.5deg, rgb(0,163,134) 0%, rgb(1,195,160) 31.43%, rgb(125,226,101) 84.81%)' }}
     >
-      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 py-12 md:flex-row md:items-end md:gap-12 md:px-6 md:py-0 lg:px-0">
+      <div className="flex w-full max-w-[800px] flex-col items-center gap-8 px-5 pt-12 pb-0 md:flex-row md:items-end md:gap-12 md:px-6 md:pt-10 md:pb-0 lg:px-0">
         {/* Phone mockup */}
         <div className="w-[240px] shrink-0 md:w-[300px]">
           <Image
@@ -20,7 +20,7 @@ export default function LPCta() {
         </div>
 
         {/* Text + badges */}
-        <div className="flex flex-col gap-5 pb-12 text-center md:text-left">
+        <div className="flex flex-col gap-5 pb-10 text-center md:text-left">
           <CtaText />
         </div>
       </div>
