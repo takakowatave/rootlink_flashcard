@@ -12,25 +12,23 @@ export default function LPCta() {
       </div>
 
       {/* ── Desktop layout ── */}
-      <div className="relative hidden h-[432px] w-full md:block">
-        {/* Phone mockup */}
-        <div
-          className="absolute"
-          style={{ left: 257, top: 18, width: 308, height: 414 }}
-        >
-          <Image
-            src="/lp/mock_.png"
-            alt="RootLink アプリ"
-            width={308}
-            height={414}
-            className="h-full w-full object-contain drop-shadow-xl"
-            sizes="308px"
-          />
-        </div>
-
-        {/* Text + badges */}
-        <div className="absolute flex flex-col gap-5" style={{ left: 634, top: 128, width: 449 }}>
-          <CtaText />
+      <div className="hidden md:flex w-full justify-center py-10">
+        <div className="flex w-full max-w-[800px] items-center gap-10 px-6 lg:px-0">
+          {/* Phone mockup */}
+          <div className="shrink-0 w-[280px]">
+            <Image
+              src="/lp/mock_.png"
+              alt="RootLink アプリ"
+              width={560}
+              height={670}
+              className="w-full h-auto block"
+              sizes="280px"
+            />
+          </div>
+          {/* Text + badges */}
+          <div className="flex flex-col gap-5">
+            <CtaText />
+          </div>
         </div>
       </div>
     </section>

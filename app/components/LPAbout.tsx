@@ -10,13 +10,13 @@ export default function LPAbout() {
       <div className="flex w-full max-w-[980px] flex-col items-center gap-8 px-5 md:flex-row md:items-center md:gap-12 md:px-6 lg:px-0">
 
         {/* ── Phone mockup image ── */}
-        <div className="w-full shrink-0 md:w-[380px]">
+        <div className="w-full shrink-0 overflow-hidden md:w-[380px]">
           <Image
             src="/lp/mock_.png"
             alt="RootLink アプリ画面"
             width={760}
             height={900}
-            className="w-full h-auto"
+            className="w-full h-auto block"
             sizes="(max-width: 768px) 100vw, 380px"
           />
         </div>
