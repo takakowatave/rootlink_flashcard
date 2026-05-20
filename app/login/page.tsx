@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { isInAppBrowser } from "../lib/isInAppBrowser";
 
 interface FormData {
   email: string;
@@ -12,6 +14,11 @@ interface FormData {
 
 export default function AuthLogin() {
   const router = useRouter();
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    setInAppBrowser(isInAppBrowser());
+  }, []);
 
   const {
     register,
@@ -21,6 +28,7 @@ export default function AuthLogin() {
   } = useForm<FormData>();
 
   const handleGoogleLogin = async () => {
+    if (inAppBrowser) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/callback` },
@@ -84,11 +92,18 @@ export default function AuthLogin() {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full py-3 px-4 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
+          disabled={inAppBrowser}
+          className="w-full py-3 px-4 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
           Googleでログイン
         </button>
+        {inAppBrowser && (
+          <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center leading-relaxed">
+            アプリ内ブラウザでは Google ログインができません。<br />
+            SafariまたはChromeでこのページを開いてください。
+          </p>
+        )}
 
         <p className="text-center text-xs text-gray-400 mt-4">
           アカウントをお持ちでない方は{" "}
