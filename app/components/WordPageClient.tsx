@@ -4,6 +4,7 @@
 // Oxford / rewritten / normalized の辞書データを画面表示用 shape にそろえて EntryCard に渡す
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
@@ -680,6 +681,8 @@ export default function WordPageClient({
   initialPinnedSenseId?: string | null
   correctedFrom?: string
 }) {
+  const router = useRouter()
+
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
 
@@ -1055,6 +1058,17 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
+    {/* Floating search button — SP only */}
+    <button
+      type="button"
+      onClick={() => router.push('/')}
+      className="md:hidden fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-[#009689] flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
+      aria-label="Search"
+    >
+      <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </button>
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     {showCorrectionBanner && correctedFrom && (
       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-0 mx-4 mt-3">

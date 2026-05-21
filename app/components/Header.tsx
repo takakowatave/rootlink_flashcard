@@ -71,7 +71,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
+      <header className="h-14 bg-white border-b border-[#e2e8f0] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
         {/* ロゴ */}
         <Link href="/" className="shrink-0">
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />

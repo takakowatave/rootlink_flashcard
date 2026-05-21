@@ -171,56 +171,57 @@ export default function EntryCard({
 
         {/* ── ETYMOLOGY HOOK ── */}
         {!compact && hasParts && (
-          <div className="mt-2 bg-[#f0fdfa] rounded-sm px-2 py-2 flex flex-col gap-2">
-            {/* Root panels */}
+          <div className="mt-2 bg-[#f0fdfa] rounded-sm px-2 py-2 flex flex-col gap-[16px]">
+            {/* Root panels — side-by-side */}
+            <div className="flex gap-2 items-start w-full">
             {parts.map((part, idx) => {
               const gloss = displayLocale === 'ja'
                 ? (part.meaningJa ?? part.meaning ?? '')
                 : (part.meaning ?? part.meaningJa ?? '')
-
-              const isFirst = idx === 0
 
               const filteredWords = (partWordMap[part.text.toLowerCase()] ?? []).slice(0, 6)
 
               return (
                 <div
                   key={idx}
-                  className="bg-[#cbfbf1] rounded-lg px-3.5 py-2 flex flex-col gap-2"
+                  className={`bg-[#cbfbf1] rounded-lg flex-1 min-w-0 flex flex-col gap-2 ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
                 >
                   {/* Badge + gloss */}
                   <div className="flex items-center gap-2">
-                    {filteredWords.length > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
-                        className="bg-white border-2 border-[#00d5be] rounded-3xl pl-1 pr-3 py-1 flex items-center gap-1 shrink-0"
-                      >
-                        {expandedParts[idx]
-                          ? <MdRemoveCircle className="size-5 text-[#00786f]" />
-                          : <MdAddCircle    className="size-5 text-[#00786f]" />
-                        }
-                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
-                      </button>
-                    ) : (
-                      <div className="bg-white border-2 border-[#00d5be] rounded-3xl px-3 py-1 shrink-0">
-                        <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-[#00786f] whitespace-nowrap">{gloss}</span>
+                    <div className="flex h-[28px] items-center shrink-0">
+                      {filteredWords.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
+                          className="bg-white border-2 border-[#00d5be] rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
+                        >
+                          {expandedParts[idx]
+                            ? <MdRemoveCircle className="size-[20px] text-[#00786f]" />
+                            : <MdAddCircle    className="size-[20px] text-[#00786f]" />
+                          }
+                          <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                        </button>
+                      ) : (
+                        <div className="bg-white border-2 border-[#00d5be] rounded-[24px] px-[12px] py-[4px]">
+                          <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-[#00786f] w-[33px]">{gloss}</span>
                   </div>
 
                   {/* Related words tree */}
                   {expandedParts[idx] && filteredWords.length > 0 && (() => {
-                    const ITEM_H = 48
+                    const ITEM_H = 36
                     const TX = 5
-                    const R = 12
+                    const R = 10
                     const lastMidY = (filteredWords.length - 1) * ITEM_H + ITEM_H / 2
                     const trunkEnd = lastMidY - R
                     return (
-                      <div className="relative ml-1" style={{ paddingLeft: 48 }}>
+                      <div className="relative ml-1" style={{ paddingLeft: 40 }}>
                         <svg
                           className="absolute left-0 top-0 pointer-events-none overflow-visible"
-                          width={44}
+                          width={36}
                           height={filteredWords.length * ITEM_H}
                           fill="none"
                         >
@@ -239,7 +240,7 @@ export default function EntryCard({
                             return (
                               <path
                                 key={wi}
-                                d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 42,${midY}`}
+                                d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 34,${midY}`}
                                 stroke="#00d5be"
                                 strokeWidth="2"
                                 strokeLinecap="round"
@@ -253,7 +254,7 @@ export default function EntryCard({
                           })}
                         </svg>
                         {filteredWords.map((rw, wi) => (
-                          <div key={wi} className="flex items-center gap-2" style={{ height: ITEM_H }}>
+                          <div key={wi} className="flex items-center gap-[2px]" style={{ height: ITEM_H }}>
                             <div className="group/chip relative shrink-0">
                               <button
                                 type="button"
@@ -275,15 +276,15 @@ export default function EntryCard({
                                     setNavigatingWord(null)
                                   }
                                 }}
-                                className="bg-[#f0fdfa] px-2 py-1 rounded-3xl transition-opacity disabled:opacity-50"
+                                className="bg-[#f0fdfa] px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
                               >
                                 {navigatingWord === rw ? (
-                                  <svg className="size-4 animate-spin text-[#00AD82]" fill="none" viewBox="0 0 24 24">
+                                  <svg className="size-4 animate-spin text-[#009689]" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                   </svg>
                                 ) : (
-                                  <span className="text-sm font-medium text-[#00AD82] leading-4">{rw}</span>
+                                  <span className="text-[14px] font-medium text-[#009689] leading-4">{rw}</span>
                                 )}
                               </button>
                               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
@@ -291,7 +292,7 @@ export default function EntryCard({
                               </span>
                             </div>
                             {part.relatedWordMeanings?.[rw] && (
-                              <span className="text-xs text-[#00AD82] whitespace-nowrap">{part.relatedWordMeanings[rw]}</span>
+                              <span className="text-[12px] font-medium text-[#009689] w-[33px]">{part.relatedWordMeanings[rw]}</span>
                             )}
                           </div>
                         ))}
@@ -301,10 +302,11 @@ export default function EntryCard({
                 </div>
               )
             })}
+            </div>
 
             {/* Etymology description */}
             {hasEtymologyText && (
-              <p className="text-sm text-[#00786f] leading-5">{displayedEtymologyDescription}</p>
+              <p className="text-[14px] text-[#00786f] leading-[20px]">{displayedEtymologyDescription}</p>
             )}
           </div>
         )}
