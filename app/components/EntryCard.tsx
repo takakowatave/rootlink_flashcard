@@ -141,11 +141,11 @@ export default function EntryCard({
   })
 
   return (
-    <div className="mx-auto max-w-[600px] px-4 py-3">
-      <div className="bg-white rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2">
+    <div className="mx-auto max-w-[600px] md:px-4 md:py-3">
+      <div className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2">
 
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-between px-2 py-1">
+        <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-semibold leading-8 text-black">{headword}</h1>
             <button type="button" onClick={playAudio} disabled={audioLoading} className="shrink-0">
@@ -162,7 +162,7 @@ export default function EntryCard({
 
         {/* IPA */}
         {pronunciation?.phoneticSpelling && (
-          <div className="px-2 flex items-center">
+          <div className="flex items-center">
             <span className="text-base font-medium text-[#90a1b9]">
               /{pronunciation.phoneticSpelling}/
             </span>
@@ -327,7 +327,7 @@ export default function EntryCard({
               if (!sense) return null
 
               return [(
-                <div key={pos} className="px-2">
+                <div key={pos}>
                   <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
                     {getPosLabel(pos, displayLocale)}
                   </span>
@@ -336,7 +336,7 @@ export default function EntryCard({
                     <BsPinFill className="size-4 text-[#90a1b9] shrink-0 mt-1" />
                   </div>
                   {(sense.example || sense.exampleTranslation) && (
-                    <div className="mt-2 flex flex-col gap-1 text-sm text-black">
+                    <div className="mt-2 flex flex-col gap-2 text-sm text-black">
                       {sense.example && <p>{sense.example}</p>}
                       {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                     </div>
@@ -346,7 +346,7 @@ export default function EntryCard({
             }
 
             return allEntries.map(([pos, items]) => (
-              <div key={pos} className="px-2">
+              <div key={pos}>
                 <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
                   {getPosLabel(pos, displayLocale)}
                 </span>
@@ -370,7 +370,7 @@ export default function EntryCard({
                           )}
 
                           {(sense.example || sense.exampleTranslation) && (
-                            <div className="mt-1.5 flex flex-col gap-1 text-sm text-black opacity-70">
+                            <div className="mt-2 flex flex-col gap-2 text-sm text-black">
                               {sense.example && <p>{sense.example}</p>}
                               {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                             </div>
@@ -405,13 +405,13 @@ export default function EntryCard({
 
         {/* ── SYNONYMS / ANTONYMS ── */}
         {synonyms.length > 0 && (
-          <div className="mt-4 px-2">
+          <div className="mt-4">
             <p className="text-xs text-[#90a1b9] mb-1">{labels.synonyms}</p>
             <p className="text-sm text-black">{synonyms.slice(0, 8).join(', ')}</p>
           </div>
         )}
         {antonyms.length > 0 && (
-          <div className="mt-3 px-2">
+          <div className="mt-3">
             <p className="text-xs text-[#90a1b9] mb-1">{labels.antonyms}</p>
             <p className="text-sm text-black">{antonyms.slice(0, 8).join(', ')}</p>
           </div>
@@ -419,7 +419,7 @@ export default function EntryCard({
 
         {/* ── DERIVATIVES ── */}
         {orderedDerivatives.length > 0 && (
-          <div className="mt-3 px-2">
+          <div className="mt-3">
             <p className="text-xs text-[#90a1b9] mb-1.5">{labels.derivatives}</p>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
