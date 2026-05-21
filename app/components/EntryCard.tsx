@@ -187,7 +187,7 @@ export default function EntryCard({
                   className={`bg-[#cbfbf1] rounded-lg flex-1 min-w-0 flex flex-col gap-2 ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
                 >
                   {/* Badge + gloss */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     <div className="flex h-[28px] items-center shrink-0">
                       {filteredWords.length > 0 ? (
                         <button
@@ -207,7 +207,7 @@ export default function EntryCard({
                         </div>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-[#00786f] w-[33px]">{gloss}</span>
+                    <span className="text-sm font-medium text-[#00786f] leading-[28px]">{gloss}</span>
                   </div>
 
                   {/* Related words tree */}
