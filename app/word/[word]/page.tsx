@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 
@@ -5,7 +6,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
   "https://rootlink-server-v2-774622345521.asia-northeast1.run.app"
 
-async function resolveWord(raw: string) {
+const resolveWord = cache(async (raw: string) => {
   try {
     const res = await fetch(`${API_BASE}/resolve`, {
       method: "POST",
@@ -20,7 +21,7 @@ async function resolveWord(raw: string) {
   } catch {
     return null
   }
-}
+})
 
 function extractDescription(dictionary: Record<string, unknown> | null, word: string): string {
   if (!dictionary) return `Explore the etymology and meaning of "${word}" on RootLink.`
