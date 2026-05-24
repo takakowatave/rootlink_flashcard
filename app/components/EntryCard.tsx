@@ -128,12 +128,7 @@ export default function EntryCard({
     ? { synonyms: '類義語', antonyms: '対義語', derivatives: '派生語', pinThisSense: 'この意味をピン留め' }
     : { synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives', pinThisSense: 'Pin this sense' }
 
-  const displayedEtymologyDescription = displayLocale === 'ja'
-    ? localizedEtymologyJa?.description ?? etymology
-    : etymology
-
   const hasParts = parts.length > 0
-  const hasEtymologyText = Boolean(displayedEtymologyDescription?.trim())
 
   const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
     const score = (v: string) => v.endsWith('ing') ? 3 : v.endsWith('ed') ? 2 : v.endsWith('s') ? 1 : 0
@@ -304,10 +299,6 @@ export default function EntryCard({
             })}
             </div>
 
-            {/* Etymology description */}
-            {hasEtymologyText && (
-              <p className="text-[14px] text-[#00786f] leading-[20px]">{displayedEtymologyDescription}</p>
-            )}
           </div>
         )}
 
