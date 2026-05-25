@@ -130,6 +130,20 @@ export default function EntryCard({
 
   const hasParts = parts.length > 0
 
+  const displayedEtymologyDescription = displayLocale === 'ja'
+    ? localizedEtymologyJa?.description ?? etymology
+    : etymology
+
+  // 「〜から来ています。」系の冗長テキストは非表示（パーツがある場合は語源パーツで伝わる）
+  const isRedundantDescription = (text: string) =>
+    /から来ています[。．]?\s*$/.test(text.trim()) ||
+    /^.{0,30}から来ています[。．]?\s*$/.test(text.trim())
+
+  const hasEtymologyText = Boolean(
+    displayedEtymologyDescription?.trim() &&
+    !isRedundantDescription(displayedEtymologyDescription)
+  )
+
   const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
     const score = (v: string) => v.endsWith('ing') ? 3 : v.endsWith('ed') ? 2 : v.endsWith('s') ? 1 : 0
     return score(a) - score(b)
@@ -299,6 +313,10 @@ export default function EntryCard({
             })}
             </div>
 
+            {/* Etymology description */}
+            {hasEtymologyText && (
+              <p className="text-[14px] text-[#00786f] leading-[20px]">{displayedEtymologyDescription}</p>
+            )}
           </div>
         )}
 
