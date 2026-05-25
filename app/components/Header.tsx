@@ -20,6 +20,7 @@ const Header = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,18 +34,23 @@ const Header = () => {
     const trimmed = searchValue.trim();
     if (!trimmed || isSearching) return;
     setIsSearching(true);
+    setSearchError(false);
     try {
       const res = await fetch(`${API_BASE}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: trimmed }),
       });
-      if (!res.ok) return;
+      if (!res.ok) { setSearchError(true); return; }
       const r = await res.json();
       if (r?.ok === true && typeof r.redirectTo === 'string') {
         setMobileSearchOpen(false);
         router.push(r.redirectTo);
+      } else {
+        setSearchError(true);
       }
+    } catch {
+      setSearchError(true);
     } finally {
       setIsSearching(false);
     }
@@ -83,10 +89,10 @@ const Header = () => {
             onSubmit={handleSearch}
             className="hidden md:flex flex-1 items-center justify-center"
           >
-            <div className="flex items-center w-full max-w-[400px] h-8 bg-white border border-[#e2e8f0] rounded-full pl-4 pr-2 gap-2">
+            <div className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-[#e2e8f0]'}`}>
               <input
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
+                onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
                 placeholder=""
                 disabled={isSearching}
                 className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
@@ -161,11 +167,14 @@ const Header = () => {
               <input
                 ref={mobileInputRef}
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
+                onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
                 placeholder="Search a word"
                 disabled={isSearching}
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-base focus:outline-none focus:border-[#00AD82] disabled:opacity-50"
+                className={`w-full rounded-full border bg-gray-50 px-4 py-2.5 text-base focus:outline-none disabled:opacity-50 ${searchError ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-[#00AD82]'}`}
               />
+              {searchError && (
+                <p className="absolute -bottom-5 left-4 text-xs text-red-500">見つかりませんでした</p>
+              )}
               {isSearching && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
                   <svg className="h-4 w-4 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
