@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchWordlists, saveQuizResult } from '@/lib/supabaseApi'
 import { BsVolumeUp } from 'react-icons/bs'
@@ -160,6 +161,7 @@ function CardView({
   total,
   mode,
   onModeChange,
+  onQuit,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -167,6 +169,7 @@ function CardView({
   total: number
   mode: QuizMode
   onModeChange: (m: QuizMode) => void
+  onQuit: () => void
 }) {
   const [revealed, setRevealed] = useState(false)
 
@@ -197,7 +200,7 @@ function CardView({
       {/* カード */}
       <div className="flex-1 relative mx-4 mt-4 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-5">
-          {/* タブ + カウンター */}
+          {/* タブ + カウンター + 終了 */}
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => onModeChange('example')}
@@ -212,6 +215,12 @@ function CardView({
               単語
             </button>
             <span className="ml-1 text-sm text-gray-400">{current} / {total}</span>
+            <button
+              onClick={onQuit}
+              className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              終了
+            </button>
           </div>
 
           {/* コンテンツ */}
@@ -266,7 +275,7 @@ function CardView({
       <div className="flex gap-3 px-4 pb-6">
         <button
           onClick={() => onAnswer(false)}
-          className="flex-1 py-4 rounded-2xl bg-gray-400 text-white font-bold text-base active:scale-95 transition-all"
+          className="flex-1 py-4 rounded-2xl bg-white border border-[#009689] text-[#009689] font-bold text-base active:scale-95 transition-all hover:bg-[#cbfbf1]"
         >
           わからない
         </button>
@@ -283,6 +292,7 @@ function CardView({
 
 // ===== メイン =====
 export default function QuizClient() {
+  const router = useRouter()
   const [cards, setCards] = useState<QuizCard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
@@ -356,6 +366,7 @@ export default function QuizClient() {
       total={cards.length}
       mode={mode}
       onModeChange={setMode}
+      onQuit={() => router.push('/wordlist')}
     />
   )
 }
