@@ -193,7 +193,7 @@ function CardView({
               : part
           )}
         </p>
-        {card.exampleJa && (
+        {revealed && card.exampleJa && (
           <p className="text-gray-400 text-sm mt-2 leading-relaxed">{card.exampleJa}</p>
         )}
       </div>
