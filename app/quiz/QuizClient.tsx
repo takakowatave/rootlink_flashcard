@@ -185,22 +185,35 @@ function CardView({
     const regex = new RegExp(`(${card.word})`, 'gi')
     const parts = text.split(regex)
     return (
-      <p className="text-2xl font-bold text-gray-800 leading-relaxed">
-        {parts.map((part, i) =>
-          part.toLowerCase() === card.word.toLowerCase()
-            ? <span key={i} className="text-orange-400">{part}</span>
-            : part
+      <div>
+        <p className="text-2xl font-bold text-gray-800 leading-relaxed">
+          {parts.map((part, i) =>
+            part.toLowerCase() === card.word.toLowerCase()
+              ? <span key={i} className="text-orange-400">{part}</span>
+              : part
+          )}
+        </p>
+        {card.exampleJa && (
+          <p className="text-gray-400 text-sm mt-2 leading-relaxed">{card.exampleJa}</p>
         )}
-      </p>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col mx-auto w-full max-w-[600px]" style={{ height: 'calc(100dvh - 56px)' }}>
+      {/* プログレスバー */}
+      <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-[#00AD82] rounded-full transition-all duration-300"
+          style={{ width: `${(current / total) * 100}%` }}
+        />
+      </div>
+
       {/* カード */}
-      <div className="flex-1 relative mx-4 mt-4 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="flex-1 relative mx-4 mt-3 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-5">
-          {/* タブ + カウンター + 終了 */}
+          {/* タブ + 終了 */}
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => onModeChange('example')}
@@ -214,7 +227,6 @@ function CardView({
             >
               単語
             </button>
-            <span className="ml-1 text-sm text-gray-400">{current} / {total}</span>
             <button
               onClick={onQuit}
               className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition-colors"
@@ -254,9 +266,6 @@ function CardView({
                     <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>
                   )}
                 </div>
-              )}
-              {mode === 'example' && card.exampleJa && (
-                <p className="text-gray-400 text-sm mt-2 leading-relaxed">{card.exampleJa}</p>
               )}
             </div>
           )}
