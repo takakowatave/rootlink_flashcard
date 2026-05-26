@@ -196,7 +196,7 @@ function CardView({
   }
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100dvh - 56px)' }}>
+    <div className="flex flex-col mx-auto w-full max-w-[600px]" style={{ height: 'calc(100dvh - 56px)' }}>
       {/* カード */}
       <div className="flex-1 relative mx-4 mt-4 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-5">
