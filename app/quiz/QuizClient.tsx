@@ -244,9 +244,13 @@ function CardView({
           {mode === 'example' ? (
             renderExample()
           ) : (
-            <div>
-              <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
-              <div className="flex items-center gap-2 mt-2 text-gray-400">
+            <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
+          )}
+
+          {/* 解説（展開時） */}
+          {revealed && (
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-2 mb-1 text-gray-400">
                 {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
                 {card.audioPath && (
                   <button onClick={playAudio} className="p-1 hover:text-gray-600 transition-colors">
@@ -254,12 +258,6 @@ function CardView({
                   </button>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* 解説（展開時） */}
-          {revealed && (
-            <div className="mt-5 pt-4 border-t border-gray-100">
               <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
               {card.meaningEn && (
                 <p className="text-gray-400 text-sm mt-1">{card.meaningEn}</p>
