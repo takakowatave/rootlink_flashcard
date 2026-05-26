@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import EntryCard from "@/components/EntryCard"
 import WordPageClient from "@/components/WordPageClient"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
@@ -98,6 +99,17 @@ export default function WordListPage() {
   return (
     <>
       <Toaster position="top-center" />
+
+      {/* ===== Quiz CTA ===== */}
+      {wordList.length > 0 && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <Link href="/quiz">
+            <button className="w-full h-10 rounded-full bg-[#00AD82] text-white text-sm font-medium hover:bg-[#009970] transition-colors">
+              クイズを始める
+            </button>
+          </Link>
+        </div>
+      )}
 
       {/* ===== Word list ===== */}
       <div className="w-full">

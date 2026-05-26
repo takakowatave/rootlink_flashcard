@@ -1,12 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LPHero from '@/components/LPHero'
 import LPAbout from '@/components/LPAbout'
 import LPFeatures from '@/components/LPFeatures'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
+import { supabase } from '@/lib/supabaseClient'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -17,6 +18,12 @@ export default function HomePage() {
   const [value, setValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) router.replace('/wordlist')
+    })
+  }, [router])
 
   const handleSubmit = async () => {
     if (!value) return
