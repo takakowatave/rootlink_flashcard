@@ -8,12 +8,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLP = pathname === '/'
   const isAuth = pathname === '/login' || pathname === '/signup'
+  const isQuiz = pathname === '/quiz'
 
   return (
     <>
-      <Header />
+      {!isQuiz && <Header />}
       {children}
-      {!isLP && !isAuth && <Footer />}
+      {!isLP && !isAuth && !isQuiz && <Footer />}
     </>
   )
 }

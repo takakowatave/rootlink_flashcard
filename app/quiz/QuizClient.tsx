@@ -201,39 +201,44 @@ function CardView({
   }
 
   return (
-    <div className="flex flex-col mx-auto w-full max-w-[600px]" style={{ height: 'calc(100dvh - 56px)' }}>
-      {/* プログレスバー */}
-      <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-[#00AD82] rounded-full transition-all duration-300"
-          style={{ width: `${(current / total) * 100}%` }}
-        />
-      </div>
+    <div className="flex flex-col" style={{ height: '100dvh' }}>
+      {/* クイズ専用ヘッダー */}
+      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
+        <button
+          onClick={onQuit}
+          className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors"
+        >
+          終了
+        </button>
+      </header>
 
-      {/* カード */}
-      <div className="flex-1 relative mx-4 mt-3 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-5">
-          {/* タブ + 終了 */}
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={() => onModeChange('example')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'example' ? 'bg-[#00AD82] text-white' : 'border border-gray-200 text-gray-500'}`}
-            >
-              例文
-            </button>
-            <button
-              onClick={() => onModeChange('word')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'word' ? 'bg-[#00AD82] text-white' : 'border border-gray-200 text-gray-500'}`}
-            >
-              単語
-            </button>
-            <button
-              onClick={onQuit}
-              className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              終了
-            </button>
-          </div>
+      <div className="flex flex-col mx-auto w-full max-w-[600px] flex-1 min-h-0">
+        {/* プログレスバー */}
+        <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
+          <div
+            className="h-full bg-[#00AD82] rounded-full transition-all duration-300"
+            style={{ width: `${(current / total) * 100}%` }}
+          />
+        </div>
+
+        {/* カード */}
+        <div className="flex-1 relative mx-4 mt-3 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-5">
+            {/* タブ（セグメントコントロール） */}
+            <div className="inline-flex border border-[#dbe0e5] rounded-[4px] overflow-hidden mb-4">
+              <button
+                onClick={() => onModeChange('example')}
+                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-[#cbfbf1] text-[#009689]' : 'bg-white text-[#6f777f]'}`}
+              >
+                例文
+              </button>
+              <button
+                onClick={() => onModeChange('word')}
+                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-[#cbfbf1] text-[#009689] font-bold' : 'bg-white text-[#6f777f] font-normal'}`}
+              >
+                単語
+              </button>
+            </div>
 
           {/* コンテンツ */}
           {mode === 'example' ? (
@@ -271,29 +276,30 @@ function CardView({
           )}
         </div>
 
-        {/* 解説ボタン */}
-        <button
-          onClick={() => setRevealed(r => !r)}
-          className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#00AD82] text-white text-xs font-medium shadow-md hover:bg-[#009970] active:scale-95 transition-all"
-        >
-          解説
-        </button>
-      </div>
+          {/* 解説ボタン */}
+          <button
+            onClick={() => setRevealed(r => !r)}
+            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#00AD82] text-white text-xs font-medium shadow-md hover:bg-[#009970] active:scale-95 transition-all"
+          >
+            解説
+          </button>
+        </div>
 
-      {/* 判定ボタン */}
-      <div className="flex gap-3 px-4 pb-6">
-        <button
-          onClick={() => onAnswer(false)}
-          className="flex-1 py-4 rounded-2xl bg-white border border-[#009689] text-[#009689] font-bold text-base active:scale-95 transition-all hover:bg-[#cbfbf1]"
-        >
-          わからない
-        </button>
-        <button
-          onClick={() => onAnswer(true)}
-          className="flex-1 py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all"
-        >
-          わかる
-        </button>
+        {/* 判定ボタン */}
+        <div className="flex gap-3 px-4 pb-6 shrink-0">
+          <button
+            onClick={() => onAnswer(false)}
+            className="flex-1 py-4 rounded-2xl bg-white border border-[#009689] text-[#009689] font-bold text-base active:scale-95 transition-all hover:bg-[#cbfbf1]"
+          >
+            わからない
+          </button>
+          <button
+            onClick={() => onAnswer(true)}
+            className="flex-1 py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all"
+          >
+            わかる
+          </button>
+        </div>
       </div>
     </div>
   )
