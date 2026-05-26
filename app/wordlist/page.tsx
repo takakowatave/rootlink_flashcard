@@ -105,7 +105,7 @@ export default function WordListPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <Link href="/quiz">
             <button className="w-full h-10 rounded-full bg-[#00AD82] text-white text-sm font-medium hover:bg-[#009970] transition-colors">
-              クイズを始める
+              復習する
             </button>
           </Link>
         </div>
