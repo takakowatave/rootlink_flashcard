@@ -102,9 +102,9 @@ export default function WordListPage() {
 
       {/* ===== Quiz CTA ===== */}
       {wordList.length > 0 && (
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
           <Link href="/quiz">
-            <button className="w-full h-10 rounded-full bg-[#00AD82] text-white text-sm font-medium hover:bg-[#009970] transition-colors">
+            <button className="h-7 px-4 rounded-full border border-[#00AD82] text-[#00AD82] text-xs font-medium hover:bg-[#f0fdf9] transition-colors">
               復習する
             </button>
           </Link>
