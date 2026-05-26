@@ -178,7 +178,8 @@ function CardView({
   useEffect(() => {
     setRevealed(false)
     setAudioUrl(card.audioPath)
-  }, [current, card.audioPath])
+    if (!card.example) onModeChange('word')
+  }, [current, card.audioPath, card.example, onModeChange])
 
   const playAudio = async () => {
     if (audioUrl) { new Audio(audioUrl).play(); return }
@@ -199,7 +200,7 @@ function CardView({
 
   const renderExample = () => {
     const text = card.example
-    if (!text) return <p className="text-2xl font-bold text-gray-800">{card.word}</p>
+    if (!text) return null
     const regex = new RegExp(`(${card.word})`, 'gi')
     const parts = text.split(regex)
     return (
@@ -207,7 +208,9 @@ function CardView({
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
             part.toLowerCase() === card.word.toLowerCase()
-              ? <span key={i} className="text-orange-400">{part}</span>
+              ? revealed
+                ? <span key={i} className="text-orange-400">{part}</span>
+                : <span key={i} className="inline-block border-b-2 border-gray-400 text-transparent select-none px-1">{part}</span>
               : part
           )}
         </p>
@@ -245,8 +248,9 @@ function CardView({
             {/* タブ（セグメントコントロール） */}
             <div className="inline-flex border border-[#dbe0e5] rounded-[4px] overflow-hidden mb-4">
               <button
-                onClick={() => onModeChange('example')}
-                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-[#cbfbf1] text-[#009689]' : 'bg-white text-[#6f777f]'}`}
+                onClick={() => card.example && onModeChange('example')}
+                disabled={!card.example}
+                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-[#cbfbf1] text-[#009689]' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-[#6f777f]'}`}
               >
                 例文
               </button>
@@ -259,7 +263,7 @@ function CardView({
             </div>
 
           {/* コンテンツ */}
-          {mode === 'example' ? (
+          {mode === 'example' && card.example ? (
             renderExample()
           ) : (
             <div>
@@ -279,19 +283,7 @@ function CardView({
           {/* 解説（展開時） */}
           {revealed && (
             <div className="mt-5 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2 mb-1 text-gray-400">
-                {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
-                <button onClick={playAudio} disabled={audioLoading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
-                  {audioLoading
-                    ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <BsVolumeUp size={16} />
-                  }
-                </button>
-              </div>
               <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
-              {card.meaningEn && (
-                <p className="text-gray-400 text-sm mt-1">{card.meaningEn}</p>
-              )}
               {mode === 'word' && card.example && (
                 <div className="mt-3 bg-gray-50 rounded-xl p-3 text-sm">
                   <p className="text-gray-700 leading-relaxed">{card.example}</p>
