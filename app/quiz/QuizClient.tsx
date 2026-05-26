@@ -17,11 +17,13 @@ type QuizCard = {
   word: string
   ipa?: string
   audioPath?: string
-  meaning: string       // JA（ピン留め意味）
-  meaningEn: string     // EN
-  example?: string      // EN例文
-  exampleJa?: string    // JA例文訳
+  meaning: string
+  meaningEn: string
+  example?: string
+  exampleJa?: string
 }
+
+type QuizMode = 'example' | 'word'
 
 function buildQuizCards(wordList: WordlistEntry[]): QuizCard[] {
   const cards: QuizCard[] = []
@@ -35,7 +37,6 @@ function buildQuizCards(wordList: WordlistEntry[]): QuizCard[] {
     const jaLocales = d.locales?.ja?.senses ?? {}
     const pinnedSenseId: string | null = item.pinned_sense_id ?? null
 
-    // ピン留めされた sense を探す（なければ最初の sense）
     let targetSense: SavedWordSense | null = null
     outer: for (const group of senseGroups) {
       for (const sense of group.senses ?? []) {
@@ -95,22 +96,20 @@ function ResultScreen({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
-      {/* スコア */}
       <div className="text-center mb-8">
         <h2 className="text-xl font-bold text-gray-700 mb-1">結果</h2>
-        <p className="text-6xl font-bold text-green-600 my-4">
+        <p className="text-6xl font-bold text-[#00AD82] my-4">
           {correct}
           <span className="text-2xl text-gray-400 font-normal"> / {cards.length}</span>
         </p>
       </div>
 
-      {/* まだ */}
       {wrongCards.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-red-400 mb-2">× まだ（{wrongCards.length}語）</h3>
-          <div className="bg-red-50 rounded-xl overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">わからなかった（{wrongCards.length}語）</h3>
+          <div className="bg-gray-50 rounded-xl overflow-hidden">
             {wrongCards.map((card, i) => (
-              <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-red-100 last:border-0">
+              <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-0">
                 <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
                 <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
               </div>
@@ -119,10 +118,9 @@ function ResultScreen({
         </div>
       )}
 
-      {/* 覚えた */}
       {correctCards.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-sm font-semibold text-green-500 mb-2">○ 覚えた（{correctCards.length}語）</h3>
+          <h3 className="text-sm font-semibold text-[#00AD82] mb-2">わかった（{correctCards.length}語）</h3>
           <div className="bg-green-50 rounded-xl overflow-hidden">
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-green-100 last:border-0">
@@ -134,19 +132,18 @@ function ResultScreen({
         </div>
       )}
 
-      {/* ボタン */}
       <div className="flex gap-3">
         {wrongCards.length > 0 && (
           <button
             onClick={onRetryWrong}
-            className="flex-1 py-3 rounded-full border-2 border-red-400 text-red-400 font-semibold hover:bg-red-50 transition-colors"
+            className="flex-1 py-3 rounded-full border-2 border-gray-300 text-gray-500 font-semibold hover:bg-gray-50 transition-colors"
           >
-            × だけもう一度
+            わからないだけもう一度
           </button>
         )}
         <button
           onClick={onRestart}
-          className="flex-1 py-3 rounded-full bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
+          className="flex-1 py-3 rounded-full bg-[#00AD82] text-white font-semibold hover:bg-[#009970] transition-colors"
         >
           全部もう一度
         </button>
@@ -158,99 +155,128 @@ function ResultScreen({
 // ===== クイズカード =====
 function CardView({
   card,
-  revealed,
-  onReveal,
   onAnswer,
   current,
   total,
+  mode,
+  onModeChange,
 }: {
   card: QuizCard
-  revealed: boolean
-  onReveal: () => void
   onAnswer: (correct: boolean) => void
   current: number
   total: number
+  mode: QuizMode
+  onModeChange: (m: QuizMode) => void
 }) {
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => { setRevealed(false) }, [current])
+
   const playAudio = () => {
     if (card.audioPath) new Audio(card.audioPath).play()
   }
 
+  const renderExample = () => {
+    const text = card.example
+    if (!text) return <p className="text-2xl font-bold text-gray-800">{card.word}</p>
+    const regex = new RegExp(`(${card.word})`, 'gi')
+    const parts = text.split(regex)
+    return (
+      <p className="text-2xl font-bold text-gray-800 leading-relaxed">
+        {parts.map((part, i) =>
+          part.toLowerCase() === card.word.toLowerCase()
+            ? <span key={i} className="text-orange-400">{part}</span>
+            : part
+        )}
+      </p>
+    )
+  }
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
-      {/* プログレス */}
-      <div className="flex items-center gap-3 mb-5">
-        <span className="text-sm text-gray-400 tabular-nums">{current} / {total}</span>
-        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-green-500 rounded-full transition-all duration-300"
-            style={{ width: `${((current - 1) / total) * 100}%` }}
-          />
-        </div>
-      </div>
-
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 56px)' }}>
       {/* カード */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
-        {/* 表：単語 */}
-        <div className="px-8 py-10 text-center">
-          <p className="text-4xl font-bold text-gray-800 tracking-wide mb-2">{card.word}</p>
-          <div className="flex items-center justify-center gap-2 text-gray-400">
-            {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
-            {card.audioPath && (
-              <button onClick={playAudio} className="p-1 hover:text-gray-600 transition-colors">
-                <BsVolumeUp size={16} />
-              </button>
-            )}
+      <div className="flex-1 relative mx-4 mt-4 mb-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-5">
+          {/* タブ + カウンター */}
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={() => onModeChange('example')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'example' ? 'bg-red-500 text-white' : 'border border-gray-200 text-gray-500'}`}
+            >
+              例文
+            </button>
+            <button
+              onClick={() => onModeChange('word')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'word' ? 'bg-red-500 text-white' : 'border border-gray-200 text-gray-500'}`}
+            >
+              単語
+            </button>
+            <span className="ml-1 text-sm text-gray-400">{current} / {total}</span>
           </div>
-        </div>
 
-        {/* 裏：意味 + 例文 */}
-        {revealed && (
-          <div className="border-t border-gray-100 px-6 py-5">
-            <p className="text-2xl font-semibold text-gray-800 mb-1">{card.meaning}</p>
-            {card.meaningEn && (
-              <p className="text-gray-400 text-sm mb-4">{card.meaningEn}</p>
-            )}
-            {card.example && (
-              <div className="bg-gray-50 rounded-xl p-4 text-sm">
-                <p className="text-gray-700 leading-relaxed">{card.example}</p>
-                {card.exampleJa && (
-                  <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>
+          {/* コンテンツ */}
+          {mode === 'example' ? (
+            renderExample()
+          ) : (
+            <div>
+              <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
+              <div className="flex items-center gap-2 mt-2 text-gray-400">
+                {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
+                {card.audioPath && (
+                  <button onClick={playAudio} className="p-1 hover:text-gray-600 transition-colors">
+                    <BsVolumeUp size={16} />
+                  </button>
                 )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* 答えを見るボタン */}
-        {!revealed && (
-          <div className="border-t border-gray-50 px-6 py-5 text-center">
-            <button
-              onClick={onReveal}
-              className="text-gray-400 border border-gray-200 px-6 py-4 rounded-full text-sm hover:bg-gray-50 transition-colors"
-            >
-              答えを見る
-            </button>
-          </div>
-        )}
+          {/* 解説（展開時） */}
+          {revealed && (
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
+              {card.meaningEn && (
+                <p className="text-gray-400 text-sm mt-1">{card.meaningEn}</p>
+              )}
+              {mode === 'word' && card.example && (
+                <div className="mt-3 bg-gray-50 rounded-xl p-3 text-sm">
+                  <p className="text-gray-700 leading-relaxed">{card.example}</p>
+                  {card.exampleJa && (
+                    <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>
+                  )}
+                </div>
+              )}
+              {mode === 'example' && card.exampleJa && (
+                <p className="text-gray-400 text-sm mt-2 leading-relaxed">{card.exampleJa}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 解説ボタン */}
+        <button
+          onClick={() => setRevealed(r => !r)}
+          className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-red-500 text-white text-xs font-medium shadow-md hover:bg-red-600 active:scale-95 transition-all"
+        >
+          解説
+        </button>
       </div>
 
-      {/* ○/× ボタン */}
-      {revealed && (
-        <div className="flex gap-3">
-          <button
-            onClick={() => onAnswer(false)}
-            className="flex-1 py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-lg hover:bg-red-100 active:scale-95 transition-all"
-          >
-            × まだ
-          </button>
-          <button
-            onClick={() => onAnswer(true)}
-            className="flex-1 py-4 rounded-2xl bg-green-50 text-green-600 font-bold text-lg hover:bg-green-100 active:scale-95 transition-all"
-          >
-            ○ 覚えた
-          </button>
-        </div>
-      )}
+      {/* 判定ボタン */}
+      <div className="flex gap-3 px-4 pb-6">
+        <button
+          onClick={() => onAnswer(false)}
+          className="flex-1 py-4 rounded-2xl bg-gray-400 text-white font-bold text-base active:scale-95 transition-all"
+        >
+          わからない
+        </button>
+        <button
+          onClick={() => onAnswer(true)}
+          className="flex-1 py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all"
+        >
+          わかる
+        </button>
+      </div>
     </div>
   )
 }
@@ -259,10 +285,10 @@ function CardView({
 export default function QuizClient() {
   const [cards, setCards] = useState<QuizCard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [revealed, setRevealed] = useState(false)
   const [results, setResults] = useState<boolean[]>([])
   const [loading, setLoading] = useState(true)
   const [done, setDone] = useState(false)
+  const [mode, setMode] = useState<QuizMode>('example')
 
   const loadCards = async () => {
     const { data } = await supabase.auth.getUser()
@@ -274,29 +300,25 @@ export default function QuizClient() {
   }
 
   useEffect(() => {
-    toast.dismiss() // 前ページからの残存トーストを消す
+    toast.dismiss()
     loadCards()
   }, [])
 
-  const handleReveal = () => setRevealed(true)
-
   const handleAnswer = (correct: boolean) => {
     const card = cards[currentIndex]
-    saveQuizResult(card.word, correct) // fire-and-forget
+    saveQuizResult(card.word, correct)
     const newResults = [...results, correct]
     setResults(newResults)
     if (currentIndex + 1 >= cards.length) {
       setDone(true)
     } else {
       setCurrentIndex(i => i + 1)
-      setRevealed(false)
     }
   }
 
   const handleRestart = () => {
     setCards(prev => shuffle(prev))
     setCurrentIndex(0)
-    setRevealed(false)
     setResults([])
     setDone(false)
   }
@@ -305,7 +327,6 @@ export default function QuizClient() {
     const wrongCards = cards.filter((_, i) => !results[i])
     setCards(shuffle(wrongCards))
     setCurrentIndex(0)
-    setRevealed(false)
     setResults([])
     setDone(false)
   }
@@ -318,7 +339,7 @@ export default function QuizClient() {
     return (
       <div className="py-20 text-center text-gray-400">
         <p>保存した単語がありません</p>
-        <a href="/" className="mt-4 inline-block text-green-600 underline text-sm">単語を検索する</a>
+        <a href="/wordlist" className="mt-4 inline-block text-[#00AD82] underline text-sm">単語リストへ</a>
       </div>
     )
   }
@@ -330,11 +351,11 @@ export default function QuizClient() {
   return (
     <CardView
       card={cards[currentIndex]}
-      revealed={revealed}
-      onReveal={handleReveal}
       onAnswer={handleAnswer}
       current={currentIndex + 1}
       total={cards.length}
+      mode={mode}
+      onModeChange={setMode}
     />
   )
 }
