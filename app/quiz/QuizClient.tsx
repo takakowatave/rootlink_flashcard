@@ -244,7 +244,17 @@ function CardView({
           {mode === 'example' ? (
             renderExample()
           ) : (
-            <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
+            <div>
+              <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
+              <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
+                {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
+                {card.audioPath && (
+                  <button onClick={playAudio} className="p-1 hover:text-gray-600 transition-colors">
+                    <BsVolumeUp size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
           )}
 
           {/* 解説（展開時） */}
