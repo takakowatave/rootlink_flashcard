@@ -201,13 +201,13 @@ function CardView({
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => onModeChange('example')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'example' ? 'bg-red-500 text-white' : 'border border-gray-200 text-gray-500'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'example' ? 'bg-[#00AD82] text-white' : 'border border-gray-200 text-gray-500'}`}
             >
               例文
             </button>
             <button
               onClick={() => onModeChange('word')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'word' ? 'bg-red-500 text-white' : 'border border-gray-200 text-gray-500'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${mode === 'word' ? 'bg-[#00AD82] text-white' : 'border border-gray-200 text-gray-500'}`}
             >
               単語
             </button>
@@ -256,7 +256,7 @@ function CardView({
         {/* 解説ボタン */}
         <button
           onClick={() => setRevealed(r => !r)}
-          className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-red-500 text-white text-xs font-medium shadow-md hover:bg-red-600 active:scale-95 transition-all"
+          className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#00AD82] text-white text-xs font-medium shadow-md hover:bg-[#009970] active:scale-95 transition-all"
         >
           解説
         </button>
