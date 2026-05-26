@@ -113,7 +113,7 @@ export default function WordListPage() {
 
       {/* ===== Word list ===== */}
       <div className="w-full">
-        {[...wordList].reverse().map((item) => {
+        {wordList.map((item) => {
           const d = item.dictionary
           const pronunciation = buildPronunciation(d)
           const senses = buildSenses(d)

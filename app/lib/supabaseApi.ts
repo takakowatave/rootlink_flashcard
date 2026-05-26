@@ -281,6 +281,7 @@ export const fetchWordlists = async (userId: string) => {
     `
     )
     .eq("user_id", userId)
+    .order("created_at", { ascending: false })
 
   if (savedErr) {
     console.error("fetchWordlists saved_words error:", savedErr)
