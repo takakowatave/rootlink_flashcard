@@ -106,7 +106,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
               <div className="relative flex-1">
                 <input
                   value={value}
-                  onChange={(e) => onChange(e.target.value.replace(/\s/g, ''))}
+                  onChange={(e) => onChange(e.target.value)}
                   disabled={isLoading}
                   className="w-full bg-transparent text-[26px] md:text-[38px] text-gray-800 outline-none disabled:opacity-50"
                   style={{ caretColor: 'transparent' }}
