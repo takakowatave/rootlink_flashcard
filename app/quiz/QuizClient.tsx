@@ -208,9 +208,7 @@ function CardView({
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
             part.toLowerCase() === card.word.toLowerCase()
-              ? revealed
-                ? <span key={i} className="text-orange-400">{part}</span>
-                : <span key={i} className="inline-block border-b-2 border-gray-400 text-transparent select-none px-1">{part}</span>
+              ? <span key={i} className="text-orange-400">{part}</span>
               : part
           )}
         </p>
