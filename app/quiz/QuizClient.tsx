@@ -203,6 +203,28 @@ function CardView({
     if (!text) return null
     const regex = new RegExp(`(${card.word})`, 'gi')
     const parts = text.split(regex)
+
+    const renderJaHighlighted = (ja: string) => {
+      if (!card.meaning) return <>{ja}</>
+      const candidates = card.meaning
+        .split(/[のをにはがでともや、。・\s]+/)
+        .filter(s => s.length >= 2)
+        .sort((a, b) => b.length - a.length)
+      const matches = candidates.filter(c => ja.includes(c))
+      if (matches.length === 0) return <>{ja}</>
+      const hiRegex = new RegExp(
+        `(${matches.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+        'g'
+      )
+      return (
+        <>
+          {ja.split(hiRegex).map((p, i) =>
+            matches.includes(p) ? <span key={i} className="text-orange-400">{p}</span> : p
+          )}
+        </>
+      )
+    }
+
     return (
       <div>
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
@@ -212,6 +234,11 @@ function CardView({
               : part
           )}
         </p>
+        {revealed && card.exampleJa && (
+          <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+            {renderJaHighlighted(card.exampleJa)}
+          </p>
+        )}
       </div>
     )
   }
@@ -276,10 +303,10 @@ function CardView({
           )}
 
           {/* 解説（展開時） */}
-          {revealed && (
+          {revealed && mode === 'word' && (
             <div className="mt-5 pt-4 border-t border-gray-100">
               <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
-              {mode === 'word' && card.example && (
+              {card.example && (
                 <div className="mt-3 bg-gray-50 rounded-xl p-3 text-sm">
                   <p className="text-gray-700 leading-relaxed">{card.example}</p>
                   {card.exampleJa && (
