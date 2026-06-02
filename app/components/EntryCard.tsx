@@ -182,7 +182,7 @@ export default function EntryCard({
         {!compact && hasParts && (
           <div className="mt-2 bg-[#f0fdfa] rounded-sm px-2 py-2 flex flex-col gap-[16px]">
             {/* Root panels — side-by-side */}
-            <div className="flex gap-2 items-start w-full">
+            <div className="flex flex-wrap gap-2 items-start w-full">
             {parts.map((part, idx) => {
               const gloss = displayLocale === 'ja'
                 ? (part.meaningJa ?? part.meaning ?? '')
@@ -193,7 +193,7 @@ export default function EntryCard({
               return (
                 <div
                   key={idx}
-                  className={`bg-[#cbfbf1] rounded-lg flex-1 min-w-0 flex flex-col gap-2 ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
+                  className={`bg-[#cbfbf1] rounded-lg min-w-0 flex flex-col gap-2 basis-[calc(50%-4px)] max-w-[calc(50%-4px)] ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
                 >
                   {/* Badge + gloss */}
                   <div className="flex items-start gap-2">
