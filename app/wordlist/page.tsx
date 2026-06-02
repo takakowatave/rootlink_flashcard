@@ -35,7 +35,7 @@ function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) 
   }
 }
 
-function buildSenses(dictionary: SavedWordDictionary | null | undefined): Record<string, DisplaySense[]> {
+function buildSenses(dictionary: SavedWordDictionary | null | undefined, locale: DisplayLocale = 'ja'): Record<string, DisplaySense[]> {
   const senseGroups: SavedWordSenseGroup[] = dictionary?.senseGroups ?? []
   const jaLocales = dictionary?.locales?.ja?.senses ?? {}
 
@@ -49,9 +49,12 @@ function buildSenses(dictionary: SavedWordDictionary | null | undefined): Record
       .map((sense) => {
         const senseId = String(sense.senseId ?? '')
         const ja = jaLocales[senseId]
+        const meaning = locale === 'ja'
+          ? (ja?.meaning ?? sense.definition ?? '')
+          : (sense.definition ?? ja?.meaning ?? '')
         return {
           senseId,
-          meaning: ja?.meaning ?? sense.definition ?? '',
+          meaning,
           example: sense.example ?? undefined,
           exampleTranslation: ja?.exampleTranslation ?? undefined,
         }
@@ -124,7 +127,7 @@ export default function WordListPage() {
         {wordList.map((item) => {
           const d = item.dictionary
           const pronunciation = buildPronunciation(d)
-          const senses = buildSenses(d)
+          const senses = buildSenses(d, displayLocale)
           const inflections: string[] = d?.inflections ?? []
           const allSenses = Object.values(senses).flat()
           const firstSenseId = allSenses[0]?.senseId ?? null
