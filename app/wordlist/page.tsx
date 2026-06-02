@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
 import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
+import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 
 export type SavedWordRow = {
   word_id: string
@@ -71,7 +72,10 @@ export default function WordListPage() {
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
+    if (typeof window === 'undefined') return 'ja'
+    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
+  })
 
   const load = async () => {
     const { data } = await supabase.auth.getUser()
@@ -83,6 +87,15 @@ export default function WordListPage() {
 
   useEffect(() => {
     load()
+  }, [])
+
+  useEffect(() => {
+    const handler = () => {
+      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+      if (saved) setDisplayLocale(saved)
+    }
+    window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+    return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
   }, [])
 
   const handleToggleSave = async (word: SavedWordRow) => {
@@ -107,13 +120,7 @@ export default function WordListPage() {
 
       {/* ===== Quiz CTA ===== */}
       {wordList.length > 0 && (
-        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
-          <button
-            onClick={() => setDisplayLocale(l => l === 'ja' ? 'en' : 'ja')}
-            className="h-7 px-3 rounded-full border border-gray-300 text-gray-500 text-xs font-medium hover:bg-gray-50 transition-colors"
-          >
-            {displayLocale === 'ja' ? 'JA' : 'EN'}
-          </button>
+        <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
           <Link href="/quiz">
             <button className="h-7 px-4 rounded-full border border-[#00AD82] text-[#00AD82] text-xs font-medium hover:bg-[#f0fdf9] transition-colors">
               復習する
