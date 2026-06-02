@@ -674,17 +674,19 @@ export default function WordPageClient({
   savedId,
   initialPinnedSenseId,
   correctedFrom,
+  initialDisplayLocale,
 }: {
   word: string
   dictionary: DictionaryInput
   savedId?: string | null
   initialPinnedSenseId?: string | null
   correctedFrom?: string
+  initialDisplayLocale?: DisplayLocale
 }) {
   const router = useRouter()
 
   // Header と共有する表示言語
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
 
   useEffect(() => {
     const syncDisplayLocale = () => {

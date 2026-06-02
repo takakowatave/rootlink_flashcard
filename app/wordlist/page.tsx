@@ -9,6 +9,7 @@ import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
 import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
+import type { DisplayLocale } from "@/types/DisplayLocale"
 
 export type SavedWordRow = {
   word_id: string
@@ -67,6 +68,7 @@ export default function WordListPage() {
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
 
   const load = async () => {
     const { data } = await supabase.auth.getUser()
@@ -102,7 +104,13 @@ export default function WordListPage() {
 
       {/* ===== Quiz CTA ===== */}
       {wordList.length > 0 && (
-        <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
+          <button
+            onClick={() => setDisplayLocale(l => l === 'ja' ? 'en' : 'ja')}
+            className="h-7 px-3 rounded-full border border-gray-300 text-gray-500 text-xs font-medium hover:bg-gray-50 transition-colors"
+          >
+            {displayLocale === 'ja' ? 'JA' : 'EN'}
+          </button>
           <Link href="/quiz">
             <button className="h-7 px-4 rounded-full border border-[#00AD82] text-[#00AD82] text-xs font-medium hover:bg-[#f0fdf9] transition-colors">
               復習する
@@ -138,7 +146,7 @@ export default function WordListPage() {
                 isBookmarked={savedWords.includes(item.word)}
                 onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
                 pinnedSenseId={pinnedSenseId}
-                displayLocale="ja"
+                displayLocale={displayLocale}
                 compact
               />
             </div>
@@ -188,6 +196,7 @@ export default function WordListPage() {
                 dictionary={selectedItem.dictionary}
                 savedId={selectedItem.saved_id}
                 initialPinnedSenseId={selectedItem.pinned_sense_id}
+                initialDisplayLocale={displayLocale}
               />
             </div>
           </div>
