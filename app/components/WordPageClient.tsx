@@ -1061,7 +1061,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [dictionary])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
+    <div className={noCard ? 'bg-white' : 'min-h-screen bg-[#f8fafc]'}>
     {/* Floating search button — SP only */}
     <button
       type="button"
