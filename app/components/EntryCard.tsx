@@ -43,6 +43,7 @@ type Props = {
   onTogglePin?: (senseId: string) => void
   displayLocale?: DisplayLocale
   compact?: boolean
+  noCard?: boolean
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -73,6 +74,7 @@ export default function EntryCard({
   onTogglePin = () => {},
   onSave,
   compact = false,
+  noCard = false,
 }: Props) {
   const parts = useMemo(
     () => etymologyData?.structure.type === 'parts'
@@ -151,7 +153,7 @@ export default function EntryCard({
 
   return (
     <div className="mx-auto max-w-[600px] md:px-4 md:py-3">
-      <div className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2">
+      <div className={noCard ? 'pt-2 pb-3 px-2' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2'}>
 
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between py-1">

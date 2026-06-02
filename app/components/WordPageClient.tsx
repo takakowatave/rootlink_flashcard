@@ -675,6 +675,7 @@ export default function WordPageClient({
   initialPinnedSenseId,
   correctedFrom,
   initialDisplayLocale,
+  noCard,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -682,6 +683,7 @@ export default function WordPageClient({
   initialPinnedSenseId?: string | null
   correctedFrom?: string
   initialDisplayLocale?: DisplayLocale
+  noCard?: boolean
 }) {
   const router = useRouter()
 
@@ -1105,6 +1107,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       pinnedSenseId={pinnedSenseId}
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
+      noCard={noCard}
     />
     </div>
   )

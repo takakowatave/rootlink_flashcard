@@ -207,6 +207,7 @@ export default function WordListPage() {
                 savedId={selectedItem.saved_id}
                 initialPinnedSenseId={selectedItem.pinned_sense_id}
                 initialDisplayLocale={displayLocale}
+                noCard
               />
             </div>
           </div>
