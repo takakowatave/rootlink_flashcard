@@ -347,7 +347,7 @@ export default function EntryCard({
                   {(sense.example || sense.exampleTranslation) && (
                     <div className="mt-2 flex flex-col gap-2 text-sm text-black">
                       {sense.example && <p>{sense.example}</p>}
-                      {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
+                      {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                     </div>
                   )}
                 </div>
@@ -381,7 +381,7 @@ export default function EntryCard({
                           {(sense.example || sense.exampleTranslation) && (
                             <div className="mt-2 flex flex-col gap-2 text-sm text-black">
                               {sense.example && <p>{sense.example}</p>}
-                              {sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
+                              {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                             </div>
                           )}
                         </div>
