@@ -69,6 +69,8 @@ export default function EditProfileModal({
       const data = await res.json()
       if (data.ok && data.url) {
         window.location.href = data.url
+      } else {
+        toast.error("サブスクリプション情報が見つかりません")
       }
     } catch (e) {
       toast.error("エラーが発生しました")
