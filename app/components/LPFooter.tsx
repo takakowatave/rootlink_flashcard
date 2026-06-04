@@ -17,7 +17,10 @@ export default function LPFooter() {
           <Link href="/privacy" className="transition-colors hover:text-white">
             プライバシーポリシー
           </Link>
-          <a
+          <Link href="/terms" className="transition-colors hover:text-white">
+            利用規約
+          </Link>
+          <
             href="https://tally.so/r/ODJoEY"
             target="_blank"
             rel="noopener noreferrer"

@@ -7,6 +7,9 @@ export default function Footer() {
         <Link href="/privacy" className="hover:text-gray-600 transition-colors">
           プライバシーポリシー
         </Link>
+        <Link href="/terms" className="hover:text-gray-600 transition-colors">
+          利用規約
+        </Link>
         <a href="https://tally.so/r/ODJoEY" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">
           お問い合わせ
         </a>
