@@ -116,6 +116,7 @@ export default function EditProfileModal({
   };
 
   return (
+    <>
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
       <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md">
         <h2 className="text-xl font-semibold mb-6">Edit profile</h2>
@@ -221,5 +222,6 @@ export default function EditProfileModal({
       </div>
     </div>
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    </>
   );
 }
