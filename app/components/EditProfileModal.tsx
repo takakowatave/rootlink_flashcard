@@ -9,6 +9,7 @@ import { FaUserCircle } from "react-icons/fa";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
+import UpgradeModal from "@/components/UpgradeModal";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -37,6 +38,7 @@ export default function EditProfileModal({
   } = useForm<FormData>();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
   const router = useRouter()
 
@@ -161,7 +163,7 @@ export default function EditProfileModal({
           {plan === "free" && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => setShowUpgradeModal(true)}
               className="text-xs text-amber-600 underline hover:text-amber-800 font-medium"
             >
               アップグレード →
@@ -218,5 +220,6 @@ export default function EditProfileModal({
         </form>
       </div>
     </div>
+    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
   );
 }
