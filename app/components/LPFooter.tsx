@@ -20,7 +20,7 @@ export default function LPFooter() {
           <Link href="/terms" className="transition-colors hover:text-white">
             利用規約
           </Link>
-          <
+          <a
             href="https://tally.so/r/ODJoEY"
             target="_blank"
             rel="noopener noreferrer"
