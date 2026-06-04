@@ -64,7 +64,7 @@ export default function EditProfileModal({
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ origin: window.location.origin }),
+        body: JSON.stringify({ origin: window.location.origin, locale: navigator.language.startsWith("ja") ? "ja" : "auto" }),
       })
       const data = await res.json()
       if (data.ok && data.url) {
