@@ -10,9 +10,10 @@ const API_BASE =
 
 type Props = {
   onClose: () => void
+  reason?: "limit" | "upgrade"
 }
 
-export default function UpgradeModal({ onClose }: Props) {
+export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("monthly")
 
@@ -52,11 +53,12 @@ export default function UpgradeModal({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-gray-900 mb-1">
-          保存上限に達しました
+          {reason === "limit" ? "保存上限に達しました" : "プレミアムプラン"}
         </h2>
         <p className="text-sm text-gray-500 mb-4">
-          無料プランでは {FREE_PLAN_LIMIT} 件まで保存できます。
-          プレミアムにアップグレードすると無制限に保存できます。
+          {reason === "limit"
+            ? `無料プランでは ${FREE_PLAN_LIMIT} 件まで保存できます。プレミアムにアップグレードすると無制限に保存できます。`
+            : "プレミアムプランで単語保存・クイズを無制限にご利用いただけます。"}
         </p>
 
         {/* プラン選択 */}

@@ -221,7 +221,7 @@ export default function EditProfileModal({
         </form>
       </div>
     </div>
-    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
     </>
   );
 }
