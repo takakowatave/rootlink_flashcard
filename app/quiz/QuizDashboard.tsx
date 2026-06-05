@@ -47,8 +47,8 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
         )}
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-4xl font-bold text-gray-900">{total}</span>
-        <span className="text-xs text-gray-400 mt-0.5">単語</span>
+        <span className="text-3xl font-bold text-gray-900">{masteredPct100}<span className="text-lg font-medium text-gray-400">%</span></span>
+        <span className="text-xs text-gray-400 mt-0.5">習得済</span>
       </div>
     </div>
   )
