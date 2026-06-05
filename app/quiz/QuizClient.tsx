@@ -443,7 +443,7 @@ export default function QuizClient() {
   }
 
   if (showDashboard) {
-    return <QuizDashboard onStart={loadCards} />
+    return <QuizDashboard onStart={loadCards} onBack={() => router.push('/wordlist')} />
   }
 
   if (loading) {

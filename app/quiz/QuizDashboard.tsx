@@ -94,7 +94,7 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
   )
 }
 
-export default function QuizDashboard({ onStart }: { onStart: (mode: 'all' | 'review') => void }) {
+export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: 'all' | 'review') => void, onBack: () => void }) {
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, mastered: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -154,7 +154,18 @@ export default function QuizDashboard({ onStart }: { onStart: (mode: 'all' | 're
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8">
+    <div className="flex flex-col" style={{ minHeight: '100dvh' }}>
+      {/* ヘッダー */}
+      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
+        <button
+          onClick={onBack}
+          className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors"
+        >
+          戻る
+        </button>
+      </header>
+
+    <div className="max-w-md mx-auto px-4 py-8 w-full">
       {/* ドーナツグラフ */}
       <div className="flex justify-center mb-6">
         <DonutChart stats={stats} />
@@ -201,6 +212,7 @@ export default function QuizDashboard({ onStart }: { onStart: (mode: 'all' | 're
           復習 {stats.needs_review}問
         </button>
       </div>
+    </div>
     </div>
   )
 }
