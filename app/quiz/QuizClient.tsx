@@ -80,35 +80,117 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
 }
 
+// ===== キラキラパーティクル =====
+const SPARKLE_COLORS = ['#00AD82', '#00d5be', '#cbfbf1', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
+
+function Sparkles({ show }: { show: boolean }) {
+  if (!show) return null
+  const items = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: 6 + Math.random() * 10,
+    color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+    delay: Math.random() * 0.8,
+    duration: 1.2 + Math.random() * 0.8,
+  }))
+
+  return (
+    <>
+      <style>{`
+        @keyframes sparkle-pop {
+          0% { transform: scale(0) rotate(0deg); opacity: 0; }
+          40% { transform: scale(1.3) rotate(180deg); opacity: 1; }
+          100% { transform: scale(0) rotate(360deg); opacity: 0; }
+        }
+        .sparkle { animation: sparkle-pop var(--dur) var(--delay) ease-in-out forwards; }
+      `}</style>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {items.map(s => (
+          <div
+            key={s.id}
+            className="sparkle absolute"
+            style={{
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              width: s.size,
+              height: s.size,
+              color: s.color,
+              '--dur': `${s.duration}s`,
+              '--delay': `${s.delay}s`,
+            } as React.CSSProperties}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
 // ===== 結果画面 =====
 function ResultScreen({
   cards,
   results,
   onRestart,
   onRetryWrong,
+  onBack,
 }: {
   cards: QuizCard[]
   results: boolean[]
   onRestart: () => void
   onRetryWrong: () => void
+  onBack: () => void
 }) {
   const correct = results.filter(Boolean).length
+  const total = cards.length
   const correctCards = cards.filter((_, i) => results[i])
   const wrongCards = cards.filter((_, i) => !results[i])
+  const pct = total > 0 ? correct / total : 0
+
+  const message = pct === 1 ? 'Perfect! 🎉' : pct >= 0.8 ? 'Fantastic!' : pct >= 0.6 ? 'Great!' : 'Keep going!'
+  const showSparkles = pct >= 0.8
+
+  // ドーナツグラフ
+  const r = 70
+  const circ = 2 * Math.PI * r
+  const greenLen = pct * circ
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-10">
-      <div className="text-center mb-8">
-        <h2 className="text-xl font-bold text-gray-700 mb-1">結果</h2>
-        <p className="text-6xl font-bold text-[#00AD82] my-4">
-          {correct}
-          <span className="text-2xl text-gray-400 font-normal"> / {cards.length}</span>
-        </p>
+    <div className="max-w-lg mx-auto px-4 py-8 relative">
+      <Sparkles show={showSparkles} />
+
+      {/* スコアカード */}
+      <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 overflow-hidden flex flex-col items-center">
+        <Sparkles show={showSparkles} />
+        {/* ドーナツ */}
+        <div className="relative flex items-center justify-center my-2">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r={r} fill="none" stroke="#f0f0f0" strokeWidth="16" />
+            {greenLen > 0 && (
+              <circle
+                cx="80" cy="80" r={r}
+                fill="none" stroke="#00AD82" strokeWidth="16"
+                strokeDasharray={`${greenLen} ${circ - greenLen}`}
+                strokeDashoffset={circ * 0.25}
+                strokeLinecap="round"
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '80px 80px' }}
+              />
+            )}
+          </svg>
+          <div className="absolute flex flex-col items-center">
+            <span className="text-3xl font-bold text-gray-900">{correct}<span className="text-lg text-gray-400">/{total}</span></span>
+          </div>
+        </div>
+        <p className="text-xl font-bold italic text-gray-800 mt-1">{message}</p>
       </div>
 
+      {/* 間違えた単語 */}
       {wrongCards.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2">わからなかった（{wrongCards.length}語）</h3>
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-gray-400 mb-2">わからなかった（{wrongCards.length}語）</h3>
           <div className="bg-gray-50 rounded-xl overflow-hidden">
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-0">
@@ -120,9 +202,10 @@ function ResultScreen({
         </div>
       )}
 
+      {/* 正解した単語 */}
       {correctCards.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-semibold text-[#00AD82] mb-2">わかった（{correctCards.length}語）</h3>
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold text-[#00AD82] mb-2">わかった（{correctCards.length}語）</h3>
           <div className="bg-green-50 rounded-xl overflow-hidden">
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-green-100 last:border-0">
@@ -138,16 +221,16 @@ function ResultScreen({
         {wrongCards.length > 0 && (
           <button
             onClick={onRetryWrong}
-            className="flex-1 py-3 rounded-full border-2 border-gray-300 text-gray-500 font-semibold hover:bg-gray-50 transition-colors"
+            className="flex-1 py-3 rounded-2xl border border-[#009689] text-[#009689] font-semibold text-sm hover:bg-[#cbfbf1] transition-colors"
           >
-            わからないだけもう一度
+            間違えた単語だけ
           </button>
         )}
         <button
-          onClick={onRestart}
-          className="flex-1 py-3 rounded-full bg-[#00AD82] text-white font-semibold hover:bg-[#009970] transition-colors"
+          onClick={onBack}
+          className="flex-1 py-3 rounded-2xl bg-[#009689] text-white font-semibold text-sm hover:bg-[#007a6f] transition-colors"
         >
-          全部もう一度
+          次へ
         </button>
       </div>
     </div>
@@ -461,7 +544,7 @@ export default function QuizClient() {
   }
 
   if (done) {
-    return <ResultScreen cards={cards} results={results} onRestart={handleRestart} onRetryWrong={handleRetryWrong} />
+    return <ResultScreen cards={cards} results={results} onRestart={handleRestart} onRetryWrong={handleRetryWrong} onBack={() => setShowDashboard(true)} />
   }
 
   return (
