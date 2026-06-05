@@ -134,7 +134,6 @@ function Sparkles({ show }: { show: boolean }) {
 function ResultScreen({
   cards,
   results,
-  onRestart,
   onRetryWrong,
   onBack,
 }: {
@@ -149,90 +148,64 @@ function ResultScreen({
   const correctCards = cards.filter((_, i) => results[i])
   const wrongCards = cards.filter((_, i) => !results[i])
   const pct = total > 0 ? correct / total : 0
-
-  const message = pct === 1 ? 'Perfect! 🎉' : pct >= 0.8 ? 'Fantastic!' : pct >= 0.6 ? 'Great!' : 'Keep going!'
   const showSparkles = pct >= 0.8
-
-  // ドーナツグラフ
-  const r = 70
-  const circ = 2 * Math.PI * r
-  const greenLen = pct * circ
+  const message = pct === 1 ? 'Perfect!' : pct >= 0.8 ? 'Fantastic!' : pct >= 0.6 ? 'Great!' : 'Keep going!'
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8 relative">
       <Sparkles show={showSparkles} />
 
       {/* スコアカード */}
-      <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 overflow-hidden flex flex-col items-center">
+      <div className="relative bg-[#f0fdfa] rounded-2xl p-6 mb-6 overflow-hidden flex flex-col items-center">
         <Sparkles show={showSparkles} />
-        {/* ドーナツ */}
-        <div className="relative flex items-center justify-center my-2">
-          <svg width="160" height="160" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r={r} fill="none" stroke="#f0f0f0" strokeWidth="16" />
-            {greenLen > 0 && (
-              <circle
-                cx="80" cy="80" r={r}
-                fill="none" stroke="#00AD82" strokeWidth="16"
-                strokeDasharray={`${greenLen} ${circ - greenLen}`}
-                strokeDashoffset={circ * 0.25}
-                strokeLinecap="round"
-                style={{ transform: 'rotate(-90deg)', transformOrigin: '80px 80px' }}
-              />
-            )}
-          </svg>
-          <div className="absolute flex flex-col items-center">
-            <span className="text-3xl font-bold text-gray-900">{correct}<span className="text-lg text-gray-400">/{total}</span></span>
-          </div>
-        </div>
-        <p className="text-xl font-bold italic text-gray-800 mt-1">{message}</p>
+        <p className="text-xs font-medium text-[#009689] bg-[#cbfbf1] px-3 py-1 rounded-full mb-3">わかった数</p>
+        <p className="text-5xl font-bold text-gray-900 mb-1">
+          {correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span>
+        </p>
+        <p className="text-base font-bold italic text-gray-600 mt-2">{message}</p>
       </div>
 
-      {/* 間違えた単語 */}
+      {/* 次へボタン */}
+      <button
+        onClick={onBack}
+        className="w-full py-4 rounded-2xl bg-[#009689] text-white font-bold text-base hover:bg-[#007a6f] transition-colors mb-6"
+      >
+        次へ
+      </button>
+
+      {/* わからなかった */}
       {wrongCards.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-xs font-semibold text-gray-400 mb-2">わからなかった（{wrongCards.length}語）</h3>
-          <div className="bg-gray-50 rounded-xl overflow-hidden">
-            {wrongCards.map((card, i) => (
-              <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-0">
-                <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
-                <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
-              </div>
-            ))}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-500">わからなかった（{wrongCards.length}語）</h3>
+            <button
+              onClick={onRetryWrong}
+              className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors flex items-center gap-1"
+            >
+              <span>↺</span> {wrongCards.length}問を復習
+            </button>
           </div>
+          {wrongCards.map((card, i) => (
+            <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+              <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
+              <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* 正解した単語 */}
+      {/* わかった */}
       {correctCards.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-xs font-semibold text-[#00AD82] mb-2">わかった（{correctCards.length}語）</h3>
-          <div className="bg-green-50 rounded-xl overflow-hidden">
-            {correctCards.map((card, i) => (
-              <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-b border-green-100 last:border-0">
-                <span className="font-semibold text-gray-700 w-32 truncate">{card.word}</span>
-                <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-sm font-semibold text-[#009689] mb-2">わかった（{correctCards.length}語）</h3>
+          {correctCards.map((card, i) => (
+            <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+              <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
+              <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+            </div>
+          ))}
         </div>
       )}
-
-      <div className="flex gap-3">
-        {wrongCards.length > 0 && (
-          <button
-            onClick={onRetryWrong}
-            className="flex-1 py-3 rounded-2xl border border-[#009689] text-[#009689] font-semibold text-sm hover:bg-[#cbfbf1] transition-colors"
-          >
-            間違えた単語だけ
-          </button>
-        )}
-        <button
-          onClick={onBack}
-          className="flex-1 py-3 rounded-2xl bg-[#009689] text-white font-semibold text-sm hover:bg-[#007a6f] transition-colors"
-        >
-          次へ
-        </button>
-      </div>
     </div>
   )
 }
