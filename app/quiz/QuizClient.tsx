@@ -369,15 +369,16 @@ export default function QuizClient() {
     if (quizMode === 'review') {
       const { data: mastery } = await supabase
         .from('word_mastery')
-        .select('word')
+        .select('word, wrong_count')
         .eq('user_id', data.user.id)
         .eq('status', 'needs_review')
-        .limit(500)
+        .order('wrong_count', { ascending: false })
+        .limit(20)
       const reviewWords = new Set((mastery ?? []).map(m => m.word))
       built = built.filter(c => reviewWords.has(c.word))
     }
 
-    setCards(shuffle(built))
+    setCards(shuffle(built).slice(0, 20))
     setLoading(false)
     setShowDashboard(false)
     setCurrentIndex(0)
