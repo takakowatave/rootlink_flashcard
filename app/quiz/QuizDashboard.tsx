@@ -21,67 +21,48 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
   const r = 80
   const cx = 100
   const cy = 100
-  const circumference = 2 * Math.PI * r
+  const C = 2 * Math.PI * r
 
-  // 習得済（緑）→ 要復習（セカンダリ）→ 未習得（グレー）の順
-  const masteredLen = masteredPct * circumference
-  const reviewLen = reviewPct * circumference
-  const unlearnedLen = circumference - masteredLen - reviewLen
+  const masteredLen = masteredPct * C
+  const reviewLen = reviewPct * C
+  const unlearnedLen = C - masteredLen - reviewLen
 
-  // offset: SVGは3時方向スタート、12時にしたい
-  const startOffset = circumference * 0.25
-
-  const masteredOffset = circumference - masteredLen + startOffset
-  const reviewOffset = circumference - reviewLen + startOffset - masteredLen + circumference
-  const unlearnedOffset = (reviewOffset - reviewLen + circumference) % circumference
-
+  // strokeDashoffset: 12時スタート = C*0.25、各セグメントは前の長さ分ずらす
   const masteredPct100 = Math.round(masteredPct * 100)
 
   return (
     <div className="relative flex items-center justify-center">
-      <svg width="200" height="200" viewBox="0 0 200 200">
-        {/* 背景 */}
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f0f0f0" strokeWidth="20" />
+      <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
+        {/* 背景（グレー全周） */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="20" />
 
-        {/* 習得済（緑） */}
-        {masteredLen > 0 && (
-          <circle
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke="#00AD82"
-            strokeWidth="20"
-            strokeDasharray={`${masteredLen} ${circumference - masteredLen}`}
-            strokeDashoffset={masteredOffset}
-            strokeLinecap="butt"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }}
-          />
-        )}
-
-        {/* 要復習（セカンダリ：オレンジ系） */}
-        {reviewLen > 0 && (
-          <circle
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke="#FF7B3A"
-            strokeWidth="20"
-            strokeDasharray={`${reviewLen} ${circumference - reviewLen}`}
-            strokeDashoffset={circumference - masteredLen + circumference * 0.25}
-            strokeLinecap="butt"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }}
-          />
-        )}
-
-        {/* 未習得（グレー） */}
+        {/* 未習得（薄グレー）- 一番下に描画 */}
         {unlearnedLen > 0 && (
           <circle
             cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke="#E5E7EB"
-            strokeWidth="20"
-            strokeDasharray={`${unlearnedLen} ${circumference - unlearnedLen}`}
-            strokeDashoffset={circumference - masteredLen - reviewLen + circumference * 0.25}
-            strokeLinecap="butt"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: '100px 100px' }}
+            fill="none" stroke="#d1d5db" strokeWidth="20"
+            strokeDasharray={`${unlearnedLen} ${C - unlearnedLen}`}
+            strokeDashoffset={C - (masteredLen + reviewLen)}
+          />
+        )}
+
+        {/* 要復習（オレンジ） */}
+        {reviewLen > 0 && (
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none" stroke="#FF7B3A" strokeWidth="20"
+            strokeDasharray={`${reviewLen} ${C - reviewLen}`}
+            strokeDashoffset={C - masteredLen}
+          />
+        )}
+
+        {/* 習得済（緑） - 一番上に描画 */}
+        {masteredLen > 0 && (
+          <circle
+            cx={cx} cy={cy} r={r}
+            fill="none" stroke="#00AD82" strokeWidth="20"
+            strokeDasharray={`${masteredLen} ${C - masteredLen}`}
+            strokeDashoffset={C}
           />
         )}
       </svg>
