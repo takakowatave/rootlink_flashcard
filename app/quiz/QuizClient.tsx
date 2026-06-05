@@ -8,6 +8,8 @@ import { BsVolumeUp } from 'react-icons/bs'
 import toast from 'react-hot-toast'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import QuizDashboard from './QuizDashboard'
+import WordPageClient from '@/components/WordPageClient'
+import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 
 type WordlistEntry = {
   word?: string
@@ -134,11 +136,13 @@ function Sparkles({ show }: { show: boolean }) {
 function ResultScreen({
   cards,
   results,
+  wordListEntries,
   onRetryWrong,
   onBack,
 }: {
   cards: QuizCard[]
   results: boolean[]
+  wordListEntries: WordlistEntry[]
   onRestart: () => void
   onRetryWrong: () => void
   onBack: () => void
@@ -150,6 +154,13 @@ function ResultScreen({
   const pct = total > 0 ? correct / total : 0
   const showSparkles = pct >= 0.8
   const message = pct === 1 ? 'Perfect!' : pct >= 0.8 ? 'Fantastic!' : pct >= 0.6 ? 'Great!' : 'Keep going!'
+
+  const [selectedWord, setSelectedWord] = useState<WordlistEntry | null>(null)
+
+  const handleWordTap = (word: string) => {
+    const entry = wordListEntries.find(e => e.word === word)
+    if (entry) setSelectedWord(entry)
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8 relative">
@@ -186,9 +197,10 @@ function ResultScreen({
             </button>
           </div>
           {wrongCards.map((card, i) => (
-            <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+            <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
               <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
-              <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+              <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
+              <span className="text-gray-300 text-xs">›</span>
             </div>
           ))}
         </div>
@@ -199,11 +211,40 @@ function ResultScreen({
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-[#009689] mb-2">わかった（{correctCards.length}語）</h3>
           {correctCards.map((card, i) => (
-            <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+            <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
               <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
-              <span className="text-gray-400 text-sm truncate">{card.meaning}</span>
+              <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
+              <span className="text-gray-300 text-xs">›</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 単語詳細モーダル */}
+      {selectedWord && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setSelectedWord(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl overflow-x-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-1">
+                <a href={`/word/${selectedWord.word}`} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                  <BsArrowUpRightSquare size={18} />
+                </a>
+                <button onClick={() => setSelectedWord(null)} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                  <BsX size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <WordPageClient
+                word={selectedWord.word!}
+                dictionary={selectedWord.dictionary}
+                savedId={undefined}
+                initialPinnedSenseId={selectedWord.pinned_sense_id}
+                noCard
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -414,12 +455,14 @@ export default function QuizClient() {
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
   const [showDashboard, setShowDashboard] = useState(true)
+  const [wordListEntries, setWordListEntries] = useState<WordlistEntry[]>([])
 
   const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
     setLoading(true)
     const { data } = await supabase.auth.getUser()
     if (!data.user) return
     const wordList = await fetchWordlists(data.user.id)
+    setWordListEntries(wordList)
     let built = buildQuizCards(wordList)
 
     if (quizMode === 'review') {
@@ -517,7 +560,7 @@ export default function QuizClient() {
   }
 
   if (done) {
-    return <ResultScreen cards={cards} results={results} onRestart={handleRestart} onRetryWrong={handleRetryWrong} onBack={() => setShowDashboard(true)} />
+    return <ResultScreen cards={cards} results={results} wordListEntries={wordListEntries} onRestart={handleRestart} onRetryWrong={handleRetryWrong} onBack={() => setShowDashboard(true)} />
   }
 
   return (
