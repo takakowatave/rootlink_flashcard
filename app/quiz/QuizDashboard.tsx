@@ -56,6 +56,7 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
 
 export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: QuizMode) => void, onBack: () => void }) {
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, mastered: 0, total: 0 })
+
   const [savedTotal, setSavedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedMode, setSelectedMode] = useState<QuizMode>('all')
@@ -123,7 +124,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   ]
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-[#f8fafc]" style={{ height: '100dvh' }}>
       {/* ヘッダー */}
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <button onClick={onBack} className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors">
@@ -132,7 +133,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-md mx-auto px-4 pt-8 pb-4 w-full">
+        <div className="max-w-[900px] mx-auto px-4 pt-8 pb-4 w-full">
 
           {/* ドーナツ */}
           <div className="flex justify-center mb-4">

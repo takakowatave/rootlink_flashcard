@@ -163,7 +163,7 @@ function ResultScreen({
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8 relative">
+    <div className="max-w-[900px] mx-auto px-4 py-8 relative bg-[#f8fafc] min-h-screen">
       <Sparkles show={showSparkles} />
 
       {/* スコアカード */}
@@ -342,7 +342,7 @@ function CardView({
   }
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-[#f8fafc]" style={{ height: '100dvh' }}>
       {/* クイズ専用ヘッダー */}
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <button
@@ -353,7 +353,7 @@ function CardView({
         </button>
       </header>
 
-      <div className="flex flex-col mx-auto w-full max-w-[600px] flex-1 min-h-0">
+      <div className="flex flex-col mx-auto w-full max-w-[900px] flex-1 min-h-0">
         {/* プログレスバー */}
         <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
           <div
