@@ -178,19 +178,15 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           </div>
 
           </div>{/* white card end */}
-        </div>
-      </div>
 
-      {/* スタートボタン（固定フッター） */}
-      <div className="bg-white border-t border-gray-100 shrink-0 py-4">
-        <div className="max-w-[700px] mx-auto px-4">
-        <button
-          onClick={() => onStart(selectedMode)}
-          disabled={selectedMode === 'review' && stats.needs_review === 0}
-          className="w-full py-4 rounded-2xl bg-[#009689] text-white font-bold text-base active:scale-95 transition-all hover:bg-[#007a6f] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          スタート
-        </button>
+          {/* スタートボタン */}
+          <button
+            onClick={() => onStart(selectedMode)}
+            disabled={selectedMode === 'review' && stats.needs_review === 0}
+            className="w-full py-4 rounded-2xl bg-[#009689] text-white font-bold text-base active:scale-95 transition-all hover:bg-[#007a6f] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            スタート
+          </button>
         </div>
       </div>
     </div>
