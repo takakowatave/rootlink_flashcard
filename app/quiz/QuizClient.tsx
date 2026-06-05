@@ -365,7 +365,7 @@ function CardView({
         </div>
 
         {/* カード */}
-        <div className="flex-1 relative bg-white overflow-hidden">
+        <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 bg-white overflow-hidden">
           <div className="p-5">
             {/* タブ（セグメントコントロール） */}
             <div className="inline-flex border border-[#dbe0e5] rounded-[4px] overflow-hidden mb-4">
