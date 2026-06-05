@@ -183,7 +183,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           <button
             onClick={() => onStart(selectedMode)}
             disabled={selectedMode === 'review' && stats.needs_review === 0}
-            className="w-full py-4 rounded-2xl bg-[#009689] text-white font-bold text-base active:scale-95 transition-all hover:bg-[#007a6f] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all hover:bg-[#009970] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             スタート
           </button>
