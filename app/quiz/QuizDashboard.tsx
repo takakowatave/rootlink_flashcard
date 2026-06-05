@@ -133,7 +133,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[700px] mx-auto px-4 pt-8 pb-4 w-full">
+        <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
 
           {/* ドーナツ */}
           <div className="flex justify-center mb-4">
@@ -176,6 +177,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
             ))}
           </div>
 
+          </div>{/* white card end */}
         </div>
       </div>
 
