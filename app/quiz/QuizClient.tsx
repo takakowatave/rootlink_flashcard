@@ -163,7 +163,7 @@ function ResultScreen({
   }
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen">
+    <div className="bg-white min-h-screen">
     <div className="max-w-[700px] mx-auto px-4 py-8 relative">
       <Sparkles show={showSparkles} />
 
@@ -344,7 +344,7 @@ function CardView({
   }
 
   return (
-    <div className="flex flex-col bg-[#f8fafc]" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
       {/* クイズ専用ヘッダー */}
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <button

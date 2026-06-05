@@ -124,7 +124,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   ]
 
   return (
-    <div className="flex flex-col bg-[#f8fafc]" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
       {/* ヘッダー */}
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <button onClick={onBack} className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors">
@@ -182,7 +182,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       </div>
 
       {/* スタートボタン（固定フッター） */}
-      <div className="bg-[#f8fafc] border-t border-gray-100 shrink-0 py-4">
+      <div className="bg-white border-t border-gray-100 shrink-0 py-4">
         <div className="max-w-[700px] mx-auto px-4">
         <button
           onClick={() => onStart(selectedMode)}
