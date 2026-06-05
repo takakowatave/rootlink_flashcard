@@ -373,12 +373,12 @@ export default function QuizClient() {
         .eq('user_id', data.user.id)
         .eq('status', 'needs_review')
         .order('wrong_count', { ascending: false })
-        .limit(20)
+        .limit(10)
       const reviewWords = new Set((mastery ?? []).map(m => m.word))
       built = built.filter(c => reviewWords.has(c.word))
     }
 
-    setCards(shuffle(built).slice(0, 20))
+    setCards(shuffle(built).slice(0, 10))
     setLoading(false)
     setShowDashboard(false)
     setCurrentIndex(0)
