@@ -166,7 +166,7 @@ export default function EntryCard({
           <button type="button" onClick={onSave} className="shrink-0">
             {isBookmarked
               ? <HiBookmark className="size-6 text-[#90a1b9]" />
-              : <HiOutlineBookmark className="size-6 text-[#00AD82]" />
+              : <HiOutlineBookmark className="size-6 text-primary" />
             }
           </button>
         </div>
@@ -182,7 +182,7 @@ export default function EntryCard({
 
         {/* ── ETYMOLOGY HOOK ── */}
         {!compact && hasParts && (
-          <div className="mt-2 bg-[#f0fdfa] rounded-sm px-2 py-2 flex flex-col gap-[16px]">
+          <div className="mt-2 bg-primary-subtle rounded-sm px-2 py-2 flex flex-col gap-[16px]">
             {/* Root panels — side-by-side */}
             <div className="flex flex-wrap gap-2 items-start w-full">
             {parts.map((part, idx) => {
@@ -195,7 +195,7 @@ export default function EntryCard({
               return (
                 <div
                   key={idx}
-                  className={`bg-[#cbfbf1] rounded-lg min-w-0 flex flex-col gap-2 basis-[calc(50%-4px)] max-w-[calc(50%-4px)] ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
+                  className={`bg-primary-light rounded-lg min-w-0 flex flex-col gap-2 basis-[calc(50%-4px)] max-w-[calc(50%-4px)] ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
                 >
                   {/* Badge + gloss */}
                   <div className="flex items-start gap-2">
@@ -204,7 +204,7 @@ export default function EntryCard({
                         <button
                           type="button"
                           onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
-                          className="bg-white border-2 border-[#00d5be] rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
+                          className="bg-white border-2 border-primary rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
                         >
                           {expandedParts[idx]
                             ? <MdRemoveCircle className="size-[20px] text-[#00786f]" />
@@ -213,7 +213,7 @@ export default function EntryCard({
                           <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
                         </button>
                       ) : (
-                        <div className="bg-white border-2 border-[#00d5be] rounded-[24px] px-[12px] py-[4px]">
+                        <div className="bg-white border-2 border-primary rounded-[24px] px-[12px] py-[4px]">
                           <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
                         </div>
                       )}
@@ -238,7 +238,7 @@ export default function EntryCard({
                         >
                           <path
                             d={`M ${TX},0 L ${TX},${trunkEnd}`}
-                            stroke="#00d5be"
+                            stroke="#00AD82"
                             strokeWidth="2"
                             strokeLinecap="round"
                             pathLength="1"
@@ -252,7 +252,7 @@ export default function EntryCard({
                               <path
                                 key={wi}
                                 d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 34,${midY}`}
-                                stroke="#00d5be"
+                                stroke="#00AD82"
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 fill="none"
@@ -287,15 +287,15 @@ export default function EntryCard({
                                     setNavigatingWord(null)
                                   }
                                 }}
-                                className="bg-[#f0fdfa] px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
+                                className="bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
                               >
                                 {navigatingWord === rw ? (
-                                  <svg className="size-4 animate-spin text-[#009689]" fill="none" viewBox="0 0 24 24">
+                                  <svg className="size-4 animate-spin text-secondary" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                   </svg>
                                 ) : (
-                                  <span className="text-[14px] font-medium text-[#009689] leading-4">{rw}</span>
+                                  <span className="text-[14px] font-medium text-secondary leading-4">{rw}</span>
                                 )}
                               </button>
                               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
@@ -303,7 +303,7 @@ export default function EntryCard({
                               </span>
                             </div>
                             {part.relatedWordMeanings?.[rw] && (
-                              <span className="text-[12px] font-medium text-[#009689] w-[33px]">{part.relatedWordMeanings[rw]}</span>
+                              <span className="text-[12px] font-medium text-secondary w-[33px]">{part.relatedWordMeanings[rw]}</span>
                             )}
                           </div>
                         ))}
@@ -395,7 +395,7 @@ export default function EntryCard({
                             className="flex size-8 items-center justify-center"
                           >
                             {isPinned
-                              ? <BsPinFill className="size-4 text-[#00AD82]" />
+                              ? <BsPinFill className="size-4 text-primary" />
                               : <BsPin className="size-4 text-[#90a1b9] opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
                             }
                           </button>
@@ -434,7 +434,7 @@ export default function EntryCard({
             <p className="text-xs text-[#90a1b9] mb-1.5">{labels.derivatives}</p>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
-                <span key={d} className="text-sm text-[#00AD82] underline underline-offset-2">{d}</span>
+                <span key={d} className="text-sm text-primary underline underline-offset-2">{d}</span>
               ))}
             </div>
           </div>

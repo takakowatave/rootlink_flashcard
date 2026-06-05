@@ -83,7 +83,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 // ===== キラキラパーティクル =====
-const SPARKLE_COLORS = ['#00AD82', '#00d5be', '#cbfbf1', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
+const SPARKLE_COLORS = ['primary', 'primary', 'primary-light', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
 
 function Sparkles({ show }: { show: boolean }) {
   if (!show) return null
@@ -168,9 +168,9 @@ function ResultScreen({
       <Sparkles show={showSparkles} />
 
       {/* スコアカード */}
-      <div className="relative bg-[#f0fdfa] rounded-2xl p-6 mb-6 overflow-hidden flex flex-col items-center">
+      <div className="relative bg-primary-subtle rounded-2xl p-6 mb-6 overflow-hidden flex flex-col items-center">
         <Sparkles show={showSparkles} />
-        <p className="text-xs font-medium text-[#009689] bg-[#cbfbf1] px-3 py-1 rounded-full mb-3">わかった数</p>
+        <p className="text-xs font-medium text-secondary bg-primary-light px-3 py-1 rounded-full mb-3">わかった数</p>
         <p className="text-5xl font-bold text-gray-900 mb-1">
           {correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span>
         </p>
@@ -180,7 +180,7 @@ function ResultScreen({
       {/* 次へボタン */}
       <button
         onClick={onBack}
-        className="w-full py-4 rounded-2xl bg-[#009689] text-white font-bold text-base hover:bg-[#007a6f] transition-colors mb-6"
+        className="w-full py-4 rounded-2xl bg-secondary text-white font-bold text-base hover:bg-secondary-hover transition-colors mb-6"
       >
         次へ
       </button>
@@ -192,7 +192,7 @@ function ResultScreen({
             <h3 className="text-sm font-semibold text-gray-500">わからなかった（{wrongCards.length}語）</h3>
             <button
               onClick={onRetryWrong}
-              className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors flex items-center gap-1"
+              className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors flex items-center gap-1"
             >
               <span>↺</span> {wrongCards.length}問を復習
             </button>
@@ -210,7 +210,7 @@ function ResultScreen({
       {/* わかった */}
       {correctCards.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-[#009689] mb-2">わかった（{correctCards.length}語）</h3>
+          <h3 className="text-sm font-semibold text-secondary mb-2">わかった（{correctCards.length}語）</h3>
           {correctCards.map((card, i) => (
             <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
               <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
@@ -349,7 +349,7 @@ function CardView({
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <button
           onClick={onQuit}
-          className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors"
+          className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors"
         >
           終了
         </button>
@@ -359,7 +359,7 @@ function CardView({
         {/* プログレスバー */}
         <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
           <div
-            className="h-full bg-[#00AD82] rounded-full transition-all duration-300"
+            className="h-full bg-primary rounded-full transition-all duration-300"
             style={{ width: `${(current / total) * 100}%` }}
           />
         </div>
@@ -372,13 +372,13 @@ function CardView({
               <button
                 onClick={() => card.example && onModeChange('example')}
                 disabled={!card.example}
-                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-[#cbfbf1] text-[#009689]' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-[#6f777f]'}`}
+                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-[#6f777f]'}`}
               >
                 例文
               </button>
               <button
                 onClick={() => onModeChange('word')}
-                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-[#cbfbf1] text-[#009689] font-bold' : 'bg-white text-[#6f777f] font-normal'}`}
+                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-[#6f777f] font-normal'}`}
               >
                 単語
               </button>
@@ -421,7 +421,7 @@ function CardView({
           {/* 解説ボタン */}
           <button
             onClick={() => setRevealed(r => !r)}
-            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-[#00AD82] text-white text-xs font-medium shadow-md hover:bg-[#009970] active:scale-95 transition-all"
+            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white text-xs font-medium shadow-md hover:bg-primary-hover active:scale-95 transition-all"
           >
             解説
           </button>
@@ -431,13 +431,13 @@ function CardView({
         <div className="flex gap-3 px-4 pb-6 shrink-0">
           <button
             onClick={() => onAnswer(false)}
-            className="flex-1 py-4 rounded-2xl bg-white border border-[#009689] text-[#009689] font-bold text-base active:scale-95 transition-all hover:bg-[#cbfbf1]"
+            className="flex-1 py-4 rounded-2xl bg-white border border-secondary text-secondary font-bold text-base active:scale-95 transition-all hover:bg-primary-light"
           >
             わからない
           </button>
           <button
             onClick={() => onAnswer(true)}
-            className="flex-1 py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all"
+            className="flex-1 py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-95 transition-all"
           >
             わかる
           </button>
@@ -556,7 +556,7 @@ export default function QuizClient() {
     return (
       <div className="py-20 text-center text-gray-400">
         <p>保存した単語がありません</p>
-        <a href="/wordlist" className="mt-4 inline-block text-[#00AD82] underline text-sm">単語リストへ</a>
+        <a href="/wordlist" className="mt-4 inline-block text-primary underline text-sm">単語リストへ</a>
       </div>
     )
   }

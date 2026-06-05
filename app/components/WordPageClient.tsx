@@ -1066,7 +1066,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     <button
       type="button"
       onClick={() => router.push('/')}
-      className={`${noCard ? 'hidden' : 'md:hidden'} fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-[#009689] flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]`}
+      className={`${noCard ? 'hidden' : 'md:hidden'} fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-secondary flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]`}
       aria-label="Search"
     >
       <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

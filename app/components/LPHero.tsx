@@ -90,7 +90,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         className="mb-8 text-center text-[38px] font-bold leading-tight tracking-tight text-gray-800 md:text-6xl"
         style={anim(0)}
       >
-        関連性で単語を<br className="md:hidden" /><span className="text-[#00AD82]">芋づる式</span>に覚えよう
+        関連性で単語を<br className="md:hidden" /><span className="text-primary">芋づる式</span>に覚えよう
       </h1>
 
       {/* Search bar */}
@@ -115,7 +115,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
                   <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] md:text-[38px] text-gray-800">
                     <span>{typed}</span>
                     <span
-                      className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-[#00AD82] ${showCursor ? '' : 'opacity-0'}`}
+                      className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`}
                     />
                   </div>
                 )}
@@ -123,7 +123,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="ml-3 text-[#01c3a0] transition-colors hover:text-[#00AD82] disabled:opacity-50"
+                className="ml-3 text-[#01c3a0] transition-colors hover:text-primary disabled:opacity-50"
               >
                 {isLoading ? (
                   <svg className="h-8 w-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

@@ -96,7 +96,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
         <header className="h-10 bg-white border-b border-[#e2e8f0] flex items-center px-2 shrink-0">
-          <button onClick={onBack} className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">戻る</button>
+          <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium">戻る</button>
         </header>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-gray-400 text-sm">読み込み中...</div>
@@ -109,7 +109,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
         <header className="h-10 bg-white border-b border-[#e2e8f0] flex items-center px-2 shrink-0">
-          <button onClick={onBack} className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium">戻る</button>
+          <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium">戻る</button>
         </header>
         <div className="flex-1 flex items-center justify-center px-4">
           <p className="text-gray-400 text-sm text-center">単語リストに単語を保存するとクイズができます</p>
@@ -119,7 +119,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   }
 
   const modes: { key: QuizMode; label: string; count: number; color: string }[] = [
-    { key: 'all', label: 'ランダム', count: stats.total, color: '#009689' },
+    { key: 'all', label: 'ランダム', count: stats.total, color: "#009689" },
     { key: 'review', label: '要復習', count: stats.needs_review, color: '#FF7B3A' },
   ]
 
@@ -127,7 +127,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
       {/* ヘッダー */}
       <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <button onClick={onBack} className="h-8 px-4 rounded-full border border-[#009689] text-[#009689] text-xs font-medium hover:bg-[#cbfbf1] transition-colors">
+        <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors">
           戻る
         </button>
       </header>
@@ -152,7 +152,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
               <span className="text-xs text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-[#00AD82]" />
+              <div className="w-2 h-2 rounded-full bg-primary" />
               <span className="text-xs text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
             </div>
           </div>
@@ -167,12 +167,12 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
                 disabled={m.key === 'review' && m.count === 0}
                 className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedMode === m.key
-                    ? 'border-[#009689] bg-[#f0fdfa]'
+                    ? 'border-secondary bg-primary-subtle'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-[#009689]' : 'text-gray-600'}`}>{m.label}</span>
-                <span className={`text-xs ${selectedMode === m.key ? 'text-[#009689]' : 'text-gray-400'}`}>{m.count}問</span>
+                <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-secondary' : 'text-gray-600'}`}>{m.label}</span>
+                <span className={`text-xs ${selectedMode === m.key ? 'text-secondary' : 'text-gray-400'}`}>{m.count}問</span>
               </button>
             ))}
           </div>
@@ -183,7 +183,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           <button
             onClick={() => onStart(selectedMode)}
             disabled={selectedMode === 'review' && stats.needs_review === 0}
-            className="w-full py-4 rounded-2xl bg-[#00AD82] text-white font-bold text-base active:scale-95 transition-all hover:bg-[#009970] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-95 transition-all hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
           >
             スタート
           </button>
