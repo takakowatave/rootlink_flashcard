@@ -44,9 +44,7 @@ export default function EditProfileModal({
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    onClose()
-    router.push("/")
-    router.refresh()
+    window.location.href = "/"
   }
 
   const API_BASE =
