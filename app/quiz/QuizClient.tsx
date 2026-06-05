@@ -163,7 +163,8 @@ function ResultScreen({
   }
 
   return (
-    <div className="max-w-[900px] mx-auto px-4 py-8 relative bg-[#f8fafc] min-h-screen">
+    <div className="bg-[#f8fafc] min-h-screen">
+    <div className="max-w-[700px] mx-auto px-4 py-8 relative">
       <Sparkles show={showSparkles} />
 
       {/* スコアカード */}
@@ -247,6 +248,7 @@ function ResultScreen({
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }
@@ -353,7 +355,7 @@ function CardView({
         </button>
       </header>
 
-      <div className="flex flex-col mx-auto w-full max-w-[900px] flex-1 min-h-0">
+      <div className="flex flex-col mx-auto w-full max-w-[700px] flex-1 min-h-0">
         {/* プログレスバー */}
         <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
           <div
@@ -363,7 +365,7 @@ function CardView({
         </div>
 
         {/* カード */}
-        <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 bg-white overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
           <div className="p-5">
             {/* タブ（セグメントコントロール） */}
             <div className="inline-flex border border-[#dbe0e5] rounded-[4px] overflow-hidden mb-4">

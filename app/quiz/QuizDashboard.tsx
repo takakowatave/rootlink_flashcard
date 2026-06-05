@@ -133,7 +133,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[900px] mx-auto px-4 pt-8 pb-4 w-full">
+        <div className="max-w-[700px] mx-auto px-4 pt-8 pb-4 w-full">
 
           {/* ドーナツ */}
           <div className="flex justify-center mb-4">
@@ -180,7 +180,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       </div>
 
       {/* スタートボタン（固定フッター） */}
-      <div className="px-4 pb-6 pt-2 bg-white border-t border-gray-100 shrink-0">
+      <div className="bg-[#f8fafc] border-t border-gray-100 shrink-0 py-4">
+        <div className="max-w-[700px] mx-auto px-4">
         <button
           onClick={() => onStart(selectedMode)}
           disabled={selectedMode === 'review' && stats.needs_review === 0}
@@ -188,6 +189,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
         >
           スタート
         </button>
+        </div>
       </div>
     </div>
   )
