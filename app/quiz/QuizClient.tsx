@@ -7,6 +7,7 @@ import { fetchWordlists, saveQuizResult } from '@/lib/supabaseApi'
 import { BsVolumeUp } from 'react-icons/bs'
 import toast from 'react-hot-toast'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
+import QuizDashboard from './QuizDashboard'
 
 type WordlistEntry = {
   word?: string
@@ -353,27 +354,70 @@ export default function QuizClient() {
   const [cards, setCards] = useState<QuizCard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
+  const [showDashboard, setShowDashboard] = useState(true)
 
-  const loadCards = async () => {
+  const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
+    setLoading(true)
     const { data } = await supabase.auth.getUser()
     if (!data.user) return
     const wordList = await fetchWordlists(data.user.id)
-    const built = buildQuizCards(wordList)
+    let built = buildQuizCards(wordList)
+
+    if (quizMode === 'review') {
+      const { data: mastery } = await supabase
+        .from('word_mastery')
+        .select('word')
+        .eq('user_id', data.user.id)
+        .eq('status', 'needs_review')
+        .limit(500)
+      const reviewWords = new Set((mastery ?? []).map(m => m.word))
+      built = built.filter(c => reviewWords.has(c.word))
+    }
+
     setCards(shuffle(built))
     setLoading(false)
+    setShowDashboard(false)
+    setCurrentIndex(0)
+    setResults([])
+    setDone(false)
   }
 
   useEffect(() => {
     toast.dismiss()
-    loadCards()
   }, [])
 
-  const handleAnswer = (correct: boolean) => {
+  const handleAnswer = async (correct: boolean) => {
     const card = cards[currentIndex]
     saveQuizResult(card.word, correct)
+
+    // word_mastery更新
+    const { data: auth } = await supabase.auth.getUser()
+    if (auth.user) {
+      const { data: existing } = await supabase
+        .from('word_mastery')
+        .select('correct_streak, wrong_count')
+        .eq('user_id', auth.user.id)
+        .eq('word', card.word)
+        .maybeSingle()
+
+      const streak = correct ? (existing?.correct_streak ?? 0) + 1 : 0
+      const wrongCount = correct ? (existing?.wrong_count ?? 0) : (existing?.wrong_count ?? 0) + 1
+      const status = streak >= 2 ? 'mastered' : correct ? 'mastered' : 'needs_review'
+
+      await supabase.from('word_mastery').upsert({
+        user_id: auth.user.id,
+        word: card.word,
+        status: streak >= 2 ? 'mastered' : correct ? 'mastered' : 'needs_review',
+        correct_streak: streak,
+        wrong_count: wrongCount,
+        last_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,word' })
+    }
+
     const newResults = [...results, correct]
     setResults(newResults)
     if (currentIndex + 1 >= cards.length) {
@@ -396,6 +440,10 @@ export default function QuizClient() {
     setCurrentIndex(0)
     setResults([])
     setDone(false)
+  }
+
+  if (showDashboard) {
+    return <QuizDashboard onStart={loadCards} />
   }
 
   if (loading) {
@@ -423,7 +471,7 @@ export default function QuizClient() {
       total={cards.length}
       mode={mode}
       onModeChange={setMode}
-      onQuit={() => router.push('/wordlist')}
+      onQuit={() => setShowDashboard(true)}
     />
   )
 }
