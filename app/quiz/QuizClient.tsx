@@ -198,7 +198,7 @@ function ResultScreen({
             <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
               <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
               <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
-              <span className="text-gray-300 text-xs">›</span>
+              <span className="text-gray-300 text-base leading-none">›</span>
             </div>
           ))}
         </div>
@@ -212,7 +212,7 @@ function ResultScreen({
             <div key={`correct-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
               <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
               <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
-              <span className="text-gray-300 text-xs">›</span>
+              <span className="text-gray-300 text-base leading-none">›</span>
             </div>
           ))}
         </div>
