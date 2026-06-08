@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { isInAppBrowser } from "../lib/isInAppBrowser";
+import Button from "@/components/Button";
 
 interface FormData {
   email: string;
@@ -75,13 +76,9 @@ export default function AuthLogin() {
             />
             {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
           </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
             {isSubmitting ? "ログイン中..." : "ログイン"}
-          </button>
+          </Button>
         </form>
 
         <div className="flex items-center gap-3 mb-6">

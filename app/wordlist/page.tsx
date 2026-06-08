@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import EntryCard from "@/components/EntryCard"
+import Button from "@/components/Button"
 import WordPageClient from "@/components/WordPageClient"
 import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
@@ -122,9 +123,7 @@ export default function WordListPage() {
       {wordList.length > 0 && (
         <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
           <Link href="/quiz">
-            <button className="h-7 px-4 rounded-full border border-primary text-primary text-xs font-medium hover:bg-[#f0fdf9] transition-colors">
-              復習する
-            </button>
+            <Button variant="secondary" size="sm">復習する</Button>
           </Link>
         </div>
       )}
