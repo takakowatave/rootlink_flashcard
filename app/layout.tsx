@@ -32,7 +32,7 @@ export default function RootLayout({
     }) {
     return (
         <html lang="ja">
-        <body className="overflow-x-hidden">
+        <body>
             <Toaster position="top-center" />
             <AppShell>
                 {children}
