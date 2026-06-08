@@ -30,7 +30,7 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
 
   return (
     <div className="relative flex items-center justify-center">
-      <svg width="180" height="180" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
+      <svg width="234" height="234" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="18" />
         {unlearnedLen > 0 && (
           <circle cx={cx} cy={cy} r={r} fill="none" stroke="#d1d5db" strokeWidth="18"
@@ -49,8 +49,8 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
         )}
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-3xl font-bold text-gray-900">{masteredPct100}<span className="text-lg font-medium text-gray-400">%</span></span>
-        <span className="text-xs text-gray-400 mt-0.5">習得済</span>
+        <span className="text-4xl font-bold text-gray-900">{masteredPct100}<span className="text-xl font-medium text-gray-400">%</span></span>
+        <span className="text-sm text-gray-400 mt-0.5">習得済</span>
       </div>
     </div>
   )
@@ -144,21 +144,21 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           {/* 統計バッジ */}
           <div className="flex justify-center gap-4 mb-8">
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-gray-300" />
-              <span className="text-xs text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
+              <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+              <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-quiz-review" />
-              <span className="text-xs text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
+              <div className="w-2.5 h-2.5 rounded-full bg-quiz-review" />
+              <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-xs text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
+              <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+              <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
             </div>
           </div>
 
           {/* モード選択タブ */}
-          <p className="text-xs font-semibold text-gray-400 mb-3">出題範囲</p>
+          <p className="text-sm font-semibold text-gray-400 mb-3">出題範囲</p>
           <div className="flex gap-3 mb-8">
             {modes.map(m => (
               <button

@@ -207,8 +207,8 @@ export default function EntryCard({
                           className="bg-white border-2 border-primary-mid rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
                         >
                           {expandedParts[idx]
-                            ? <MdRemoveCircle className="size-[20px] text-primary-dark" />
-                            : <MdAddCircle    className="size-[20px] text-primary-dark" />
+                            ? <MdRemoveCircle className="size-5 text-primary-dark" />
+                            : <MdAddCircle    className="size-5 text-primary-dark" />
                           }
                           <span className="text-base font-medium text-primary-dark leading-4">{part.text}</span>
                         </button>
