@@ -8,6 +8,7 @@ import { FaUserCircle } from "react-icons/fa";
 import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
 import EditProfileModal from "@/components/EditProfileModal";
+import Button from "@/components/Button";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -77,7 +78,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-[#e2e8f0] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
+      <header className="h-14 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
         {/* ロゴ */}
         <Link href="/" className="shrink-0">
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
@@ -89,7 +90,7 @@ const Header = () => {
             onSubmit={handleSearch}
             className="hidden md:flex flex-1 items-center justify-center"
           >
-            <div className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-[#e2e8f0]'}`}>
+            <div className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
               <input
                 value={searchValue}
                 onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
@@ -114,14 +115,10 @@ const Header = () => {
           {!profile && (
             <>
               <Link href="/signup">
-                <button className="h-8 px-4 rounded-full bg-primary text-white text-xs font-medium">
-                  新規登録
-                </button>
+                <Button variant="primary" size="sm">新規登録</Button>
               </Link>
               <Link href="/login">
-                <button className="h-8 px-4 rounded-full border border-primary text-primary text-xs font-medium">
-                  ログイン
-                </button>
+                <Button variant="secondary" size="sm">ログイン</Button>
               </Link>
             </>
           )}
@@ -130,9 +127,7 @@ const Header = () => {
             <>
               {/* PC only nav */}
               <Link href="/wordlist" className="hidden md:block">
-                <button className="h-8 px-4 rounded-full border border-primary text-primary text-xs font-medium">
-                  単語リスト
-                </button>
+                <Button variant="secondary" size="sm">単語リスト</Button>
               </Link>
 
               {/* SP: 検索アイコン */}

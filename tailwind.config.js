@@ -17,6 +17,8 @@ module.exports = {
           DEFAULT: '#009689',
           hover:   '#007a6f',
         },
+        // 境界線・区切り線の標準色
+        line: '#e2e8f0',
       },
     },
   },

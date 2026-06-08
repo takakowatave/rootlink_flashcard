@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import Button from '@/components/Button'
 
 type MasteryStats = {
   unlearned: number
@@ -95,8 +96,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   if (loading) {
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
-        <header className="h-10 bg-white border-b border-[#e2e8f0] flex items-center px-2 shrink-0">
-          <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium">戻る</button>
+        <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
+          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
         </header>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-gray-400 text-sm">読み込み中...</div>
@@ -108,8 +109,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   if (savedTotal === 0) {
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
-        <header className="h-10 bg-white border-b border-[#e2e8f0] flex items-center px-2 shrink-0">
-          <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium">戻る</button>
+        <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
+          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
         </header>
         <div className="flex-1 flex items-center justify-center px-4">
           <p className="text-gray-400 text-sm text-center">単語リストに単語を保存するとクイズができます</p>
@@ -126,10 +127,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   return (
     <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
       {/* ヘッダー */}
-      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <button onClick={onBack} className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors">
-          戻る
-        </button>
+      <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
+        <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
       </header>
 
       <div className="flex-1 overflow-y-auto">
@@ -167,12 +166,12 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
                 disabled={m.key === 'review' && m.count === 0}
                 className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedMode === m.key
-                    ? 'border-secondary bg-primary-subtle'
+                    ? 'border-primary bg-primary-subtle'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-secondary' : 'text-gray-600'}`}>{m.label}</span>
-                <span className={`text-xs ${selectedMode === m.key ? 'text-secondary' : 'text-gray-400'}`}>{m.count}問</span>
+                <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-primary' : 'text-gray-600'}`}>{m.label}</span>
+                <span className={`text-xs ${selectedMode === m.key ? 'text-primary' : 'text-gray-400'}`}>{m.count}問</span>
               </button>
             ))}
           </div>
@@ -180,13 +179,15 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           </div>{/* white card end */}
 
           {/* スタートボタン */}
-          <button
+          <Button
             onClick={() => onStart(selectedMode)}
             disabled={selectedMode === 'review' && stats.needs_review === 0}
-            className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-95 transition-all hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
+            variant="primary"
+            size="lg"
+            fullWidth
           >
             スタート
-          </button>
+          </Button>
         </div>
       </div>
     </div>

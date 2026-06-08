@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import QuizDashboard from './QuizDashboard'
 import WordPageClient from '@/components/WordPageClient'
+import Button from '@/components/Button'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 
 type WordlistEntry = {
@@ -83,7 +84,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 // ===== キラキラパーティクル =====
-const SPARKLE_COLORS = ['primary', 'primary', 'primary-light', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
+// inlineスタイル(style={{color}})で使うため、トークン名ではなく実際のhex値を使う
+const SPARKLE_COLORS = ['#00AD82', '#00d5be', '#cbfbf1', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
 
 function Sparkles({ show }: { show: boolean }) {
   if (!show) return null
@@ -178,24 +180,18 @@ function ResultScreen({
       </div>
 
       {/* 次へボタン */}
-      <button
-        onClick={onBack}
-        className="w-full py-4 rounded-2xl bg-secondary text-white font-bold text-base hover:bg-secondary-hover transition-colors mb-6"
-      >
+      <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-6">
         次へ
-      </button>
+      </Button>
 
       {/* わからなかった */}
       {wrongCards.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-500">わからなかった（{wrongCards.length}語）</h3>
-            <button
-              onClick={onRetryWrong}
-              className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors flex items-center gap-1"
-            >
+            <Button onClick={onRetryWrong} variant="secondary" size="sm">
               <span>↺</span> {wrongCards.length}問を復習
-            </button>
+            </Button>
           </div>
           {wrongCards.map((card, i) => (
             <div key={`wrong-${card.word}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded" onClick={() => handleWordTap(card.word)}>
@@ -346,13 +342,8 @@ function CardView({
   return (
     <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
       {/* クイズ専用ヘッダー */}
-      <header className="h-10 bg-white border-b border-[#e2e8f0] shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <button
-          onClick={onQuit}
-          className="h-8 px-4 rounded-full border border-secondary text-secondary text-xs font-medium hover:bg-primary-light transition-colors"
-        >
-          終了
-        </button>
+      <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
+        <Button onClick={onQuit} variant="secondary" size="sm">終了</Button>
       </header>
 
       <div className="flex flex-col mx-auto w-full max-w-[700px] flex-1 min-h-0">
@@ -429,18 +420,12 @@ function CardView({
 
         {/* 判定ボタン */}
         <div className="flex gap-3 px-4 pb-6 shrink-0">
-          <button
-            onClick={() => onAnswer(false)}
-            className="flex-1 py-4 rounded-2xl bg-white border border-secondary text-secondary font-bold text-base active:scale-95 transition-all hover:bg-primary-light"
-          >
+          <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">
             わからない
-          </button>
-          <button
-            onClick={() => onAnswer(true)}
-            className="flex-1 py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-95 transition-all"
-          >
+          </Button>
+          <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">
             わかる
-          </button>
+          </Button>
         </div>
       </div>
     </div>
