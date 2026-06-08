@@ -225,11 +225,11 @@ function ResultScreen({
           <div className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl overflow-x-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
               <div className="flex items-center gap-1">
-                <a href={`/word/${selectedWord.word}`} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-                  <BsArrowUpRightSquare size={18} />
+                <a href={`/word/${selectedWord.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                  <BsArrowUpRightSquare size={24} />
                 </a>
-                <button onClick={() => setSelectedWord(null)} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-                  <BsX size={20} />
+                <button onClick={() => setSelectedWord(null)} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                  <BsX size={24} />
                 </button>
               </div>
             </div>
@@ -387,7 +387,7 @@ function CardView({
                 <button onClick={playAudio} disabled={audioLoading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
                   {audioLoading
                     ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <BsVolumeUp size={16} />
+                    : <BsVolumeUp size={20} />
                   }
                 </button>
               </div>

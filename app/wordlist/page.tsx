@@ -189,17 +189,17 @@ export default function WordListPage() {
               <div className="flex items-center gap-1">
                 <a
                   href={`/word/${selectedItem.word}`}
-                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
                   aria-label="単語ページへ"
                 >
-                  <BsArrowUpRightSquare size={18} />
+                  <BsArrowUpRightSquare size={24} />
                 </a>
                 <button
                   onClick={handleCloseModal}
-                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
                   aria-label="閉じる"
                 >
-                  <BsX size={20} />
+                  <BsX size={24} />
                 </button>
               </div>
             </div>
