@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
+import Button from "@/components/Button";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -202,20 +203,12 @@ export default function EditProfileModal({
               ログアウト
             </button>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg border"
-              >
+              <Button type="button" onClick={onClose} variant="secondary" size="md" radius="lg">
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 rounded-lg bg-black text-white"
-              >
+              </Button>
+              <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg">
                 {isSubmitting ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </div>
         </form>

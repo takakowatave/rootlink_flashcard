@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { FREE_PLAN_LIMIT } from "@/lib/supabaseApi"
+import Button from "@/components/Button"
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -106,19 +107,20 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
           <li>✓ クイズ 無制限</li>
         </ul>
 
-        <button
-          className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors mb-2 disabled:opacity-50"
+        <Button
           onClick={handleUpgrade}
           disabled={isLoading}
+          variant="primary"
+          size="md"
+          radius="lg"
+          fullWidth
+          className="mb-2"
         >
           {isLoading ? "処理中..." : "アップグレードする"}
-        </button>
-        <button
-          className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-          onClick={onClose}
-        >
+        </Button>
+        <Button onClick={onClose} variant="tertiary" size="md" fullWidth className="text-gray-400 hover:bg-transparent hover:text-gray-600">
           あとで
-        </button>
+        </Button>
       </div>
     </div>
   )
