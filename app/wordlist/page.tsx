@@ -135,7 +135,7 @@ export default function WordListPage() {
       )}
 
       {/* ===== Word list ===== */}
-      <div className="w-full">
+      <div className="w-full overflow-x-hidden">
         {wordList.map((item) => {
           const d = item.dictionary
           const pronunciation = buildPronunciation(d)
@@ -172,7 +172,7 @@ export default function WordListPage() {
       {/* ===== Detail modal ===== */}
       {selectedItem && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-hidden"
           onClick={handleCloseModal}
         >
           {/* Overlay */}
@@ -180,7 +180,7 @@ export default function WordListPage() {
 
           {/* Panel */}
           <div
-            className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90vh] flex flex-col shadow-xl overflow-x-hidden"
+            className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90dvh] flex flex-col shadow-xl overflow-x-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
