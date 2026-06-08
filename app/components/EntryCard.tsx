@@ -152,7 +152,7 @@ export default function EntryCard({
   })
 
   return (
-    <div className={noCard ? 'w-full overflow-x-hidden' : 'mx-auto max-w-[600px] md:px-4 md:py-3'}>
+    <div className={noCard ? 'w-full overflow-x-hidden' : 'mx-auto max-w-[600px] md:px-4 md:py-3 overflow-x-hidden'}>
       <div className={noCard ? 'pt-2 pb-3 px-2 md:px-4' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2'}>
 
         {/* ── HEADER ── */}
@@ -182,9 +182,9 @@ export default function EntryCard({
 
         {/* ── ETYMOLOGY HOOK ── */}
         {!compact && hasParts && (
-          <div className="mt-2 bg-primary-subtle rounded-sm px-2 py-2 flex flex-col gap-[16px]">
+          <div className="mt-2 bg-primary-subtle rounded-sm px-2 py-2 flex flex-col gap-[16px] overflow-x-hidden">
             {/* Root panels — side-by-side */}
-            <div className="flex flex-wrap gap-2 items-start w-full">
+            <div className="flex flex-wrap gap-2 items-start w-full overflow-x-hidden">
             {parts.map((part, idx) => {
               const gloss = displayLocale === 'ja'
                 ? (part.meaningJa ?? part.meaning ?? '')
@@ -229,7 +229,7 @@ export default function EntryCard({
                     const lastMidY = (filteredWords.length - 1) * ITEM_H + ITEM_H / 2
                     const trunkEnd = lastMidY - R
                     return (
-                      <div className="relative ml-1" style={{ paddingLeft: 40 }}>
+                      <div className="relative ml-1 overflow-x-hidden" style={{ paddingLeft: 40 }}>
                         <svg
                           className="absolute left-0 top-0 pointer-events-none overflow-visible"
                           width={36}
