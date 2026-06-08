@@ -332,7 +332,7 @@ function CardView({
           )}
         </p>
         {revealed && card.exampleJa && (
-          <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+          <p className="text-gray-600 text-base mt-2 leading-relaxed">
             {renderJaHighlighted(card.exampleJa)}
           </p>
         )}
@@ -364,13 +364,13 @@ function CardView({
               <button
                 onClick={() => card.example && onModeChange('example')}
                 disabled={!card.example}
-                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}
+                className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}
               >
                 例文
               </button>
               <button
                 onClick={() => onModeChange('word')}
-                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-dim font-normal'}`}
+                className={`px-6 h-8 text-base transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-dim font-normal'}`}
               >
                 単語
               </button>
@@ -383,7 +383,7 @@ function CardView({
             <div>
               <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
               <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
-                {card.ipa && <span className="text-sm">/{card.ipa}/</span>}
+                {card.ipa && <span className="text-base">/{card.ipa}/</span>}
                 <button onClick={playAudio} disabled={audioLoading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
                   {audioLoading
                     ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
@@ -399,7 +399,7 @@ function CardView({
             <div className="mt-5 pt-4 border-t border-gray-100">
               <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
               {card.example && (
-                <div className="mt-3 bg-gray-50 rounded-xl p-3 text-sm">
+                <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
                   <p className="text-gray-700 leading-relaxed">{card.example}</p>
                   {card.exampleJa && (
                     <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>
@@ -413,7 +413,7 @@ function CardView({
           {/* 解説ボタン */}
           <button
             onClick={() => setRevealed(r => !r)}
-            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white text-xs font-medium shadow-md hover:bg-primary-hover active:scale-95 transition-all"
+            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white text-sm font-medium shadow-md hover:bg-primary-hover active:scale-95 transition-all"
           >
             解説
           </button>
