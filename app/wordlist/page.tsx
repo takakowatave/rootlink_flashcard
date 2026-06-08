@@ -184,7 +184,8 @@ export default function WordListPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
+              <span className="text-base font-semibold text-gray-800">{selectedItem.word}</span>
               <div className="flex items-center gap-1">
                 <a
                   href={`/word/${selectedItem.word}`}
