@@ -152,7 +152,7 @@ export default function EntryCard({
   })
 
   return (
-    <div className={noCard ? '' : 'mx-auto max-w-[600px] md:px-4 md:py-3'}>
+    <div className={noCard ? 'w-full overflow-x-hidden' : 'mx-auto max-w-[600px] md:px-4 md:py-3'}>
       <div className={noCard ? 'pt-2 pb-3 px-2 md:px-4' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2'}>
 
         {/* ── HEADER ── */}

@@ -198,7 +198,7 @@ export default function WordListPage() {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto overflow-x-hidden flex-1 w-full">
               <WordPageClient
                 word={selectedItem.word}
                 dictionary={selectedItem.dictionary}
