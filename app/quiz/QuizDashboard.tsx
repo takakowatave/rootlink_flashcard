@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Button from '@/components/Button'
+import { colors } from '@/lib/colors'
 
 type MasteryStats = {
   unlearned: number
@@ -37,12 +38,12 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
             strokeDashoffset={C - (masteredLen + reviewLen)} />
         )}
         {reviewLen > 0 && (
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#FF7B3A" strokeWidth="18"
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.quizReview} strokeWidth="18"
             strokeDasharray={`${reviewLen} ${C - reviewLen}`}
             strokeDashoffset={C - masteredLen} />
         )}
         {masteredLen > 0 && (
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#00AD82" strokeWidth="18"
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.primary} strokeWidth="18"
             strokeDasharray={`${masteredLen} ${C - masteredLen}`}
             strokeDashoffset={C} />
         )}
@@ -120,8 +121,8 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   }
 
   const modes: { key: QuizMode; label: string; count: number; color: string }[] = [
-    { key: 'all', label: 'ランダム', count: stats.total, color: "#009689" },
-    { key: 'review', label: '要復習', count: stats.needs_review, color: '#FF7B3A' },
+    { key: 'all', label: 'ランダム', count: stats.total, color: colors.secondary },
+    { key: 'review', label: '要復習', count: stats.needs_review, color: colors.quizReview },
   ]
 
   return (
@@ -147,7 +148,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
               <span className="text-xs text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-[#FF7B3A]" />
+              <div className="w-2 h-2 rounded-full bg-quiz-review" />
               <span className="text-xs text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
             </div>
             <div className="flex items-center gap-1.5">

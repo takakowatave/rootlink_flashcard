@@ -160,12 +160,12 @@ export default function EntryCard({
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-semibold leading-8 text-black">{headword}</h1>
             <button type="button" onClick={playAudio} disabled={audioLoading} className="shrink-0">
-              <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-[#90a1b9] animate-pulse' : 'text-[#90a1b9]'}`} />
+              <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
             </button>
           </div>
           <button type="button" onClick={onSave} className="shrink-0">
             {isBookmarked
-              ? <HiBookmark className="size-6 text-[#90a1b9]" />
+              ? <HiBookmark className="size-6 text-muted" />
               : <HiOutlineBookmark className="size-6 text-primary" />
             }
           </button>
@@ -174,7 +174,7 @@ export default function EntryCard({
         {/* IPA */}
         {pronunciation?.phoneticSpelling && (
           <div className="flex items-center">
-            <span className="text-base font-medium text-[#90a1b9]">
+            <span className="text-base font-medium text-muted">
               /{pronunciation.phoneticSpelling}/
             </span>
           </div>
@@ -204,21 +204,21 @@ export default function EntryCard({
                         <button
                           type="button"
                           onClick={() => setExpandedParts(prev => prev.map((v, i) => i === idx ? !v : v))}
-                          className="bg-white border-2 border-primary rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
+                          className="bg-white border-2 border-primary-mid rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
                         >
                           {expandedParts[idx]
-                            ? <MdRemoveCircle className="size-[20px] text-[#00786f]" />
-                            : <MdAddCircle    className="size-[20px] text-[#00786f]" />
+                            ? <MdRemoveCircle className="size-[20px] text-primary-dark" />
+                            : <MdAddCircle    className="size-[20px] text-primary-dark" />
                           }
-                          <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                          <span className="text-base font-medium text-primary-dark leading-4">{part.text}</span>
                         </button>
                       ) : (
-                        <div className="bg-white border-2 border-primary rounded-[24px] px-[12px] py-[4px]">
-                          <span className="text-base font-medium text-[#00786f] leading-4">{part.text}</span>
+                        <div className="bg-white border-2 border-primary-mid rounded-[24px] px-[12px] py-[4px]">
+                          <span className="text-base font-medium text-primary-dark leading-4">{part.text}</span>
                         </div>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-[#00786f] leading-[28px]">{gloss}</span>
+                    <span className="text-sm font-medium text-primary-dark leading-[28px]">{gloss}</span>
                   </div>
 
                   {/* Related words tree */}
@@ -317,7 +317,7 @@ export default function EntryCard({
 
             {/* Etymology description */}
             {hasEtymologyText && (
-              <p className="text-[14px] text-[#00786f] leading-[20px]">{displayedEtymologyDescription}</p>
+              <p className="text-[14px] text-primary-dark leading-[20px]">{displayedEtymologyDescription}</p>
             )}
           </div>
         )}
@@ -339,12 +339,12 @@ export default function EntryCard({
 
               return [(
                 <div key={pos}>
-                  <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
+                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
                     {getPosLabel(pos, displayLocale)}
                   </span>
                   <div className="mt-2 flex items-start gap-2">
                     <p className="flex-1 text-base font-medium text-black">{sense.meaning}</p>
-                    <BsPinFill className="size-4 text-[#90a1b9] shrink-0 mt-1" />
+                    <BsPinFill className="size-4 text-muted shrink-0 mt-1" />
                   </div>
                   {(sense.example || sense.exampleTranslation) && (
                     <div className="mt-2 flex flex-col gap-2 text-sm text-black">
@@ -358,12 +358,12 @@ export default function EntryCard({
 
             return allEntries.map(([pos, items]) => (
               <div key={pos}>
-                <span className="inline-flex items-center border border-[#90a1b9] rounded-full px-2 py-1 text-xs font-medium text-[#90a1b9]">
+                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
                   {getPosLabel(pos, displayLocale)}
                 </span>
 
                 {pos === 'verb' && inflections.length > 0 && (
-                  <p className="mt-1 text-sm text-[#90a1b9]">{inflections.join(' · ')}</p>
+                  <p className="mt-1 text-sm text-muted">{inflections.join(' · ')}</p>
                 )}
 
                 <div className="mt-2 flex flex-col gap-4">
@@ -396,7 +396,7 @@ export default function EntryCard({
                           >
                             {isPinned
                               ? <BsPinFill className="size-4 text-primary" />
-                              : <BsPin className="size-4 text-[#90a1b9] opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
+                              : <BsPin className="size-4 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
                             }
                           </button>
                           {!isPinned && (
@@ -417,13 +417,13 @@ export default function EntryCard({
         {/* ── SYNONYMS / ANTONYMS ── */}
         {synonyms.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs text-[#90a1b9] mb-1">{labels.synonyms}</p>
+            <p className="text-xs text-muted mb-1">{labels.synonyms}</p>
             <p className="text-sm text-black">{synonyms.slice(0, 8).join(', ')}</p>
           </div>
         )}
         {antonyms.length > 0 && (
           <div className="mt-3">
-            <p className="text-xs text-[#90a1b9] mb-1">{labels.antonyms}</p>
+            <p className="text-xs text-muted mb-1">{labels.antonyms}</p>
             <p className="text-sm text-black">{antonyms.slice(0, 8).join(', ')}</p>
           </div>
         )}
@@ -431,7 +431,7 @@ export default function EntryCard({
         {/* ── DERIVATIVES ── */}
         {orderedDerivatives.length > 0 && (
           <div className="mt-3">
-            <p className="text-xs text-[#90a1b9] mb-1.5">{labels.derivatives}</p>
+            <p className="text-xs text-muted mb-1.5">{labels.derivatives}</p>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
                 <span key={d} className="text-sm text-primary underline underline-offset-2">{d}</span>

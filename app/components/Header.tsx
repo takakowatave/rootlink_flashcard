@@ -99,12 +99,12 @@ const Header = () => {
                 className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
               />
               {isSearching ? (
-                <svg className="size-5 animate-spin text-[#90a1b9] shrink-0" fill="none" viewBox="0 0 24 24">
+                <svg className="size-5 animate-spin text-muted shrink-0" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
               ) : (
-                <HiSearch className="size-5 text-[#90a1b9] shrink-0" />
+                <HiSearch className="size-5 text-muted shrink-0" />
               )}
             </div>
           </form>
@@ -146,7 +146,7 @@ const Header = () => {
                 {profile.avatar_url ? (
                   <img src={profile.avatar_url} className="size-8 rounded-full object-cover" alt="avatar" />
                 ) : (
-                  <FaUserCircle className="size-8 text-[#90a1b9]" />
+                  <FaUserCircle className="size-8 text-muted" />
                 )}
               </button>
             </>

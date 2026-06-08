@@ -8,6 +8,7 @@ import { BsVolumeUp } from 'react-icons/bs'
 import toast from 'react-hot-toast'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import QuizDashboard from './QuizDashboard'
+import { colors } from '@/lib/colors'
 import WordPageClient from '@/components/WordPageClient'
 import Button from '@/components/Button'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
@@ -85,7 +86,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ===== キラキラパーティクル =====
 // inlineスタイル(style={{color}})で使うため、トークン名ではなく実際のhex値を使う
-const SPARKLE_COLORS = ['#00AD82', '#00d5be', '#cbfbf1', '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
+const SPARKLE_COLORS = [colors.primary, colors.primaryMid, colors.primaryLight, '#FFD700', '#FF9F43', '#a29bfe', '#fd79a8']
 
 function Sparkles({ show }: { show: boolean }) {
   if (!show) return null
@@ -359,17 +360,17 @@ function CardView({
         <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 bg-white overflow-hidden">
           <div className="p-5">
             {/* タブ（セグメントコントロール） */}
-            <div className="inline-flex border border-[#dbe0e5] rounded-[4px] overflow-hidden mb-4">
+            <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button
                 onClick={() => card.example && onModeChange('example')}
                 disabled={!card.example}
-                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-[#6f777f]'}`}
+                className={`px-6 h-8 text-sm font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}
               >
                 例文
               </button>
               <button
                 onClick={() => onModeChange('word')}
-                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-[#6f777f] font-normal'}`}
+                className={`px-6 h-8 text-sm transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-dim font-normal'}`}
               >
                 単語
               </button>
