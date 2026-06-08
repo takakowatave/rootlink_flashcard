@@ -112,7 +112,13 @@ export default function WordListPage() {
 
   const handleCloseModal = () => {
     setSelectedItem(null)
+    document.body.style.overflow = ''
     load()
+  }
+
+  const handleOpenModal = (item: SavedWordRow) => {
+    setSelectedItem(item)
+    document.body.style.overflow = 'hidden'
   }
 
   return (
@@ -142,7 +148,7 @@ export default function WordListPage() {
           return (
             <div
               key={item.saved_id ?? item.word_id}
-              onClick={() => setSelectedItem(item)}
+              onClick={() => handleOpenModal(item)}
               className="cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition-colors"
             >
               <EntryCard
@@ -198,7 +204,7 @@ export default function WordListPage() {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto overflow-x-hidden flex-1 w-full">
+            <div className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8">
               <WordPageClient
                 word={selectedItem.word}
                 dictionary={selectedItem.dictionary}
