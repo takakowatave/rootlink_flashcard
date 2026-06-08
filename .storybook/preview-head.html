@@ -1,0 +1,10 @@
+<!-- Next.js の process.env をブラウザでも参照できるようシム。
+     モジュールスクリプト(type=module, defer)より前に同期実行される。 -->
+<script>
+  window.process = window.process || { env: {} };
+  window.process.env = Object.assign({}, window.process.env, {
+    NEXT_PUBLIC_SUPABASE_URL: 'https://placeholder.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'placeholder-anon-key',
+    NEXT_PUBLIC_CLOUDRUN_API_URL: ''
+  });
+</script>

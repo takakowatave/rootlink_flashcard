@@ -195,13 +195,9 @@ export default function EditProfileModal({
           </div>
 
           <div className="flex items-center justify-between pt-4">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg text-sm text-red-500 hover:text-red-700"
-            >
+            <Button type="button" onClick={handleLogout} variant="secondary" size="md" radius="lg">
               ログアウト
-            </button>
+            </Button>
             <div className="flex gap-3">
               <Button type="button" onClick={onClose} variant="secondary" size="md" radius="lg">
                 Cancel

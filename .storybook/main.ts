@@ -16,6 +16,7 @@ const config: StorybookConfig = {
   },
   staticDirs: ["../public"],
   viteFinal: async (config) => {
+    // @ エイリアスを app/ に解決
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias as object ?? {}),
