@@ -111,14 +111,21 @@ export default function WordListPage() {
   }
 
   const handleCloseModal = () => {
+    const scrollY = parseInt(document.body.style.top || '0') * -1
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.width = ''
+    window.scrollTo(0, scrollY)
     setSelectedItem(null)
-    document.body.style.overflow = ''
     load()
   }
 
   const handleOpenModal = (item: SavedWordRow) => {
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
     setSelectedItem(item)
-    document.body.style.overflow = 'hidden'
   }
 
   return (
