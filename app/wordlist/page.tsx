@@ -73,6 +73,7 @@ export default function WordListPage() {
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
+  const [modalScrolled, setModalScrolled] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -125,6 +126,7 @@ export default function WordListPage() {
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
     document.body.style.width = '100%'
+    setModalScrolled(false)
     setSelectedItem(item)
   }
 
@@ -206,7 +208,7 @@ export default function WordListPage() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
-              <span className="text-base font-semibold text-gray-800">{selectedItem.word}</span>
+              <span className={`text-base font-semibold text-gray-800 transition-opacity duration-150 ${modalScrolled ? 'opacity-100' : 'opacity-0'}`}>{selectedItem.word}</span>
               <div className="flex items-center gap-1">
                 <a
                   href={`/word/${selectedItem.word}`}
@@ -226,7 +228,10 @@ export default function WordListPage() {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8">
+            <div
+              className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8"
+              onScroll={(e) => setModalScrolled((e.currentTarget as HTMLDivElement).scrollTop > 40)}
+            >
               <WordPageClient
                 word={selectedItem.word}
                 dictionary={selectedItem.dictionary}

@@ -366,8 +366,8 @@ export default function EntryCard({
                   <p className="mt-1 text-sm text-muted">{inflections.join(' · ')}</p>
                 )}
 
-                <div className="mt-2 flex flex-col gap-4">
-                  {items.filter((sense) => sense.example || sense.exampleTranslation).map((sense) => {
+                <div className="mt-2 flex flex-col gap-6">
+                  {items.filter((sense) => !!sense.example).map((sense) => {
                     const isPinned = pinnedSenseId === sense.senseId
                     return (
                       <div key={sense.senseId} className="group flex items-start gap-2">
