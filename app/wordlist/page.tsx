@@ -132,6 +132,20 @@ export default function WordListPage() {
     <>
       <Toaster position="top-center" />
 
+      {/* ===== FAB: SP search ===== */}
+      {!selectedItem && (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+          className="md:hidden fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-secondary flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
+          aria-label="Search"
+        >
+          <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+      )}
+
       {/* ===== Quiz CTA ===== */}
       {wordList.length > 0 && (
         <div className="px-4 py-2 border-b border-gray-100 flex justify-end">

@@ -63,6 +63,12 @@ const Header = () => {
   };
 
   useEffect(() => {
+    const handler = () => openMobileSearch();
+    window.addEventListener('open-mobile-search', handler);
+    return () => window.removeEventListener('open-mobile-search', handler);
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -78,7 +84,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
+      <header className="sticky top-0 z-40 h-14 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
         {/* ロゴ */}
         <Link href="/" className="shrink-0">
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
