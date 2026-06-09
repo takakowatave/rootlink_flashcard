@@ -58,6 +58,8 @@ const Header = () => {
   };
 
   const openMobileSearch = () => {
+    setSearchValue('');
+    setSearchError(false);
     setMobileSearchOpen(true);
     setTimeout(() => mobileInputRef.current?.focus(), 50);
   };
