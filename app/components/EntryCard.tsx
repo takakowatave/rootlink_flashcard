@@ -367,7 +367,7 @@ export default function EntryCard({
                 )}
 
                 <div className="mt-2 flex flex-col gap-6">
-                  {items.filter((sense) => !!sense.example).map((sense) => {
+                  {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => {
                     const isPinned = pinnedSenseId === sense.senseId
                     return (
                       <div key={sense.senseId} className="group flex items-start gap-2">
