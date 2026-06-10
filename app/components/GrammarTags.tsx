@@ -25,6 +25,13 @@ const GRAMMAR_TAG_LABELS_JA: Record<string, string> = {
   'usually as adverb': '通常は副詞として用いる',
   'usually as noun': '通常は名詞として用いる',
   'usually as verb': '通常は動詞として用いる',
+  'attributive': '限定用法',
+  'predicative': '叙述用法',
+  'postpositive': '後位修飾',
+  'in singular': '単数形で',
+  'in plural': '複数形で',
+  'with negative': '否定形で',
+  'in combination': '複合語として',
 }
 
 // tag の表記ゆれを吸収
