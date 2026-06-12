@@ -12,6 +12,7 @@ import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
 import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
+import SignupRequiredModal from "@/components/SignupRequiredModal"
 
 export type SavedWordRow = {
   word_id: string
@@ -74,6 +75,7 @@ export default function WordListPage() {
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -81,7 +83,7 @@ export default function WordListPage() {
 
   const load = async () => {
     const { data } = await supabase.auth.getUser()
-    if (!data.user) return
+    if (!data.user) { setShowSignupModal(true); return }
     const words = await fetchWordlists(data.user.id)
     setWordList(words)
     setSavedWords(words.map((w) => w.word))
@@ -133,6 +135,7 @@ export default function WordListPage() {
   return (
     <>
       <Toaster position="top-center" />
+      {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
       {/* ===== FAB: SP search ===== */}
       {!selectedItem && (
@@ -172,7 +175,7 @@ export default function WordListPage() {
             <div
               key={item.saved_id ?? item.word_id}
               onClick={() => handleOpenModal(item)}
-              className="cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              className="cursor-pointer border-b border-gray-100 relative transition-shadow hover:shadow-[0px_0px_9px_rgba(187,187,187,0.25)] hover:z-10"
             >
               <EntryCard
                 headword={item.word}

@@ -12,6 +12,7 @@ import { colors } from '@/lib/colors'
 import WordPageClient from '@/components/WordPageClient'
 import Button from '@/components/Button'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
+import SignupRequiredModal from '@/components/SignupRequiredModal'
 
 type WordlistEntry = {
   word?: string
@@ -440,6 +441,7 @@ export default function QuizClient() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [loading, setLoading] = useState(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
   const [showDashboard, setShowDashboard] = useState(true)
@@ -448,7 +450,7 @@ export default function QuizClient() {
   const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
     setLoading(true)
     const { data } = await supabase.auth.getUser()
-    if (!data.user) return
+    if (!data.user) { setShowSignupModal(true); setLoading(false); return }
     const wordList = await fetchWordlists(data.user.id)
     setWordListEntries(wordList)
     let built = buildQuizCards(wordList)
@@ -531,7 +533,12 @@ export default function QuizClient() {
   }
 
   if (showDashboard) {
-    return <QuizDashboard onStart={loadCards} onBack={() => router.push('/wordlist')} />
+    return (
+      <>
+        <QuizDashboard onStart={loadCards} onBack={() => router.push('/wordlist')} />
+        {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
+      </>
+    )
   }
 
   if (loading) {

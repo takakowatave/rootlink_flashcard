@@ -11,10 +11,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isQuiz = pathname === '/quiz'
 
   return (
-    <>
+    <div className={isLP || isAuth || isQuiz ? '' : 'min-h-screen bg-[#f8fafc]'}>
       {!isQuiz && <Header />}
       {children}
       {!isLP && !isAuth && !isQuiz && <Footer />}
-    </>
+    </div>
   )
 }
