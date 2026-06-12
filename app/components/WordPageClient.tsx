@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
+import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
@@ -924,6 +925,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     initialPinnedSenseId ?? null
   )
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
   const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
   // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
@@ -997,6 +999,9 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // 単語の保存状態切り替え担当
   const handleSave = async () => {
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) { setShowSignupModal(true); return }
+
     const isSaved = savedWords.includes(word)
 
     // 楽観的更新：API応答を待たずに即時UI反映
@@ -1074,6 +1079,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       </svg>
     </button>
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
     {showCorrectionBanner && correctedFrom && (
       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-0 mx-4 mt-3">
         <span>
