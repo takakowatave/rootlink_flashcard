@@ -161,7 +161,7 @@ export default function WordListPage() {
       )}
 
       {/* ===== Word list ===== */}
-      <div className="w-full overflow-x-hidden">
+      <div className="w-full overflow-x-hidden flex flex-col gap-3 px-3 py-3">
         {wordList.map((item) => {
           const d = item.dictionary
           const pronunciation = buildPronunciation(d)
@@ -175,7 +175,7 @@ export default function WordListPage() {
             <div
               key={item.saved_id ?? item.word_id}
               onClick={() => handleOpenModal(item)}
-              className="cursor-pointer border-b border-gray-100 relative transition-shadow hover:shadow-[0px_0px_9px_rgba(187,187,187,0.25)] hover:z-10"
+              className="group cursor-pointer"
             >
               <EntryCard
                 headword={item.word}

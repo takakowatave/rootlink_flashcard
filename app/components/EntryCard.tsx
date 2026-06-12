@@ -153,7 +153,7 @@ export default function EntryCard({
 
   return (
     <div className={noCard ? 'w-full overflow-x-hidden' : 'mx-auto max-w-[600px] md:px-4 md:py-3 overflow-x-hidden'}>
-      <div className={noCard ? 'pt-2 pb-3 px-2 md:px-4' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2'}>
+      <div className={noCard ? 'pt-2 pb-3 px-2 md:px-4' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] group-hover:shadow-[0px_0px_9px_rgba(187,187,187,0.25)] transition-shadow pt-2 pb-3 px-2'}>
 
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between py-1">
