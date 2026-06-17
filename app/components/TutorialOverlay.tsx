@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-const KEY_SEEN = 'rootlink_tutorial_v4_seen'
-const KEY_STEP = 'rootlink_tutorial_v4_step'
+const KEY_SEEN = 'rootlink_tutorial_v5_seen'
+const KEY_STEP = 'rootlink_tutorial_v5_step'
 const PADDING = 10
 
 type Step = {
