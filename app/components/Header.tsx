@@ -88,7 +88,7 @@ const Header = () => {
     <>
       <header className="sticky top-0 z-40 h-14 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
         {/* ロゴ */}
-        <Link href="/" className="shrink-0">
+        <Link href={profile ? '/about' : '/'} className="shrink-0">
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
 
@@ -134,9 +134,6 @@ const Header = () => {
           {profile && (
             <>
               {/* PC only nav */}
-              <Link href="/about" className="hidden md:block">
-                <Button variant="secondary" size="sm">RootLinkとは</Button>
-              </Link>
               <Link href="/wordlist" className="hidden md:block">
                 <Button variant="secondary" size="sm">単語リスト</Button>
               </Link>
