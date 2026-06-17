@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-const STORAGE_KEY = 'rootlink_tutorial_v1_seen'
+const STORAGE_KEY = 'rootlink_tutorial_v2_seen'
 const PADDING = 10
 
 type Step = {
