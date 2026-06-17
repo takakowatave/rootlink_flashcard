@@ -163,7 +163,7 @@ export default function EntryCard({
               <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
             </button>
           </div>
-          <button type="button" onClick={onSave} className="shrink-0">
+          <button type="button" onClick={onSave} data-tutorial="save-button" className="shrink-0 p-2 -mr-2 -mt-1">
             {isBookmarked
               ? <HiBookmark className="size-6 text-muted" />
               : <HiOutlineBookmark className="size-6 text-primary" />
@@ -392,11 +392,13 @@ export default function EntryCard({
                           <button
                             type="button"
                             onClick={() => onTogglePin(sense.senseId)}
-                            className="flex size-8 items-center justify-center"
+                            data-tutorial="pin-button"
+                            className="flex size-10 items-center justify-center -mr-1"
+                            aria-label={labels.pinThisSense}
                           >
                             {isPinned
                               ? <BsPinFill className="size-4 text-primary" />
-                              : <BsPin className="size-4 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-hover/pin:opacity-100" />
+                              : <BsPin className="size-4 text-muted opacity-40 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-hover/pin:opacity-100" />
                             }
                           </button>
                           {!isPinned && (

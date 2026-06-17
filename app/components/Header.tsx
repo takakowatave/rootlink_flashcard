@@ -98,7 +98,7 @@ const Header = () => {
             onSubmit={handleSearch}
             className="hidden md:flex flex-1 items-center justify-center"
           >
-            <div className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
+            <div data-tutorial="search" className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
               <input
                 value={searchValue}
                 onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
@@ -134,6 +134,9 @@ const Header = () => {
           {profile && (
             <>
               {/* PC only nav */}
+              <Link href="/about" className="hidden md:block">
+                <Button variant="secondary" size="sm">RootLinkとは</Button>
+              </Link>
               <Link href="/wordlist" className="hidden md:block">
                 <Button variant="secondary" size="sm">単語リスト</Button>
               </Link>

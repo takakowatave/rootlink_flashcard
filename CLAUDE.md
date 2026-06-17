@@ -79,7 +79,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 | OpenAI | **gpt-4o**（従量課金） | — | rewrite・語源抽出・TTS。唯一の有料サービス |
 | Supabase | Free | プロジェクトID `ybfdlsjuscgspkcgwist` | 本番DB |
 | Vercel | Free（Hobby） | ドメイン `rootlink.app` | フロント |
-| Stripe | — | 月額¥500 / 年額¥4,800（早期割引UI） | テスト未完 |
+| Stripe | — | 月額¥500 / 年額¥4,800（早期割引UI） | 本番決済・Webhook・Supabase書き込み確認済み（2026-06-05） |
 
 ### Cloud Run API エンドポイント
 
