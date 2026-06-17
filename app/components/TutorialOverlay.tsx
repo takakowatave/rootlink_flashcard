@@ -14,7 +14,8 @@ type Step = {
   title: string
   description: string
   selector?: string
-  requiredPath?: RegExp  // このパスにいる時だけ発火
+  requiredPath?: RegExp
+  waitHint?: string  // requiredPath待ち中に表示する案内
 }
 
 const STEPS: Step[] = [
@@ -35,6 +36,7 @@ const STEPS: Step[] = [
     description: '右上のブックマークアイコンをタップすると単語リストに保存できます。後でいつでも復習できます。',
     selector: '[data-tutorial="save-button"]',
     requiredPath: /^\/word\//,
+    waitHint: '検索して単語の詳細ページを開くと、次のヒントが表示されます 👆',
   },
   {
     emoji: '📌',
@@ -49,6 +51,7 @@ const STEPS: Step[] = [
     description: '保存した単語はクイズで復習できます。○/×形式で素早くチェック。間違えた単語だけ再挑戦もできます。',
     selector: '[data-tutorial="quiz-start"]',
     requiredPath: /^\/quiz/,
+    waitHint: 'クイズページを開くと、次のヒントが表示されます 🃏',
   },
 ]
 
@@ -59,6 +62,7 @@ export default function TutorialOverlay() {
   const [authed, setAuthed] = useState(false)
   const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
+  const [waitMode, setWaitMode] = useState(false)  // 正しいページに到達するまでの案内
   const [rect, setRect] = useState<SpotlightRect | null>(null)
 
   // 認証チェック（初回のみ）
@@ -79,13 +83,18 @@ export default function TutorialOverlay() {
     const current = STEPS[step]
     if (!current) return
 
-    // requiredPath がある場合、現在のパスが合わなければ非表示で待機
     if (current.requiredPath && !current.requiredPath.test(pathname)) {
+      // 正しいページにいない → waitMode で案内を出す（waitHint があれば）
       setVisible(false)
+      if (current.waitHint) {
+        const timer = setTimeout(() => setWaitMode(true), 100)
+        return () => clearTimeout(timer)
+      }
       return
     }
 
-    // 対象要素を少し待ってから探す（画面描画待ち）
+    // 正しいページに来た → waitMode を閉じてステップ表示
+    setWaitMode(false)
     const timer = setTimeout(() => setVisible(true), 300)
     return () => clearTimeout(timer)
   }, [authed, step, pathname])
@@ -129,6 +138,25 @@ export default function TutorialOverlay() {
       setStep(next)
       setVisible(false) // 次ステップの表示判定は useEffect に委ねる
     }
+  }
+
+  // waitMode：正しいページへの案内トースト
+  if (waitMode && step !== null && STEPS[step]?.waitHint) {
+    return (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto">
+        <div className="bg-gray-900 text-white text-sm rounded-2xl px-5 py-3.5 shadow-xl flex items-center gap-3 max-w-[320px]">
+          <span className="shrink-0 text-lg">{STEPS[step].emoji}</span>
+          <p className="leading-snug">{STEPS[step].waitHint}</p>
+          <button
+            onClick={() => setWaitMode(false)}
+            className="shrink-0 text-white/50 hover:text-white ml-1"
+            aria-label="閉じる"
+          >
+            <HiX className="size-4" />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (!visible || step === null) return null
