@@ -142,6 +142,7 @@ const Header = () => {
               <button
                 type="button"
                 onClick={openMobileSearch}
+                data-tutorial="search"
                 className="md:hidden p-2 text-gray-400 hover:text-primary transition-colors"
                 aria-label="検索"
               >

@@ -95,7 +95,9 @@ export default function TutorialOverlay() {
     if (step === null) return
     const selector = STEPS[step]?.selector
     if (!selector) { setRect(null); return }
-    const el = document.querySelector(selector)
+    // 複数ある場合（PC/SP兼用）は画面上に見えている要素を使う
+    const el = Array.from(document.querySelectorAll(selector))
+      .find((e) => e.getBoundingClientRect().width > 0) ?? null
     if (!el) { setRect(null); return }
     const r = el.getBoundingClientRect()
     setRect({
