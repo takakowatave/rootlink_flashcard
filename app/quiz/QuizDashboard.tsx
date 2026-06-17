@@ -186,6 +186,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
             variant="primary"
             size="lg"
             fullWidth
+            data-tutorial="quiz-start"
           >
             スタート
           </Button>

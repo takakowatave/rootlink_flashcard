@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-const STORAGE_KEY = 'rootlink_tutorial_v2_seen'
+const KEY_SEEN = 'rootlink_tutorial_v2_seen'
+const KEY_STEP = 'rootlink_tutorial_v2_step'
 const PADDING = 10
 
 type Step = {
@@ -12,6 +14,7 @@ type Step = {
   title: string
   description: string
   selector?: string
+  requiredPath?: RegExp  // このパスにいる時だけ発火
 }
 
 const STEPS: Step[] = [
@@ -23,50 +26,84 @@ const STEPS: Step[] = [
   {
     emoji: '🔍',
     title: '単語を検索する',
-    description: '検索バーに英単語を入力してみてください。語源フック・発音・意味・例文がまとめて表示されます。',
+    description: '上の検索バーに英単語を入力してみてください。語源・発音・意味・例文がまとめて表示されます。',
     selector: '[data-tutorial="search"]',
   },
   {
     emoji: '🔖',
     title: '気になった単語を保存',
-    description: 'ブックマークアイコンをタップすると、単語リストに保存できます。後でいつでも復習できます。',
+    description: '右上のブックマークアイコンをタップすると単語リストに保存できます。後でいつでも復習できます。',
     selector: '[data-tutorial="save-button"]',
+    requiredPath: /^\/word\//,
   },
   {
     emoji: '📌',
     title: '多義語はピン止めで整理',
-    description: '複数の意味がある単語は、覚えたい意味だけピン留めできます。ピンアイコンをタップして選んでみましょう。',
+    description: '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
     selector: '[data-tutorial="pin-button"]',
+    requiredPath: /^\/word\//,
   },
   {
     emoji: '🃏',
     title: 'クイズで定着させよう',
     description: '保存した単語はクイズで復習できます。○/×形式で素早くチェック。間違えた単語だけ再挑戦もできます。',
+    selector: '[data-tutorial="quiz-start"]',
+    requiredPath: /^\/quiz/,
   },
 ]
 
 type SpotlightRect = { top: number; left: number; width: number; height: number }
 
 export default function TutorialOverlay() {
+  const pathname = usePathname()
+  const [authed, setAuthed] = useState(false)
+  const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
-  const [step, setStep] = useState(0)
   const [rect, setRect] = useState<SpotlightRect | null>(null)
 
+  // 認証チェック（初回のみ）
   useEffect(() => {
-    const seen = localStorage.getItem(STORAGE_KEY)
-    if (seen) return
+    if (localStorage.getItem(KEY_SEEN)) return
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setVisible(true)
+      if (data.session) {
+        const saved = localStorage.getItem(KEY_STEP)
+        setStep(saved ? parseInt(saved, 10) : 0)
+        setAuthed(true)
+      }
     })
   }, [])
 
+  // パスが変わったとき or ステップが変わったときに表示判定
+  useEffect(() => {
+    if (!authed || step === null) return
+    const current = STEPS[step]
+    if (!current) return
+
+    // requiredPath がある場合、現在のパスが合わなければ非表示で待機
+    if (current.requiredPath && !current.requiredPath.test(pathname)) {
+      setVisible(false)
+      return
+    }
+
+    // 対象要素を少し待ってから探す（画面描画待ち）
+    const timer = setTimeout(() => setVisible(true), 300)
+    return () => clearTimeout(timer)
+  }, [authed, step, pathname])
+
+  // スポットライト対象要素の座標取得
   const updateRect = useCallback(() => {
+    if (step === null) return
     const selector = STEPS[step]?.selector
     if (!selector) { setRect(null); return }
     const el = document.querySelector(selector)
     if (!el) { setRect(null); return }
     const r = el.getBoundingClientRect()
-    setRect({ top: r.top - PADDING, left: r.left - PADDING, width: r.width + PADDING * 2, height: r.height + PADDING * 2 })
+    setRect({
+      top: r.top - PADDING,
+      left: r.left - PADDING,
+      width: r.width + PADDING * 2,
+      height: r.height + PADDING * 2,
+    })
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [step])
 
@@ -77,39 +114,39 @@ export default function TutorialOverlay() {
     return () => window.removeEventListener('resize', updateRect)
   }, [visible, updateRect])
 
-  const close = () => {
-    localStorage.setItem(STORAGE_KEY, '1')
-    setVisible(false)
+  const advance = () => {
+    const next = (step ?? 0) + 1
+    if (next >= STEPS.length) {
+      // 完了
+      localStorage.setItem(KEY_SEEN, '1')
+      localStorage.removeItem(KEY_STEP)
+      setVisible(false)
+      setStep(null)
+    } else {
+      localStorage.setItem(KEY_STEP, String(next))
+      setStep(next)
+      setVisible(false) // 次ステップの表示判定は useEffect に委ねる
+    }
   }
 
-  const next = () => {
-    if (step < STEPS.length - 1) setStep((s) => s + 1)
-    else close()
-  }
-
-  if (!visible) return null
+  if (!visible || step === null) return null
 
   const current = STEPS[step]
   const hasSpotlight = rect !== null
+  const isLastStep = step === STEPS.length - 1
 
-  // Tooltip position: below spotlight if in upper half, above if lower half
-  const tooltipTop = hasSpotlight
-    ? rect.top + rect.height > window.innerHeight / 2
-      ? rect.top - 8  // above (translate up via transform)
-      : rect.top + rect.height + 8  // below
-    : null
-  const tooltipAbove = hasSpotlight && rect.top + rect.height > window.innerHeight / 2
+  // ツールチップ位置：スポットライトの上半分 → 下に、下半分 → 上に
+  const below = hasSpotlight && rect.top < window.innerHeight / 2
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
-      {/* Spotlight overlay: 4 dark panels around the target */}
+      {/* オーバーレイ */}
       {hasSpotlight ? (
         <>
           <div className="fixed inset-x-0 top-0 bg-black/70 pointer-events-auto" style={{ height: Math.max(0, rect.top) }} />
           <div className="fixed inset-x-0 bottom-0 bg-black/70 pointer-events-auto" style={{ top: rect.top + rect.height }} />
           <div className="fixed left-0 bg-black/70 pointer-events-auto" style={{ top: rect.top, width: Math.max(0, rect.left), height: rect.height }} />
           <div className="fixed right-0 bg-black/70 pointer-events-auto" style={{ top: rect.top, left: rect.left + rect.width, height: rect.height }} />
-          {/* Spotlight ring */}
           <div
             className="fixed rounded-xl pointer-events-none"
             style={{
@@ -125,37 +162,30 @@ export default function TutorialOverlay() {
         <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
       )}
 
-      {/* Tooltip card */}
+      {/* カード */}
       <div
-        className="fixed left-1/2 -translate-x-1/2 pointer-events-auto"
+        className="fixed pointer-events-auto"
         style={
-          hasSpotlight && tooltipTop !== null
-            ? tooltipAbove
-              ? { bottom: window.innerHeight - rect.top + 8, left: '50%', transform: 'translateX(-50%)' }
-              : { top: rect.top + rect.height + 8, left: '50%', transform: 'translateX(-50%)' }
+          hasSpotlight
+            ? below
+              ? { top: rect.top + rect.height + 12, left: '50%', transform: 'translateX(-50%)' }
+              : { bottom: window.innerHeight - rect.top + 12, left: '50%', transform: 'translateX(-50%)' }
             : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
         }
       >
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          {/* Skip */}
           <button
-            onClick={close}
+            onClick={advance}
             className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors"
             aria-label="スキップ"
           >
             <HiX className="size-4" />
           </button>
 
-          {/* Emoji */}
           <div className="text-3xl text-center mb-3 select-none">{current.emoji}</div>
-
-          {/* Title */}
           <h2 className="text-base font-bold text-center text-gray-900 mb-2">{current.title}</h2>
-
-          {/* Description */}
           <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">{current.description}</p>
 
-          {/* Progress dots */}
           <div className="flex justify-center gap-1.5 mb-4">
             {STEPS.map((_, i) => (
               <span
@@ -165,12 +195,11 @@ export default function TutorialOverlay() {
             ))}
           </div>
 
-          {/* Button */}
           <button
-            onClick={next}
+            onClick={advance}
             className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
           >
-            {step < STEPS.length - 1 ? '次へ' : 'はじめる'}
+            {isLastStep ? 'はじめる' : '次へ'}
           </button>
         </div>
       </div>
