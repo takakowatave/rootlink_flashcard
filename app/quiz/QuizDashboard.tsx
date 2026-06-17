@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
+import { HiX } from 'react-icons/hi'
+import { KEY_SEEN, KEY_STEP, TOTAL_STEPS } from '@/components/TutorialOverlay'
+
+const QUIZ_DASHBOARD_STEP = 5
+const QUIZ_CARD_STEP = 6
 
 type MasteryStats = {
   unlearned: number
@@ -56,12 +61,44 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
   )
 }
 
+// チュートリアル step5: クイズページの説明カード（スポットライトなし）
+function QuizTutorialCard({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+        <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="スキップ">
+            <HiX className="size-4" />
+          </button>
+          <div className="text-3xl text-center mb-3 select-none">🃏</div>
+          <h2 className="text-base font-bold text-center text-gray-900 mb-2">クイズで定着させよう</h2>
+          <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
+            あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたらクイズで復習しましょう。
+          </p>
+          <div className="flex justify-center gap-1.5 mb-4">
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <span key={i} className={`block size-1.5 rounded-full transition-colors ${i === QUIZ_DASHBOARD_STEP ? 'bg-primary' : 'bg-gray-200'}`} />
+            ))}
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
+          >
+            次へ
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: QuizMode) => void, onBack: () => void }) {
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, mastered: 0, total: 0 })
-
   const [savedTotal, setSavedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedMode, setSelectedMode] = useState<QuizMode>('all')
+  const [tutorialVisible, setTutorialVisible] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -93,6 +130,21 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     }
     load()
   }, [])
+
+  // データ読み込み完了後にチュートリアル step5 を確認
+  useEffect(() => {
+    if (loading) return
+    if (localStorage.getItem(KEY_SEEN)) return
+    const savedStep = localStorage.getItem(KEY_STEP)
+    if (savedStep !== String(QUIZ_DASHBOARD_STEP)) return
+    const timer = setTimeout(() => setTutorialVisible(true), 300)
+    return () => clearTimeout(timer)
+  }, [loading])
+
+  const advanceTutorial = () => {
+    localStorage.setItem(KEY_STEP, String(QUIZ_CARD_STEP))
+    setTutorialVisible(false)
+  }
 
   if (loading) {
     return (
@@ -126,72 +178,76 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   ]
 
   return (
-    <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
-      {/* ヘッダー */}
-      <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
-      </header>
+    <>
+      <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
+        {/* ヘッダー */}
+        <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
+          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
+        </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
 
-          {/* ドーナツ */}
-          <div className="flex justify-center mb-4">
-            <DonutChart stats={stats} />
-          </div>
-
-          {/* 統計バッジ */}
-          <div className="flex justify-center gap-4 mb-8">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-              <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
+            {/* ドーナツ */}
+            <div className="flex justify-center mb-4">
+              <DonutChart stats={stats} />
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-quiz-review" />
-              <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
+
+            {/* 統計バッジ */}
+            <div className="flex justify-center gap-4 mb-8">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-quiz-review" />
+                <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
+
+            {/* モード選択タブ */}
+            <p className="text-sm font-semibold text-gray-400 mb-3">出題範囲</p>
+            <div className="flex gap-3 mb-8">
+              {modes.map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => setSelectedMode(m.key)}
+                  disabled={m.key === 'review' && m.count === 0}
+                  className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    selectedMode === m.key
+                      ? 'border-primary bg-primary-subtle'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-primary' : 'text-gray-600'}`}>{m.label}</span>
+                  <span className={`text-xs ${selectedMode === m.key ? 'text-primary' : 'text-gray-400'}`}>{m.count}問</span>
+                </button>
+              ))}
             </div>
+
+            </div>{/* white card end */}
+
+            {/* スタートボタン */}
+            <Button
+              onClick={() => onStart(selectedMode)}
+              disabled={selectedMode === 'review' && stats.needs_review === 0}
+              variant="primary"
+              size="lg"
+              fullWidth
+              data-tutorial="quiz-start"
+            >
+              スタート
+            </Button>
           </div>
-
-          {/* モード選択タブ */}
-          <p className="text-sm font-semibold text-gray-400 mb-3">出題範囲</p>
-          <div className="flex gap-3 mb-8">
-            {modes.map(m => (
-              <button
-                key={m.key}
-                onClick={() => setSelectedMode(m.key)}
-                disabled={m.key === 'review' && m.count === 0}
-                className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                  selectedMode === m.key
-                    ? 'border-primary bg-primary-subtle'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-primary' : 'text-gray-600'}`}>{m.label}</span>
-                <span className={`text-xs ${selectedMode === m.key ? 'text-primary' : 'text-gray-400'}`}>{m.count}問</span>
-              </button>
-            ))}
-          </div>
-
-          </div>{/* white card end */}
-
-          {/* スタートボタン */}
-          <Button
-            onClick={() => onStart(selectedMode)}
-            disabled={selectedMode === 'review' && stats.needs_review === 0}
-            variant="primary"
-            size="lg"
-            fullWidth
-            data-tutorial="quiz-start"
-          >
-            スタート
-          </Button>
         </div>
       </div>
-    </div>
+
+      {tutorialVisible && <QuizTutorialCard onClose={advanceTutorial} />}
+    </>
   )
 }

@@ -30,17 +30,15 @@ const Header = () => {
     if (match) setSearchValue(decodeURIComponent(match[1]))
   }, [pathname]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = searchValue.trim();
-    if (!trimmed || isSearching) return;
+  const doSearch = async (query: string) => {
+    if (!query || isSearching) return;
     setIsSearching(true);
     setSearchError(false);
     try {
       const res = await fetch(`${API_BASE}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: trimmed }),
+        body: JSON.stringify({ query }),
       });
       if (!res.ok) { setSearchError(true); return; }
       const r = await res.json();
@@ -56,6 +54,23 @@ const Header = () => {
       setIsSearching(false);
     }
   };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    doSearch(searchValue.trim());
+  };
+
+  // チュートリアルからの自動検索
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const query = (e as CustomEvent<{ query: string }>).detail.query;
+      setSearchValue(query);
+      setTimeout(() => doSearch(query), 100);
+    };
+    window.addEventListener('tutorial-auto-search', handler);
+    return () => window.removeEventListener('tutorial-auto-search', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openMobileSearch = () => {
     setSearchValue('');

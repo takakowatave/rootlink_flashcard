@@ -182,7 +182,7 @@ export default function EntryCard({
 
         {/* ── ETYMOLOGY HOOK ── */}
         {!compact && hasParts && (
-          <div className="mt-2 bg-primary-subtle rounded-sm px-2 py-2 flex flex-col gap-[16px] overflow-x-hidden">
+          <div data-tutorial="etymology-tree" className="mt-2 bg-primary-subtle rounded-sm px-2 py-2 flex flex-col gap-[16px] overflow-x-hidden">
             {/* Root panels — side-by-side */}
             <div className="flex flex-wrap gap-2 items-start w-full overflow-x-hidden">
             {parts.map((part, idx) => {

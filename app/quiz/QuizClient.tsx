@@ -13,6 +13,10 @@ import WordPageClient from '@/components/WordPageClient'
 import Button from '@/components/Button'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { HiX } from 'react-icons/hi'
+import { KEY_SEEN, KEY_STEP, TOTAL_STEPS } from '@/components/TutorialOverlay'
+
+const QUIZ_CARD_STEP = 6
 
 type WordlistEntry = {
   word?: string
@@ -446,6 +450,7 @@ export default function QuizClient() {
   const [mode, setMode] = useState<QuizMode>('example')
   const [showDashboard, setShowDashboard] = useState(true)
   const [wordListEntries, setWordListEntries] = useState<WordlistEntry[]>([])
+  const [cardTutorialVisible, setCardTutorialVisible] = useState(false)
 
   const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
     setLoading(true)
@@ -473,6 +478,11 @@ export default function QuizClient() {
     setCurrentIndex(0)
     setResults([])
     setDone(false)
+
+    // チュートリアル step6 チェック
+    if (!localStorage.getItem(KEY_SEEN) && localStorage.getItem(KEY_STEP) === String(QUIZ_CARD_STEP)) {
+      setTimeout(() => setCardTutorialVisible(true), 400)
+    }
   }
 
   useEffect(() => {
@@ -558,15 +568,51 @@ export default function QuizClient() {
     return <ResultScreen cards={cards} results={results} wordListEntries={wordListEntries} onRestart={handleRestart} onRetryWrong={handleRetryWrong} onBack={() => setShowDashboard(true)} />
   }
 
+  const finishCardTutorial = () => {
+    localStorage.setItem(KEY_SEEN, '1')
+    localStorage.removeItem(KEY_STEP)
+    setCardTutorialVisible(false)
+  }
+
   return (
-    <CardView
-      card={cards[currentIndex]}
-      onAnswer={handleAnswer}
-      current={currentIndex + 1}
-      total={cards.length}
-      mode={mode}
-      onModeChange={setMode}
-      onQuit={() => setShowDashboard(true)}
-    />
+    <>
+      <CardView
+        card={cards[currentIndex]}
+        onAnswer={handleAnswer}
+        current={currentIndex + 1}
+        total={cards.length}
+        mode={mode}
+        onModeChange={setMode}
+        onQuit={() => setShowDashboard(true)}
+      />
+      {cardTutorialVisible && (
+        <div className="fixed inset-0 z-[100] pointer-events-none">
+          <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+            <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
+              <button onClick={finishCardTutorial} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="閉じる">
+                <HiX className="size-4" />
+              </button>
+              <div className="text-3xl text-center mb-3 select-none">🎯</div>
+              <h2 className="text-base font-bold text-center text-gray-900 mb-2">クイズの使い方</h2>
+              <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
+                単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
+              </p>
+              <div className="flex justify-center gap-1.5 mb-4">
+                {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                  <span key={i} className={`block size-1.5 rounded-full transition-colors ${i === QUIZ_CARD_STEP ? 'bg-primary' : 'bg-gray-200'}`} />
+                ))}
+              </div>
+              <button
+                onClick={finishCardTutorial}
+                className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
+              >
+                はじめる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
