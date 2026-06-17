@@ -143,10 +143,25 @@ export default function TutorialOverlay() {
       {/* オーバーレイ */}
       {hasSpotlight ? (
         <>
-          <div className="fixed inset-x-0 top-0 bg-black/70 pointer-events-auto" style={{ height: Math.max(0, rect.top) }} />
-          <div className="fixed inset-x-0 bottom-0 bg-black/70 pointer-events-auto" style={{ top: rect.top + rect.height }} />
-          <div className="fixed left-0 bg-black/70 pointer-events-auto" style={{ top: rect.top, width: Math.max(0, rect.left), height: rect.height }} />
-          <div className="fixed right-0 bg-black/70 pointer-events-auto" style={{ top: rect.top, left: rect.left + rect.width, height: rect.height }} />
+          {/* SVGマスクで角丸の穴をきれいに開ける */}
+          <svg
+            className="fixed inset-0 pointer-events-auto"
+            style={{ width: '100vw', height: '100vh' }}
+          >
+            <defs>
+              <mask id="tutorial-mask">
+                <rect width="100%" height="100%" fill="white" />
+                <rect
+                  x={rect.left} y={rect.top}
+                  width={rect.width} height={rect.height}
+                  rx="12" ry="12"
+                  fill="black"
+                />
+              </mask>
+            </defs>
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#tutorial-mask)" />
+          </svg>
+          {/* スポットライトリング */}
           <div
             className="fixed rounded-xl pointer-events-none"
             style={{
