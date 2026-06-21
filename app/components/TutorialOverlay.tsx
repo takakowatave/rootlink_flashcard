@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-export const KEY_SEEN = 'rootlink_tutorial_v6_seen'
-export const KEY_STEP = 'rootlink_tutorial_v6_step'
+export const KEY_SEEN = 'rootlink_tutorial_v7_seen'
+export const KEY_STEP = 'rootlink_tutorial_v7_step'
 export const TOTAL_STEPS = 7  // 0-4: global, 5: QuizDashboard, 6: QuizCard
 
 const PADDING = 10
