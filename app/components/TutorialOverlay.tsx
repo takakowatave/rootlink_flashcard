@@ -79,8 +79,9 @@ export default function TutorialOverlay() {
         const saved = localStorage.getItem(KEY_STEP)
         const savedStep = saved ? parseInt(saved, 10) : 0
         if (savedStep >= QUIZ_STEP_INDEX) {
-          setQuizPending(true)
-          setAuthed(true)
+          // クイズ待ちトーストは廃止。KEY_SEENを立ててチュートリアル完了扱いにする
+          localStorage.setItem(KEY_SEEN, '1')
+          localStorage.removeItem(KEY_STEP)
           return
         }
         setStep(savedStep)
