@@ -38,6 +38,7 @@ export default function EditProfileModal({
     formState: { isSubmitting },
   } = useForm<FormData>();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null)
+  const [hasStripeSubscription, setHasStripeSubscription] = useState(false)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
@@ -87,6 +88,18 @@ export default function EditProfileModal({
   useEffect(() => {
     if (isOpen) {
       getUserPlan().then(setPlan)
+      // Stripe経由の課金ユーザーかどうかを確認（is_testerなど手動付与は除く）
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return
+        supabase
+          .from("subscriptions")
+          .select("stripe_customer_id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            setHasStripeSubscription(!!data?.stripe_customer_id)
+          })
+      })
       const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY)
       if (saved === 'en' || saved === 'ja') setDisplayLocale(saved)
     }
@@ -152,7 +165,7 @@ export default function EditProfileModal({
               </span>
             )}
           </div>
-          {plan === "premium" && (
+          {plan === "premium" && hasStripeSubscription && (
             <button
               type="button"
               onClick={handleManagePlan}
