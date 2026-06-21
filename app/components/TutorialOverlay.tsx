@@ -170,7 +170,11 @@ export default function TutorialOverlay() {
           <span className="shrink-0 text-lg">🃏</span>
           <p className="leading-snug">単語が溜まってきたらクイズページで復習できます 🃏</p>
           <button
-            onClick={() => setQuizPending(false)}
+            onClick={() => {
+              localStorage.setItem(KEY_SEEN, '1')
+              localStorage.removeItem(KEY_STEP)
+              setQuizPending(false)
+            }}
             className="shrink-0 text-white/50 hover:text-white ml-1"
             aria-label="閉じる"
           >
