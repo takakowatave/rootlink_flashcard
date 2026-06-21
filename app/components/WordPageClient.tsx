@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
@@ -1014,7 +1015,11 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       dictionary,
     } as Parameters<typeof toggleSaveStatus>[0])
 
-    if (!result.success) {
+    if (result.success) {
+      if (!isSaved) {
+        toast.success('単語を保存しました！', { position: 'top-center' })
+      }
+    } else {
       // 失敗したらロールバック
       setSavedWords((prev) =>
         isSaved ? [...prev, word] : prev.filter((w) => w !== word)
