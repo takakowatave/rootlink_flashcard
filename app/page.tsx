@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import LPHero from '@/components/LPHero'
 import LPAbout from '@/components/LPAbout'
 import LPFeatures from '@/components/LPFeatures'
+import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { supabase } from '@/lib/supabaseClient'
@@ -65,6 +66,7 @@ export default function HomePage() {
       />
       <LPAbout />
       <LPFeatures />
+      <LPDecks />
       <LPCta />
       <LPFooter />
     </main>
