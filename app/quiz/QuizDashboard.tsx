@@ -5,10 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
-import { KEY_SEEN, KEY_STEP, TOTAL_STEPS } from '@/components/TutorialOverlay'
 
-const QUIZ_DASHBOARD_STEP = 5
-const QUIZ_CARD_STEP = 6
+const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
 type MasteryStats = {
   unlearned: number
@@ -76,11 +74,6 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
           <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
             あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたらクイズで復習しましょう。
           </p>
-          <div className="flex justify-center gap-1.5 mb-4">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <span key={i} className={`block size-1.5 rounded-full transition-colors ${i === QUIZ_DASHBOARD_STEP ? 'bg-primary' : 'bg-gray-200'}`} />
-            ))}
-          </div>
           <button
             onClick={onClose}
             className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
@@ -131,18 +124,16 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     load()
   }, [])
 
-  // データ読み込み完了後にチュートリアル step5 を確認
+  // クイズページ初回訪問時にチュートリアルを表示
   useEffect(() => {
     if (loading) return
-    if (localStorage.getItem(KEY_SEEN)) return
-    const savedStep = localStorage.getItem(KEY_STEP)
-    if (savedStep !== String(QUIZ_DASHBOARD_STEP)) return
+    if (localStorage.getItem(QUIZ_DASHBOARD_TUTORIAL_KEY)) return
     const timer = setTimeout(() => setTutorialVisible(true), 300)
     return () => clearTimeout(timer)
   }, [loading])
 
   const advanceTutorial = () => {
-    localStorage.setItem(KEY_STEP, String(QUIZ_CARD_STEP))
+    localStorage.setItem(QUIZ_DASHBOARD_TUTORIAL_KEY, '1')
     setTutorialVisible(false)
   }
 

@@ -333,3 +333,46 @@ export const fetchWordlists = async (userId: string) => {
     pinned_sense_id: row.pinned_sense_id ?? null,
   }))
 }
+
+/* =========================================
+ ③ デッキ単語取得（deck_words + dictionary_cache）
+========================================= */
+export const fetchDeckWords = async (deckId: string) => {
+  const { data: deckRows } = await supabase
+    .from('deck_words')
+    .select('word, meaning')
+    .eq('deck_id', deckId)
+    .limit(2000)
+
+  if (!deckRows || deckRows.length === 0) return []
+
+  const wordTexts = deckRows.map(r => r.word)
+
+  const { data: wordRows } = await supabase
+    .from('words')
+    .select('id, word')
+    .in('word', wordTexts)
+    .limit(2000)
+
+  const wordIdByWord = new Map((wordRows ?? []).map(r => [r.word, r.id]))
+  const wordIds = [...wordIdByWord.values()]
+
+  const cacheByWordId = new Map<string, SavedWordDictionary | null>()
+  if (wordIds.length > 0) {
+    const { data: cacheRows } = await supabase
+      .from('dictionary_cache')
+      .select('word_id, payload')
+      .in('word_id', wordIds)
+      .limit(2000)
+    ;(cacheRows ?? []).forEach(r => {
+      cacheByWordId.set(r.word_id, (r.payload as SavedWordDictionary) ?? null)
+    })
+  }
+
+  return deckRows.map(row => ({
+    word: row.word,
+    meaning: (row.meaning as string | null) ?? null,
+    dictionary: cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null,
+    pinned_sense_id: null as string | null,
+  }))
+}

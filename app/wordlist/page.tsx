@@ -151,14 +151,17 @@ export default function WordListPage() {
         </button>
       )}
 
-      {/* ===== Quiz CTA ===== */}
-      {wordList.length > 0 && (
-        <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
+      {/* ===== Quiz / Deck CTA ===== */}
+      <div className="px-4 py-2 border-b border-gray-100 flex justify-end gap-2">
+        <Link href="/decks">
+          <Button variant="secondary" size="sm">デッキ</Button>
+        </Link>
+        {wordList.length > 0 && (
           <Link href="/quiz">
             <Button variant="secondary" size="sm">復習する</Button>
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ===== Word list ===== */}
       <div className="w-full overflow-x-hidden flex flex-col gap-3 px-3 py-3">

@@ -170,7 +170,7 @@ export default function EntryCard({
                 : <HiOutlineBookmark className="size-6 text-primary" />
               }
             </button>
-            <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
+            <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
               {isBookmarked
                 ? (displayLocale === 'ja' ? '保存から外す' : 'Remove from list')
                 : (displayLocale === 'ja' ? '単語リストに保存' : 'Save to list')}

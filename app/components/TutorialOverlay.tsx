@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-export const KEY_SEEN = 'rootlink_tutorial_v7_seen'
-export const KEY_STEP = 'rootlink_tutorial_v7_step'
-export const TOTAL_STEPS = 7  // 0-4: global, 5: QuizDashboard, 6: QuizCard
+// グローバルチュートリアル（step 0-4）のキー
+const KEY_SEEN = 'rootlink_tutorial_v7_seen'
+const KEY_STEP = 'rootlink_tutorial_v7_step'
 
 const PADDING = 10
 
@@ -18,10 +18,9 @@ type Step = {
   selector?: string
   requiredPath?: RegExp
   waitHint?: string
-  autoSearch?: string  // このステップを「次へ」したとき自動検索するワード
+  autoSearch?: string
 }
 
-// グローバルで処理するステップ（0〜4）
 const STEPS: Step[] = [
   {
     emoji: '🌱',
@@ -58,9 +57,6 @@ const STEPS: Step[] = [
   },
 ]
 
-// step 5, 6 はそれぞれ QuizDashboard / QuizClient 内で処理
-const QUIZ_STEP_INDEX = STEPS.length  // = 5
-
 type SpotlightRect = { top: number; left: number; width: number; height: number }
 
 export default function TutorialOverlay() {
@@ -69,7 +65,6 @@ export default function TutorialOverlay() {
   const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
-  const [quizPending, setQuizPending] = useState(false)
   const [rect, setRect] = useState<SpotlightRect | null>(null)
 
   useEffect(() => {
@@ -78,8 +73,8 @@ export default function TutorialOverlay() {
       if (data.session) {
         const saved = localStorage.getItem(KEY_STEP)
         const savedStep = saved ? parseInt(saved, 10) : 0
-        if (savedStep >= QUIZ_STEP_INDEX) {
-          // クイズ待ちトーストは廃止。KEY_SEENを立ててチュートリアル完了扱いにする
+        // step数を超えていたら完了扱い（古いstateのクリーンアップ）
+        if (savedStep >= STEPS.length) {
           localStorage.setItem(KEY_SEEN, '1')
           localStorage.removeItem(KEY_STEP)
           return
@@ -89,13 +84,6 @@ export default function TutorialOverlay() {
       }
     })
   }, [])
-
-  // クイズページに着いたら quizPending トーストを閉じる（QuizDashboard が引き継ぐ）
-  useEffect(() => {
-    if (quizPending && /^\/quiz/.test(pathname)) {
-      setQuizPending(false)
-    }
-  }, [quizPending, pathname])
 
   useEffect(() => {
     if (!authed || step === null) return
@@ -144,46 +132,23 @@ export default function TutorialOverlay() {
     const current = step !== null ? STEPS[step] : null
     const next = (step ?? 0) + 1
 
-    // 自動検索ステップ：次へを押したらシステムが検索を実行してページ遷移
     if (current?.autoSearch) {
       window.dispatchEvent(
         new CustomEvent('tutorial-auto-search', { detail: { query: current.autoSearch } })
       )
     }
 
-    if (next >= QUIZ_STEP_INDEX) {
-      localStorage.setItem(KEY_STEP, String(QUIZ_STEP_INDEX))
+    if (next >= STEPS.length) {
+      // グローバルチュートリアル完了 → ここで終わり。クイズとは無関係
+      localStorage.setItem(KEY_SEEN, '1')
+      localStorage.removeItem(KEY_STEP)
       setVisible(false)
       setStep(null)
-      setQuizPending(true)
     } else {
       localStorage.setItem(KEY_STEP, String(next))
       setStep(next)
       setVisible(false)
     }
-  }
-
-  // クイズページ待ちトースト
-  if (quizPending) {
-    return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto">
-        <div className="bg-gray-900 text-white text-sm rounded-2xl px-5 py-3.5 shadow-xl flex items-center gap-3 max-w-[320px]">
-          <span className="shrink-0 text-lg">🃏</span>
-          <p className="leading-snug">単語が溜まってきたらクイズページで復習できます 🃏</p>
-          <button
-            onClick={() => {
-              localStorage.setItem(KEY_SEEN, '1')
-              localStorage.removeItem(KEY_STEP)
-              setQuizPending(false)
-            }}
-            className="shrink-0 text-white/50 hover:text-white ml-1"
-            aria-label="閉じる"
-          >
-            <HiX className="size-4" />
-          </button>
-        </div>
-      </div>
-    )
   }
 
   if (waitMode && step !== null && STEPS[step]?.waitHint) {
@@ -255,7 +220,7 @@ export default function TutorialOverlay() {
           <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">{current.description}</p>
 
           <div className="flex justify-center gap-1.5 mb-4">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            {STEPS.map((_, i) => (
               <span key={i} className={`block size-1.5 rounded-full transition-colors ${i === step ? 'bg-primary' : 'bg-gray-200'}`} />
             ))}
           </div>
@@ -264,7 +229,7 @@ export default function TutorialOverlay() {
             onClick={advance}
             className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
           >
-            {current.autoSearch ? 'component を検索する' : '次へ'}
+            {step === STEPS.length - 1 ? 'はじめる' : current.autoSearch ? 'component を検索する' : '次へ'}
           </button>
         </div>
       </div>

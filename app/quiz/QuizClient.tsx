@@ -14,9 +14,8 @@ import Button from '@/components/Button'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { HiX } from 'react-icons/hi'
-import { KEY_SEEN, KEY_STEP, TOTAL_STEPS } from '@/components/TutorialOverlay'
 
-const QUIZ_CARD_STEP = 6
+const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
 
 type WordlistEntry = {
   word?: string
@@ -479,8 +478,8 @@ export default function QuizClient() {
     setResults([])
     setDone(false)
 
-    // チュートリアル step6 チェック
-    if (!localStorage.getItem(KEY_SEEN) && localStorage.getItem(KEY_STEP) === String(QUIZ_CARD_STEP)) {
+    // クイズカード初回表示時にチュートリアルを表示
+    if (!localStorage.getItem(QUIZ_CARD_TUTORIAL_KEY)) {
       setTimeout(() => setCardTutorialVisible(true), 400)
     }
   }
@@ -569,8 +568,7 @@ export default function QuizClient() {
   }
 
   const finishCardTutorial = () => {
-    localStorage.setItem(KEY_SEEN, '1')
-    localStorage.removeItem(KEY_STEP)
+    localStorage.setItem(QUIZ_CARD_TUTORIAL_KEY, '1')
     setCardTutorialVisible(false)
   }
 
@@ -598,11 +596,6 @@ export default function QuizClient() {
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
                 単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>
-              <div className="flex justify-center gap-1.5 mb-4">
-                {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-                  <span key={i} className={`block size-1.5 rounded-full transition-colors ${i === QUIZ_CARD_STEP ? 'bg-primary' : 'bg-gray-200'}`} />
-                ))}
-              </div>
               <button
                 onClick={finishCardTutorial}
                 className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
