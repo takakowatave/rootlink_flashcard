@@ -298,6 +298,7 @@ export const fetchWordlists = async (userId: string) => {
       word_id: row.word_id,
       word: row.words?.word ?? '',
       dictionary: null as SavedWordDictionary | null,
+      pinned_sense_id: row.pinned_sense_id ?? null,
     }))
   }
 
@@ -315,6 +316,7 @@ export const fetchWordlists = async (userId: string) => {
       word_id: row.word_id,
       word: row.words?.word ?? '',
       dictionary: null as SavedWordDictionary | null,
+      pinned_sense_id: row.pinned_sense_id ?? null,
     }))
   }
 
