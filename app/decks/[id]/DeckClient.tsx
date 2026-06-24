@@ -131,39 +131,66 @@ function Sparkles({ show }: { show: boolean }) {
   )
 }
 
-function DonutChart({ available, total }: { available: number; total: number }) {
-  const size = 96
-  const stroke = 10
+type WordStatus = 'mastered' | 'review' | 'unseen'
+
+function TriDonutChart({ mastered, review, unseen }: { mastered: number; review: number; unseen: number }) {
+  const total = mastered + review + unseen
+  if (total === 0) return null
+  const size = 180
+  const stroke = 16
   const r = (size - stroke) / 2
+  const cx = size / 2
+  const cy = size / 2
   const circ = 2 * Math.PI * r
-  const pct = total > 0 ? available / total : 0
-  const dash = pct * circ
+  const mFrac = mastered / total
+  const rFrac = review / total
+  const pct = Math.round((mastered / total) * 100)
+
+  const seg = (start: number, len: number) => ({
+    strokeDasharray: `${len * circ} ${(1 - len) * circ}`,
+    strokeDashoffset: -(start * circ),
+  })
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-center gap-4">
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={stroke} />
-          <circle
-            cx={size / 2} cy={size / 2} r={r} fill="none"
-            stroke={colors.primary} strokeWidth={stroke}
-            strokeDasharray={`${dash} ${circ}`}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dasharray 0.6s ease' }}
-          />
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          {/* background */}
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+          {/* 習得済 (green) */}
+          {mastered > 0 && (
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#4ade80" strokeWidth={stroke}
+              strokeLinecap="butt"
+              strokeDasharray={seg(0, mFrac).strokeDasharray}
+              strokeDashoffset={seg(0, mFrac).strokeDashoffset}
+            />
+          )}
+          {/* 要復習 (orange) */}
+          {review > 0 && (
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#fb923c" strokeWidth={stroke}
+              strokeLinecap="butt"
+              strokeDasharray={seg(mFrac, rFrac).strokeDasharray}
+              strokeDashoffset={seg(mFrac, rFrac).strokeDashoffset}
+            />
+          )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold text-gray-800 leading-none">{Math.round(pct * 100)}%</span>
+          <span className="text-4xl font-bold text-gray-900 leading-none">{pct}<span className="text-xl font-normal text-gray-500">%</span></span>
+          <span className="text-sm text-gray-400 mt-1">習得済</span>
         </div>
       </div>
-      <div className="flex flex-col gap-1 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block" />
-          <span className="text-gray-600">学習可能 <strong className="text-gray-800">{available}</strong> 語</span>
+      <div className="flex items-center gap-5 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" />
+          <span className="text-gray-500">未習得 <strong className="text-gray-700">{unseen}</strong></span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-200 inline-block" />
-          <span className="text-gray-400">全 <strong className="text-gray-600">{total}</strong> 語</span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" />
+          <span className="text-gray-500">要復習 <strong className="text-gray-700">{review}</strong></span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />
+          <span className="text-gray-500">習得済 <strong className="text-gray-700">{mastered}</strong></span>
         </div>
       </div>
     </div>
@@ -378,37 +405,79 @@ function ResultScreen({
   )
 }
 
+type QuizScope = 'random' | 'review'
+
 export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const router = useRouter()
   const [entries, setEntries] = useState<DeckWordEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [quizCards, setQuizCards] = useState<QuizCard[]>([])
   const [quizActive, setQuizActive] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
+  const [quizScope, setQuizScope] = useState<QuizScope>('random')
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
 
   useEffect(() => {
     toast.dismiss()
-    fetchDeckWords(deck.id).then(data => {
+    const load = async () => {
+      const [data, { data: authData }] = await Promise.all([
+        fetchDeckWords(deck.id),
+        supabase.auth.getUser(),
+      ])
       setEntries(data)
+
+      // クイズ履歴を取得して単語ステータスを計算
+      if (authData.user && data.length > 0) {
+        const words = data.map(e => e.word)
+        const { data: qr } = await supabase
+          .from('quiz_results')
+          .select('word, correct, created_at')
+          .eq('user_id', authData.user.id)
+          .in('word', words)
+          .order('created_at', { ascending: false })
+          .limit(10000)
+
+        const latestByWord = new Map<string, boolean>()
+        for (const row of ((qr ?? []) as { word: string; correct: boolean }[])) {
+          if (!latestByWord.has(row.word)) {
+            latestByWord.set(row.word, row.correct)
+          }
+        }
+        const statusMap = new Map<string, WordStatus>()
+        for (const entry of data) {
+          const latest = latestByWord.get(entry.word)
+          if (latest === undefined) statusMap.set(entry.word, 'unseen')
+          else if (latest) statusMap.set(entry.word, 'mastered')
+          else statusMap.set(entry.word, 'review')
+        }
+        setWordStatus(statusMap)
+      }
       setLoading(false)
-    })
+    }
+    load()
   }, [deck.id])
 
   const availableCount = entries.filter(e => !!e.dictionary).length
+  const masteredCount = [...wordStatus.values()].filter(s => s === 'mastered').length
+  const reviewCount = [...wordStatus.values()].filter(s => s === 'review').length
+  const unseenCount = entries.length - masteredCount - reviewCount
+
+  const reviewWords = entries.filter(e => wordStatus.get(e.word) === 'review' && !!e.dictionary)
 
   const startQuiz = useCallback(() => {
-    const built = buildQuizCards(entries)
+    const sourceEntries = quizScope === 'review' ? reviewWords : entries
+    const built = buildQuizCards(sourceEntries)
     setQuizCards(shuffle(built).slice(0, 10))
     setCurrentIndex(0)
     setResults([])
     setDone(false)
     setMode('example')
     setQuizActive(true)
-  }, [entries])
+  }, [entries, quizScope, reviewWords])
 
   const handleAnswer = (correct: boolean) => {
     const newResults = [...results, correct]
@@ -466,24 +535,48 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
         {/* デッキ情報カード */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
-              <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
-              {deck.description && <p className="text-sm text-gray-500 mt-1">{deck.description}</p>}
-            </div>
-            {!loading && (
-              <div className="shrink-0 ml-4">
-                <DonutChart available={availableCount} total={entries.length} />
-              </div>
-            )}
+          <div className="mb-2">
+            <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
+            <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
+            {deck.description && <p className="text-sm text-gray-500 mt-1">{deck.description}</p>}
           </div>
+
+          {/* ドーナツチャート */}
+          {!loading && (
+            <div className="flex justify-center py-4">
+              <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
+            </div>
+          )}
+
+          {/* 出題範囲セレクター */}
+          {!loading && availableCount > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setQuizScope('random')}
+                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-white'}`}
+                >
+                  <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
+                  <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
+                </button>
+                <button
+                  onClick={() => setQuizScope('review')}
+                  disabled={reviewWords.length === 0}
+                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-white'}`}
+                >
+                  <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
+                  <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* クイズボタン */}
         <Button
           onClick={startQuiz}
-          disabled={loading || availableCount === 0}
+          disabled={loading || availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
           variant="primary"
           size="lg"
           fullWidth
@@ -497,6 +590,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           {entries.map((entry, i) => {
             const meaning = getFirstMeaning(entry)
             const clickable = !!entry.dictionary
+            const status = wordStatus.get(entry.word)
             return (
               <div
                 key={`${entry.word}-${i}`}
@@ -509,6 +603,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
                 {meaning && (
                   <span className="text-gray-400 text-xs truncate flex-1">{meaning}</span>
                 )}
+                {status === 'mastered' && <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />}
+                {status === 'review' && <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />}
                 {clickable && <span className="text-gray-300 text-base leading-none shrink-0">›</span>}
               </div>
             )
