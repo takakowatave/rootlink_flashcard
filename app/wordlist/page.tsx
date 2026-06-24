@@ -170,60 +170,71 @@ export default function WordListPage() {
 
       {/* Streak */}
       {streak && (
-        <div className="px-4 py-2 border-b border-line flex items-center">
+        <div className="px-4 py-3 border-b border-line flex items-center">
           <StreakBadge streak={streak.current_streak} longest={streak.longest_streak} />
         </div>
       )}
 
-      {/* オリジナル単語リスト */}
-      <div className="px-4 pt-4 pb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700">オリジナル単語リスト</h2>
-        {wordList.length > 0 && (
-          <Link href="/quiz" className="text-xs text-primary font-medium hover:underline">復習する →</Link>
+      {/* ── オリジナル単語リスト ── */}
+      <section className="pt-6">
+        <div className="px-4 flex items-center justify-between mb-3">
+          <h2 className="text-xl font-bold text-gray-900">
+            オリジナル単語リスト
+            <span className="text-muted ml-1">›</span>
+          </h2>
+          <span className="text-sm text-muted">{wordList.length}語</span>
+        </div>
+
+        {wordList.length === 0 ? (
+          <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
+        ) : (
+          <div className="flex flex-col gap-3 px-3">
+            {wordList.map((item) => {
+              const d = item.dictionary
+              const pronunciation = buildPronunciation(d)
+              const senses = buildSenses(d, displayLocale)
+              const inflections: string[] = d?.inflections ?? []
+              const allSenses = Object.values(senses).flat()
+              const firstSenseId = allSenses[0]?.senseId ?? null
+              const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
+              return (
+                <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
+                  <EntryCard
+                    headword={item.word}
+                    pronunciation={pronunciation}
+                    etymology=""
+                    senses={senses}
+                    inflections={inflections}
+                    grammarTags={{}}
+                    isBookmarked={savedWords.includes(item.word)}
+                    onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
+                    pinnedSenseId={pinnedSenseId}
+                    displayLocale={displayLocale}
+                    compact
+                  />
+                </div>
+              )
+            })}
+          </div>
         )}
-      </div>
+      </section>
 
-      <div className="w-full overflow-x-hidden flex flex-col gap-3 px-3 py-3">
-        {wordList.map((item) => {
-          const d = item.dictionary
-          const pronunciation = buildPronunciation(d)
-          const senses = buildSenses(d, displayLocale)
-          const inflections: string[] = d?.inflections ?? []
-          const allSenses = Object.values(senses).flat()
-          const firstSenseId = allSenses[0]?.senseId ?? null
-          const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
-
-          return (
-            <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="group cursor-pointer">
-              <EntryCard
-                headword={item.word}
-                pronunciation={pronunciation}
-                etymology=""
-                senses={senses}
-                inflections={inflections}
-                grammarTags={{}}
-                isBookmarked={savedWords.includes(item.word)}
-                onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
-                pinnedSenseId={pinnedSenseId}
-                displayLocale={displayLocale}
-                compact
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      {/* デッキ */}
+      {/* ── デッキ ── */}
       {decks.length > 0 && (
-        <div className="border-t border-line mt-4 px-4 pt-4 pb-8">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">デッキ</h2>
-          <div className="flex flex-col gap-6">
+        <section className="pt-8 pb-12">
+          <div className="px-4 mb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              デッキ
+              <span className="text-muted ml-1">›</span>
+            </h2>
+          </div>
+          <div className="px-4 flex flex-col gap-6">
             {LABEL_ORDER.map(label => {
               const items = grouped[label]
               if (!items || items.length === 0) return null
               return (
-                <section key={label}>
-                  <p className="text-xs font-semibold text-muted mb-2">{label}</p>
+                <div key={label}>
+                  <p className="text-sm font-semibold text-muted mb-2">{label}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {items.map(deck => (
                       <button
@@ -238,11 +249,11 @@ export default function WordListPage() {
                       </button>
                     ))}
                   </div>
-                </section>
+                </div>
               )
             })}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Detail modal */}
