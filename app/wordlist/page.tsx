@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import EntryCard from "@/components/EntryCard"
-import Button from "@/components/Button"
 import WordPageClient from "@/components/WordPageClient"
 import { fetchWordlists, toggleSaveStatus, updateStreak } from "@/lib/supabaseApi"
 import type { StreakInfo } from "@/lib/supabaseApi"
@@ -24,57 +22,50 @@ export type SavedWordRow = {
   pinned_sense_id?: string | null
 }
 
-type DisplaySense = { senseId: string; meaning: string; example?: string; exampleTranslation?: string }
-
-function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-  if (dictionary?.audio?.audioPath) {
-    return {
-      phoneticSpelling: dictionary.ipa ?? undefined,
-      audioFile: `${supabaseUrl}/storage/v1/object/public/${dictionary.audio.audioPath}`,
-    }
-  }
-  return {
-    phoneticSpelling: dictionary?.ipa ?? undefined,
-    audioFile: undefined,
-  }
-}
-
-function buildSenses(dictionary: SavedWordDictionary | null | undefined, locale: DisplayLocale = 'ja'): Record<string, DisplaySense[]> {
+function getFirstMeaning(dictionary: SavedWordDictionary | null | undefined, locale: DisplayLocale): string {
   const senseGroups: SavedWordSenseGroup[] = dictionary?.senseGroups ?? []
   const jaLocales = dictionary?.locales?.ja?.senses ?? {}
-
-  const result: Record<string, DisplaySense[]> = {}
-
   for (const group of senseGroups) {
-    const pos = String(group.partOfSpeech ?? '').toLowerCase()
-    if (!pos) continue
-
-    const senses: DisplaySense[] = (group.senses ?? [])
-      .map((sense) => {
-        const senseId = String(sense.senseId ?? '')
-        const ja = jaLocales[senseId]
-        const meaning = locale === 'ja'
-          ? (ja?.meaning ?? sense.definition ?? '')
-          : (sense.definition ?? ja?.meaning ?? '')
-        return {
-          senseId,
-          meaning,
-          example: sense.example ?? undefined,
-          exampleTranslation: ja?.exampleTranslation ?? undefined,
-        }
-      })
-      .filter((s) => s.senseId && s.meaning)
-
-    if (senses.length > 0) result[pos] = senses
+    for (const sense of group.senses ?? []) {
+      const senseId = String(sense.senseId ?? '')
+      const ja = jaLocales[senseId]
+      const meaning = locale === 'ja'
+        ? (ja?.meaning ?? sense.definition ?? '')
+        : (sense.definition ?? ja?.meaning ?? '')
+      if (meaning) return meaning
+    }
   }
+  return ''
+}
 
-  return result
+function DonutChart({ total, available }: { total: number; available: number }) {
+  if (total === 0) return null
+  const pct = available / total
+  const r = 28
+  const circ = 2 * Math.PI * r
+  const dash = pct * circ
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r={r} fill="none" stroke="#e5e7eb" strokeWidth="8" />
+        <circle
+          cx="36" cy="36" r={r} fill="none"
+          stroke="#3b82f6" strokeWidth="8"
+          strokeDasharray={`${dash} ${circ - dash}`}
+          strokeLinecap="round"
+          transform="rotate(-90 36 36)"
+        />
+        <text x="36" y="40" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1f2937">
+          {Math.round(pct * 100)}%
+        </text>
+      </svg>
+      <span className="text-[11px] text-gray-400">辞書あり</span>
+    </div>
+  )
 }
 
 export default function WordListPage() {
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
-  const [savedWords, setSavedWords] = useState<string[]>([])
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -92,13 +83,10 @@ export default function WordListPage() {
       updateStreak(data.user.id),
     ])
     setWordList(words)
-    setSavedWords(words.map((w) => w.word))
     setStreak(streakInfo)
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   useEffect(() => {
     const handler = () => {
@@ -112,10 +100,8 @@ export default function WordListPage() {
   const handleToggleSave = async (word: SavedWordRow) => {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { toast.error("ログインが必要です"); return }
-
     const result = await toggleSaveStatus(word)
     if (!result.success) { toast.error("処理に失敗しました"); return }
-
     await load()
     toast.success("更新しました")
   }
@@ -131,6 +117,7 @@ export default function WordListPage() {
   }
 
   const handleOpenModal = (item: SavedWordRow) => {
+    if (!item.dictionary) return
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
@@ -138,6 +125,8 @@ export default function WordListPage() {
     setModalScrolled(false)
     setSelectedItem(item)
   }
+
+  const availableCount = wordList.filter(w => !!w.dictionary).length
 
   return (
     <>
@@ -158,58 +147,75 @@ export default function WordListPage() {
         </button>
       )}
 
-      {/* ===== Streak ===== */}
-      {streak && (
-        <div className="px-4 py-2 border-b border-gray-100 flex items-center">
-          <StreakBadge streak={streak.current_streak} longest={streak.longest_streak} />
-        </div>
-      )}
+      <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6">
 
-      {/* ===== Quiz / Deck CTA ===== */}
-      <div className="px-4 py-2 border-b border-gray-100 flex justify-end gap-2">
-        <Link href="/decks">
-          <Button variant="secondary" size="sm">デッキ</Button>
-        </Link>
-        {wordList.length > 0 && (
-          <Link href="/quiz">
-            <Button variant="secondary" size="sm">復習する</Button>
-          </Link>
+        {/* ===== Streak + deck link ===== */}
+        {streak && (
+          <div className="flex items-center justify-between">
+            <StreakBadge streak={streak.current_streak} longest={streak.longest_streak} />
+            <Link href="/decks" className="text-sm text-blue-500 hover:underline">デッキ一覧 →</Link>
+          </div>
         )}
-      </div>
 
-      {/* ===== Word list ===== */}
-      <div className="w-full overflow-x-hidden flex flex-col gap-3 px-3 py-3">
-        {wordList.map((item) => {
-          const d = item.dictionary
-          const pronunciation = buildPronunciation(d)
-          const senses = buildSenses(d, displayLocale)
-          const inflections: string[] = d?.inflections ?? []
-          const allSenses = Object.values(senses).flat()
-          const firstSenseId = allSenses[0]?.senseId ?? null
-          const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
-
-          return (
-            <div
-              key={item.saved_id ?? item.word_id}
-              onClick={() => handleOpenModal(item)}
-              className="group cursor-pointer"
-            >
-              <EntryCard
-                headword={item.word}
-                pronunciation={pronunciation}
-                etymology=""
-                senses={senses}
-                inflections={inflections}
-                grammarTags={{}}
-                isBookmarked={savedWords.includes(item.word)}
-                onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
-                pinnedSenseId={pinnedSenseId}
-                displayLocale={displayLocale}
-                compact
-              />
+        {/* ===== Deck card ===== */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium mb-0.5">マイリスト</p>
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">オリジナル単語リスト</h1>
+              <p className="text-sm text-gray-500 mt-1">{wordList.length} 語</p>
             </div>
-          )
-        })}
+            <DonutChart total={wordList.length} available={availableCount} />
+          </div>
+
+          {/* Quiz button */}
+          {wordList.length > 0 && (
+            <div className="px-5 pb-5">
+              <Link href="/quiz">
+                <button className="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm transition-colors">
+                  クイズを始める
+                </button>
+              </Link>
+            </div>
+          )}
+
+          {wordList.length > 0 && <div className="h-px bg-gray-100" />}
+
+          {/* Word list */}
+          <ul>
+            {wordList.map((item, idx) => {
+              const meaning = getFirstMeaning(item.dictionary, displayLocale)
+              const hasDict = !!item.dictionary
+              return (
+                <li
+                  key={item.saved_id ?? item.word_id}
+                  className={`flex items-center gap-3 px-5 py-3 ${hasDict ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : ''} transition-colors ${idx > 0 ? 'border-t border-gray-50' : ''}`}
+                  onClick={() => handleOpenModal(item)}
+                >
+                  <span className="text-xs text-gray-300 w-6 text-right flex-shrink-0 tabular-nums">{idx + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{item.word}</p>
+                    {meaning && (
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{meaning}</p>
+                    )}
+                  </div>
+                  {hasDict && (
+                    <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+
+          {wordList.length === 0 && (
+            <div className="px-5 py-10 text-center text-gray-400 text-sm">
+              単語を検索して保存してみましょう
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ===== Detail modal ===== */}
@@ -218,15 +224,11 @@ export default function WordListPage() {
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-hidden"
           onClick={handleCloseModal}
         >
-          {/* Overlay */}
           <div className="absolute inset-0 bg-black/40" />
-
-          {/* Panel */}
           <div
             className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90dvh] flex flex-col shadow-xl overflow-x-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
               <span className={`text-base font-semibold text-gray-800 transition-opacity duration-150 ${modalScrolled ? 'opacity-100' : 'opacity-0'}`}>{selectedItem.word}</span>
               <div className="flex items-center gap-1">
@@ -246,8 +248,6 @@ export default function WordListPage() {
                 </button>
               </div>
             </div>
-
-            {/* Content */}
             <div
               className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8"
               onScroll={(e) => setModalScrolled((e.currentTarget as HTMLDivElement).scrollTop > 40)}
