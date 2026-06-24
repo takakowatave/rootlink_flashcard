@@ -139,9 +139,9 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
             </div>
           </div>
         </form>
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-500">英語として確認できませんでした</p>
-        )}
+        <p className="mt-2 text-center text-xs text-gray-400">
+          {error ? '英語として確認できませんでした' : '英単語を入力して Enter または → で検索'}
+        </p>
       </div>
 
       {/* Trees */}
