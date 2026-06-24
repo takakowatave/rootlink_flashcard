@@ -388,6 +388,15 @@ export type StreakInfo = {
   last_activity_date: string | null
 }
 
+export async function getStreak(userId: string): Promise<StreakInfo | null> {
+  const { data } = await supabase
+    .from('user_streaks')
+    .select('current_streak, longest_streak, last_activity_date')
+    .eq('user_id', userId)
+    .single()
+  return (data as StreakInfo) ?? null
+}
+
 export async function updateStreak(userId: string): Promise<StreakInfo> {
   const today = new Date().toISOString().slice(0, 10)
 

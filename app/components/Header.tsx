@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { getStreak } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
 import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
@@ -18,6 +19,7 @@ const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [currentStreak, setCurrentStreak] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -89,12 +91,12 @@ const Header = () => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single<Profile>();
-      if (data) setProfile(data);
+      const [profileData, streakData] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
+        getStreak(user.id),
+      ]);
+      if (profileData.data) setProfile(profileData.data);
+      if (streakData) setCurrentStreak(streakData.current_streak);
     };
     load();
   }, []);
@@ -148,11 +150,6 @@ const Header = () => {
 
           {profile && (
             <>
-              {/* PC only nav */}
-              <Link href="/wordlist" className="hidden md:block">
-                <Button variant="secondary" size="sm">単語リスト</Button>
-              </Link>
-
               {/* SP: 検索アイコン */}
               <button
                 type="button"
@@ -165,6 +162,12 @@ const Header = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
+
+              {currentStreak > 0 && (
+                <span className="flex items-center gap-0.5 text-sm font-bold text-quiz-review tabular-nums select-none">
+                  🔥{currentStreak}
+                </span>
+              )}
 
               <button onClick={() => setIsModalOpen(true)}>
                 {profile.avatar_url ? (
