@@ -214,7 +214,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   return (
     <div className="flex flex-col bg-white min-h-screen">
       <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
-        <Button onClick={() => router.push('/decks')} variant="secondary" size="sm">戻る</Button>
+        <Button onClick={() => router.push('/wordlist')} variant="secondary" size="sm">戻る</Button>
         <h1 className="text-sm font-semibold text-gray-800 ml-3">{deck.name}</h1>
       </header>
 
