@@ -138,8 +138,8 @@ export default function EntryCard({
 
   // 「〜から来ています。」系の冗長テキストは非表示（パーツがある場合は語源パーツで伝わる）
   const isRedundantDescription = (text: string) =>
-    /から来ています[。．]?\s*$/.test(text.trim()) ||
-    /^.{0,30}から来ています[。．]?\s*$/.test(text.trim())
+    /から来てい(ます|る)[。．]?\s*$/.test(text.trim()) ||
+    /^.{0,30}から来てい(ます|る)[。．]?\s*$/.test(text.trim())
 
   const hasEtymologyText = Boolean(
     displayedEtymologyDescription?.trim() &&

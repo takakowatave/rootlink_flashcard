@@ -376,3 +376,48 @@ export const fetchDeckWords = async (deckId: string) => {
     pinned_sense_id: null as string | null,
   }))
 }
+
+/* =========================================
+ ストリーク
+========================================= */
+export type StreakInfo = {
+  current_streak: number
+  longest_streak: number
+  last_activity_date: string | null
+}
+
+export async function updateStreak(userId: string): Promise<StreakInfo> {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data: existing } = await supabase
+    .from('user_streaks')
+    .select('current_streak, longest_streak, last_activity_date')
+    .eq('user_id', userId)
+    .single()
+
+  if (!existing) {
+    // 初回
+    const row = { user_id: userId, current_streak: 1, longest_streak: 1, last_activity_date: today }
+    await supabase.from('user_streaks').insert(row)
+    return { current_streak: 1, longest_streak: 1, last_activity_date: today }
+  }
+
+  const last = existing.last_activity_date
+  if (last === today) {
+    // 今日すでに記録済み
+    return existing as StreakInfo
+  }
+
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const newStreak = last === yesterday ? existing.current_streak + 1 : 1
+  const newLongest = Math.max(newStreak, existing.longest_streak)
+
+  await supabase.from('user_streaks').update({
+    current_streak: newStreak,
+    longest_streak: newLongest,
+    last_activity_date: today,
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', userId)
+
+  return { current_streak: newStreak, longest_streak: newLongest, last_activity_date: today }
+}

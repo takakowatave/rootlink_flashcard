@@ -6,10 +6,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
-import { BsVolumeUp } from 'react-icons/bs'
+import { BsVolumeUp, BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import { colors } from '@/lib/colors'
-import { HiX } from 'react-icons/hi'
-import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import WordPageClient from '@/components/WordPageClient'
 import toast from 'react-hot-toast'
 
@@ -38,6 +36,20 @@ type QuizCard = {
 }
 
 type QuizMode = 'example' | 'word'
+
+function getFirstMeaning(entry: DeckWordEntry): string {
+  const d = entry.dictionary
+  if (!d) return ''
+  const senseGroups: SavedWordSenseGroup[] = d.senseGroups ?? []
+  const jaLocales = d.locales?.ja?.senses ?? {}
+  for (const group of senseGroups) {
+    for (const sense of group.senses ?? []) {
+      const ja = jaLocales[sense.senseId ?? ''] ?? {}
+      return ja.meaning ?? sense.definition ?? ''
+    }
+  }
+  return ''
+}
 
 function buildQuizCards(entries: DeckWordEntry[]): QuizCard[] {
   const cards: QuizCard[] = []
@@ -119,14 +131,73 @@ function Sparkles({ show }: { show: boolean }) {
   )
 }
 
+function DonutChart({ available, total }: { available: number; total: number }) {
+  const size = 96
+  const stroke = 10
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  const pct = total > 0 ? available / total : 0
+  const dash = pct * circ
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={stroke} />
+          <circle
+            cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={colors.primary} strokeWidth={stroke}
+            strokeDasharray={`${dash} ${circ}`}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.6s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold text-gray-800 leading-none">{Math.round(pct * 100)}%</span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block" />
+          <span className="text-gray-600">学習可能 <strong className="text-gray-800">{available}</strong> 語</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-gray-200 inline-block" />
+          <span className="text-gray-400">全 <strong className="text-gray-600">{total}</strong> 語</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WordDetailModal({ entry, onClose }: { entry: DeckWordEntry; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col shadow-xl overflow-x-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-1">
+            <a href={`/word/${entry.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+              <BsArrowUpRightSquare size={24} />
+            </a>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+              <BsX size={24} />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          <WordPageClient word={entry.word} dictionary={entry.dictionary} savedId={undefined} initialPinnedSenseId={null} noCard />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CardView({
-  card,
-  onAnswer,
-  current,
-  total,
-  mode,
-  onModeChange,
-  onQuit,
+  card, onAnswer, current, total, mode, onModeChange, onQuit,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -242,11 +313,7 @@ function CardView({
 }
 
 function ResultScreen({
-  cards,
-  results,
-  entries,
-  onRetryWrong,
-  onBack,
+  cards, results, entries, onRetryWrong, onBack,
 }: {
   cards: QuizCard[]
   results: boolean[]
@@ -281,7 +348,8 @@ function ResultScreen({
               <Button onClick={onRetryWrong} variant="secondary" size="sm"><span>↺</span> {wrongCards.length}問を復習</Button>
             </div>
             {wrongCards.map((card, i) => (
-              <div key={`wrong-${card.word}-${i}`} onClick={() => setSelectedEntry(entries.find(e => e.word === card.word) ?? null)}
+              <div key={`wrong-${card.word}-${i}`}
+                onClick={() => setSelectedEntry(entries.find(e => e.word === card.word) ?? null)}
                 className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
@@ -294,7 +362,8 @@ function ResultScreen({
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-secondary mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
-              <div key={`correct-${card.word}-${i}`} onClick={() => setSelectedEntry(entries.find(e => e.word === card.word) ?? null)}
+              <div key={`correct-${card.word}-${i}`}
+                onClick={() => setSelectedEntry(entries.find(e => e.word === card.word) ?? null)}
                 className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
@@ -303,22 +372,7 @@ function ResultScreen({
             ))}
           </div>
         )}
-        {selectedEntry && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setSelectedEntry(null)}>
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col shadow-xl overflow-x-hidden" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-1">
-                  <a href={`/word/${selectedEntry.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"><BsArrowUpRightSquare size={24} /></a>
-                  <button onClick={() => setSelectedEntry(null)} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"><BsX size={24} /></button>
-                </div>
-              </div>
-              <div className="overflow-y-auto flex-1">
-                <WordPageClient word={selectedEntry.word} dictionary={selectedEntry.dictionary} savedId={undefined} initialPinnedSenseId={null} noCard />
-              </div>
-            </div>
-          </div>
-        )}
+        {selectedEntry && <WordDetailModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />}
       </div>
     </div>
   )
@@ -334,17 +388,17 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [results, setResults] = useState<boolean[]>([])
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
-  const [availableCount, setAvailableCount] = useState(0)
+  const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
 
   useEffect(() => {
     toast.dismiss()
     fetchDeckWords(deck.id).then(data => {
       setEntries(data)
-      const built = buildQuizCards(data)
-      setAvailableCount(built.length)
       setLoading(false)
     })
   }, [deck.id])
+
+  const availableCount = entries.filter(e => !!e.dictionary).length
 
   const startQuiz = useCallback(() => {
     const built = buildQuizCards(entries)
@@ -410,20 +464,23 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       </header>
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
+        {/* デッキ情報カード */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
-          <div className="flex items-start justify-between mb-1">
-            <div>
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
               <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
               <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
+              {deck.description && <p className="text-sm text-gray-500 mt-1">{deck.description}</p>}
             </div>
-          </div>
-          {deck.description && <p className="text-sm text-gray-500 mt-1">{deck.description}</p>}
-          <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
-            <span>全 <strong className="text-gray-800">{entries.length}</strong> 語</span>
-            {!loading && <span>生成済み <strong className="text-gray-800">{availableCount}</strong> 語</span>}
+            {!loading && (
+              <div className="shrink-0 ml-4">
+                <DonutChart available={availableCount} total={entries.length} />
+              </div>
+            )}
           </div>
         </div>
 
+        {/* クイズボタン */}
         <Button
           onClick={startQuiz}
           disabled={loading || availableCount === 0}
@@ -435,44 +492,31 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           {loading ? '読み込み中...' : availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
         </Button>
 
-        {availableCount === 0 && !loading && (
-          <p className="text-xs text-gray-400 text-center -mt-4">
-            単語が検索されると順次クイズに追加されます
-          </p>
-        )}
-
-        <div className="space-y-1">
+        {/* 単語リスト */}
+        <div className="space-y-0">
           {entries.map((entry, i) => {
-            const hasDictionary = !!entry.dictionary
+            const meaning = getFirstMeaning(entry)
+            const clickable = !!entry.dictionary
             return (
               <div
                 key={`${entry.word}-${i}`}
-                className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0"
+                onClick={() => clickable && setSelectedEntry(entry)}
+                className={`flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 ${clickable ? 'cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded' : ''}`}
               >
-                <span className={`font-semibold text-sm w-40 truncate ${hasDictionary ? 'text-gray-800' : 'text-gray-300'}`}>
+                <span className={`font-semibold text-sm w-40 truncate ${clickable ? 'text-gray-800' : 'text-gray-300'}`}>
                   {entry.word}
                 </span>
-                {hasDictionary && (
-                  <span className="text-gray-400 text-xs truncate flex-1">
-                    {(() => {
-                      const d = entry.dictionary!
-                      const senseGroups: SavedWordSenseGroup[] = d.senseGroups ?? []
-                      const jaLocales = d.locales?.ja?.senses ?? {}
-                      for (const group of senseGroups) {
-                        for (const sense of group.senses ?? []) {
-                          const ja = jaLocales[sense.senseId ?? ''] ?? {}
-                          return ja.meaning ?? sense.definition ?? ''
-                        }
-                      }
-                      return ''
-                    })()}
-                  </span>
+                {meaning && (
+                  <span className="text-gray-400 text-xs truncate flex-1">{meaning}</span>
                 )}
+                {clickable && <span className="text-gray-300 text-base leading-none shrink-0">›</span>}
               </div>
             )
           })}
         </div>
       </div>
+
+      {selectedEntry && <WordDetailModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />}
     </div>
   )
 }

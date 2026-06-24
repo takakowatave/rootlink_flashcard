@@ -5,7 +5,9 @@ import Link from "next/link"
 import EntryCard from "@/components/EntryCard"
 import Button from "@/components/Button"
 import WordPageClient from "@/components/WordPageClient"
-import { fetchWordlists, toggleSaveStatus } from "@/lib/supabaseApi"
+import { fetchWordlists, toggleSaveStatus, updateStreak } from "@/lib/supabaseApi"
+import type { StreakInfo } from "@/lib/supabaseApi"
+import StreakBadge from "@/components/StreakBadge"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
@@ -76,6 +78,7 @@ export default function WordListPage() {
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [streak, setStreak] = useState<StreakInfo | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -84,9 +87,13 @@ export default function WordListPage() {
   const load = async () => {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); return }
-    const words = await fetchWordlists(data.user.id)
+    const [words, streakInfo] = await Promise.all([
+      fetchWordlists(data.user.id),
+      updateStreak(data.user.id),
+    ])
     setWordList(words)
     setSavedWords(words.map((w) => w.word))
+    setStreak(streakInfo)
   }
 
   useEffect(() => {
@@ -149,6 +156,13 @@ export default function WordListPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </button>
+      )}
+
+      {/* ===== Streak ===== */}
+      {streak && (
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center">
+          <StreakBadge streak={streak.current_streak} longest={streak.longest_streak} />
+        </div>
       )}
 
       {/* ===== Quiz / Deck CTA ===== */}
