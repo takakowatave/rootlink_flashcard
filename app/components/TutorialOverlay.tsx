@@ -104,17 +104,14 @@ export default function TutorialOverlay() {
         return
       }
 
-      const saved = localStorage.getItem(STEP_PREFIX + uid)
-      const savedStep = saved ? parseInt(saved, 10) : 0
-      if (savedStep >= STEPS.length) {
-        _completedUsers.add(uid)
-        localStorage.removeItem(STEP_PREFIX + uid)
-        await markTutorialCompleted(uid)
-        return
-      }
+      // 「表示する」と決まった時点で即DBに完了を記録する。
+      // 完了まで到達しなくても二度と再表示されないようにするため。
       _initializedUsers.add(uid)
+      _completedUsers.add(uid)
+      void markTutorialCompleted(uid)
+
       setUserId(uid)
-      setStep(savedStep)
+      setStep(0)
       setAuthed(true)
     }
 
@@ -168,19 +165,6 @@ export default function TutorialOverlay() {
     window.addEventListener('resize', updateRect)
     return () => window.removeEventListener('resize', updateRect)
   }, [visible, updateRect])
-
-  // ×ボタン: チュートリアル全体を即終了して完了扱いにする（1ステップ進めるのではない）
-  const skip = () => {
-    if (userId) {
-      _completedUsers.add(userId)
-      _initializedUsers.delete(userId)
-      localStorage.removeItem(STEP_PREFIX + userId)
-      void markTutorialCompleted(userId)
-    }
-    setWaitMode(false)
-    setVisible(false)
-    setStep(null)
-  }
 
   const advance = () => {
     const current = step !== null ? STEPS[step] : null
@@ -269,7 +253,7 @@ export default function TutorialOverlay() {
         }
       >
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          <button onClick={skip} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="スキップ">
+          <button onClick={advance} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="閉じる">
             <HiX className="size-4" />
           </button>
 
