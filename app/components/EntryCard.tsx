@@ -377,7 +377,7 @@ export default function EntryCard({
                   {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => {
                     const isPinned = pinnedSenseId === sense.senseId
                     return (
-                      <div key={sense.senseId} className="group flex items-start gap-2">
+                      <div key={sense.senseId} className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
                         <div className="flex-1 min-w-0">
                           <p className="text-base font-medium text-black">{sense.meaning}</p>
 
