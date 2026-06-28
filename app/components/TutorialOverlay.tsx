@@ -13,6 +13,19 @@ const STEP_PREFIX = 'rootlink_tutorial_step_'
 const _initializedUsers = new Set<string>()
 const _completedUsers = new Set<string>()
 
+/**
+ * チュートリアル完了をDBに記録する。
+ * supabase-js のクエリビルダーは await/then されるまで HTTP を送らないため、
+ * 必ず await して実行＆エラーを握りつぶさないようにする。
+ */
+async function markTutorialCompleted(uid: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ tutorial_completed: true })
+    .eq('id', uid)
+  if (error) console.error('TUTORIAL COMPLETE WRITE FAILED:', error)
+}
+
 const PADDING = 10
 
 type Step = {
@@ -96,7 +109,7 @@ export default function TutorialOverlay() {
       if (savedStep >= STEPS.length) {
         _completedUsers.add(uid)
         localStorage.removeItem(STEP_PREFIX + uid)
-        await supabase.from('profiles').update({ tutorial_completed: true }).eq('id', uid)
+        await markTutorialCompleted(uid)
         return
       }
       _initializedUsers.add(uid)
@@ -171,7 +184,8 @@ export default function TutorialOverlay() {
         _completedUsers.add(userId)
         _initializedUsers.delete(userId)
         localStorage.removeItem(STEP_PREFIX + userId)
-        supabase.from('profiles').update({ tutorial_completed: true }).eq('id', userId)
+        // supabase-js のクエリは then/await されるまで実行されないため必ず await する
+        void markTutorialCompleted(userId)
       }
       setVisible(false)
       setStep(null)
