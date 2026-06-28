@@ -169,6 +169,19 @@ export default function TutorialOverlay() {
     return () => window.removeEventListener('resize', updateRect)
   }, [visible, updateRect])
 
+  // ×ボタン: チュートリアル全体を即終了して完了扱いにする（1ステップ進めるのではない）
+  const skip = () => {
+    if (userId) {
+      _completedUsers.add(userId)
+      _initializedUsers.delete(userId)
+      localStorage.removeItem(STEP_PREFIX + userId)
+      void markTutorialCompleted(userId)
+    }
+    setWaitMode(false)
+    setVisible(false)
+    setStep(null)
+  }
+
   const advance = () => {
     const current = step !== null ? STEPS[step] : null
     const next = (step ?? 0) + 1
@@ -256,7 +269,7 @@ export default function TutorialOverlay() {
         }
       >
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          <button onClick={advance} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="スキップ">
+          <button onClick={skip} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="スキップ">
             <HiX className="size-4" />
           </button>
 
