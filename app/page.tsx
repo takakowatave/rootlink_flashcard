@@ -10,6 +10,7 @@ import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { HiSearch } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
+import Dashboard from '@/components/Dashboard'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -22,12 +23,13 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showStickySearch, setShowStickySearch] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace('/wordlist')
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session)
     })
-  }, [router])
+  }, [])
 
   useEffect(() => {
     const el = heroRef.current
@@ -68,6 +70,9 @@ export default function HomePage() {
       setIsLoading(false)
     }
   }
+
+  if (isLoggedIn === null) return null
+  if (isLoggedIn) return <Dashboard />
 
   return (
     <main>
