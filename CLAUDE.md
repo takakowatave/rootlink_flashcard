@@ -100,6 +100,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - ストリーク表示（Headerアバター隣に🔥N、user_streaksテーブル）
 - クイズ機能（フラッシュカード・○/×・覚えた/まだ分岐・間違えた単語だけ再挑戦）
 - quiz_results テーブル（正誤・日時記録）
+- オンボーディングチュートリアル（TutorialOverlay・5ステップ・完了判定は `profiles.tutorial_completed`）
 - プライバシーポリシーページ
 - サインアップ同意チェックボックス
 - フッター（プライバシー・お問い合わせ）
@@ -109,6 +110,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 
 ## 設計方針・決定事項
 
+- **オンボーディング完了判定**: localStorageではなくDB（`profiles.tutorial_completed`）で管理。ブラウザ単位だとアカウント削除・再作成しても発火しないため。新規アカウントは必ず発火する。途中ステップのみユーザーIDごとのlocalStorageキーで保持
 - **語源抽出**: CSVカタログではなくAIが `rawEtymology` テキストから直接抽出（精度が高い）
 - **辞書キャッシュ**: `RewrittenPayload` 形式で `dictionary_cache` に保存。first-write-wins
 - **型安全**: `any` 型は禁止。共有型は `/app/types/` に集約（Dictionary.ts / Etymology.ts / DisplayLocale.ts など）
