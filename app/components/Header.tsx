@@ -181,38 +181,44 @@ const Header = () => {
 
       {/* SP: 検索オーバーレイ */}
       {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-black/40 flex flex-col">
-          <div className="bg-white px-4 py-3 flex items-center gap-3 shadow">
-            <form onSubmit={handleSearch} className="flex-1 flex items-center relative">
-              <input
-                ref={mobileInputRef}
-                value={searchValue}
-                onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
-                placeholder="Search a word"
-                disabled={isSearching}
-                className={`w-full rounded-full border bg-gray-50 px-4 py-2.5 text-base focus:outline-none disabled:opacity-50 ${searchError ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-primary'}`}
-              />
-              {searchError && (
-                <p className="absolute -bottom-5 left-4 text-xs text-red-500">見つかりませんでした</p>
-              )}
-              {isSearching && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg className="h-4 w-4 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col">
+          {/* 背景タップで閉じる */}
+          <div className="flex-1 bg-black/40" onClick={() => setMobileSearchOpen(false)} />
+          {/* 下部パネル */}
+          <div className="bg-white px-4 pt-3 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="text-sm font-bold text-primary"
+              >
+                閉じる
+              </button>
+            </div>
+            <form onSubmit={handleSearch}>
+              <div className={`flex items-center h-12 bg-white border rounded-full pl-4 pr-3 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
+                <input
+                  ref={mobileInputRef}
+                  value={searchValue}
+                  onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
+                  placeholder="Search a word..."
+                  disabled={isSearching}
+                  className="flex-1 min-w-0 text-base text-black bg-transparent outline-none disabled:opacity-50"
+                />
+                {isSearching ? (
+                  <svg className="size-5 animate-spin text-muted shrink-0" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                </span>
+                ) : (
+                  <HiSearch className="size-5 text-muted shrink-0" />
+                )}
+              </div>
+              {searchError && (
+                <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>
               )}
             </form>
-            <button
-              type="button"
-              onClick={() => setMobileSearchOpen(false)}
-              className="text-gray-400 hover:text-gray-600 text-sm shrink-0"
-            >
-              キャンセル
-            </button>
           </div>
-          <div className="flex-1" onClick={() => setMobileSearchOpen(false)} />
         </div>
       )}
 
