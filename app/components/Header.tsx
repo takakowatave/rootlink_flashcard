@@ -109,31 +109,29 @@ const Header = () => {
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
 
-        {/* 中央：検索フォーム（ログイン済みのみ） */}
-        {profile && (
-          <form
-            onSubmit={handleSearch}
-            className="hidden md:flex flex-1 items-center justify-center"
-          >
-            <div data-tutorial="search" className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
-              <input
-                value={searchValue}
-                onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
-                placeholder="Search a word..."
-                disabled={isSearching}
-                className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
-              />
-              {isSearching ? (
-                <svg className="size-5 animate-spin text-muted shrink-0" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-              ) : (
-                <HiSearch className="size-5 text-muted shrink-0" />
-              )}
-            </div>
-          </form>
-        )}
+        {/* 中央：検索フォーム（PC常時表示） */}
+        <form
+          onSubmit={handleSearch}
+          className="hidden md:flex flex-1 items-center justify-center"
+        >
+          <div data-tutorial="search" className={`flex items-center w-full max-w-[400px] h-8 bg-white border rounded-full pl-4 pr-2 gap-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
+            <input
+              value={searchValue}
+              onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
+              placeholder="Search a word..."
+              disabled={isSearching}
+              className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
+            />
+            {isSearching ? (
+              <svg className="size-5 animate-spin text-muted shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              <HiSearch className="size-5 text-muted shrink-0" />
+            )}
+          </div>
+        </form>
 
         {/* 右：アクション */}
         <div className="ml-auto flex items-center gap-2 shrink-0">
