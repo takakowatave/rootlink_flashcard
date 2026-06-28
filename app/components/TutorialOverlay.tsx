@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 
-// グローバルチュートリアル（step 0-4）のキー
-const KEY_SEEN = 'rootlink_tutorial_v7_seen'
-const KEY_STEP = 'rootlink_tutorial_v7_step'
+// チュートリアル完了フラグはDB（profiles.tutorial_completed）で管理。
+// 途中ステップだけページ遷移をまたぐためユーザーIDごとに localStorage に保持する。
+const STEP_PREFIX = 'rootlink_tutorial_step_'
 
 const PADDING = 10
 
@@ -62,34 +62,44 @@ type SpotlightRect = { top: number; left: number; width: number; height: number 
 export default function TutorialOverlay() {
   const pathname = usePathname()
   const [authed, setAuthed] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
   const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
   const [rect, setRect] = useState<SpotlightRect | null>(null)
 
   useEffect(() => {
-    if (localStorage.getItem(KEY_SEEN)) return
+    let cancelled = false
 
-    const init = (session: { user: unknown } | null) => {
-      if (!session) return
-      if (localStorage.getItem(KEY_SEEN)) return
-      const saved = localStorage.getItem(KEY_STEP)
+    const init = async (uid: string | undefined) => {
+      if (!uid) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tutorial_completed')
+        .eq('id', uid)
+        .single()
+      if (cancelled) return
+      // プロフィール未作成 or 完了済みなら出さない
+      if (!profile || profile.tutorial_completed) return
+
+      const saved = localStorage.getItem(STEP_PREFIX + uid)
       const savedStep = saved ? parseInt(saved, 10) : 0
       if (savedStep >= STEPS.length) {
-        localStorage.setItem(KEY_SEEN, '1')
-        localStorage.removeItem(KEY_STEP)
+        localStorage.removeItem(STEP_PREFIX + uid)
+        await supabase.from('profiles').update({ tutorial_completed: true }).eq('id', uid)
         return
       }
+      setUserId(uid)
       setStep(savedStep)
       setAuthed(true)
     }
 
-    supabase.auth.getSession().then(({ data }) => init(data.session))
+    supabase.auth.getSession().then(({ data }) => init(data.session?.user?.id))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      init(session)
+      init(session?.user?.id)
     })
-    return () => subscription.unsubscribe()
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [])
 
   useEffect(() => {
@@ -146,13 +156,15 @@ export default function TutorialOverlay() {
     }
 
     if (next >= STEPS.length) {
-      // グローバルチュートリアル完了 → ここで終わり。クイズとは無関係
-      localStorage.setItem(KEY_SEEN, '1')
-      localStorage.removeItem(KEY_STEP)
+      // チュートリアル完了 → DBに記録
+      if (userId) {
+        localStorage.removeItem(STEP_PREFIX + userId)
+        supabase.from('profiles').update({ tutorial_completed: true }).eq('id', userId)
+      }
       setVisible(false)
       setStep(null)
     } else {
-      localStorage.setItem(KEY_STEP, String(next))
+      if (userId) localStorage.setItem(STEP_PREFIX + userId, String(next))
       setStep(next)
       setVisible(false)
     }
