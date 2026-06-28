@@ -119,7 +119,7 @@ const Header = () => {
               <input
                 value={searchValue}
                 onChange={(e) => { setSearchValue(e.target.value); setSearchError(false); }}
-                placeholder=""
+                placeholder="Search a word..."
                 disabled={isSearching}
                 className="flex-1 min-w-0 text-sm text-black bg-transparent outline-none disabled:opacity-50"
               />
