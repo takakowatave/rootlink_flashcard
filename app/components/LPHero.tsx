@@ -93,21 +93,42 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         関連性で単語を<br className="md:hidden" /><span className="text-primary">芋づる式</span>に覚えよう
       </h1>
 
-      {/* Search bar — 装飾のみ。SP はボトムシート、PC はヘッダー検索を使う */}
+      {/* Search bar */}
       <div className="mb-6 w-full max-w-[600px]" style={anim(0.15)}>
-        <div
-          className="p-[6px] rounded-[90px] pointer-events-none select-none md:pointer-events-none"
-          style={{
-            backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)`
-          }}
+        {/* SP: タップでボトムシートを開く */}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+          className="md:hidden w-full text-left"
+          aria-label="検索"
         >
-          <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[50px] md:h-[68px]">
+          <div
+            className="p-[6px] rounded-[90px] pointer-events-none"
+            style={{ backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)` }}
+          >
+            <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[50px]">
+              <div className="relative flex-1">
+                <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] text-gray-800">
+                  <span>{typed}</span>
+                  <span className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`} />
+                </div>
+              </div>
+              <svg className="h-8 w-8 ml-3 text-[#01c3a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </button>
+        {/* PC: 完全に装飾のみ */}
+        <div
+          className="hidden md:block p-[6px] rounded-[90px] pointer-events-none select-none"
+          style={{ backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)` }}
+        >
+          <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[68px]">
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] md:text-[38px] text-gray-800">
+              <div className="pointer-events-none absolute inset-0 flex items-center text-[38px] text-gray-800">
                 <span>{typed}</span>
-                <span
-                  className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`}
-                />
+                <span className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`} />
               </div>
             </div>
             <svg className="h-8 w-8 ml-3 text-[#01c3a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
