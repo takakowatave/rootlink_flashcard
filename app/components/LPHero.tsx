@@ -93,55 +93,28 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         関連性で単語を<br className="md:hidden" /><span className="text-primary">芋づる式</span>に覚えよう
       </h1>
 
-      {/* Search bar */}
+      {/* Search bar — 装飾のみ。SP はボトムシート、PC はヘッダー検索を使う */}
       <div className="mb-6 w-full max-w-[600px]" style={anim(0.15)}>
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
-          <div
-            className="p-[6px] rounded-[90px]"
-            style={{
-              backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)`
-            }}
-          >
-            <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[50px] md:h-[68px]">
-              <div className="relative flex-1">
-                <input
-                  value={value}
-                  onChange={(e) => onChange(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full bg-transparent text-[26px] md:text-[38px] text-gray-800 outline-none disabled:opacity-50"
-                  style={{ caretColor: 'transparent' }}
+        <div
+          className="p-[6px] rounded-[90px] pointer-events-none select-none md:pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(87deg, rgba(105,219,197,0.85) 0%, rgba(172,237,165,0.75) 100%)`
+          }}
+        >
+          <div className="flex items-center rounded-[84px] bg-white pl-8 pr-6 h-[50px] md:h-[68px]">
+            <div className="relative flex-1">
+              <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] md:text-[38px] text-gray-800">
+                <span>{typed}</span>
+                <span
+                  className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`}
                 />
-                {!value && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center text-[26px] md:text-[38px] text-gray-800">
-                    <span>{typed}</span>
-                    <span
-                      className={`lp-cursor ml-[1px] inline-block h-[1em] w-[3px] bg-primary ${showCursor ? '' : 'opacity-0'}`}
-                    />
-                  </div>
-                )}
               </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="ml-3 text-[#01c3a0] transition-colors hover:text-primary disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <svg className="h-8 w-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                ) : (
-                  <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                )}
-              </button>
             </div>
+            <svg className="h-8 w-8 ml-3 text-[#01c3a0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
-        </form>
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-500">英語として確認できませんでした</p>
-        )}
+        </div>
       </div>
 
       {/* Trees */}
