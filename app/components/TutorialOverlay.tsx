@@ -69,20 +69,27 @@ export default function TutorialOverlay() {
 
   useEffect(() => {
     if (localStorage.getItem(KEY_SEEN)) return
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        const saved = localStorage.getItem(KEY_STEP)
-        const savedStep = saved ? parseInt(saved, 10) : 0
-        // step数を超えていたら完了扱い（古いstateのクリーンアップ）
-        if (savedStep >= STEPS.length) {
-          localStorage.setItem(KEY_SEEN, '1')
-          localStorage.removeItem(KEY_STEP)
-          return
-        }
-        setStep(savedStep)
-        setAuthed(true)
+
+    const init = (session: { user: unknown } | null) => {
+      if (!session) return
+      if (localStorage.getItem(KEY_SEEN)) return
+      const saved = localStorage.getItem(KEY_STEP)
+      const savedStep = saved ? parseInt(saved, 10) : 0
+      if (savedStep >= STEPS.length) {
+        localStorage.setItem(KEY_SEEN, '1')
+        localStorage.removeItem(KEY_STEP)
+        return
       }
+      setStep(savedStep)
+      setAuthed(true)
+    }
+
+    supabase.auth.getSession().then(({ data }) => init(data.session))
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      init(session)
     })
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
