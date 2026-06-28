@@ -50,7 +50,7 @@ export default function AuthLogin() {
   };
 
   return (
-    <div className="relative flex min-h-[calc(100vh-40px)] items-center justify-center bg-gray-100 px-4 py-12">
+    <div className="relative flex min-h-screen items-start justify-center bg-gray-100 px-4 pt-6 pb-16">
       <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md">
         <div className="flex justify-center mb-3">
           <img src="/logo.svg" alt="RootLink" className="h-[17px] w-auto" />

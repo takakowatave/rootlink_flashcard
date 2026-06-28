@@ -13,7 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={isLP || isAuth || isQuiz ? '' : 'min-h-screen bg-[#f8fafc]'}>
-      {!isQuiz && <Header />}
+      {!isQuiz && !isAuth && <Header />}
       {!isLP && !isAuth && <TutorialOverlay />}
       {children}
       {!isLP && !isAuth && !isQuiz && <Footer />}
