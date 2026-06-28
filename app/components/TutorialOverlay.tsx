@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
@@ -8,6 +8,10 @@ import { supabase } from '@/lib/supabaseClient'
 // チュートリアル完了フラグはDB（profiles.tutorial_completed）で管理。
 // 途中ステップだけページ遷移をまたぐためユーザーIDごとに localStorage に保持する。
 const STEP_PREFIX = 'rootlink_tutorial_step_'
+
+// モジュールレベルで保持 → コンポーネントが再マウントされても状態が保持される
+const _initializedUsers = new Set<string>()
+const _completedUsers = new Set<string>()
 
 const PADDING = 10
 
@@ -67,16 +71,14 @@ export default function TutorialOverlay() {
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
   const [rect, setRect] = useState<SpotlightRect | null>(null)
-  const didInitRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
 
     const init = async (uid: string | undefined) => {
       if (!uid) return
-      if (didInitRef.current) return  // 二重初期化防止
-      // sessionStorageで同タブ内の完了フラグを確認（DB書き込み待ち中の再マウント対策）
-      if (sessionStorage.getItem('rootlink_tutorial_done_' + uid)) return
+      // モジュールレベルで既に初期化済み or 完了済みなら何もしない
+      if (_initializedUsers.has(uid) || _completedUsers.has(uid)) return
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -84,17 +86,20 @@ export default function TutorialOverlay() {
         .eq('id', uid)
         .single()
       if (cancelled) return
-      if (!profile || profile.tutorial_completed) return
+      if (!profile || profile.tutorial_completed) {
+        _completedUsers.add(uid)
+        return
+      }
 
       const saved = localStorage.getItem(STEP_PREFIX + uid)
       const savedStep = saved ? parseInt(saved, 10) : 0
       if (savedStep >= STEPS.length) {
+        _completedUsers.add(uid)
         localStorage.removeItem(STEP_PREFIX + uid)
-        sessionStorage.setItem('rootlink_tutorial_done_' + uid, '1')
         await supabase.from('profiles').update({ tutorial_completed: true }).eq('id', uid)
         return
       }
-      didInitRef.current = true
+      _initializedUsers.add(uid)
       setUserId(uid)
       setStep(savedStep)
       setAuthed(true)
@@ -162,9 +167,9 @@ export default function TutorialOverlay() {
     }
 
     if (next >= STEPS.length) {
-      // チュートリアル完了 → まずsessionStorageに即時記録してから非同期でDB更新
       if (userId) {
-        sessionStorage.setItem('rootlink_tutorial_done_' + userId, '1')
+        _completedUsers.add(userId)
+        _initializedUsers.delete(userId)
         localStorage.removeItem(STEP_PREFIX + userId)
         supabase.from('profiles').update({ tutorial_completed: true }).eq('id', userId)
       }
