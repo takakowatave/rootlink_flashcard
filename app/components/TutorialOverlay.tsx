@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
@@ -67,28 +67,34 @@ export default function TutorialOverlay() {
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
   const [rect, setRect] = useState<SpotlightRect | null>(null)
+  const didInitRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
 
     const init = async (uid: string | undefined) => {
       if (!uid) return
+      if (didInitRef.current) return  // 二重初期化防止
+      // sessionStorageで同タブ内の完了フラグを確認（DB書き込み待ち中の再マウント対策）
+      if (sessionStorage.getItem('rootlink_tutorial_done_' + uid)) return
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('tutorial_completed')
         .eq('id', uid)
         .single()
       if (cancelled) return
-      // プロフィール未作成 or 完了済みなら出さない
       if (!profile || profile.tutorial_completed) return
 
       const saved = localStorage.getItem(STEP_PREFIX + uid)
       const savedStep = saved ? parseInt(saved, 10) : 0
       if (savedStep >= STEPS.length) {
         localStorage.removeItem(STEP_PREFIX + uid)
+        sessionStorage.setItem('rootlink_tutorial_done_' + uid, '1')
         await supabase.from('profiles').update({ tutorial_completed: true }).eq('id', uid)
         return
       }
+      didInitRef.current = true
       setUserId(uid)
       setStep(savedStep)
       setAuthed(true)
@@ -156,8 +162,9 @@ export default function TutorialOverlay() {
     }
 
     if (next >= STEPS.length) {
-      // チュートリアル完了 → DBに記録
+      // チュートリアル完了 → まずsessionStorageに即時記録してから非同期でDB更新
       if (userId) {
+        sessionStorage.setItem('rootlink_tutorial_done_' + userId, '1')
         localStorage.removeItem(STEP_PREFIX + userId)
         supabase.from('profiles').update({ tutorial_completed: true }).eq('id', userId)
       }
