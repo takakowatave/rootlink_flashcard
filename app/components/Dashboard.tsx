@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { updateStreak } from '@/lib/supabaseApi'
+import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
 
 type Deck = {
   id: string
@@ -14,46 +14,39 @@ type Deck = {
 
 type DayActivity = {
   date: string
-  count: number
+  count: 1
 }
 
-function getActivityColor(count: number): string {
-  if (count === 0) return '#e8eaee'
-  if (count <= 2) return '#93e7a2'
-  if (count <= 5) return '#3ebe5e'
-  if (count <= 9) return '#2f984a'
-  return '#216435'
+function getActivityColor(active: boolean): string {
+  return active ? '#3ebe5e' : '#e8eaee'
 }
 
-function buildActivityGrid(activities: DayActivity[]): number[] {
-  const activityMap = new Map(activities.map(a => [a.date, a.count]))
-  const today = new Date()
-  const result: number[] = []
+function buildActivityGrid(dates: string[]): boolean[] {
+  const dateSet = new Set(dates)
+  const today = new Date().toLocaleDateString('sv')
+  const result: boolean[] = []
   for (let i = 363; i >= 0; i--) {
-    const d = new Date(today)
+    const d = new Date()
     d.setDate(d.getDate() - i)
-    result.push(activityMap.get(d.toISOString().slice(0, 10)) ?? 0)
+    result.push(dateSet.has(d.toLocaleDateString('sv')))
   }
   return result
 }
 
-function ActivityGrid({ activities }: { activities: DayActivity[] }) {
-  const data = buildActivityGrid(activities)
+function ActivityGrid({ dates }: { dates: string[] }) {
+  const data = buildActivityGrid(dates)
   return (
     <div className="bg-white rounded-lg px-4 py-3 overflow-x-auto">
       <div className="flex gap-[2.5px]">
         {Array.from({ length: 52 }, (_, w) => (
           <div key={w} className="flex flex-col gap-[2.5px]">
-            {Array.from({ length: 7 }, (_, d) => {
-              const count = data[w * 7 + d] ?? 0
-              return (
-                <div
-                  key={d}
-                  className="rounded-[2px]"
-                  style={{ width: 11, height: 11, backgroundColor: getActivityColor(count) }}
-                />
-              )
-            })}
+            {Array.from({ length: 7 }, (_, d) => (
+              <div
+                key={d}
+                className="rounded-[2px]"
+                style={{ width: 11, height: 11, backgroundColor: getActivityColor(data[w * 7 + d] ?? false) }}
+              />
+            ))}
           </div>
         ))}
       </div>
@@ -106,7 +99,7 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [masteredCount, setMasteredCount] = useState(0)
-  const [activities, setActivities] = useState<DayActivity[]>([])
+  const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
 
   useEffect(() => {
@@ -116,28 +109,21 @@ export default function Dashboard() {
 
       const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
 
-      const [streakData, savedData, quizData, decksData] = await Promise.all([
-        updateStreak(user.id),
+      const [, savedData, quizData, decksData, dates] = await Promise.all([
+        recordActivity(user.id),
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('quiz_results').select('word, correct, created_at').eq('user_id', user.id).gte('created_at', oneYearAgo).limit(5000),
+        supabase.from('quiz_results').select('word, correct').eq('user_id', user.id).gte('created_at', oneYearAgo).limit(5000),
         supabase.from('decks').select('id, name, label, word_count').order('label').order('name').limit(100),
+        getActivityLog(user.id),
       ])
 
-      if (streakData) setStreak(streakData.current_streak)
+      setStreak(calcStreak(dates))
+      setActivityDates(dates)
       if (savedData.count != null) setSavedCount(savedData.count)
 
       if (quizData.data) {
-        const masteredWords = new Set(
-          quizData.data.filter(r => r.correct).map(r => r.word)
-        )
+        const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
         setMasteredCount(masteredWords.size)
-
-        const dayMap = new Map<string, number>()
-        for (const row of quizData.data) {
-          const date = (row.created_at as string).slice(0, 10)
-          dayMap.set(date, (dayMap.get(date) ?? 0) + 1)
-        }
-        setActivities(Array.from(dayMap, ([date, count]) => ({ date, count })))
       }
 
       if (decksData.data) setDecks(decksData.data as Deck[])
@@ -172,7 +158,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <ActivityGrid activities={activities} />
+            <ActivityGrid dates={activityDates} />
 
             <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">

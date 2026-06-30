@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { getStreak } from "@/lib/supabaseApi";
+import { getActivityLog, calcStreak } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
 import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
@@ -91,12 +91,12 @@ const Header = () => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const [profileData, streakData] = await Promise.all([
+      const [profileData, dates] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
-        getStreak(user.id),
+        getActivityLog(user.id),
       ]);
       if (profileData.data) setProfile(profileData.data);
-      if (streakData) setCurrentStreak(streakData.current_streak);
+      setCurrentStreak(calcStreak(dates));
     };
     load();
   }, []);

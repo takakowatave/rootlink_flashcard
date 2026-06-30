@@ -380,6 +380,59 @@ export const fetchDeckWords = async (deckId: string) => {
 }
 
 /* =========================================
+ アクティビティログ（草）
+========================================= */
+
+function localDateStr(): string {
+  // YYYY-MM-DD をローカルタイムゾーンで返す
+  return new Date().toLocaleDateString('sv')
+}
+
+export async function recordActivity(userId: string): Promise<void> {
+  const today = localDateStr()
+  await supabase
+    .from('user_activity_log')
+    .upsert({ user_id: userId, activity_date: today }, { onConflict: 'user_id,activity_date' })
+}
+
+export async function getActivityLog(userId: string): Promise<string[]> {
+  const oneYearAgo = new Date()
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  const { data } = await supabase
+    .from('user_activity_log')
+    .select('activity_date')
+    .eq('user_id', userId)
+    .gte('activity_date', oneYearAgo.toLocaleDateString('sv'))
+    .order('activity_date', { ascending: false })
+    .limit(400)
+  return (data ?? []).map(r => r.activity_date as string)
+}
+
+export function calcStreak(dates: string[]): number {
+  if (dates.length === 0) return 0
+  const sorted = [...dates].sort().reverse()
+  const today = localDateStr()
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv')
+
+  // 今日または昨日から連続していない場合はストリーク0
+  if (sorted[0] !== today && sorted[0] !== yesterday) return 0
+
+  let streak = 0
+  let expected = sorted[0]
+  for (const d of sorted) {
+    if (d === expected) {
+      streak++
+      const prev = new Date(expected)
+      prev.setDate(prev.getDate() - 1)
+      expected = prev.toLocaleDateString('sv')
+    } else {
+      break
+    }
+  }
+  return streak
+}
+
+/* =========================================
  ストリーク
 ========================================= */
 export type StreakInfo = {
