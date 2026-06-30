@@ -12,50 +12,110 @@ type Deck = {
   word_count: number
 }
 
-type DayActivity = {
-  date: string
-  count: 1
+const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
+
+function getWeekDates(): { date: string; label: string; isToday: boolean; isFuture: boolean }[] {
+  const today = new Date()
+  const todayStr = today.toLocaleDateString('sv')
+  // 今週の月曜日を起点にする
+  const dayOfWeek = today.getDay() // 0=日, 1=月...
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + mondayOffset)
+
+  return DAY_LABELS.map((label, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const dateStr = d.toLocaleDateString('sv')
+    return {
+      date: dateStr,
+      label,
+      isToday: dateStr === todayStr,
+      isFuture: dateStr > todayStr,
+    }
+  })
 }
 
-function getActivityColor(active: boolean): string {
-  return active ? '#3ebe5e' : '#e8eaee'
-}
+function WeeklyStreak({ streak, activityDates }: { streak: number; activityDates: string[] }) {
+  const dateSet = new Set(activityDates)
+  const weekDates = getWeekDates()
 
-function buildActivityGrid(dates: string[]): boolean[] {
-  const dateSet = new Set(dates)
-  const today = new Date().toLocaleDateString('sv')
-  const result: boolean[] = []
-  for (let i = 363; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    result.push(dateSet.has(d.toLocaleDateString('sv')))
-  }
-  return result
-}
-
-function ActivityGrid({ dates }: { dates: string[] }) {
-  const data = buildActivityGrid(dates)
   return (
-    <div className="bg-white rounded-lg px-4 py-3 overflow-x-auto">
-      <div className="flex gap-[2.5px]">
-        {Array.from({ length: 52 }, (_, w) => (
-          <div key={w} className="flex flex-col gap-[2.5px]">
-            {Array.from({ length: 7 }, (_, d) => (
+    <div className="bg-white rounded-xl border border-line px-5 py-4 flex items-center gap-6">
+      {/* 連続日数 */}
+      <div className="flex flex-col items-center shrink-0">
+        <p className="text-xs text-muted mb-0.5">連続ログイン</p>
+        <div className="flex items-end gap-1">
+          <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
+          <span className="text-lg font-bold text-quiz-review mb-1">日</span>
+        </div>
+      </div>
+
+      <div className="w-px self-stretch bg-line shrink-0" />
+
+      {/* 今週カレンダー */}
+      <div className="flex gap-2 flex-1 justify-around">
+        {weekDates.map(({ date, label, isToday, isFuture }) => {
+          const active = dateSet.has(date)
+          return (
+            <div key={date} className="flex flex-col items-center gap-1">
+              <p className={`text-[11px] font-medium ${isToday ? 'text-quiz-review' : 'text-muted'}`}>{label}</p>
               <div
-                key={d}
-                className="rounded-[2px]"
-                style={{ width: 11, height: 11, backgroundColor: getActivityColor(data[w * 7 + d] ?? false) }}
-              />
-            ))}
-          </div>
-        ))}
+                className={`size-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                  active
+                    ? 'bg-quiz-review border-quiz-review text-white'
+                    : isFuture
+                    ? 'border-dashed border-line bg-transparent'
+                    : isToday
+                    ? 'border-quiz-review border-dashed bg-transparent'
+                    : 'border-line bg-transparent'
+                }`}
+              >
+                {active && (
+                  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function StreakModal({ streak, onClose }: { streak: number; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl px-10 py-8 flex flex-col items-center gap-3 shadow-2xl mx-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <p className="text-6xl select-none">🔥</p>
+        <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
+        <p className="text-base font-medium text-gray-700">今日も継続中！</p>
+        <button
+          onClick={onClose}
+          className="mt-2 bg-quiz-review text-white font-bold px-8 py-2.5 rounded-full text-sm hover:opacity-90 transition-opacity"
+        >
+          やるぞ！
+        </button>
       </div>
     </div>
   )
 }
 
 function DeckCard({ name, onClick }: { name: string; onClick: () => void }) {
-  const needsTwoLines = name.replace(/[^\s\-–]/g, '').length > 0 || name.length > 10
+  const needsTwoLines = name.includes(' ') || name.includes('-') || name.length > 10
   return (
     <button
       onClick={onClick}
@@ -72,13 +132,7 @@ function DeckCard({ name, onClick }: { name: string; onClick: () => void }) {
   )
 }
 
-function DeckSection({
-  title,
-  items,
-}: {
-  title: string
-  items: Array<{ name: string; href: string }>
-}) {
+function DeckSection({ title, items }: { title: string; items: Array<{ name: string; href: string }> }) {
   const router = useRouter()
   if (items.length === 0) return null
   return (
@@ -94,6 +148,7 @@ function DeckSection({
 }
 
 const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
+const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 
 export default function Dashboard() {
   const [streak, setStreak] = useState(0)
@@ -101,6 +156,7 @@ export default function Dashboard() {
   const [masteredCount, setMasteredCount] = useState(0)
   const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -117,16 +173,23 @@ export default function Dashboard() {
         getActivityLog(user.id),
       ])
 
-      setStreak(calcStreak(dates))
+      const currentStreak = calcStreak(dates)
+      setStreak(currentStreak)
       setActivityDates(dates)
       if (savedData.count != null) setSavedCount(savedData.count)
-
       if (quizData.data) {
         const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
         setMasteredCount(masteredWords.size)
       }
-
       if (decksData.data) setDecks(decksData.data as Deck[])
+
+      // 今日まだモーダルを出していなければ表示
+      const today = new Date().toLocaleDateString('sv')
+      const lastShown = localStorage.getItem(MODAL_STORAGE_KEY)
+      if (currentStreak > 0 && lastShown !== today) {
+        setShowModal(true)
+        localStorage.setItem(MODAL_STORAGE_KEY, today)
+      }
     }
 
     load()
@@ -134,7 +197,6 @@ export default function Dashboard() {
 
   const myDeck = { name: 'My単語帳', href: '/wordlist' }
   const deckItems = decks.map(d => ({ name: d.name, href: `/decks/${d.id}` }))
-
   const historyItems = [myDeck, ...deckItems.slice(0, 4)]
   const studyingItems = [myDeck, ...deckItems.slice(0, 3)]
   const examItems = LABEL_ORDER.flatMap(label =>
@@ -142,55 +204,49 @@ export default function Dashboard() {
   )
 
   return (
-    <div className="bg-surface min-h-screen">
-      <div className="flex justify-center w-full">
-        <div className="flex flex-col gap-6 w-full max-w-[812px] px-4 py-3">
+    <>
+      {showModal && <StreakModal streak={streak} onClose={() => setShowModal(false)} />}
 
-          {/* 利用状況 */}
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
+      <div className="bg-surface min-h-screen">
+        <div className="flex justify-center w-full">
+          <div className="flex flex-col gap-6 w-full max-w-[812px] px-4 py-3">
+
+            {/* 利用状況 */}
+            <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">利用状況</h2>
-              {streak > 0 && (
-                <div className="flex items-center gap-1 bg-orange-100 border border-red-500 rounded-full px-2.5 py-0.5 text-xs font-semibold text-red-500">
-                  <span>{streak}日目</span>
-                  <span>🔥</span>
+
+              <WeeklyStreak streak={streak} activityDates={activityDates} />
+
+              <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">
+                  <div className="text-4xl select-none leading-none">🌱</div>
+                  <div>
+                    <p className="text-xs text-muted leading-snug">単語を覚えて<br />鉢植えを育てよう</p>
+                    <p className="text-sm font-bold text-gray-950 mt-0.5">Lv.01</p>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <ActivityGrid dates={activityDates} />
-
-            <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
-              <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">
-                <div className="text-4xl select-none leading-none">🌱</div>
-                <div>
-                  <p className="text-xs text-muted leading-snug">単語を覚えて<br />鉢植えを育てよう</p>
-                  <p className="text-sm font-bold text-gray-950 mt-0.5">Lv.01</p>
+                <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
+                  <p className="text-xs text-muted">学習中の単語数</p>
+                  <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
+                    {savedCount.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex-1 px-6 py-3 flex flex-col justify-center">
+                  <p className="text-xs text-muted">覚えた単語数</p>
+                  <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
+                    {masteredCount.toLocaleString()}
+                  </p>
                 </div>
               </div>
-              <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
-                <p className="text-xs text-muted">学習中の単語数</p>
-                <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
-                  {savedCount.toLocaleString()}
-                </p>
-              </div>
-              <div className="flex-1 px-6 py-3 flex flex-col justify-center">
-                <p className="text-xs text-muted">覚えた単語数</p>
-                <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
-                  {masteredCount.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <DeckSection title="履歴" items={historyItems} />
-          <DeckSection title="学習中" items={studyingItems} />
-          {examItems.length > 0 && (
-            <DeckSection title="試験対策" items={examItems} />
-          )}
+            <DeckSection title="履歴" items={historyItems} />
+            <DeckSection title="学習中" items={studyingItems} />
+            {examItems.length > 0 && <DeckSection title="試験対策" items={examItems} />}
 
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
