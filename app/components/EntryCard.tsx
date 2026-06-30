@@ -443,7 +443,7 @@ export default function EntryCard({
             <p className="text-xs text-muted mb-1.5">{labels.derivatives}</p>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
-                <span key={d} className="text-sm text-primary underline underline-offset-2">{d}</span>
+                <a key={d} href={`/word/${encodeURIComponent(d)}`} className="text-sm text-primary underline underline-offset-2 hover:text-primary-hover">{d}</a>
               ))}
             </div>
           </div>
