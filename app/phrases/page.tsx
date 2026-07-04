@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
@@ -69,7 +70,9 @@ function PhraseCardItem({
     <div className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2 mx-auto max-w-[600px] w-full">
       {/* HEADER */}
       <div className="flex items-center justify-between py-1 px-1">
-        <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+        <Link href={`/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`} className="hover:opacity-75 transition-opacity">
+          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+        </Link>
         <button type="button" onClick={onSave} className="p-2 -mr-2 -mt-1 shrink-0">
           {isSaved
             ? <HiBookmark className="size-6 text-muted" />
@@ -140,7 +143,7 @@ export default function PhrasesPage() {
   const [loading, setLoading] = useState(true)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
-  const [todayOnly, setTodayOnly] = useState(false)
+  const [todayOnly, setTodayOnly] = useState(searchParams.get('today') === '1')
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
