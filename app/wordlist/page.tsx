@@ -22,13 +22,6 @@ export type SavedWordRow = {
   pinned_sense_id?: string | null
 }
 
-type Deck = {
-  id: string
-  name: string
-  label: string
-  word_count: number
-}
-
 type DisplaySense = { senseId: string; meaning: string; example?: string; exampleTranslation?: string }
 
 function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) {
@@ -68,8 +61,6 @@ function buildSenses(dictionary: SavedWordDictionary | null | undefined, locale:
   return result
 }
 
-const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
-
 export default function WordListPage() {
   const router = useRouter()
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
@@ -77,7 +68,6 @@ export default function WordListPage() {
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const [decks, setDecks] = useState<Deck[]>([])
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -96,12 +86,6 @@ export default function WordListPage() {
 
   useEffect(() => {
     load()
-    supabase
-      .from('decks')
-      .select('id, name, label, word_count')
-      .order('label').order('name')
-      .limit(100)
-      .then(({ data }) => setDecks((data ?? []) as Deck[]))
   }, [])
 
   useEffect(() => {
@@ -140,11 +124,6 @@ export default function WordListPage() {
     setModalScrolled(false)
     setSelectedItem(item)
   }
-
-  const grouped = LABEL_ORDER.reduce<Record<string, Deck[]>>((acc, label) => {
-    acc[label] = decks.filter(d => d.label === label)
-    return acc
-  }, {})
 
   return (
     <>
@@ -208,42 +187,6 @@ export default function WordListPage() {
         )}
       </section>
 
-      {/* ── デッキ ── */}
-      {decks.length > 0 && (
-        <section className="pt-8 pb-12">
-          <div className="px-4 mb-4">
-            <h2 className="text-xl font-bold text-gray-900">
-              デッキ
-              <span className="text-muted ml-1">›</span>
-            </h2>
-          </div>
-          <div className="px-4 flex flex-col gap-6">
-            {LABEL_ORDER.map(label => {
-              const items = grouped[label]
-              if (!items || items.length === 0) return null
-              return (
-                <div key={label}>
-                  <p className="text-sm font-semibold text-muted mb-2">{label}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {items.map(deck => (
-                      <button
-                        key={deck.id}
-                        onClick={() => router.push(`/decks/${deck.id}`)}
-                        className="bg-white border border-line rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-[0_0_0_2px_rgba(0,173,130,0.08)] transition-all active:scale-[0.98]"
-                      >
-                        <p className="text-lg font-bold text-gray-900 leading-snug">
-                          {deck.name.replace(label, '').trim()}
-                        </p>
-                        <p className="text-xs text-muted mt-1">{deck.word_count.toLocaleString()} words</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
 
       {/* Detail modal */}
       {selectedItem && (
