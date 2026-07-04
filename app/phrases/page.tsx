@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
@@ -130,6 +131,10 @@ function PhraseCardItem({
 }
 
 export default function PhrasesPage() {
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.get('q') ?? ''
+  const highlightRef = useRef<HTMLDivElement>(null)
+
   const [cards, setCards] = useState<PhraseCard[]>([])
   const [loading, setLoading] = useState(true)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
@@ -181,8 +186,18 @@ export default function PhrasesPage() {
     }
   }
 
+  // ?q= で検索ヒットしたカードをトップに移動 + スクロール
+  useEffect(() => {
+    if (searchQuery && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [searchQuery, loading])
+
   const displayed = todayOnly ? cards.filter(c => isToday(c.created_at)) : cards
   const todayCount = cards.filter(c => isToday(c.created_at)).length
+  const matchedId = searchQuery
+    ? cards.find(c => c.phrase.toLowerCase() === searchQuery.toLowerCase())?.id
+    : null
 
   return (
     <div className="bg-surface min-h-screen">
@@ -224,13 +239,15 @@ export default function PhrasesPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {displayed.map((card) => (
-                <PhraseCardItem
-                  key={card.id}
-                  card={card}
-                  displayLocale={displayLocale}
-                  isSaved={savedIds.has(card.id)}
-                  onSave={() => handleSave(card.id)}
-                />
+                <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                  className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                  <PhraseCardItem
+                    card={card}
+                    displayLocale={displayLocale}
+                    isSaved={savedIds.has(card.id)}
+                    onSave={() => handleSave(card.id)}
+                  />
+                </div>
               ))}
             </div>
           )}

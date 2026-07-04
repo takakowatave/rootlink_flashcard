@@ -29,7 +29,7 @@ const Header = () => {
 
   useEffect(() => {
     const match = pathname.match(/^\/word\/(.+)$/)
-    if (match) setSearchValue(decodeURIComponent(match[1]))
+    setSearchValue(match ? decodeURIComponent(match[1]) : '')
   }, [pathname]);
 
   const doSearch = async (query: string) => {
@@ -47,6 +47,18 @@ const Header = () => {
       if (r?.ok === true && typeof r.redirectTo === 'string') {
         setMobileSearchOpen(false);
         router.push(r.redirectTo);
+        return;
+      }
+      // 単語が見つからなければ phrase_cards を検索
+      const { data: phraseMatch } = await supabase
+        .from('phrase_cards')
+        .select('id')
+        .ilike('phrase', query)
+        .limit(1)
+        .maybeSingle();
+      if (phraseMatch) {
+        setMobileSearchOpen(false);
+        router.push(`/phrases?q=${encodeURIComponent(query)}`);
       } else {
         setSearchError(true);
       }
