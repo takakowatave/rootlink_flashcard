@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
@@ -134,7 +134,7 @@ function PhraseCardItem({
   )
 }
 
-export default function PhrasesPage() {
+function PhrasesPageInner() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q') ?? ''
   const highlightRef = useRef<HTMLDivElement>(null)
@@ -258,5 +258,13 @@ export default function PhrasesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PhrasesPage() {
+  return (
+    <Suspense>
+      <PhrasesPageInner />
+    </Suspense>
   )
 }
