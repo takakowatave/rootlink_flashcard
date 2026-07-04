@@ -35,6 +35,7 @@ type Props = {
   inflections?: string[]
   synonyms?: string[]
   derivatives?: string[]
+  derivativesLabel?: string
   antonyms?: string[]
   grammarTags?: Record<string, string[]>
   isBookmarked: boolean
@@ -50,6 +51,9 @@ const POS_LABEL_EN: Record<string, string> = {
   noun: 'noun', verb: 'verb', adjective: 'adjective', adverb: 'adverb',
   pronoun: 'pronoun', preposition: 'preposition', conjunction: 'conjunction',
   determiner: 'determiner', interjection: 'interjection',
+  idiom: 'Idiom', phrasal_verb: 'Phrasal verb', fixed_expression: 'Fixed expression',
+  spoken_expression: 'Spoken expression', collocation: 'Collocation',
+  pattern: 'Pattern', expression: 'Expression', slang: 'Slang',
 }
 
 function getPosLabel(pos: string, locale: DisplayLocale): string {
@@ -67,6 +71,7 @@ export default function EntryCard({
   synonyms = [],
   antonyms = [],
   derivatives = [],
+  derivativesLabel,
   grammarTags = {},
   isBookmarked,
   pinnedSenseId = null,
@@ -127,8 +132,8 @@ export default function EntryCard({
   }
 
   const labels = displayLocale === 'ja'
-    ? { synonyms: '類義語', antonyms: '対義語', derivatives: '派生語', pinThisSense: 'この意味をピン留め' }
-    : { synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives', pinThisSense: 'Pin this sense' }
+    ? { synonyms: '類義語', antonyms: '対義語', derivatives: '派生語', pinThisSense: 'この意味をピン留め', saveToList: 'マイリストに追加', removeFromList: 'マイリストから外す' }
+    : { synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives', pinThisSense: 'Pin this sense', saveToList: 'Add to My List', removeFromList: 'Remove from list' }
 
   const hasParts = parts.length > 0
 
@@ -172,8 +177,8 @@ export default function EntryCard({
             </button>
             <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
               {isBookmarked
-                ? (displayLocale === 'ja' ? '保存から外す' : 'Remove from list')
-                : (displayLocale === 'ja' ? '単語リストに保存' : 'Save to list')}
+                ? labels.removeFromList
+                : labels.saveToList}
             </span>
           </div>
         </div>
@@ -440,7 +445,9 @@ export default function EntryCard({
         {/* ── DERIVATIVES ── */}
         {orderedDerivatives.length > 0 && (
           <div className="mt-3">
-            <p className="text-xs text-muted mb-1.5">{labels.derivatives}</p>
+            {(derivativesLabel ?? labels.derivatives) && (
+              <p className="text-xs text-muted mb-1.5">{derivativesLabel ?? labels.derivatives}</p>
+            )}
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
                 <a key={d} href={`/word/${encodeURIComponent(d)}`} className="text-sm text-primary underline underline-offset-2 hover:text-primary-hover">{d}</a>

@@ -73,7 +73,7 @@ function SearchBox({
   const navigate = (label: string) => {
     setShowSuggestions(false)
     setSuggestions([])
-    router.push(`/word/${encodeURIComponent(label)}`)
+    router.push(`/word/${label.replace(/\s+/g, '_')}`)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -170,7 +170,7 @@ const Header = () => {
         .from('phrase_cards').select('id').ilike('phrase', query).limit(1).maybeSingle();
       if (phraseMatch) {
         setMobileSearchOpen(false);
-        router.push(`/word/${encodeURIComponent(query)}`);
+        router.push(`/word/${query.replace(/\s+/g, '_')}`);
       } else {
         setSearchError(true);
       }

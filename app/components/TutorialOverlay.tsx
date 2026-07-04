@@ -61,7 +61,7 @@ const STEPS: Step[] = [
   {
     emoji: '🔖',
     title: '気になった単語を保存',
-    description: '右上のブックマークアイコンをタップすると単語リストに保存できます。後でいつでも復習できます。',
+    description: '右上のブックマークアイコンをタップするとマイリストに追加できます。後でいつでも復習できます。',
     selector: '[data-tutorial="save-button"]',
     requiredPath: /^\/word\//,
   },

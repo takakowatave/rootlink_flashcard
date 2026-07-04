@@ -93,4 +93,13 @@ export const POS_LABEL_JA: Record<string,string> = {
     "Phrasal verb": "句動詞",
     Idiom: "熟語",
     Phrase: "フレーズ",
+
+    idiom: "イディオム",
+    phrasal_verb: "句動詞",
+    fixed_expression: "固定表現",
+    spoken_expression: "会話表現",
+    collocation: "コロケーション",
+    pattern: "構文パターン",
+    expression: "表現",
+    slang: "スラング",
 };

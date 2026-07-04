@@ -31,6 +31,7 @@ const TYPE_LABEL: Record<string, { en: string; ja: string }> = {
   collocation:       { en: 'Collocation',        ja: 'コロケーション' },
   pattern:           { en: 'Pattern',            ja: '構文パターン' },
   expression:        { en: 'Expression',         ja: '表現' },
+  slang:             { en: 'Slang',              ja: 'スラング' },
 }
 
 const REGISTER_LABEL: Record<string, string> = {

@@ -71,7 +71,15 @@ export async function generateMetadata({ params }: { params: { word: string } })
 }
 
 export default async function Page({ params }: { params: { word: string } }) {
-  const raw = decodeURIComponent(params.word).trim().toLowerCase()
+  const raw = decodeURIComponent(params.word).replace(/_/g, ' ').trim().toLowerCase()
+
+  // 複数語はフレーズを優先して検索（語源ツリーを避ける）
+  if (raw.includes(' ')) {
+    const phraseCard = await resolvePhrase(raw)
+    if (phraseCard) {
+      return <PhrasePageClient card={phraseCard} />
+    }
+  }
 
   const data = await resolveWord(raw)
   if (data) {
