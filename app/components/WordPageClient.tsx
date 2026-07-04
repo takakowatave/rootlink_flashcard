@@ -1030,13 +1030,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // IPA / audio を決定
   const pronunciation = useMemo(() => {
-    // Supabase Storage に保存済みの audioPath があれば優先する
     if (dictionary?.audio?.audioPath) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-      const audioUrl = `${supabaseUrl}/storage/v1/object/public/${dictionary.audio.audioPath}`
       return {
         phoneticSpelling: dictionary.ipa ?? undefined,
-        audioFile: audioUrl,
+        audioFile: undefined,
       }
     }
 
