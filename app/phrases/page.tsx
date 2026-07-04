@@ -19,14 +19,17 @@ type PhraseCard = {
   type: string | null
   register: string | null
   locale: string | null
+  created_at: string
 }
 
 const TYPE_LABEL: Record<string, { en: string; ja: string }> = {
-  phrasal_verb:  { en: 'Phrasal verb',  ja: '句動詞' },
-  collocation:   { en: 'Collocation',   ja: 'コロケーション' },
-  idiom:         { en: 'Idiom',         ja: 'イディオム' },
-  expression:    { en: 'Expression',    ja: '表現' },
-  conjunction:   { en: 'Conjunction',   ja: '接続詞用法' },
+  idiom:             { en: 'Idiom',             ja: 'イディオム' },
+  phrasal_verb:      { en: 'Phrasal verb',       ja: '句動詞' },
+  fixed_expression:  { en: 'Fixed expression',   ja: '固定表現' },
+  spoken_expression: { en: 'Spoken expression',  ja: '会話表現' },
+  collocation:       { en: 'Collocation',        ja: 'コロケーション' },
+  pattern:           { en: 'Pattern',            ja: '構文パターン' },
+  expression:        { en: 'Expression',         ja: '表現' },
 }
 
 const REGISTER_LABEL: Record<string, string> = {
@@ -37,11 +40,13 @@ function cleanPhrase(phrase: string): string {
   return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
 }
 
+function isToday(dateStr: string): boolean {
+  const today = new Date().toLocaleDateString('sv')
+  return dateStr.startsWith(today)
+}
+
 function PhraseCardItem({
-  card,
-  displayLocale,
-  isSaved,
-  onSave,
+  card, displayLocale, isSaved, onSave,
 }: {
   card: PhraseCard
   displayLocale: DisplayLocale
@@ -60,11 +65,9 @@ function PhraseCardItem({
 
   return (
     <div className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2 mx-auto max-w-[600px] w-full">
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div className="flex items-center justify-between py-1 px-1">
-        <div className="flex items-start gap-2 min-w-0">
-          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
-        </div>
+        <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
         <button type="button" onClick={onSave} className="p-2 -mr-2 -mt-1 shrink-0">
           {isSaved
             ? <HiBookmark className="size-6 text-muted" />
@@ -73,8 +76,8 @@ function PhraseCardItem({
         </button>
       </div>
 
-      {/* タイプ・メタ */}
-      <div className="flex items-center gap-1.5 px-1 mb-2">
+      {/* メタ */}
+      <div className="flex flex-wrap items-center gap-1.5 px-1 mb-2">
         {typeLabel && (
           <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
         )}
@@ -131,6 +134,7 @@ export default function PhrasesPage() {
   const [loading, setLoading] = useState(true)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
+  const [todayOnly, setTodayOnly] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -143,10 +147,12 @@ export default function PhrasesPage() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, usage_tip, type, register, locale')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, usage_tip, type, register, locale, created_at')
           .order('created_at', { ascending: false })
           .limit(200),
-        user ? supabase.from('saved_phrase_cards').select('phrase_card_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
+        user
+          ? supabase.from('saved_phrase_cards').select('phrase_card_id').eq('user_id', user.id)
+          : Promise.resolve({ data: [] }),
       ])
       setCards((cardsRes.data ?? []) as PhraseCard[])
       setSavedIds(new Set((savedRes.data ?? []).map((r: { phrase_card_id: string }) => r.phrase_card_id)))
@@ -175,13 +181,33 @@ export default function PhrasesPage() {
     }
   }
 
+  const displayed = todayOnly ? cards.filter(c => isToday(c.created_at)) : cards
+  const todayCount = cards.filter(c => isToday(c.created_at)).length
+
   return (
     <div className="bg-surface min-h-screen">
       <div className="flex justify-center w-full">
         <div className="w-full max-w-[812px] px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-950">表現・フレーズ</h1>
-            <span className="text-sm text-muted">{cards.length}件</span>
+            <span className="text-sm text-muted">{displayed.length}件</span>
+          </div>
+
+          {/* フィルター */}
+          <div className="flex gap-2 mb-5">
+            <button
+              onClick={() => setTodayOnly(false)}
+              className={`text-sm font-medium px-3 py-1 rounded-full border transition-colors ${!todayOnly ? 'bg-primary text-white border-primary' : 'border-line text-muted bg-white'}`}
+            >
+              すべて
+            </button>
+            <button
+              onClick={() => setTodayOnly(true)}
+              className={`text-sm font-medium px-3 py-1 rounded-full border transition-colors ${todayOnly ? 'bg-primary text-white border-primary' : 'border-line text-muted bg-white'}`}
+            >
+              今日追加 {todayCount > 0 && <span className="ml-1">{todayCount}</span>}
+            </button>
           </div>
 
           {loading ? (
@@ -191,9 +217,13 @@ export default function PhrasesPage() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             </div>
+          ) : displayed.length === 0 ? (
+            <p className="text-sm text-muted text-center py-16">
+              {todayOnly ? '今日の追加はまだありません' : 'フレーズがありません'}
+            </p>
           ) : (
             <div className="flex flex-col gap-3">
-              {cards.map((card) => (
+              {displayed.map((card) => (
                 <PhraseCardItem
                   key={card.id}
                   card={card}
