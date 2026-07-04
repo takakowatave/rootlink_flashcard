@@ -86,7 +86,7 @@ export default function EntryCard({
 
   const router = useRouter()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation?.audioFile ?? null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
