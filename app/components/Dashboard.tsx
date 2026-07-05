@@ -156,6 +156,7 @@ export default function Dashboard() {
   const [masteredCount, setMasteredCount] = useState(0)
   const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
+  const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
@@ -184,6 +185,24 @@ export default function Dashboard() {
       }
       if (decksData.data) setDecks(decksData.data as Deck[])
 
+      // quiz済み単語からアクティブなデッキIDを特定（最近学習した順）
+      const quizWords = [...new Set((quizData.data ?? []).map(r => r.word))].slice(0, 500)
+      if (quizWords.length > 0) {
+        const deckWordRows: { deck_id: string; word: string }[] = []
+        for (let i = 0; i < quizWords.length; i += 200) {
+          const { data } = await supabase.from('deck_words').select('deck_id, word').in('word', quizWords.slice(i, i + 200))
+          if (data) deckWordRows.push(...data)
+        }
+        const deckIdByWord = new Map(deckWordRows.map(r => [r.word, r.deck_id]))
+        const seen = new Set<string>()
+        const ordered: string[] = []
+        for (const { word } of (quizData.data ?? [])) {
+          const deckId = deckIdByWord.get(word)
+          if (deckId && !seen.has(deckId)) { seen.add(deckId); ordered.push(deckId) }
+        }
+        setActiveDeckIds(ordered)
+      }
+
       // 今日まだモーダルを出していなければ表示
       const today = new Date().toLocaleDateString('sv')
       const lastShown = localStorage.getItem(MODAL_STORAGE_KEY)
@@ -197,9 +216,13 @@ export default function Dashboard() {
   }, [])
 
   const myDeck = { name: 'My単語帳', href: '/wordlist' }
-  const deckItems = decks.map(d => ({ name: d.name, href: `/decks/${d.id}` }))
-  const historyItems = [myDeck, ...deckItems.slice(0, 4)]
-  const studyingItems = [myDeck, ...deckItems.slice(0, 3)]
+  const myDeckEntry = savedCount > 0 ? [myDeck] : []
+  const activeDeckItems = activeDeckIds
+    .map(id => decks.find(d => d.id === id))
+    .filter((d): d is Deck => d !== undefined)
+    .map(d => ({ name: d.name, href: `/decks/${d.id}` }))
+  const historyItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 4 : 5)]
+  const studyingItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 3 : 4)]
   const examItems = LABEL_ORDER.flatMap(label =>
     decks.filter(d => d.label === label).map(d => ({ name: d.name, href: `/decks/${d.id}` }))
   )
