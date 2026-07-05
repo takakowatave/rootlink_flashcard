@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { getActivityLog, calcStreak } from "@/lib/supabaseApi";
+import { getActivityLog, calcStreak, recordActivity } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
 import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
@@ -214,6 +214,7 @@ const Header = () => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      await recordActivity(user.id)
       const [profileData, dates] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
         getActivityLog(user.id),

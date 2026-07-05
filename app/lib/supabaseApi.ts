@@ -412,7 +412,8 @@ export function calcStreak(dates: string[]): number {
   if (dates.length === 0) return 0
   const sorted = [...dates].sort().reverse()
   const today = localDateStr()
-  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv')
+  const d = new Date(); d.setDate(d.getDate() - 1)
+  const yesterday = d.toLocaleDateString('sv')
 
   // 今日または昨日から連続していない場合はストリーク0
   if (sorted[0] !== today && sorted[0] !== yesterday) return 0
@@ -472,7 +473,8 @@ export async function updateStreak(userId: string): Promise<StreakInfo> {
     return existing as StreakInfo
   }
 
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const yd = new Date(); yd.setDate(yd.getDate() - 1)
+  const yesterday = yd.toLocaleDateString('sv')
   const newStreak = last === yesterday ? existing.current_streak + 1 : 1
   const newLongest = Math.max(newStreak, existing.longest_streak)
 
