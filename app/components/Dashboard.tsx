@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { getActivityLog, calcStreak } from '@/lib/supabaseApi'
+import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
 
 type Deck = {
   id: string
@@ -164,6 +164,8 @@ export default function Dashboard() {
       if (!user) return
 
       const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
+
+      await recordActivity(user.id)
 
       const [savedData, quizData, decksData, dates] = await Promise.all([
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
