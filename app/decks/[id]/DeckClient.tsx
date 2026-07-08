@@ -5,11 +5,10 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, saveQuizResult } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
-import type { SavedWordDictionary, SavedWordSenseGroup } from '@/types/Dictionary'
-import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
-import WordPageClient from '@/components/WordPageClient'
+import type { SavedWordDictionary } from '@/types/Dictionary'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
+import TriDonutChart from '@/components/TriDonutChart'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -26,111 +25,7 @@ type DeckWordEntry = {
   pinned_sense_id: string | null
 }
 
-function getFirstMeaning(entry: DeckWordEntry): string {
-  const d = entry.dictionary
-  if (!d) return ''
-  const senseGroups: SavedWordSenseGroup[] = d.senseGroups ?? []
-  const jaLocales = d.locales?.ja?.senses ?? {}
-  for (const group of senseGroups) {
-    for (const sense of group.senses ?? []) {
-      const ja = jaLocales[sense.senseId ?? ''] ?? {}
-      return ja.meaning ?? sense.definition ?? ''
-    }
-  }
-  return ''
-}
-
 type WordStatus = 'mastered' | 'review' | 'unseen'
-
-function TriDonutChart({ mastered, review, unseen }: { mastered: number; review: number; unseen: number }) {
-  const total = mastered + review + unseen
-  if (total === 0) return null
-  const size = 180
-  const stroke = 16
-  const r = (size - stroke) / 2
-  const cx = size / 2
-  const cy = size / 2
-  const circ = 2 * Math.PI * r
-  const mFrac = mastered / total
-  const rFrac = review / total
-  const pct = Math.round((mastered / total) * 100)
-
-  const seg = (start: number, len: number) => ({
-    strokeDasharray: `${len * circ} ${(1 - len) * circ}`,
-    strokeDashoffset: -(start * circ),
-  })
-
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          {/* background */}
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
-          {/* 習得済 (green) */}
-          {mastered > 0 && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#4ade80" strokeWidth={stroke}
-              strokeLinecap="butt"
-              strokeDasharray={seg(0, mFrac).strokeDasharray}
-              strokeDashoffset={seg(0, mFrac).strokeDashoffset}
-            />
-          )}
-          {/* 要復習 (orange) */}
-          {review > 0 && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#fb923c" strokeWidth={stroke}
-              strokeLinecap="butt"
-              strokeDasharray={seg(mFrac, rFrac).strokeDasharray}
-              strokeDashoffset={seg(mFrac, rFrac).strokeDashoffset}
-            />
-          )}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-4xl font-bold text-gray-900 leading-none">{pct}<span className="text-xl font-normal text-gray-500">%</span></span>
-          <span className="text-sm text-gray-400 mt-1">習得済</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-5 text-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" />
-          <span className="text-gray-500">未習得 <strong className="text-gray-700">{unseen}</strong></span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block" />
-          <span className="text-gray-500">要復習 <strong className="text-gray-700">{review}</strong></span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />
-          <span className="text-gray-500">習得済 <strong className="text-gray-700">{mastered}</strong></span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function WordDetailModal({ entry, onClose }: { entry: DeckWordEntry; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40" />
-      <div
-        className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col shadow-xl overflow-x-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
-          <div className="flex items-center gap-1">
-            <a href={`/word/${entry.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-              <BsArrowUpRightSquare size={24} />
-            </a>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-              <BsX size={24} />
-            </button>
-          </div>
-        </div>
-        <div className="overflow-y-auto flex-1">
-          <WordPageClient word={entry.word} dictionary={entry.dictionary} savedId={undefined} initialPinnedSenseId={null} noCard />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 type QuizScope = 'random' | 'review'
 
@@ -141,7 +36,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('random')
-  const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
@@ -270,35 +164,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         >
           {loading ? '読み込み中...' : availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
         </Button>
-
-        {/* 単語リスト */}
-        <div className="space-y-0">
-          {entries.map((entry, i) => {
-            const meaning = getFirstMeaning(entry)
-            const clickable = !!entry.dictionary
-            const status = wordStatus.get(entry.word)
-            return (
-              <div
-                key={`${entry.word}-${i}`}
-                onClick={() => clickable && setSelectedEntry(entry)}
-                className={`flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 ${clickable ? 'cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded' : ''}`}
-              >
-                <span className={`font-semibold text-sm w-40 truncate ${clickable ? 'text-gray-800' : 'text-gray-300'}`}>
-                  {entry.word}
-                </span>
-                {meaning && (
-                  <span className="text-gray-400 text-xs truncate flex-1">{meaning}</span>
-                )}
-                {status === 'mastered' && <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />}
-                {status === 'review' && <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />}
-                {clickable && <span className="text-gray-300 text-base leading-none shrink-0">›</span>}
-              </div>
-            )
-          })}
-        </div>
       </div>
-
-      {selectedEntry && <WordDetailModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />}
     </div>
   )
 }

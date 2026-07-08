@@ -5,7 +5,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import EntryCard from "@/components/EntryCard"
 import WordPageClient from "@/components/WordPageClient"
-import { fetchWordlists, toggleSaveStatus, updateStreak } from "@/lib/supabaseApi"
+import Button from "@/components/Button"
+import TriDonutChart from "@/components/TriDonutChart"
+import QuizSession, { buildQuizCards, shuffleCards } from "@/components/QuizSession"
+import type { QuizEntry } from "@/components/QuizSession"
+import { fetchWordlists, toggleSaveStatus, updateStreak, saveQuizResult } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
@@ -13,6 +17,9 @@ import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionar
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
+
+type WordStatus = 'mastered' | 'review' | 'unseen'
+type QuizScope = 'random' | 'review'
 
 export type SavedWordRow = {
   word_id: string
@@ -68,10 +75,35 @@ export default function WordListPage() {
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
+  const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
+  const [quizScope, setQuizScope] = useState<QuizScope>('random')
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
   })
+
+  const loadStatus = async (words: SavedWordRow[], userId: string) => {
+    const wordNames = words.map((w) => w.word)
+    const { data: qr } = await supabase
+      .from('quiz_results')
+      .select('word, correct, created_at')
+      .eq('user_id', userId)
+      .in('word', wordNames)
+      .order('created_at', { ascending: false })
+      .limit(10000)
+
+    const latestByWord = new Map<string, boolean>()
+    for (const row of ((qr ?? []) as { word: string; correct: boolean }[])) {
+      if (!latestByWord.has(row.word)) latestByWord.set(row.word, row.correct)
+    }
+    const statusMap = new Map<string, WordStatus>()
+    for (const w of words) {
+      const latest = latestByWord.get(w.word)
+      statusMap.set(w.word, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
+    }
+    setWordStatus(statusMap)
+  }
 
   const load = async () => {
     const { data } = await supabase.auth.getUser()
@@ -82,6 +114,7 @@ export default function WordListPage() {
     ])
     setWordList(words)
     setSavedWords(words.map((w) => w.word))
+    if (words.length > 0) await loadStatus(words, data.user.id)
   }
 
   useEffect(() => {
@@ -125,6 +158,44 @@ export default function WordListPage() {
     setSelectedItem(item)
   }
 
+  const availableCount = wordList.filter((w) => !!w.dictionary).length
+  const masteredCount = [...wordStatus.values()].filter((s) => s === 'mastered').length
+  const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
+  const unseenCount = wordList.length - masteredCount - reviewCount
+  const reviewWords = wordList.filter((w) => wordStatus.get(w.word) === 'review' && !!w.dictionary)
+
+  const toQuizEntry = (w: SavedWordRow): QuizEntry => ({
+    word: w.word,
+    dictionary: w.dictionary ?? null,
+    pinned_sense_id: w.pinned_sense_id ?? null,
+  })
+
+  const startQuiz = () => {
+    const source = quizScope === 'review' ? reviewWords : wordList
+    const sourceEntries = source.map(toQuizEntry)
+    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
+    const sessionEntries: QuizEntry[] = cards.map(
+      (c) => sourceEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
+    )
+    setQuizEntries(sessionEntries)
+  }
+
+  const handleQuizAnswer = async (word: string, correct: boolean) => {
+    await saveQuizResult(word, correct)
+    setWordStatus((prev) => new Map(prev).set(word, correct ? 'mastered' : 'review'))
+  }
+
+  if (quizEntries !== null) {
+    return (
+      <QuizSession
+        initialCards={shuffleCards(buildQuizCards(quizEntries)).slice(0, 10)}
+        entries={quizEntries}
+        onQuit={() => setQuizEntries(null)}
+        onAnswer={handleQuizAnswer}
+      />
+    )
+  }
+
   return (
     <>
       <Toaster position="top-center" />
@@ -141,6 +212,51 @@ export default function WordListPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </button>
+      )}
+
+      {/* ── 進捗＋クイズ ── */}
+      {wordList.length > 0 && (
+        <section className="pt-6 px-4">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <div className="flex justify-center py-2">
+              <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
+            </div>
+
+            {availableCount > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setQuizScope('random')}
+                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-white'}`}
+                  >
+                    <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
+                    <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
+                  </button>
+                  <button
+                    onClick={() => setQuizScope('review')}
+                    disabled={reviewWords.length === 0}
+                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-white'}`}
+                  >
+                    <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
+                    <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button
+            onClick={startQuiz}
+            disabled={availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="mt-4"
+          >
+            {availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
+          </Button>
+        </section>
       )}
 
       {/* ── オリジナル単語リスト ── */}

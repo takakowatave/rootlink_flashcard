@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
+import PlantStatus from '@/components/PlantStatus'
 
 type Deck = {
   id: string
@@ -242,13 +243,7 @@ export default function Dashboard() {
               <WeeklyStreak streak={streak} activityDates={activityDates} />
 
               <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
-                <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">
-                  <div className="text-4xl select-none leading-none">🌱</div>
-                  <div>
-                    <p className="text-xs text-muted leading-snug">単語を覚えて<br />鉢植えを育てよう</p>
-                    <p className="text-sm font-bold text-gray-950 mt-0.5">Lv.01</p>
-                  </div>
-                </div>
+                <PlantStatus loginDays={activityDates.length} />
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
                   <p className="text-xs text-muted">学習中の単語数</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
