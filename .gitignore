@@ -44,3 +44,8 @@ next-env.d.ts
 scripts/*.log
 
 *storybook.log
+
+# Vim swap files
+*.swp
+*.swo
+*.swn
