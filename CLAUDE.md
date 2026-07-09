@@ -134,6 +134,12 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - `.limit()` が必ずついているか（未設定は全件取得になる）
 - ユーザー入力をそのままクエリに渡していないか（長さチェック必須）
 
+### 新規テーブル作成時（RLS必須）
+- SQL（SQLエディタ・マイグレーション・スクリプト・AI/MCP生成DDL）で `CREATE TABLE` すると **RLSはOFF初期値**。しかもanon/authenticatedには自動でアクセス権が付くため、放置すると「anon keyで誰でも読み書き可能」になる（2026-07に実際に9テーブルで発生）
+- 新規テーブルは必ずセットで `alter table ... enable row level security;` ＋ 適切なポリシーを書く（参照系=公開SELECTのみ / ユーザーデータ=`auth.uid() = user_id`）
+- 書き込みはservice_role（Cloud Run・スクリプト）経由なので、公開読み取り以外のポリシーは基本作らなくてよい（service_roleはRLSをバイパス）
+- DDL変更後は `get_advisors(type: security)` を回してRLS漏れ・過剰ポリシーを確認する
+
 ### useEffect
 - 依存配列に配列・オブジェクトが入っている場合、`useMemo` / `useCallback` で参照を安定させているか
   - `filter()` / `map()` 等は毎レンダーで新しい参照を生成するため無限ループの原因になる
