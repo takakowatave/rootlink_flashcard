@@ -806,21 +806,6 @@ export default function WordPageClient({
     localizedEtymologyJa,
   } = parsed
 
-  const supplementary = useMemo(() => {
-    if (!dictionary || typeof dictionary !== 'object') return null
-    const d = dictionary as Record<string, unknown>
-    const s = d.supplementary
-    if (!s || typeof s !== 'object') return null
-    const sup = s as Record<string, unknown>
-    const collocations = Array.isArray(sup.collocations)
-      ? (sup.collocations as unknown[]).filter((c): c is string => typeof c === 'string')
-      : []
-    const usageNoteEn = typeof sup.usageNoteEn === 'string' ? sup.usageNoteEn : null
-    const usageNoteJa = typeof sup.usageNoteJa === 'string' ? sup.usageNoteJa : null
-    if (collocations.length === 0 && !usageNoteEn) return null
-    return { collocations, usageNoteEn, usageNoteJa }
-  }, [dictionary])
-
   // 表示言語に応じて EntryCard 用の string shape に落とす
   const displaySenses = useMemo<Record<string, DisplaySenseItem[]>>(() => {
     return Object.fromEntries(
@@ -1133,39 +1118,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       noCard={noCard}
     />
 
-    {supplementary && (
-      <div className="mt-3 flex flex-col gap-3">
-        {supplementary.collocations.length > 0 && (
-          <div className="bg-white rounded-2xl border border-line px-5 py-4">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">
-              {displayLocale === 'ja' ? 'よく使われる表現' : 'Common collocations'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {supplementary.collocations.map((c) => (
-                <span
-                  key={c}
-                  className="text-sm text-gray-800 bg-surface border border-line rounded-full px-3 py-1"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        {(supplementary.usageNoteEn || supplementary.usageNoteJa) && (
-          <div className="bg-white rounded-2xl border border-line px-5 py-4">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-              {displayLocale === 'ja' ? '使い方のポイント' : 'Usage note'}
-            </p>
-            <p className="text-sm text-gray-700">
-              {displayLocale === 'ja'
-                ? (supplementary.usageNoteJa ?? supplementary.usageNoteEn)
-                : supplementary.usageNoteEn}
-            </p>
-          </div>
-        )}
-      </div>
-    )}
     </div>
   )
 }
