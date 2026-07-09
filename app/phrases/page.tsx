@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
@@ -56,6 +56,7 @@ function PhraseCardItem({
   isSaved: boolean
   onSave: () => void
 }) {
+  const router = useRouter()
   const meaning = displayLocale === 'ja'
     ? (card.meaning_ja ?? card.meaning_en ?? '')
     : (card.meaning_en ?? card.meaning_ja ?? '')
@@ -65,15 +66,21 @@ function PhraseCardItem({
 
   const typeInfo = card.type ? TYPE_LABEL[card.type] : null
   const typeLabel = typeInfo ? (displayLocale === 'ja' ? typeInfo.ja : typeInfo.en) : null
+  const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
 
   return (
-    <div className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2 mx-auto max-w-[600px] w-full">
+    <div
+      className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2 mx-auto max-w-[600px] w-full cursor-pointer hover:ring-2 hover:ring-primary/40 md:hover:ring-2 md:hover:ring-primary/40 transition-shadow"
+      onClick={() => router.push(href)}
+    >
       {/* HEADER */}
       <div className="flex items-center justify-between py-1 px-1">
-        <Link href={`/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`} className="hover:opacity-75 transition-opacity">
-          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
-        </Link>
-        <button type="button" onClick={onSave} className="p-2 -mr-2 -mt-1 shrink-0">
+        <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onSave() }}
+          className="p-2 -mr-2 -mt-1 shrink-0"
+        >
           {isSaved
             ? <HiBookmark className="size-6 text-muted" />
             : <HiOutlineBookmark className="size-6 text-primary" />
