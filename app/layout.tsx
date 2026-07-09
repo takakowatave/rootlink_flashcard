@@ -2,6 +2,7 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AppShell from "@/components/AppShell";
+import DevBadge from "@/components/DevBadge";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function RootLayout({
             <AppShell>
                 {children}
             </AppShell>
+            <DevBadge />
         </body>
         </html>
     );
