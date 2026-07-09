@@ -121,6 +121,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - **本番直送**: 現段階はmainブランチ → Vercel本番で運用。ユーザーが増えたらdev/prodブランチ分離を検討。開発中の確認は `develop` ブランチで行う
 - **鉢植えの成長基準**: 連続ログイン（ストリーク）ではなく**累計ログイン日数**（`user_activity_log` の重複なし日付数 ≒ `activityDates.length`）に連動。一度休んでも枯れない設計。しきい値は `PlantStatus.tsx` の `PLANT_LEVELS` 定数（Lv2=3日/Lv3=7日/Lv4=14日/Lv5=30日〜）で調整
 - **UI統一方針**: オリジナル単語帳（saved_words）とデッキ（deck_words）はクイズ・進捗表示で同じ骨格を共有。ただし一覧は単語帳側のみリッチ表示（`EntryCard`＋語源モーダル）を残す。デッキは大量語のため一覧を持たずクイズ起動に特化
+- **dev環境の識別**: `DevBadge`（`app/components/DevBadge.tsx`）が `window.location.hostname` を判定し、本番ドメイン（rootlink.app / www.rootlink.app）**以外**（localhost・Vercelプレビュー=develop等）で左下にバッジを常時表示。本番のみ非表示。画像は `public/dev-badge.png`。dev確認用のSupabaseテストアカウントも別途あり（認証情報はpublicリポジトリに置かない）
 - **語源ツリーのインデックス**: `etymology_part_words`（part_text, word）はSupabaseトリガーで `dictionary_cache` から自動展開する。トリガー関数 `sync_etymology_part_words()` が `payload.etymologyData.structure.parts[]` を読んで UPSERT。ユーザーが単語を検索 → `dictionary_cache` 蓄積 → 自動で語根インデックスも育つ。手動シードは不要（ハイブリッド戦略：初期は主要語をCoworkで先行検索して厚みを出す、以降はユーザー検索で自然成長）
 
 ---
