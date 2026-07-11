@@ -1,25 +1,26 @@
-# phrase_cards 挿入プロンプト
+# phrase_cards 生成プロンプト（AIへのシステムメッセージ）
 
 ## タスク
-以下の表現リストを解析し、Supabase の `phrase_cards` テーブルに INSERT SQL を生成してください。
+入力された英語表現1件について、以下のJSONペイロードを生成してください。
+辞書エントリーとして、どのユーザーが見ても意味・使い方が理解できる中立的で自然な内容にすること。
 
-## テーブル定義
-```
-phrase_cards (
-  phrase        TEXT NOT NULL,   -- 表現そのまま（型注釈を含めない）
-  meaning_ja    TEXT,            -- 日本語の意味（簡潔に）
-  meaning_en    TEXT,            -- 英語の意味（簡潔に）
-  explanation_ja TEXT,           -- 補足説明（日本語）
-  explanation_en TEXT,           -- 補足説明（英語）
-  example       TEXT,            -- 英語例文
-  example_ja    TEXT,            -- 例文の日本語訳
-  type          TEXT,            -- 種別（下記から選択）
-  locale        TEXT,            -- 'en-GB' または 'en-US'
-  register      TEXT             -- 'neutral' / 'formal' / 'informal' / 'slang' / 'literary'
-)
+## 出力形式（JSON）
+```json
+{
+  "phrase": "…",              // 表現そのまま。型注釈や括弧内注記は含めない
+  "meaning_ja": "…",          // 日本語の意味（簡潔に。〜する／〜のこと）
+  "meaning_en": "…",          // 英語の意味（英英辞書風に簡潔）
+  "explanation_ja": "…",      // 補足説明・使いどころ（日本語）
+  "explanation_en": "…",      // 補足説明・使いどころ（英語）
+  "example_en": "…",          // 自然な英語例文（1つ）
+  "example_ja": "…",          // 例文の日本語訳
+  "type": "…",                // 下記から必ず選択
+  "locale": null,             // 通常 null。英国/米国固有の場合のみ 'en-GB' / 'en-US'
+  "register": "neutral"       // 'neutral' / 'formal' / 'informal' / 'slang' / 'archaic' / 'vulgar'
+}
 ```
 
-## type フィールドの選択肢（必ずこの値を使う）
+## type の選択肢
 | 値 | 説明 |
 |----|------|
 | `idiom` | 非合成・意味固定・構文生成不可（意味を直訳できない） |
@@ -31,27 +32,21 @@ phrase_cards (
 | `expression` | 上記に当てはまらない一般的な表現 |
 
 ## locale の決め方
-- イギリス・オーストラリア・アイルランド固有の表現 → `en-GB`
-- アメリカ固有の表現 → `en-US`
-- **両方で使われる表現 → `en-GB`（アプリのデフォルト）**
-- 片方にしか存在しない表現のみ明示的に区別する
+- **原則 null**（英米で共通に使われる表現）
+- **英国・オーストラリア・アイルランド固有** → `en-GB`
+- **アメリカ固有** → `en-US`
+- 迷ったら `null`（過剰に特定地域扱いしない）
 
-## ルール
-- `phrase` フィールドに `(conjunction)` などの型注釈を入れない
-- `type` は必ず上記の値から選ぶ
-- `locale` は両方で使われる表現なら `en-GB` にする
-- `register` は基本 `neutral`。明らかにフォーマル・インフォーマルな場合のみ変更
-- `meaning_ja` は短く端的に（〜する／〜のこと）
-- `example` は自然な英文で
+## register の決め方
+- 原則 `neutral`
+- 明らかにフォーマルな書き言葉 → `formal`
+- カジュアルな話し言葉 → `informal`
+- スラング → `slang`
+- 古風・古語 → `archaic`
+- 下品・粗俗 → `vulgar`
 
-## 出力形式
-```sql
-INSERT INTO phrase_cards (phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, type, locale, register)
-VALUES
-  ('...', '...', NULL, NULL, NULL, '...', '...', '...', 'en-GB', 'neutral'),
-  ...;
-```
-
----
-## 入力表現リスト
-（ここに今日学んだ表現を貼る）
+## 品質基準
+- 中立・辞書的な説明。個人の感想や主観を避ける
+- 例文は自然で、文脈が明確
+- `meaning_ja` は短く端的に
+- 日本語訳は自然な日本語で（直訳調を避ける）

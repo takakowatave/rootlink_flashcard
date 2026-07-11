@@ -8,6 +8,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import CardShell from '@/components/CardShell'
+import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
 type PhraseCard = {
   id: string
@@ -16,27 +17,12 @@ type PhraseCard = {
   meaning_en: string | null
   explanation_ja: string | null
   explanation_en: string | null
-  example: string | null
+  example_en: string | null
   example_ja: string | null
   type: string | null
   register: string | null
   locale: string | null
   created_at: string
-}
-
-const TYPE_LABEL: Record<string, { en: string; ja: string }> = {
-  idiom:             { en: 'Idiom',             ja: 'イディオム' },
-  phrasal_verb:      { en: 'Phrasal verb',       ja: '句動詞' },
-  fixed_expression:  { en: 'Fixed expression',   ja: '固定表現' },
-  spoken_expression: { en: 'Spoken expression',  ja: '会話表現' },
-  collocation:       { en: 'Collocation',        ja: 'コロケーション' },
-  pattern:           { en: 'Pattern',            ja: '構文パターン' },
-  expression:        { en: 'Expression',         ja: '表現' },
-  slang:             { en: 'Slang',              ja: 'スラング' },
-}
-
-const REGISTER_LABEL: Record<string, string> = {
-  formal: 'Formal', informal: 'Informal', slang: 'Slang', literary: 'Literary',
 }
 
 function cleanPhrase(phrase: string): string {
@@ -64,8 +50,11 @@ function PhraseCardItem({
     ? (card.explanation_ja ?? card.explanation_en ?? null)
     : (card.explanation_en ?? card.explanation_ja ?? null)
 
-  const typeInfo = card.type ? TYPE_LABEL[card.type] : null
-  const typeLabel = typeInfo ? (displayLocale === 'ja' ? typeInfo.ja : typeInfo.en) : null
+  const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
+  const registerLabel = card.register && card.register !== 'neutral'
+    ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
+    : null
+  const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
 
   return (
@@ -90,15 +79,11 @@ function PhraseCardItem({
         {typeLabel && (
           <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
         )}
-        {card.locale && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-            {card.locale === 'en-GB' ? 'British English' : 'American English'}
-          </span>
+        {localeLabel && (
+          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
         )}
-        {card.register && card.register !== 'neutral' && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-            {REGISTER_LABEL[card.register] ?? card.register}
-          </span>
+        {registerLabel && (
+          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
         )}
       </div>
 
@@ -117,10 +102,10 @@ function PhraseCardItem({
       )}
 
       {/* 例文 */}
-      {card.example && (
+      {card.example_en && (
         <div className="mt-2 px-1">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="text-sm text-gray-800 italic">{card.example}</p>
+            <p className="text-sm text-gray-800 italic">{card.example_en}</p>
             {card.example_ja && displayLocale === 'ja' && (
               <p className="text-xs text-muted mt-1">{card.example_ja}</p>
             )}
@@ -154,7 +139,8 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, type, register, locale, created_at')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at')
+          .order('type', { ascending: true })
           .order('created_at', { ascending: false })
           .limit(200),
         user

@@ -7,6 +7,7 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import Link from 'next/link'
+import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
 type PhraseCard = {
   id: string
@@ -15,7 +16,7 @@ type PhraseCard = {
   meaning_en: string | null
   explanation_ja: string | null
   explanation_en: string | null
-  example: string | null
+  example_en: string | null
   example_ja: string | null
   type: string | null
   register: string | null
@@ -24,21 +25,6 @@ type PhraseCard = {
 
 function cleanPhrase(phrase: string): string {
   return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
-}
-
-const TYPE_LABEL: Record<string, { en: string; ja: string }> = {
-  idiom:             { en: 'Idiom',             ja: 'イディオム' },
-  phrasal_verb:      { en: 'Phrasal verb',       ja: '句動詞' },
-  fixed_expression:  { en: 'Fixed expression',   ja: '固定表現' },
-  spoken_expression: { en: 'Spoken expression',  ja: '会話表現' },
-  collocation:       { en: 'Collocation',        ja: 'コロケーション' },
-  pattern:           { en: 'Pattern',            ja: '構文パターン' },
-  expression:        { en: 'Expression',         ja: '表現' },
-  slang:             { en: 'Slang',              ja: 'スラング' },
-}
-
-const REGISTER_LABEL: Record<string, string> = {
-  formal: 'Formal', informal: 'Informal', slang: 'Slang', literary: 'Literary',
 }
 
 const STOP_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'is', 'be', 'or', 'and', 'not', 'so', 'but', 'one', 'all', 'out', 'up', 'off', 'had', 'got', 'get', 'do', 'from'])
@@ -97,8 +83,11 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     ? (card.explanation_ja ?? card.explanation_en ?? null)
     : (card.explanation_en ?? card.explanation_ja ?? null)
 
-  const typeInfo = card.type ? TYPE_LABEL[card.type] : null
-  const typeLabel = typeInfo ? (displayLocale === 'ja' ? typeInfo.ja : typeInfo.en) : null
+  const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
+  const registerLabel = card.register && card.register !== 'neutral'
+    ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
+    : null
+  const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const componentWords = getComponentWords(card.phrase)
 
   return (
@@ -119,20 +108,16 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
           </div>
 
           {/* メタバッジ */}
-          {(typeLabel || card.locale || (card.register && card.register !== 'neutral')) && (
+          {(typeLabel || localeLabel || registerLabel) && (
             <div className="flex flex-wrap items-center gap-1.5 mb-4">
               {typeLabel && (
                 <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
               )}
-              {card.locale && (
-                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-                  {card.locale === 'en-GB' ? 'British English' : 'American English'}
-                </span>
+              {localeLabel && (
+                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
               )}
-              {card.register && card.register !== 'neutral' && (
-                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-                  {REGISTER_LABEL[card.register] ?? card.register}
-                </span>
+              {registerLabel && (
+                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
               )}
             </div>
           )}
@@ -148,9 +133,9 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
           )}
 
           {/* 例文 */}
-          {card.example && (
+          {card.example_en && (
             <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4">
-              <p className="text-sm text-gray-800 italic">{card.example}</p>
+              <p className="text-sm text-gray-800 italic">{card.example_en}</p>
               {card.example_ja && displayLocale === 'ja' && (
                 <p className="text-xs text-muted mt-1">{card.example_ja}</p>
               )}
