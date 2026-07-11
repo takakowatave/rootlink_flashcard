@@ -10,6 +10,7 @@ import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import GrammarTags from '@/components/GrammarTags'
+import CardShell from '@/components/CardShell'
 import { supabase } from '@/lib/supabaseClient'
 
 type Pronunciation = {
@@ -49,7 +50,7 @@ type Props = {
 
 const POS_LABEL_EN: Record<string, string> = {
   noun: 'noun', verb: 'verb', adjective: 'adjective', adverb: 'adverb',
-  pronoun: 'pronoun', preposition: 'preposition', conjunction: 'conjunction',
+  pronoun: 'pronoun', preposition: 'preposition', adposition: 'preposition', conjunction: 'conjunction',
   determiner: 'determiner', interjection: 'interjection',
   idiom: 'Idiom', phrasal_verb: 'Phrasal verb', fixed_expression: 'Fixed expression',
   spoken_expression: 'Spoken expression', collocation: 'Collocation',
@@ -157,8 +158,7 @@ export default function EntryCard({
   })
 
   return (
-    <div className={noCard ? 'w-full overflow-x-hidden' : 'mx-auto max-w-[600px] md:px-4 md:py-3 overflow-x-hidden'}>
-      <div className={noCard ? 'pt-2 pb-3 px-2 md:px-4' : 'bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] group-hover:shadow-[0px_0px_9px_rgba(187,187,187,0.25)] transition-shadow pt-2 pb-3 px-2'}>
+    <CardShell noCard={noCard}>
 
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between py-1">
@@ -455,7 +455,6 @@ export default function EntryCard({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </CardShell>
   )
 }
