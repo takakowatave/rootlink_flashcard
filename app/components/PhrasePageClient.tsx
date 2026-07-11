@@ -17,7 +17,6 @@ type PhraseCard = {
   explanation_en: string | null
   example: string | null
   example_ja: string | null
-  usage_tip: string | null
   type: string | null
   register: string | null
   locale: string | null
@@ -156,11 +155,6 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                 <p className="text-xs text-muted mt-1">{card.example_ja}</p>
               )}
             </div>
-          )}
-
-          {/* 覚えるポイント */}
-          {card.usage_tip && (
-            <p className="text-sm text-primary mb-4">💡 {card.usage_tip}</p>
           )}
 
           {/* 構成単語リンク */}

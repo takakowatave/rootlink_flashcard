@@ -18,7 +18,6 @@ type PhraseCard = {
   explanation_en: string | null
   example: string | null
   example_ja: string | null
-  usage_tip: string | null
   type: string | null
   register: string | null
   locale: string | null
@@ -129,12 +128,6 @@ function PhraseCardItem({
         </div>
       )}
 
-      {/* 覚えるポイント */}
-      {card.usage_tip && (
-        <div className="mt-2 px-1">
-          <p className="text-sm text-primary">💡 {card.usage_tip}</p>
-        </div>
-      )}
     </CardShell>
   )
 }
@@ -161,7 +154,7 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, usage_tip, type, register, locale, created_at')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, type, register, locale, created_at')
           .order('created_at', { ascending: false })
           .limit(200),
         user

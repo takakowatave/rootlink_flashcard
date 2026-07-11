@@ -13,7 +13,6 @@ phrase_cards (
   explanation_en TEXT,           -- 補足説明（英語）
   example       TEXT,            -- 英語例文
   example_ja    TEXT,            -- 例文の日本語訳
-  usage_tip     TEXT,            -- 覚えるポイント（省略可）
   type          TEXT,            -- 種別（下記から選択）
   locale        TEXT,            -- 'en-GB' または 'en-US'
   register      TEXT             -- 'neutral' / 'formal' / 'informal' / 'slang' / 'literary'
@@ -43,14 +42,13 @@ phrase_cards (
 - `locale` は両方で使われる表現なら `en-GB` にする
 - `register` は基本 `neutral`。明らかにフォーマル・インフォーマルな場合のみ変更
 - `meaning_ja` は短く端的に（〜する／〜のこと）
-- `example` は自然な英文で。ソース文があればそれを使う
-- `usage_tip` は非自明な使い方や注意点がある場合のみ入れる
+- `example` は自然な英文で
 
 ## 出力形式
 ```sql
-INSERT INTO phrase_cards (phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, usage_tip, type, locale, register)
+INSERT INTO phrase_cards (phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, type, locale, register)
 VALUES
-  ('...', '...', NULL, NULL, NULL, '...', '...', NULL, '...', 'en-GB', 'neutral'),
+  ('...', '...', NULL, NULL, NULL, '...', '...', '...', 'en-GB', 'neutral'),
   ...;
 ```
 
