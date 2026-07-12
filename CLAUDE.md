@@ -151,6 +151,49 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 
 ---
 
+## センテンスマイニング → phrase_cards 追加フロー
+
+エッセイ等から抽出した英語表現を `phrase_cards` に追加するときは、以下を必ず守る。
+
+**仕様の正本**:
+- Notion「フレーズ」ページ: `https://app.notion.com/p/39ad9703217a80348b61c15062fa940c`
+- リポ内ミラー: `scripts/phrase-cards-prompt.md`（Notionと差分があればNotionが正）
+
+**判定は Claude 自身が行う（OpenAI を経由しない）**:
+- `scripts/upsert-phrase-cards.mjs` の OpenAI ルートは使わない（二重課金になる）
+- Notion spec の Step 1 判定 gate（NG1〜NG6）を Claude 自身が通し、gate 合格なら Step 2 の JSON ペイロードを組み立てる
+- 書き込みは Supabase MCP の `execute_sql` で直接 INSERT
+
+**書き込み時のカラム**:
+
+| カラム | 内容 |
+|---|---|
+| `phrase` | 表現そのまま（型注釈・括弧内注記は含めない） |
+| `meaning_ja` / `meaning_en` | Notion spec の Case B に従って生成 |
+| `explanation_ja` / `explanation_en` | 同上 |
+| `example_en` / `example_ja` | phrase を必ず含む自然な例文 |
+| `type` | `idiom` / `phrasal_verb` / `pattern` / `fixed_expression` / `collocation` / `slang` の6つのみ（`spoken_expression` / `expression` は廃止・絶対に使わない） |
+| `locale` | 原則 null。英/米固有時のみ `en-GB` / `en-US` |
+| `register` | 原則 `neutral` |
+| `skip_reason` | **gate 合格なら NULL**。gate 落ちの表現も記録として残したい場合は NG番号+短い説明を入れて INSERT（例: `'NG1: 冠詞つき名詞句'`）→ `/phrases` の「脱落」セクションに出る |
+| `gate_checked_at` | `now()` |
+
+**重複防止**:
+- `phrase_cards.phrase` は UNIQUE 制約あり。同じ phrase を再 INSERT すると失敗する
+- 事前に `SELECT id FROM phrase_cards WHERE phrase = $1 LIMIT 1` で確認するか、`ON CONFLICT (phrase) DO NOTHING` を使う
+
+**確認画面**:
+- dev `/phrases`（https://rootlink-flashcard-git-develop-kikos-projects-678edb16.vercel.app/phrases）が判定結果の目視確認画面
+- 上「残す」= `skip_reason IS NULL`、下「脱落」= `skip_reason IS NOT NULL`
+- 判定根拠のバッジ・reason表示はカードに出さない。セクション分割のみ
+
+**やってはいけないこと**:
+- ターミナルに判定結果一覧を長々と貼る（狭くて視認性が悪いと本人明言。/phrases で見る）
+- OpenAI (gpt-4o) を判定・生成に使う（Claude 自身が判定する）
+- 冠詞つき（`a` / `an` / `the` から始まる）や文まるごとを phrase_cards に入れる（Notion spec Step 1 gate で必ず弾く）
+
+---
+
 ## 作業ルール（必ず守ること）
 
 ### デプロイ
