@@ -23,6 +23,7 @@ type PhraseCard = {
   register: string | null
   locale: string | null
   created_at: string
+  skip_reason: string | null
 }
 
 function cleanPhrase(phrase: string): string {
@@ -139,7 +140,7 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at, skip_reason')
           .order('type', { ascending: true })
           .order('created_at', { ascending: false })
           .limit(200),
@@ -186,6 +187,8 @@ function PhrasesPageInner() {
   const matchedId = searchQuery
     ? cards.find(c => c.phrase.toLowerCase() === searchQuery.toLowerCase())?.id
     : null
+  const keptCards = displayed.filter(c => !c.skip_reason)
+  const droppedCards = displayed.filter(c => !!c.skip_reason)
 
   return (
     <div className="bg-surface min-h-screen">
@@ -225,19 +228,50 @@ function PhrasesPageInner() {
               {todayOnly ? '今日の追加はまだありません' : 'フレーズがありません'}
             </p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {displayed.map((card) => (
-                <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
-                  className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
-                  <PhraseCardItem
-                    card={card}
-                    displayLocale={displayLocale}
-                    isSaved={savedIds.has(card.id)}
-                    onSave={() => handleSave(card.id)}
-                  />
+            <>
+              {keptCards.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <h2 className="text-sm font-semibold text-gray-700">残す</h2>
+                    <span className="text-xs text-muted">{keptCards.length}件</span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {keptCards.map((card) => (
+                      <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                        className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <PhraseCardItem
+                          card={card}
+                          displayLocale={displayLocale}
+                          isSaved={savedIds.has(card.id)}
+                          onSave={() => handleSave(card.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+              {droppedCards.length > 0 && (
+                <div className="mt-8 pt-6 border-t-2 border-dashed border-line">
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <h2 className="text-sm font-semibold text-red-600">脱落（gate落ち・削除候補）</h2>
+                    <span className="text-xs text-muted">{droppedCards.length}件</span>
+                  </div>
+                  <div className="flex flex-col gap-3 opacity-60">
+                    {droppedCards.map((card) => (
+                      <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                        className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <PhraseCardItem
+                          card={card}
+                          displayLocale={displayLocale}
+                          isSaved={savedIds.has(card.id)}
+                          onSave={() => handleSave(card.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
