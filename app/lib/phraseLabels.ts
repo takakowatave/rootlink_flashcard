@@ -9,7 +9,6 @@ export const TYPE_LABEL: Record<string, LocalizedLabel> = {
   spoken_expression: { en: 'Spoken expression', ja: '会話表現' },
   collocation:       { en: 'Collocation',       ja: 'コロケーション' },
   pattern:           { en: 'Pattern',           ja: '構文パターン' },
-  expression:        { en: 'Expression',        ja: '表現' },
   slang:             { en: 'Slang',             ja: 'スラング' },
 }
 
