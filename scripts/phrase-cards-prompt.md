@@ -28,6 +28,7 @@
   - 略記 `sb's` は使わない
   - どちらか迷ったら Oxford / Longman の見出し形に従う
 - **主語は原則入れない**（`I nailed it.` → `nail it`。NG6 と併せて処理）
+- **AmE / BrE の綴り変種があるときは BrE を採用**（RootLink は Oxford ベース。`anesthesia` → `anaesthesia`, `color` → `colour`, `realize` → `realise`, `traveling` → `travelling`。本当にアメリカ固有の表現のみ `locale = 'en-US'` で例外扱い）
 
 正規化後の phrase で改めて NG1〜NG6 を判定する。
 
