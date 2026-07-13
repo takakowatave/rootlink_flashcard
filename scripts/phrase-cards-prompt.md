@@ -20,8 +20,11 @@
 - **括弧内注記を除去**（`nail it (informal)` → `nail it`）
 - **動詞は原形**（`nailed it` / `nails it` / `nailing it` → `nail it`）
 - **名詞は単数形**（`good ideas` → `good idea` ※そもそも NG1 で落ちる）
-- **所有格 slot は `one's`**（`his mind` / `her mind` / `my mind` → `one's mind`）
 - **人・物の slot は `sb` / `sth`**（`help John` → `help sb`。ただし NG3 で落ちる可能性大）
+- **所有格 slot は主語との関係で分ける**:
+  - 主語自身の所有物 → `one's`（`rack one's brains`, `keep one's options open`）
+  - 他人の所有物 → `sb's`（`be after sb's blood` = 他人の血を欲する）
+  - どちらか迷ったら Oxford / Longman の見出し形に従う
 - **主語は原則入れない**（`I nailed it.` → `nail it`。NG6 と併せて処理）
 
 正規化後の phrase で改めて NG1〜NG6 を判定する。
