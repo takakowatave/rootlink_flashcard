@@ -187,6 +187,16 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - 上「残す」= `skip_reason IS NULL`、下「脱落」= `skip_reason IS NOT NULL`
 - 判定根拠のバッジ・reason表示はカードに出さない。セクション分割のみ
 
+**kikoが追加を頼むときのプロンプトテンプレ**:
+
+```
+次のフレーズを phrase_cards に追加して。Notion spec（scripts/phrase-cards-prompt.md）で判定して、gate合格は Case B ペイロードで INSERT、gate落ちは skip_reason 付きで INSERT。結果は /phrases で見るからターミナルには件数だけでいい。
+
+- pull yourself together
+- get on with it
+- (1行1phrase)
+```
+
 **やってはいけないこと**:
 - ターミナルに判定結果一覧を長々と貼る（狭くて視認性が悪いと本人明言。/phrases で見る）
 - OpenAI (gpt-4o) を判定・生成に使う（Claude 自身が判定する）
