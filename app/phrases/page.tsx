@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
+import CardShell from '@/components/CardShell'
+import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
 type PhraseCard = {
   id: string
@@ -15,28 +17,13 @@ type PhraseCard = {
   meaning_en: string | null
   explanation_ja: string | null
   explanation_en: string | null
-  example: string | null
+  example_en: string | null
   example_ja: string | null
-  usage_tip: string | null
   type: string | null
   register: string | null
   locale: string | null
   created_at: string
-}
-
-const TYPE_LABEL: Record<string, { en: string; ja: string }> = {
-  idiom:             { en: 'Idiom',             ja: 'イディオム' },
-  phrasal_verb:      { en: 'Phrasal verb',       ja: '句動詞' },
-  fixed_expression:  { en: 'Fixed expression',   ja: '固定表現' },
-  spoken_expression: { en: 'Spoken expression',  ja: '会話表現' },
-  collocation:       { en: 'Collocation',        ja: 'コロケーション' },
-  pattern:           { en: 'Pattern',            ja: '構文パターン' },
-  expression:        { en: 'Expression',         ja: '表現' },
-  slang:             { en: 'Slang',              ja: 'スラング' },
-}
-
-const REGISTER_LABEL: Record<string, string> = {
-  formal: 'Formal', informal: 'Informal', slang: 'Slang', literary: 'Literary',
+  skip_reason: string | null
 }
 
 function cleanPhrase(phrase: string): string {
@@ -64,15 +51,15 @@ function PhraseCardItem({
     ? (card.explanation_ja ?? card.explanation_en ?? null)
     : (card.explanation_en ?? card.explanation_ja ?? null)
 
-  const typeInfo = card.type ? TYPE_LABEL[card.type] : null
-  const typeLabel = typeInfo ? (displayLocale === 'ja' ? typeInfo.ja : typeInfo.en) : null
+  const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
+  const registerLabel = card.register && card.register !== 'neutral'
+    ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
+    : null
+  const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
 
   return (
-    <div
-      className="bg-white md:rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-2 pb-3 px-2 mx-auto max-w-[600px] w-full cursor-pointer hover:ring-2 hover:ring-primary/40 md:hover:ring-2 md:hover:ring-primary/40 transition-shadow"
-      onClick={() => router.push(href)}
-    >
+    <CardShell onClick={() => router.push(href)}>
       {/* HEADER */}
       <div className="flex items-center justify-between py-1 px-1">
         <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
@@ -93,15 +80,11 @@ function PhraseCardItem({
         {typeLabel && (
           <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
         )}
-        {card.locale && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-            {card.locale === 'en-GB' ? 'British English' : 'American English'}
-          </span>
+        {localeLabel && (
+          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
         )}
-        {card.register && card.register !== 'neutral' && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">
-            {REGISTER_LABEL[card.register] ?? card.register}
-          </span>
+        {registerLabel && (
+          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
         )}
       </div>
 
@@ -120,10 +103,10 @@ function PhraseCardItem({
       )}
 
       {/* 例文 */}
-      {card.example && (
+      {card.example_en && (
         <div className="mt-2 px-1">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="text-sm text-gray-800 italic">{card.example}</p>
+            <p className="text-sm text-gray-800 italic">{card.example_en}</p>
             {card.example_ja && displayLocale === 'ja' && (
               <p className="text-xs text-muted mt-1">{card.example_ja}</p>
             )}
@@ -131,13 +114,7 @@ function PhraseCardItem({
         </div>
       )}
 
-      {/* 覚えるポイント */}
-      {card.usage_tip && (
-        <div className="mt-2 px-1">
-          <p className="text-sm text-primary">💡 {card.usage_tip}</p>
-        </div>
-      )}
-    </div>
+    </CardShell>
   )
 }
 
@@ -163,7 +140,8 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example, example_ja, usage_tip, type, register, locale, created_at')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at, skip_reason')
+          .order('type', { ascending: true })
           .order('created_at', { ascending: false })
           .limit(200),
         user
@@ -209,6 +187,8 @@ function PhrasesPageInner() {
   const matchedId = searchQuery
     ? cards.find(c => c.phrase.toLowerCase() === searchQuery.toLowerCase())?.id
     : null
+  const keptCards = displayed.filter(c => !c.skip_reason)
+  const droppedCards = displayed.filter(c => !!c.skip_reason)
 
   return (
     <div className="bg-surface min-h-screen">
@@ -248,19 +228,50 @@ function PhrasesPageInner() {
               {todayOnly ? '今日の追加はまだありません' : 'フレーズがありません'}
             </p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {displayed.map((card) => (
-                <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
-                  className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
-                  <PhraseCardItem
-                    card={card}
-                    displayLocale={displayLocale}
-                    isSaved={savedIds.has(card.id)}
-                    onSave={() => handleSave(card.id)}
-                  />
+            <>
+              {keptCards.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <h2 className="text-sm font-semibold text-gray-700">残す</h2>
+                    <span className="text-xs text-muted">{keptCards.length}件</span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {keptCards.map((card) => (
+                      <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                        className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <PhraseCardItem
+                          card={card}
+                          displayLocale={displayLocale}
+                          isSaved={savedIds.has(card.id)}
+                          onSave={() => handleSave(card.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+              {droppedCards.length > 0 && (
+                <div className="mt-8 pt-6 border-t-2 border-dashed border-line">
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <h2 className="text-sm font-semibold text-red-600">脱落（gate落ち・削除候補）</h2>
+                    <span className="text-xs text-muted">{droppedCards.length}件</span>
+                  </div>
+                  <div className="flex flex-col gap-3 opacity-60">
+                    {droppedCards.map((card) => (
+                      <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                        className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <PhraseCardItem
+                          card={card}
+                          displayLocale={displayLocale}
+                          isSaved={savedIds.has(card.id)}
+                          onSave={() => handleSave(card.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

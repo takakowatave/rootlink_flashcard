@@ -151,6 +151,79 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 
 ---
 
+## センテンスマイニング → phrase_cards 追加フロー
+
+エッセイ等から抽出した英語表現を `phrase_cards` に追加するときは、以下を必ず守る。
+
+**仕様の正本**:
+- Notion「フレーズ」ページ: `https://app.notion.com/p/39ad9703217a80348b61c15062fa940c`
+- リポ内ミラー: `scripts/phrase-cards-prompt.md`（Notionと差分があればNotionが正）
+
+**判定は Claude 自身が行う（OpenAI を経由しない）**:
+- `scripts/upsert-phrase-cards.mjs` の OpenAI ルートは使わない（二重課金になる）
+- Notion spec の Step 1 判定 gate（NG1〜NG6）を Claude 自身が通し、gate 合格なら Step 2 の JSON ペイロードを組み立てる
+- 書き込みは Supabase MCP の `execute_sql` で直接 INSERT
+
+**書き込み時のカラム**:
+
+| カラム | 内容 |
+|---|---|
+| `phrase` | Notion spec の Step 0 で正規化した形（小文字・原形・末尾ピリオドなし・所有格は `one's`・人/物 slot は `sb` / `sth`） |
+| `meaning_ja` / `meaning_en` | Notion spec の Case B に従って生成 |
+| `explanation_ja` / `explanation_en` | 同上 |
+| `example_en` / `example_ja` | phrase を必ず含む自然な例文 |
+| `type` | `idiom` / `phrasal_verb` / `pattern` / `fixed_expression` / `collocation` / `slang` の6つのみ（`spoken_expression` / `expression` は廃止・絶対に使わない） |
+| `locale` | 原則 null。英/米固有時のみ `en-GB` / `en-US` |
+| `register` | 原則 `neutral` |
+| `skip_reason` | **gate 合格なら NULL**。gate 落ちの表現も記録として残したい場合は NG番号+短い説明を入れて INSERT（例: `'NG1: 冠詞つき名詞句'`）→ `/phrases` の「脱落」セクションに出る |
+| `gate_checked_at` | `now()` |
+
+**重複防止**:
+- `phrase_cards.phrase` は UNIQUE 制約あり。同じ phrase を再 INSERT すると失敗する
+- 事前に `SELECT id FROM phrase_cards WHERE phrase = $1 LIMIT 1` で確認するか、`ON CONFLICT (phrase) DO NOTHING` を使う
+
+**確認画面**:
+- dev `/phrases`（https://rootlink-flashcard-git-develop-kikos-projects-678edb16.vercel.app/phrases）が判定結果の目視確認画面
+- 上「残す」= `skip_reason IS NULL`、下「脱落」= `skip_reason IS NOT NULL`
+- 判定根拠のバッジ・reason表示はカードに出さない。セクション分割のみ
+
+**kikoが追加を頼むときのプロンプトテンプレ**:
+
+```
+次のフレーズを phrase_cards に追加して。Notion spec（scripts/phrase-cards-prompt.md）で判定して、gate合格は Case B ペイロードで INSERT、gate落ちは skip_reason 付きで INSERT。結果は /phrases で見るからターミナルには件数だけでいい。
+
+- pull yourself together
+- get on with it
+- (1行1phrase)
+```
+
+**やってはいけないこと**:
+- ターミナルに判定結果一覧を長々と貼る（狭くて視認性が悪いと本人明言。/phrases で見る）
+- OpenAI (gpt-4o) を判定・生成に使う（Claude 自身が判定する）
+- 冠詞つき（`a` / `an` / `the` から始まる）や文まるごとを phrase_cards に入れる（Notion spec Step 1 gate で必ず弾く）
+- `phrase` に**大文字**・**末尾ピリオド `.` `!` `?`**・**活用形/複数形**・**具体的な人称代名詞（his/her/my等）**をそのまま入れる（Step 0 の正規化で必ずそろえる）
+
+---
+
+## 作業ルール（必ず守ること）
+
+### デプロイ
+- コード変更が完了したら、確認を求めずに即 `develop` ブランチへ commit & push する
+- `develop` ブランチが存在しない場合は作成してから push する
+- 本番（`main` へのマージ・Vercel 本番・`gcloud run deploy`）はユーザーから明示的に指示があったときのみ
+
+### UI / スタイル
+- カード・レイアウト等のスタイルは必ず共通コンポーネントを使う。ハードコード禁止
+- 新しいUIを実装する前に必ずデザイン（構成・スタイル案）をテキストや擬似コードで提示し、承認を得てから実装する
+- 共通コンポーネントを新規作成したら必ず Storybook のストーリーも追加する
+
+### スコープ
+- 頼まれていないことは絶対にやらない
+- 「表現の話」をしているときに単語ページを触らない、など文脈外の変更は禁止
+- DB の bulk 操作（UPDATE/DELETE 複数件）は必ずユーザーに内容を示して承認を得てから実行する
+
+---
+
 ## よく使うコマンド
 
 ```bash

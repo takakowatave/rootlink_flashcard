@@ -84,6 +84,7 @@ export const POS_LABEL_JA: Record<string,string> = {
     adjectival_noun:'形容動詞',
     pronoun:'代名詞',
     preposition:'前置詞',
+    adposition:'前置詞',
     conjunction:'接続詞',
     interjection:'感嘆詞',
     particle:'助詞',
