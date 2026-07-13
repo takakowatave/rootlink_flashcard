@@ -20,8 +20,13 @@
 - **括弧内注記を除去**（`nail it (informal)` → `nail it`）
 - **動詞は原形**（`nailed it` / `nails it` / `nailing it` → `nail it`）
 - **名詞は単数形**（`good ideas` → `good idea` ※そもそも NG1 で落ちる）
-- **所有格 slot は `one's`**（`his mind` / `her mind` / `my mind` → `one's mind`）
-- **人・物の slot は `sb` / `sth`**（`help John` → `help sb`。ただし NG3 で落ちる可能性大）
+- **人・物の slot は `someone` / `something`**（`help John` → `help someone`。ただし NG3 で落ちる可能性大）
+  - **略記 `sb` / `sth` は使わない**（ユーザーにはスペルミスに見える）
+- **所有格 slot は主語との関係で分ける**:
+  - 主語自身の所有物 → `one's`（`rack one's brains`, `keep one's options open`）
+  - 他人の所有物 → `someone's`（`be after someone's blood` = 他人の血を欲する）
+  - 略記 `sb's` は使わない
+  - どちらか迷ったら Oxford / Longman の見出し形に従う
 - **主語は原則入れない**（`I nailed it.` → `nail it`。NG6 と併せて処理）
 
 正規化後の phrase で改めて NG1〜NG6 を判定する。
@@ -94,7 +99,7 @@
 
 ```json
 {
-  "phrase": "…",              // Step 0 で正規化した形（小文字・原形・末尾記号なし・one's / sb / sth 使用）
+  "phrase": "…",              // Step 0 で正規化した形（小文字・原形・末尾記号なし・one's / someone / something 使用。sb / sth の略記は不可）
   "meaning_ja": "…",          // 日本語の意味（簡潔に。〜する／〜のこと）
   "meaning_en": "…",          // 英語の意味（英英辞書風に簡潔）
   "explanation_ja": "…",      // 補足説明・使いどころ（日本語）
@@ -113,6 +118,7 @@
 - **英国・オーストラリア・アイルランド固有** → `en-GB`
 - **アメリカ固有** → `en-US`
 - 迷ったら `null`（過剰に特定地域扱いしない）
+- **厳格ルール**: Oxford / Longman / Cambridge のいずれかが `British`, `especially British English`, `American`, `especially American English` 等のラベルを**明示している場合のみ** en-GB / en-US を付ける。「なんとなくBrEっぽい」で判断しない
 
 ## register の決め方
 
@@ -130,4 +136,5 @@
 - 例文は自然で文脈が明確
 - `meaning_ja` は短く端的に
 - 日本語訳は自然な日本語で（直訳調を避ける）
+- **`explanation_ja` / `explanation_en` に「活用形: rack / racked / racked / racking」のような活用形リストを入れない**（辞書の三変化表ではない。ユーザーは phrase の使い方を知りたいだけ）
 - **JSON以外の文字（前置き・コードフェンス）は出力しない**
