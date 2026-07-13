@@ -113,6 +113,7 @@
 - **英国・オーストラリア・アイルランド固有** → `en-GB`
 - **アメリカ固有** → `en-US`
 - 迷ったら `null`（過剰に特定地域扱いしない）
+- **厳格ルール**: Oxford / Longman / Cambridge のいずれかが `British`, `especially British English`, `American`, `especially American English` 等のラベルを**明示している場合のみ** en-GB / en-US を付ける。「なんとなくBrEっぽい」で判断しない
 
 ## register の決め方
 
