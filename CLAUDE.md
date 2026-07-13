@@ -168,7 +168,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 
 | カラム | 内容 |
 |---|---|
-| `phrase` | 表現そのまま（型注釈・括弧内注記は含めない） |
+| `phrase` | Notion spec の Step 0 で正規化した形（小文字・原形・末尾ピリオドなし・所有格は `one's`・人/物 slot は `sb` / `sth`） |
 | `meaning_ja` / `meaning_en` | Notion spec の Case B に従って生成 |
 | `explanation_ja` / `explanation_en` | 同上 |
 | `example_en` / `example_ja` | phrase を必ず含む自然な例文 |
@@ -201,6 +201,7 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 - ターミナルに判定結果一覧を長々と貼る（狭くて視認性が悪いと本人明言。/phrases で見る）
 - OpenAI (gpt-4o) を判定・生成に使う（Claude 自身が判定する）
 - 冠詞つき（`a` / `an` / `the` から始まる）や文まるごとを phrase_cards に入れる（Notion spec Step 1 gate で必ず弾く）
+- `phrase` に**大文字**・**末尾ピリオド `.` `!` `?`**・**活用形/複数形**・**具体的な人称代名詞（his/her/my等）**をそのまま入れる（Step 0 の正規化で必ずそろえる）
 
 ---
 
