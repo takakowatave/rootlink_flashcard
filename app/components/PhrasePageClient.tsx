@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
-import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
+import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
@@ -39,6 +39,8 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioLoading, setAudioLoading] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -64,6 +66,20 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
     return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
   }, [])
+
+  const playAudio = async () => {
+    if (audioUrl) { new Audio(audioUrl).play(); return }
+    setAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
 
   const handleSave = async () => {
     if (!userId) { setShowSignupModal(true); return }
@@ -135,7 +151,17 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
           {/* 例文 */}
           {card.example_en && (
             <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4">
-              <p className="text-sm text-gray-800 italic">{card.example_en}</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm text-gray-800 italic flex-1">{card.example_en}</p>
+                <button
+                  type="button"
+                  onClick={playAudio}
+                  disabled={audioLoading}
+                  className="shrink-0"
+                >
+                  <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+                </button>
+              </div>
               {card.example_ja && displayLocale === 'ja' && (
                 <p className="text-xs text-muted mt-1">{card.example_ja}</p>
               )}

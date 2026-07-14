@@ -1,12 +1,13 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
+import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import CardShell from '@/components/CardShell'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
@@ -50,6 +51,25 @@ function PhraseCardItem({
   const explanation = displayLocale === 'ja'
     ? (card.explanation_ja ?? card.explanation_en ?? null)
     : (card.explanation_en ?? card.explanation_ja ?? null)
+
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioLoading, setAudioLoading] = useState(false)
+
+  const playAudio = async (e: ReactMouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (audioUrl) { new Audio(audioUrl).play(); return }
+    setAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
 
   const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
   const registerLabel = card.register && card.register !== 'neutral'
@@ -106,7 +126,17 @@ function PhraseCardItem({
       {card.example_en && (
         <div className="mt-2 px-1">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="text-sm text-gray-800 italic">{card.example_en}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm text-gray-800 italic flex-1">{card.example_en}</p>
+              <button
+                type="button"
+                onClick={playAudio}
+                disabled={audioLoading}
+                className="shrink-0"
+              >
+                <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+              </button>
+            </div>
             {card.example_ja && displayLocale === 'ja' && (
               <p className="text-xs text-muted mt-1">{card.example_ja}</p>
             )}
