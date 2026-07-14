@@ -61,6 +61,10 @@
 **NG5. 字義通りの形容詞 + 名詞**
 - 慣用性がゼロの、単なる合成的意味の組み合わせ
 - 例: `red car`, `interesting book`, `big house`
+- **拡張ルール（際限テスト）**: adjective 側が汎用修飾語で、N を差し替えても同じ意味で自然に成立するなら NG5 → skip
+  - 例: `mutual friend` / `mutual respect` / `mutual understanding` / `mutual acquaintance` / `mutual interest` / `mutual benefit` … と際限がない → `mutual` の語彙エントリーで吸収されるので phrase 化しない
+  - 同型: `good idea` / `good point` / `great job` … 単体 adj のエントリーで足りるものはすべて skip
+  - **判定手順**: 「その adj + 別の N」を3つ以上並べて自然に成立するかチェック。成立するなら NG5
 
 **NG6. 文まるごと**
 - 文単位ではなく辞書粒度で立てる。文の中に慣用性のある塊があれば、その部分だけ抽出
