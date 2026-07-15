@@ -54,6 +54,8 @@ function PhraseCardItem({
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
+  const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
+  const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
 
   const playAudio = async (e: ReactMouseEvent) => {
     e.preventDefault()
@@ -71,6 +73,22 @@ function PhraseCardItem({
     } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
+  const playHeadwordAudio = async (e: ReactMouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
+    setHeadwordAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase/headword`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
+  }
+
   const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
   const registerLabel = card.register && card.register !== 'neutral'
     ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
@@ -81,8 +99,18 @@ function PhraseCardItem({
   return (
     <CardShell onClick={() => router.push(href)}>
       {/* HEADER */}
-      <div className="flex items-center justify-between py-1 px-1">
-        <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+      <div className="flex items-center justify-between py-1 px-1 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+          <button
+            type="button"
+            onClick={playHeadwordAudio}
+            disabled={headwordAudioLoading}
+            className="shrink-0"
+          >
+            <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+          </button>
+        </div>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onSave() }}

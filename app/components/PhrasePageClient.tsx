@@ -41,6 +41,8 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
+  const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
+  const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -81,6 +83,20 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
+  const playHeadwordAudio = async () => {
+    if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
+    setHeadwordAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase/headword`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
+  }
+
   const handleSave = async () => {
     if (!userId) { setShowSignupModal(true); return }
     if (isSaved) {
@@ -112,9 +128,19 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       <div className="max-w-[640px] mx-auto px-4 py-6">
         <div className="bg-white rounded-xl border border-line px-5 py-5">
 
-          {/* タイトル + ブックマーク */}
-          <div className="flex items-start justify-between mb-3">
-            <h1 className="text-3xl font-bold text-black leading-tight">{cleanPhrase(card.phrase)}</h1>
+          {/* タイトル + 再生 + ブックマーク */}
+          <div className="flex items-start justify-between mb-3 gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h1 className="text-3xl font-bold text-black leading-tight">{cleanPhrase(card.phrase)}</h1>
+              <button
+                type="button"
+                onClick={playHeadwordAudio}
+                disabled={headwordAudioLoading}
+                className="shrink-0"
+              >
+                <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+              </button>
+            </div>
             <button type="button" onClick={handleSave} className="p-2 -mr-2 -mt-1 shrink-0">
               {isSaved
                 ? <HiBookmark className="size-6 text-muted" />
