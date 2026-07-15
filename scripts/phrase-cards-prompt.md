@@ -22,6 +22,7 @@
 - **名詞は単数形**（`good ideas` → `good idea` ※そもそも NG1 で落ちる）
 - **人・物の slot は `someone` / `something`**（`help John` → `help someone`。ただし NG3 で落ちる可能性大）
   - **略記 `sb` / `sth` は使わない**（ユーザーにはスペルミスに見える）
+  - **`somebody` / `something` の `body` 系も使わない**。統一して `someone`（例: `give somebody space` → `give someone space`）
 - **所有格 slot は主語との関係で分ける**:
   - 主語自身の所有物 → `one's`（`rack one's brains`, `keep one's options open`）
   - 他人の所有物 → `someone's`（`be after someone's blood` = 他人の血を欲する）
@@ -58,13 +59,25 @@
 - 例: `make sb do sth` (SVOC使役), `let sb go`, `have sb do sth`
 - **例外**: `verb + to-inf` の usage note（`agree to do sth`, `succeed in doing sth` など）は主要辞書に立つ → OK
 
-**NG5. 字義通りの形容詞 + 名詞**
-- 慣用性がゼロの、単なる合成的意味の組み合わせ
-- 例: `red car`, `interesting book`, `big house`
-- **拡張ルール（際限テスト）**: adjective 側が汎用修飾語で、N を差し替えても同じ意味で自然に成立するなら NG5 → skip
-  - 例: `mutual friend` / `mutual respect` / `mutual understanding` / `mutual acquaintance` / `mutual interest` / `mutual benefit` … と際限がない → `mutual` の語彙エントリーで吸収されるので phrase 化しない
-  - 同型: `good idea` / `good point` / `great job` … 単体 adj のエントリーで足りるものはすべて skip
-  - **判定手順**: 「その adj + 別の N」を3つ以上並べて自然に成立するかチェック。成立するなら NG5
+**NG5. 字義通り＋際限のある組み合わせ（adj + N / verb + N）**
+- 慣用性がゼロで、片方の語彙エントリー（形容詞/動詞/名詞）で吸収されるもの
+- 基本形（adj + N）: `red car`, `interesting book`, `big house`
+- **拡張ルール（際限テスト）**: アンカー語（adj or verb）+ 別の N を3つ以上並べて自然に成立するなら NG5 → skip
+
+  **A. adj + N**（adj が汎用修飾語）
+  - `mutual friend` / `mutual respect` / `mutual understanding` / `mutual acquaintance` / `mutual interest` / `mutual benefit` … 際限がない → `mutual` の語彙で吸収
+  - 同型: `good idea` / `good point` / `great job` … 単体 adj のエントリーで足りる
+
+  **B. verb + N**（light verb + action noun）
+  - `make an incision` / `make a decision` / `make a call` / `make a mistake` / `make an effort` … 際限がない → `make` の light-verb 用法で吸収
+  - 同型: `have a chat` / `take a shower` / `do the dishes` などは慣用性が低ければ skip
+
+  **C. verb + 具象名詞クラス（体の一部・場所・道具など）で字義通り**
+  - `twist one's ankle` / `twist one's knee` / `twist one's wrist` / `twist one's neck` … 際限がない → `twist` の verb 用法で吸収
+  - 同型: `hurt one's ankle` / `bandage one's ankle` / `sprain one's ankle`
+
+- **例外（NG5にならない）**: 比喩性・非合成性のある verb + 体の一部は **idiom** として残す
+  - `break someone's heart` / `lose one's head` / `hold one's tongue` → 意味が字義から復元できない
 
 **NG6. 文まるごと**
 - 文単位ではなく辞書粒度で立てる。文の中に慣用性のある塊があれば、その部分だけ抽出
