@@ -94,6 +94,8 @@ export default function EntryCard({
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
+  const [exampleAudioUrls, setExampleAudioUrls] = useState<Record<string, string>>({})
+  const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
 
@@ -130,6 +132,26 @@ export default function EntryCard({
       const data = await res.json()
       if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
     } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
+
+  const playExampleAudio = async (senseId: string) => {
+    const cached = exampleAudioUrls[senseId]
+    if (cached) { new Audio(cached).play(); return }
+    setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/word/example`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: headword, sense_id: senseId }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) {
+        setExampleAudioUrls(prev => ({ ...prev, [senseId]: data.audioUrl }))
+        new Audio(data.audioUrl).play()
+      }
+    } catch { /* silent */ } finally {
+      setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
+    }
   }
 
   const labels = displayLocale === 'ja'
@@ -360,7 +382,19 @@ export default function EntryCard({
                   </div>
                   {(sense.example || sense.exampleTranslation) && (
                     <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                      {sense.example && <p>{sense.example}</p>}
+                      {sense.example && (
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="flex-1">{sense.example}</p>
+                          <button
+                            type="button"
+                            onClick={() => playExampleAudio(sense.senseId)}
+                            disabled={!!exampleAudioLoading[sense.senseId]}
+                            className="shrink-0"
+                          >
+                            <HiSpeakerWave className={`size-6 ${exampleAudioLoading[sense.senseId] ? 'text-muted animate-pulse' : 'text-muted'}`} />
+                          </button>
+                        </div>
+                      )}
                       {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                     </div>
                   )}
@@ -394,7 +428,19 @@ export default function EntryCard({
 
                           {(sense.example || sense.exampleTranslation) && (
                             <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                              {sense.example && <p>{sense.example}</p>}
+                              {sense.example && (
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="flex-1">{sense.example}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => playExampleAudio(sense.senseId)}
+                                    disabled={!!exampleAudioLoading[sense.senseId]}
+                                    className="shrink-0"
+                                  >
+                                    <HiSpeakerWave className={`size-6 ${exampleAudioLoading[sense.senseId] ? 'text-muted animate-pulse' : 'text-muted'}`} />
+                                  </button>
+                                </div>
+                              )}
                               {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
                             </div>
                           )}
