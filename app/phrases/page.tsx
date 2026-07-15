@@ -33,7 +33,8 @@ function cleanPhrase(phrase: string): string {
 
 function isToday(dateStr: string): boolean {
   const today = new Date().toLocaleDateString('sv')
-  return dateStr.startsWith(today)
+  const localDate = new Date(dateStr).toLocaleDateString('sv')
+  return localDate === today
 }
 
 function PhraseCardItem({
@@ -199,7 +200,6 @@ function PhrasesPageInner() {
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
           .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at, skip_reason')
-          .order('type', { ascending: true })
           .order('created_at', { ascending: false })
           .limit(200),
         user
