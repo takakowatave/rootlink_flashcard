@@ -206,13 +206,13 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
               return (
                 <div key={sense.sense_id} className="group flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    {hasMultiple && (
-                      <span className="inline-block text-xs font-semibold text-muted mb-1">
-                        {idx + 1}.
-                      </span>
-                    )}
                     {meaning && (
-                      <p className="text-lg text-gray-800 mb-2">{meaning}</p>
+                      <p className="text-lg text-gray-800 mb-2">
+                        {hasMultiple && (
+                          <span className="text-muted mr-1.5">{idx + 1}.</span>
+                        )}
+                        {meaning}
+                      </p>
                     )}
                     {explanation && (
                       <p className="text-sm text-muted mb-3">{explanation}</p>
