@@ -9,9 +9,8 @@ import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import GrammarTags from '@/components/GrammarTags'
 import CardShell from '@/components/CardShell'
-import SensePinButton from '@/components/SensePinButton'
+import SenseRow from '@/components/SenseRow'
 import SenseExample from '@/components/SenseExample'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -404,37 +403,22 @@ export default function EntryCard({
                 )}
 
                 <div className="mt-2 flex flex-col gap-6">
-                  {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => {
-                    const isPinned = pinnedSenseId === sense.senseId
-                    return (
-                      <div key={sense.senseId} className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-base font-medium text-black">{sense.meaning}</p>
-
-                          {grammarTags[sense.senseId]?.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1.5">
-                              <GrammarTags tags={grammarTags[sense.senseId]} displayLocale={displayLocale} />
-                            </div>
-                          )}
-
-                          <SenseExample
-                            example={sense.example}
-                            translation={sense.exampleTranslation}
-                            displayLocale={displayLocale}
-                            onPlay={() => playExampleAudio(sense.senseId)}
-                            isLoading={!!exampleAudioLoading[sense.senseId]}
-                          />
-                        </div>
-
-                        <SensePinButton
-                          isPinned={isPinned}
-                          onToggle={() => onTogglePin(sense.senseId)}
-                          displayLocale={displayLocale}
-                          tutorialAttr
-                        />
-                      </div>
-                    )
-                  })}
+                  {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => (
+                    <SenseRow
+                      key={sense.senseId}
+                      meaning={sense.meaning}
+                      example={sense.example}
+                      translation={sense.exampleTranslation}
+                      displayLocale={displayLocale}
+                      onPlayExample={() => playExampleAudio(sense.senseId)}
+                      exampleLoading={!!exampleAudioLoading[sense.senseId]}
+                      grammarTags={grammarTags[sense.senseId]}
+                      showPinButton
+                      isPinned={pinnedSenseId === sense.senseId}
+                      onTogglePin={() => onTogglePin(sense.senseId)}
+                      tutorialPinAttr
+                    />
+                  ))}
                 </div>
               </div>
             ))

@@ -108,7 +108,7 @@ function PhraseCardItem({
     <CardShell onClick={() => router.push(href)}>
       {/* HEADER */}
       <div className="flex items-center justify-between py-1 px-1 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
           <button
             type="button"
@@ -132,15 +132,15 @@ function PhraseCardItem({
       </div>
 
       {/* メタ */}
-      <div className="flex flex-wrap items-center gap-1.5 px-1 mb-2">
+      <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
         {typeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
         )}
         {localeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
         )}
         {registerLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
         )}
       </div>
 

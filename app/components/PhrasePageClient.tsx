@@ -8,8 +8,7 @@ import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
-import SensePinButton from '@/components/SensePinButton'
-import SenseExample from '@/components/SenseExample'
+import SenseRow from '@/components/SenseRow'
 
 type PhraseSense = {
   sense_id: string
@@ -180,7 +179,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
 
           {/* タイトル + 再生 + ブックマーク */}
           <div className="flex items-start justify-between mb-3 gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <h1 className="text-3xl font-bold text-black leading-tight">{cleanPhrase(card.phrase)}</h1>
               <button
                 type="button"
@@ -201,15 +200,15 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
 
           {/* メタバッジ */}
           {(typeLabel || localeLabel || registerLabel) && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               {typeLabel && (
-                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
+                <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
               )}
               {localeLabel && (
-                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
+                <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
               )}
               {registerLabel && (
-                <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
+                <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
               )}
             </div>
           )}
@@ -220,37 +219,22 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
               const meaning = displayLocale === 'ja'
                 ? (sense.meaning_ja ?? sense.meaning_en ?? '')
                 : (sense.meaning_en ?? sense.meaning_ja ?? '')
-              const isPinned = pinnedSenseId === sense.sense_id
               const hasMultiple = senses.length > 1
 
               return (
-                <div key={sense.sense_id} className="group flex items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    {meaning && (
-                      <p className="text-base font-medium text-black">
-                        {hasMultiple && (
-                          <span className="text-muted mr-1.5">{idx + 1}.</span>
-                        )}
-                        {meaning}
-                      </p>
-                    )}
-                    <SenseExample
-                      example={sense.example_en}
-                      translation={sense.example_ja}
-                      displayLocale={displayLocale}
-                      onPlay={() => playExampleAudio(sense.sense_id)}
-                      isLoading={!!exampleAudioLoading[sense.sense_id]}
-                    />
-                  </div>
-
-                  {hasMultiple && (
-                    <SensePinButton
-                      isPinned={isPinned}
-                      onToggle={() => togglePin(sense.sense_id)}
-                      displayLocale={displayLocale}
-                    />
-                  )}
-                </div>
+                <SenseRow
+                  key={sense.sense_id}
+                  meaning={meaning}
+                  ordinal={hasMultiple ? idx + 1 : undefined}
+                  example={sense.example_en}
+                  translation={sense.example_ja}
+                  displayLocale={displayLocale}
+                  onPlayExample={() => playExampleAudio(sense.sense_id)}
+                  exampleLoading={!!exampleAudioLoading[sense.sense_id]}
+                  showPinButton={hasMultiple}
+                  isPinned={pinnedSenseId === sense.sense_id}
+                  onTogglePin={() => togglePin(sense.sense_id)}
+                />
               )
             })}
           </div>
