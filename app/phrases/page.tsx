@@ -11,6 +11,16 @@ import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import CardShell from '@/components/CardShell'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
+type PhraseSense = {
+  sense_id: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  explanation_ja: string | null
+  explanation_en: string | null
+  example_en: string | null
+  example_ja: string | null
+}
+
 type PhraseCard = {
   id: string
   phrase: string
@@ -23,6 +33,7 @@ type PhraseCard = {
   type: string | null
   register: string | null
   locale: string | null
+  senses: PhraseSense[] | null
   created_at: string
   skip_reason: string | null
 }
@@ -95,6 +106,7 @@ function PhraseCardItem({
     ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
+  const extraSenseCount = card.senses && card.senses.length > 1 ? card.senses.length - 1 : 0
   const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
 
   return (
@@ -139,8 +151,13 @@ function PhraseCardItem({
 
       {/* 意味 */}
       {meaning && (
-        <div className="px-1 mb-2">
+        <div className="px-1 mb-2 flex items-center gap-2 flex-wrap">
           <p className="text-base text-gray-800">{meaning}</p>
+          {extraSenseCount > 0 && (
+            <span className="text-xs text-muted bg-gray-100 rounded-full px-2 py-0.5">
+              {displayLocale === 'ja' ? `他 ${extraSenseCount} 件の意味` : `+${extraSenseCount} more`}
+            </span>
+          )}
         </div>
       )}
 
@@ -199,7 +216,7 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at, skip_reason')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, senses, created_at, skip_reason')
           .order('created_at', { ascending: false })
           .limit(200),
         user

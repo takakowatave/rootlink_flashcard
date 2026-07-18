@@ -117,17 +117,69 @@
 
 ```json
 {
-  "phrase": "…",              // Step 0 で正規化した形（小文字・原形・末尾記号なし・one's / someone / something 使用。sb / sth の略記は不可）
-  "meaning_ja": "…",          // 日本語の意味（簡潔に。〜する／〜のこと）
-  "meaning_en": "…",          // 英語の意味（英英辞書風に簡潔）
-  "explanation_ja": "…",      // 補足説明・使いどころ（日本語）
-  "explanation_en": "…",      // 補足説明・使いどころ（英語）
-  "example_en": "…",          // 自然な英語例文（1つ）※必ず phrase を含む
-  "example_ja": "…",          // 例文の日本語訳
+  "phrase": "…",              // Step 0 で正規化した形（小文字・原形・末尾記号なし・one's / someone / something 使用。sb / sth / somebody は不可）
+  "senses": [                 // 必ず配列。単一意味でも 1 要素配列で書く
+    {
+      "sense_id": "<gen_random_uuid()::text で生成>",
+      "meaning_ja": "…",      // 日本語の意味（簡潔に）
+      "meaning_en": "…",      // 英英辞書風に簡潔
+      "explanation_ja": "…",  // 補足説明（日本語）
+      "explanation_en": "…",  // 補足説明（英語）
+      "example_en": "…",      // sense 個別の例文（phrase を必ず含む）
+      "example_ja": "…"       // 例文の日本語訳
+    }
+  ],
   "type": "…",                // Step 2 の優先順位で決めた1つ
   "locale": null,             // 通常 null。英国/米国固有の場合のみ 'en-GB' / 'en-US'
   "register": "neutral"       // 'neutral' / 'formal' / 'informal' / 'slang' / 'archaic' / 'vulgar'
 }
+```
+
+**senses[] の使い分け（2026-07-18 追加、Notion spec の「多義対応 senses[] 構造」に対応）**:
+
+以下のどれかに該当したら **別 sense に分ける**:
+- 物理的意味 vs 比喩的意味（`take off`: 離陸 vs 普及）
+- 文脈が明確に異なる（`push through`: 個人が困難を乗り越える vs 議案を強引に通す）
+- 主要英英辞書が別番号のエントリー / sub-sense として立てている
+
+以下は **同一 sense のまま** meaning_ja に `；`（セミコロン）で言い換えを併記して OK:
+- 同義言い換え（`early bird`: 「朝型の人；早くから行動する人」）
+- 訳し分けのニュアンス差
+
+**配列順が優先度**（senses[0] が primary）。primary は「そのシーンで meaning にしたい方」または「頻用される方」。
+
+**フラットカラム（meaning_ja / meaning_en / explanation_ja / explanation_en / example_en / example_ja）は `senses[0]` から DB トリガー `phrase_cards_sync_flat` で自動同期される**ので、INSERT SQL では senses だけ書けば OK。
+
+### SQL 実装例（Case B）
+
+```sql
+INSERT INTO phrase_cards (phrase, senses, type, register, locale, gate_checked_at)
+VALUES (
+  'push through',
+  jsonb_build_array(
+    jsonb_build_object(
+      'sense_id', gen_random_uuid()::text,
+      'meaning_ja', '踏ん張って乗り越える',
+      'meaning_en', 'to continue despite difficulties',
+      'explanation_ja', '…',
+      'explanation_en', '…',
+      'example_en', 'Whenever things get hard, you can either give up or push through.',
+      'example_ja', '…'
+    ),
+    jsonb_build_object(
+      'sense_id', gen_random_uuid()::text,
+      'meaning_ja', '強引に通す',
+      'meaning_en', 'to cause something to be officially accepted despite opposition',
+      'explanation_ja', '…',
+      'explanation_en', '…',
+      'example_en', 'The government pushed the new law through despite fierce opposition.',
+      'example_ja', '…'
+    )
+  ),
+  'phrasal_verb', 'neutral', null, now()
+)
+ON CONFLICT (phrase) DO NOTHING
+RETURNING id;
 ```
 
 ## locale の決め方

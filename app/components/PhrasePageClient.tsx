@@ -1,13 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
+import { BsPin, BsPinFill } from 'react-icons/bs'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
+
+type PhraseSense = {
+  sense_id: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  explanation_ja: string | null
+  explanation_en: string | null
+  example_en: string | null
+  example_ja: string | null
+}
 
 type PhraseCard = {
   id: string
@@ -21,6 +32,7 @@ type PhraseCard = {
   type: string | null
   register: string | null
   locale: string | null
+  senses: PhraseSense[] | null
 }
 
 function cleanPhrase(phrase: string): string {
@@ -39,14 +51,30 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [audioLoading, setAudioLoading] = useState(false)
   const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
   const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
+  const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
   })
+
+  const senses: PhraseSense[] = useMemo(() => {
+    if (card.senses && card.senses.length > 0) return card.senses
+    // フォールバック: senses が無い旧データ用（backfill 未実行時の安全網）
+    if (card.meaning_ja || card.meaning_en) {
+      return [{
+        sense_id: 'legacy',
+        meaning_ja: card.meaning_ja,
+        meaning_en: card.meaning_en,
+        explanation_ja: card.explanation_ja,
+        explanation_en: card.explanation_en,
+        example_en: card.example_en,
+        example_ja: card.example_ja,
+      }]
+    }
+    return []
+  }, [card])
 
   useEffect(() => {
     const load = async () => {
@@ -54,8 +82,13 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       if (!user) return
       setUserId(user.id)
       const { data } = await supabase
-        .from('saved_phrase_cards').select('id').eq('user_id', user.id).eq('phrase_card_id', card.id).maybeSingle()
+        .from('saved_phrase_cards')
+        .select('id, pinned_sense_id')
+        .eq('user_id', user.id)
+        .eq('phrase_card_id', card.id)
+        .maybeSingle()
       setIsSaved(!!data)
+      setPinnedSenseId(data?.pinned_sense_id ?? null)
     }
     load()
   }, [card.id])
@@ -68,20 +101,6 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
     return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
   }, [])
-
-  const playAudio = async () => {
-    if (audioUrl) { new Audio(audioUrl).play(); return }
-    setAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrase_card_id: card.id }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
-    } catch { /* silent */ } finally { setAudioLoading(false) }
-  }
 
   const playHeadwordAudio = async () => {
     if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
@@ -108,12 +127,20 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     }
   }
 
-  const meaning = displayLocale === 'ja'
-    ? (card.meaning_ja ?? card.meaning_en ?? '')
-    : (card.meaning_en ?? card.meaning_ja ?? '')
-  const explanation = displayLocale === 'ja'
-    ? (card.explanation_ja ?? card.explanation_en ?? null)
-    : (card.explanation_en ?? card.explanation_ja ?? null)
+  const togglePin = async (senseId: string) => {
+    if (!userId) { setShowSignupModal(true); return }
+    const next = pinnedSenseId === senseId ? null : senseId
+    setPinnedSenseId(next)
+    if (isSaved) {
+      await supabase.from('saved_phrase_cards')
+        .update({ pinned_sense_id: next })
+        .eq('user_id', userId).eq('phrase_card_id', card.id)
+    } else {
+      await supabase.from('saved_phrase_cards')
+        .insert({ user_id: userId, phrase_card_id: card.id, pinned_sense_id: next })
+      setIsSaved(true)
+    }
+  }
 
   const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
   const registerLabel = card.register && card.register !== 'neutral'
@@ -164,39 +191,65 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
             </div>
           )}
 
-          {/* 意味 */}
-          {meaning && (
-            <p className="text-lg text-gray-800 mb-3">{meaning}</p>
-          )}
+          {/* Senses ループ */}
+          <div className="flex flex-col gap-5">
+            {senses.map((sense, idx) => {
+              const meaning = displayLocale === 'ja'
+                ? (sense.meaning_ja ?? sense.meaning_en ?? '')
+                : (sense.meaning_en ?? sense.meaning_ja ?? '')
+              const explanation = displayLocale === 'ja'
+                ? (sense.explanation_ja ?? sense.explanation_en ?? null)
+                : (sense.explanation_en ?? sense.explanation_ja ?? null)
+              const isPinned = pinnedSenseId === sense.sense_id
+              const hasMultiple = senses.length > 1
 
-          {/* 説明 */}
-          {explanation && (
-            <p className="text-sm text-muted mb-4">{explanation}</p>
-          )}
+              return (
+                <div key={sense.sense_id} className="group flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    {hasMultiple && (
+                      <span className="inline-block text-xs font-semibold text-muted mb-1">
+                        {displayLocale === 'ja' ? `意味 ${idx + 1}` : `Sense ${idx + 1}`}
+                      </span>
+                    )}
+                    {meaning && (
+                      <p className="text-lg text-gray-800 mb-2">{meaning}</p>
+                    )}
+                    {explanation && (
+                      <p className="text-sm text-muted mb-3">{explanation}</p>
+                    )}
+                    {sense.example_en && (
+                      <div className="bg-gray-50 rounded-lg px-4 py-3">
+                        <p className="text-sm text-gray-800 italic">{sense.example_en}</p>
+                        {sense.example_ja && displayLocale === 'ja' && (
+                          <p className="text-xs text-muted mt-1">{sense.example_ja}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-          {/* 例文 */}
-          {card.example_en && (
-            <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm text-gray-800 italic flex-1">{card.example_en}</p>
-                <button
-                  type="button"
-                  onClick={playAudio}
-                  disabled={audioLoading}
-                  className="shrink-0"
-                >
-                  <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-                </button>
-              </div>
-              {card.example_ja && displayLocale === 'ja' && (
-                <p className="text-xs text-muted mt-1">{card.example_ja}</p>
-              )}
-            </div>
-          )}
+                  {hasMultiple && (
+                    <div className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => togglePin(sense.sense_id)}
+                        className="flex size-10 items-center justify-center -mr-1"
+                        aria-label={displayLocale === 'ja' ? 'この意味をピン留め' : 'Pin this sense'}
+                      >
+                        {isPinned
+                          ? <BsPinFill className="size-4 text-primary" />
+                          : <BsPin className="size-4 text-muted opacity-40 transition-opacity md:opacity-0 md:group-hover:opacity-100" />
+                        }
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
 
           {/* 構成単語リンク */}
           {componentWords.length > 0 && (
-            <div className="border-t border-line pt-4 mt-2">
+            <div className="border-t border-line pt-4 mt-5">
               <p className="text-xs text-muted mb-2">{displayLocale === 'ja' ? '構成単語' : 'Component words'}</p>
               <div className="flex flex-wrap gap-2">
                 {componentWords.map(w => (
