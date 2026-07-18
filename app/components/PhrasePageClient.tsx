@@ -208,7 +208,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                   <div className="flex-1 min-w-0">
                     {hasMultiple && (
                       <span className="inline-block text-xs font-semibold text-muted mb-1">
-                        {displayLocale === 'ja' ? `意味 ${idx + 1}` : `Sense ${idx + 1}`}
+                        {idx + 1}.
                       </span>
                     )}
                     {meaning && (
