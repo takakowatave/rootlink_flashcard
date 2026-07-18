@@ -9,6 +9,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import CardShell from '@/components/CardShell'
+import SenseExample from '@/components/SenseExample'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
 type PhraseSense = {
@@ -60,18 +61,13 @@ function PhraseCardItem({
   const meaning = displayLocale === 'ja'
     ? (card.meaning_ja ?? card.meaning_en ?? '')
     : (card.meaning_en ?? card.meaning_ja ?? '')
-  const explanation = displayLocale === 'ja'
-    ? (card.explanation_ja ?? card.explanation_en ?? null)
-    : (card.explanation_en ?? card.explanation_ja ?? null)
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
   const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
   const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
 
-  const playAudio = async (e: ReactMouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const playAudio = async () => {
     if (audioUrl) { new Audio(audioUrl).play(); return }
     setAudioLoading(true)
     try {
@@ -106,7 +102,6 @@ function PhraseCardItem({
     ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
-  const extraSenseCount = card.senses && card.senses.length > 1 ? card.senses.length - 1 : 0
   const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
 
   return (
@@ -151,44 +146,21 @@ function PhraseCardItem({
 
       {/* 意味 */}
       {meaning && (
-        <div className="px-1 mb-2 flex items-center gap-2 flex-wrap">
-          <p className="text-base text-gray-800">{meaning}</p>
-          {extraSenseCount > 0 && (
-            <span className="text-xs text-muted bg-gray-100 rounded-full px-2 py-0.5">
-              {displayLocale === 'ja' ? `他 ${extraSenseCount} 件の意味` : `+${extraSenseCount} more`}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 説明 */}
-      {explanation && (
-        <div className="px-1 mb-2">
-          <p className="text-sm text-muted">{explanation}</p>
+        <div className="px-1">
+          <p className="text-base font-medium text-black">{meaning}</p>
         </div>
       )}
 
       {/* 例文 */}
-      {card.example_en && (
-        <div className="mt-2 px-1">
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm text-gray-800 italic flex-1">{card.example_en}</p>
-              <button
-                type="button"
-                onClick={playAudio}
-                disabled={audioLoading}
-                className="shrink-0"
-              >
-                <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-              </button>
-            </div>
-            {card.example_ja && displayLocale === 'ja' && (
-              <p className="text-xs text-muted mt-1">{card.example_ja}</p>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="px-1">
+        <SenseExample
+          example={card.example_en}
+          translation={card.example_ja}
+          displayLocale={displayLocale}
+          onPlay={playAudio}
+          isLoading={audioLoading}
+        />
+      </div>
 
     </CardShell>
   )

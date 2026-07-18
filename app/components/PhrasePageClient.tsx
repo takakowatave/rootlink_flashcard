@@ -220,14 +220,11 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
               const meaning = displayLocale === 'ja'
                 ? (sense.meaning_ja ?? sense.meaning_en ?? '')
                 : (sense.meaning_en ?? sense.meaning_ja ?? '')
-              const explanation = displayLocale === 'ja'
-                ? (sense.explanation_ja ?? sense.explanation_en ?? null)
-                : (sense.explanation_en ?? sense.explanation_ja ?? null)
               const isPinned = pinnedSenseId === sense.sense_id
               const hasMultiple = senses.length > 1
 
               return (
-                <div key={sense.sense_id} className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
+                <div key={sense.sense_id} className="group flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     {meaning && (
                       <p className="text-base font-medium text-black">
@@ -236,9 +233,6 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                         )}
                         {meaning}
                       </p>
-                    )}
-                    {explanation && (
-                      <p className="mt-1 text-sm text-black">{explanation}</p>
                     )}
                     <SenseExample
                       example={sense.example_en}

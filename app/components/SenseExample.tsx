@@ -23,7 +23,7 @@ export default function SenseExample({ example, translation, displayLocale, onPl
           {onPlay && (
             <button
               type="button"
-              onClick={onPlay}
+              onClick={(e) => { e.stopPropagation(); onPlay() }}
               disabled={!!isLoading}
               className="shrink-0"
             >
