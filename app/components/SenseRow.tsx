@@ -35,7 +35,7 @@ export default function SenseRow({
   tutorialPinAttr,
 }: Props) {
   return (
-    <div className="group flex items-start gap-2">
+    <div className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
       <div className="flex-1 min-w-0">
         <p className="text-base font-medium text-black">
           {ordinal != null && (
