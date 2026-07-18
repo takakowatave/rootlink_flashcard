@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
-import { BsPinFill } from 'react-icons/bs'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
@@ -377,10 +376,7 @@ export default function EntryCard({
                   <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
                     {getPosLabel(pos, displayLocale)}
                   </span>
-                  <div className="mt-2 flex items-start gap-2">
-                    <p className="flex-1 text-base font-medium text-black">{sense.meaning}</p>
-                    <BsPinFill className="size-4 text-muted shrink-0 mt-1" />
-                  </div>
+                  <p className="mt-2 text-base font-medium text-black">{sense.meaning}</p>
                   <SenseExample
                     example={sense.example}
                     translation={sense.exampleTranslation}
