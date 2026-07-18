@@ -6,9 +6,9 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
-import { BsPin, BsPinFill } from 'react-icons/bs'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
+import SensePinButton from '@/components/SensePinButton'
 
 type PhraseSense = {
   sense_id: string
@@ -228,19 +228,11 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                   </div>
 
                   {hasMultiple && (
-                    <div className="shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => togglePin(sense.sense_id)}
-                        className="flex size-10 items-center justify-center -mr-1"
-                        aria-label={displayLocale === 'ja' ? 'この意味をピン留め' : 'Pin this sense'}
-                      >
-                        {isPinned
-                          ? <BsPinFill className="size-4 text-primary" />
-                          : <BsPin className="size-4 text-muted opacity-40 transition-opacity md:opacity-0 md:group-hover:opacity-100" />
-                        }
-                      </button>
-                    </div>
+                    <SensePinButton
+                      isPinned={isPinned}
+                      onToggle={() => togglePin(sense.sense_id)}
+                      displayLocale={displayLocale}
+                    />
                   )}
                 </div>
               )

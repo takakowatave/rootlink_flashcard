@@ -4,13 +4,14 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
-import { BsPin, BsPinFill } from 'react-icons/bs'
+import { BsPinFill } from 'react-icons/bs'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import GrammarTags from '@/components/GrammarTags'
 import CardShell from '@/components/CardShell'
+import SensePinButton from '@/components/SensePinButton'
 import { supabase } from '@/lib/supabaseClient'
 
 type Pronunciation = {
@@ -446,25 +447,12 @@ export default function EntryCard({
                           )}
                         </div>
 
-                        <div className="group/pin relative shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => onTogglePin(sense.senseId)}
-                            data-tutorial="pin-button"
-                            className="flex size-10 items-center justify-center -mr-1"
-                            aria-label={labels.pinThisSense}
-                          >
-                            {isPinned
-                              ? <BsPinFill className="size-4 text-primary" />
-                              : <BsPin className="size-4 text-muted opacity-40 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-hover/pin:opacity-100" />
-                            }
-                          </button>
-                          <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
-                            {isPinned
-                              ? (displayLocale === 'ja' ? 'この意味がピン留めされています' : 'This sense is pinned')
-                              : labels.pinThisSense}
-                          </span>
-                        </div>
+                        <SensePinButton
+                          isPinned={isPinned}
+                          onToggle={() => onTogglePin(sense.senseId)}
+                          displayLocale={displayLocale}
+                          tutorialAttr
+                        />
                       </div>
                     )
                   })}
