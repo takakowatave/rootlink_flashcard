@@ -9,6 +9,7 @@ import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 import SensePinButton from '@/components/SensePinButton'
+import SenseExample from '@/components/SenseExample'
 
 type PhraseSense = {
   sense_id: string
@@ -53,6 +54,8 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
   const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
+  const [exampleAudioUrl, setExampleAudioUrl] = useState<Record<string, string>>({})
+  const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
@@ -114,6 +117,26 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       const data = await res.json()
       if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
     } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
+  }
+
+  const playExampleAudio = async (senseId: string) => {
+    const cached = exampleAudioUrl[senseId]
+    if (cached) { new Audio(cached).play(); return }
+    setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id, sense_id: senseId }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) {
+        setExampleAudioUrl(prev => ({ ...prev, [senseId]: data.audioUrl }))
+        new Audio(data.audioUrl).play()
+      }
+    } catch { /* silent */ } finally {
+      setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
+    }
   }
 
   const handleSave = async () => {
@@ -204,10 +227,10 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
               const hasMultiple = senses.length > 1
 
               return (
-                <div key={sense.sense_id} className="group flex items-start gap-2">
+                <div key={sense.sense_id} className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0">
                     {meaning && (
-                      <p className="text-lg text-gray-800 mb-2">
+                      <p className="text-base font-medium text-black">
                         {hasMultiple && (
                           <span className="text-muted mr-1.5">{idx + 1}.</span>
                         )}
@@ -215,16 +238,15 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                       </p>
                     )}
                     {explanation && (
-                      <p className="text-sm text-muted mb-3">{explanation}</p>
+                      <p className="mt-1 text-sm text-black">{explanation}</p>
                     )}
-                    {sense.example_en && (
-                      <div className="bg-gray-50 rounded-lg px-4 py-3">
-                        <p className="text-sm text-gray-800 italic">{sense.example_en}</p>
-                        {sense.example_ja && displayLocale === 'ja' && (
-                          <p className="text-xs text-muted mt-1">{sense.example_ja}</p>
-                        )}
-                      </div>
-                    )}
+                    <SenseExample
+                      example={sense.example_en}
+                      translation={sense.example_ja}
+                      displayLocale={displayLocale}
+                      onPlay={() => playExampleAudio(sense.sense_id)}
+                      isLoading={!!exampleAudioLoading[sense.sense_id]}
+                    />
                   </div>
 
                   {hasMultiple && (

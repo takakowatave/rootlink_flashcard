@@ -12,6 +12,7 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import GrammarTags from '@/components/GrammarTags'
 import CardShell from '@/components/CardShell'
 import SensePinButton from '@/components/SensePinButton'
+import SenseExample from '@/components/SenseExample'
 import { supabase } from '@/lib/supabaseClient'
 
 type Pronunciation = {
@@ -381,24 +382,13 @@ export default function EntryCard({
                     <p className="flex-1 text-base font-medium text-black">{sense.meaning}</p>
                     <BsPinFill className="size-4 text-muted shrink-0 mt-1" />
                   </div>
-                  {(sense.example || sense.exampleTranslation) && (
-                    <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                      {sense.example && (
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="flex-1">{sense.example}</p>
-                          <button
-                            type="button"
-                            onClick={() => playExampleAudio(sense.senseId)}
-                            disabled={!!exampleAudioLoading[sense.senseId]}
-                            className="shrink-0"
-                          >
-                            <HiSpeakerWave className={`size-6 ${exampleAudioLoading[sense.senseId] ? 'text-muted animate-pulse' : 'text-muted'}`} />
-                          </button>
-                        </div>
-                      )}
-                      {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
-                    </div>
-                  )}
+                  <SenseExample
+                    example={sense.example}
+                    translation={sense.exampleTranslation}
+                    displayLocale={displayLocale}
+                    onPlay={() => playExampleAudio(sense.senseId)}
+                    isLoading={!!exampleAudioLoading[sense.senseId]}
+                  />
                 </div>
               )]
             }
@@ -427,24 +417,13 @@ export default function EntryCard({
                             </div>
                           )}
 
-                          {(sense.example || sense.exampleTranslation) && (
-                            <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                              {sense.example && (
-                                <div className="flex items-start justify-between gap-3">
-                                  <p className="flex-1">{sense.example}</p>
-                                  <button
-                                    type="button"
-                                    onClick={() => playExampleAudio(sense.senseId)}
-                                    disabled={!!exampleAudioLoading[sense.senseId]}
-                                    className="shrink-0"
-                                  >
-                                    <HiSpeakerWave className={`size-6 ${exampleAudioLoading[sense.senseId] ? 'text-muted animate-pulse' : 'text-muted'}`} />
-                                  </button>
-                                </div>
-                              )}
-                              {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
-                            </div>
-                          )}
+                          <SenseExample
+                            example={sense.example}
+                            translation={sense.exampleTranslation}
+                            displayLocale={displayLocale}
+                            onPlay={() => playExampleAudio(sense.senseId)}
+                            isLoading={!!exampleAudioLoading[sense.senseId]}
+                          />
                         </div>
 
                         <SensePinButton
