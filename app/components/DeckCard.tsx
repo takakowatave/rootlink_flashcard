@@ -21,10 +21,10 @@ export default function DeckCard({ label, title, imageSrc, onClick }: Props) {
         <img
           src={imageSrc}
           alt=""
-          className="w-full aspect-[500/308] object-cover rounded-2xl"
+          className="w-full aspect-[560/368] object-cover rounded-2xl"
         />
       ) : (
-        <div className="w-full aspect-[500/308]" />
+        <div className="w-full aspect-[560/368]" />
       )}
     </button>
   )
