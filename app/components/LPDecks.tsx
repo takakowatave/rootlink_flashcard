@@ -75,8 +75,8 @@ export default function LPDecks() {
                 {group.decks.map(deck => (
                   <DeckCard
                     key={deck.id}
+                    label={group.label}
                     title={deck.shortName}
-                    wordCount={deck.wordCount}
                     imageSrc={DECK_IMAGES[`${group.label}-${deck.shortName}`]}
                     onClick={() => router.push(`/decks/${deck.id}`)}
                   />

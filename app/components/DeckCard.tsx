@@ -1,35 +1,31 @@
 'use client'
 
 type Props = {
+  label: string
   title: string
-  wordCount: number
   imageSrc?: string
   onClick: () => void
 }
 
-export default function DeckCard({ title, wordCount, imageSrc, onClick }: Props) {
+export default function DeckCard({ label, title, imageSrc, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="bg-white border border-gray-200 rounded-3xl text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-primary/40 hover:shadow-[0_0_0_2px_rgba(20,184,166,0.08)] transition-all active:scale-[0.98] cursor-pointer overflow-hidden"
+      className="bg-white border border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-between aspect-square shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-primary/40 hover:shadow-[0_0_0_2px_rgba(20,184,166,0.08)] transition-all active:scale-[0.98] cursor-pointer overflow-hidden"
     >
+      <div className="text-center leading-tight tracking-[-0.33px]">
+        <p className="text-3xl font-bold text-gray-950">{label}</p>
+        <p className="text-3xl font-bold text-gray-950">{title}</p>
+      </div>
       {imageSrc ? (
         <img
           src={imageSrc}
           alt=""
-          className="w-full aspect-[4/3] object-cover"
+          className="w-[118px] h-[74px] object-cover"
         />
       ) : (
-        <div className="w-full aspect-[4/3] bg-gray-100" />
+        <div className="w-[118px] h-[74px]" />
       )}
-      <div className="p-4">
-        <p className="text-2xl font-bold text-gray-900 tracking-tight leading-snug">
-          {title}
-        </p>
-        <p className="text-sm text-gray-400 mt-1">
-          {wordCount.toLocaleString()} words
-        </p>
-      </div>
     </button>
   )
 }

@@ -68,8 +68,8 @@ export default function DecksPage() {
                         return (
                           <DeckCard
                             key={deck.id}
+                            label={deck.label}
                             title={shortName}
-                            wordCount={deck.word_count}
                             imageSrc={DECK_IMAGES[`${deck.label}-${shortName}`]}
                             onClick={() => router.push(`/decks/${deck.id}`)}
                           />
