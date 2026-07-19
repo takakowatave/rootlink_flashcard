@@ -92,8 +92,12 @@ export default function EntryCard({
 
   const router = useRouter()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation.audioFile ?? null)
   const [audioLoading, setAudioLoading] = useState(false)
+
+  useEffect(() => {
+    if (pronunciation.audioFile) setAudioUrl(pronunciation.audioFile)
+  }, [pronunciation.audioFile])
   const [exampleAudioUrls, setExampleAudioUrls] = useState<Record<string, string>>({})
   const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
@@ -121,7 +125,10 @@ export default function EntryCard({
   const playAudio = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (audioUrl) { new Audio(audioUrl).play(); return }
+    if (audioUrl) {
+      new Audio(audioUrl).play().catch(() => {})
+      return
+    }
     setAudioLoading(true)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
@@ -130,13 +137,19 @@ export default function EntryCard({
         body: JSON.stringify({ word: headword }),
       })
       const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+      if (data.ok && data.audioUrl) {
+        setAudioUrl(data.audioUrl)
+        new Audio(data.audioUrl).play().catch(() => {})
+      }
     } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
   const playExampleAudio = async (senseId: string) => {
     const cached = exampleAudioUrls[senseId]
-    if (cached) { new Audio(cached).play(); return }
+    if (cached) {
+      new Audio(cached).play().catch(() => {})
+      return
+    }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/word/example`, {
@@ -147,7 +160,7 @@ export default function EntryCard({
       const data = await res.json()
       if (data.ok && data.audioUrl) {
         setExampleAudioUrls(prev => ({ ...prev, [senseId]: data.audioUrl }))
-        new Audio(data.audioUrl).play()
+        new Audio(data.audioUrl).play().catch(() => {})
       }
     } catch { /* silent */ } finally {
       setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
