@@ -3,17 +3,11 @@
 import { useRouter } from 'next/navigation'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
+import { getDeckImage } from '@/lib/deckDisplay'
 
 type DeckGroup = {
   label: string
   decks: { name: string; shortName: string; wordCount: number; id: string }[]
-}
-
-const DECK_IMAGES: Record<string, string> = {
-  'TOEIC-600': '/deck-covers/toeic-600.png',
-  'TOEIC-730': '/deck-covers/toeic-730.png',
-  'TOEIC-860': '/deck-covers/toeic-860.png',
-  'TOEIC-990': '/deck-covers/toeic-990.png',
 }
 
 const DECK_GROUPS: DeckGroup[] = [
@@ -77,7 +71,7 @@ export default function LPDecks() {
                     key={deck.id}
                     label={group.label}
                     title={deck.shortName}
-                    imageSrc={DECK_IMAGES[`${group.label}-${deck.shortName}`]}
+                    imageSrc={getDeckImage(group.label, deck.shortName)}
                     onClick={() => router.push(`/decks/${deck.id}`)}
                   />
                 ))}

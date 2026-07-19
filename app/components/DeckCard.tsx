@@ -5,13 +5,14 @@ type Props = {
   title: string
   imageSrc?: string
   onClick: () => void
+  className?: string
 }
 
-export default function DeckCard({ label, title, imageSrc, onClick }: Props) {
+export default function DeckCard({ label, title, imageSrc, onClick, className }: Props) {
   return (
     <button
       onClick={onClick}
-      className="bg-white border border-slate-200 rounded-3xl px-6 py-4 flex flex-col items-center justify-between gap-3 hover:border-gray-400 transition-colors active:scale-[0.98] cursor-pointer"
+      className={`bg-white border border-slate-200 rounded-3xl px-6 py-4 flex flex-col items-center justify-between gap-3 hover:border-gray-400 transition-colors active:scale-[0.98] cursor-pointer ${className ?? ''}`}
     >
       <div className="text-center leading-6 tracking-[-0.33px]">
         <p className="text-[22px] font-bold text-gray-950">{label}</p>
