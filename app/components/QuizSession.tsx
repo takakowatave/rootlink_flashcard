@@ -126,7 +126,7 @@ function WordDetailModal({ entry, onClose }: { entry: QuizEntry; onClose: () => 
         className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col shadow-xl overflow-x-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end px-5 py-3 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-end px-5 py-3 border-b border-line flex-shrink-0">
           <div className="flex items-center gap-1">
             <a href={`/word/${entry.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
               <BsArrowUpRightSquare size={24} />
@@ -224,7 +224,7 @@ function CardView({
         <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
           <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(current / total) * 100}%` }} />
         </div>
-        <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-gray-100 bg-white overflow-hidden">
+        <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
           <div className="p-5">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
@@ -250,7 +250,7 @@ function CardView({
               </div>
             )}
             {revealed && mode === 'word' && (
-              <div className="mt-5 pt-4 border-t border-gray-100">
+              <div className="mt-5 pt-4 border-t border-line">
                 <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
                 {card.example && (
                   <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
@@ -314,7 +314,7 @@ function ResultScreen({
             </div>
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
-                className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
@@ -327,7 +327,7 @@ function ResultScreen({
             <h3 className="text-sm font-semibold text-secondary mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
-                className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>

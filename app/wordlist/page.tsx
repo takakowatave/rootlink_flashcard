@@ -218,7 +218,7 @@ export default function WordListPage() {
       {/* ── 進捗＋クイズ ── */}
       {wordList.length > 0 && (
         <section className="pt-6 px-4">
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
             <div className="flex justify-center py-2">
               <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
             </div>
@@ -229,7 +229,7 @@ export default function WordListPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setQuizScope('random')}
-                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-white'}`}
+                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
                   >
                     <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
                     <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
@@ -237,7 +237,7 @@ export default function WordListPage() {
                   <button
                     onClick={() => setQuizScope('review')}
                     disabled={reviewWords.length === 0}
-                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-white'}`}
+                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-quiz-review bg-orange-50' : 'border-line bg-white'}`}
                   >
                     <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
                     <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>

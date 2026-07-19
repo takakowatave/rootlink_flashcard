@@ -89,7 +89,7 @@ export default function AuthLogin() {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full py-3 px-4 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
+          className="w-full py-3 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
         >
           <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
           Googleでログイン

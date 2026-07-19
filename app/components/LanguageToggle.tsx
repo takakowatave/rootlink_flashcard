@@ -14,7 +14,7 @@ export default function LanguageToggle({
 }: LanguageToggleProps) {
   return (
     <div
-      className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-100 p-1"
+      className="inline-flex items-center rounded-full border border-line bg-zinc-100 p-1"
       role="group"
       aria-label="Language toggle"
     >

@@ -67,7 +67,7 @@ export default function LexicalUnitCard({
         'scroll-mt-24 rounded-2xl border p-4 transition-colors ' +
         (isHighlighted
           ? 'border-blue-200 bg-blue-50'
-          : 'border-gray-200 bg-white')
+          : 'border-line bg-white')
       }
     >
       {/* lexical header */}
