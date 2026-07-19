@@ -9,8 +9,11 @@ type DeckGroup = {
   decks: { name: string; shortName: string; wordCount: number; id: string }[]
 }
 
-const LABEL_IMAGES: Record<string, string> = {
-  TOEIC: '/deck-covers/toeic.png',
+const DECK_IMAGES: Record<string, string> = {
+  'TOEIC-600': '/deck-covers/toeic-600.png',
+  'TOEIC-730': '/deck-covers/toeic-730.png',
+  'TOEIC-860': '/deck-covers/toeic-860.png',
+  'TOEIC-990': '/deck-covers/toeic-990.png',
 }
 
 const DECK_GROUPS: DeckGroup[] = [
@@ -74,7 +77,7 @@ export default function LPDecks() {
                     key={deck.id}
                     title={deck.shortName}
                     wordCount={deck.wordCount}
-                    imageSrc={LABEL_IMAGES[group.label]}
+                    imageSrc={DECK_IMAGES[`${group.label}-${deck.shortName}`]}
                     onClick={() => router.push(`/decks/${deck.id}`)}
                   />
                 ))}

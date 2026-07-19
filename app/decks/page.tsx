@@ -10,8 +10,11 @@ type Deck = { id: string; name: string; label: string; word_count: number }
 
 const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
 
-const LABEL_IMAGES: Record<string, string> = {
-  TOEIC: '/deck-covers/toeic.png',
+const DECK_IMAGES: Record<string, string> = {
+  'TOEIC-600': '/deck-covers/toeic-600.png',
+  'TOEIC-730': '/deck-covers/toeic-730.png',
+  'TOEIC-860': '/deck-covers/toeic-860.png',
+  'TOEIC-990': '/deck-covers/toeic-990.png',
 }
 
 function toShortName(name: string, label: string) {
@@ -60,15 +63,18 @@ export default function DecksPage() {
                   <section key={label}>
                     <DeckLabelBadge label={label} />
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      {group.map(deck => (
-                        <DeckCard
-                          key={deck.id}
-                          title={toShortName(deck.name, deck.label)}
-                          wordCount={deck.word_count}
-                          imageSrc={LABEL_IMAGES[deck.label]}
-                          onClick={() => router.push(`/decks/${deck.id}`)}
-                        />
-                      ))}
+                      {group.map(deck => {
+                        const shortName = toShortName(deck.name, deck.label)
+                        return (
+                          <DeckCard
+                            key={deck.id}
+                            title={shortName}
+                            wordCount={deck.word_count}
+                            imageSrc={DECK_IMAGES[`${deck.label}-${shortName}`]}
+                            onClick={() => router.push(`/decks/${deck.id}`)}
+                          />
+                        )
+                      })}
                     </div>
                   </section>
                 )
