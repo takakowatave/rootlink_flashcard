@@ -17,20 +17,17 @@ function toShortName(name: string, label: string) {
 export default function DecksPage() {
   const router = useRouter()
   const [decks, setDecks] = useState<Deck[]>([])
-  const [savedCount, setSavedCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      const [decksRes, savedRes] = await Promise.all([
-        supabase.from('decks').select('id, name, label, word_count').order('label').order('name').limit(100),
-        user
-          ? supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-          : Promise.resolve({ count: 0 }),
-      ])
-      setDecks((decksRes.data ?? []) as Deck[])
-      setSavedCount(savedRes.count ?? 0)
+      const { data } = await supabase
+        .from('decks')
+        .select('id, name, label, word_count')
+        .order('label')
+        .order('name')
+        .limit(100)
+      setDecks((data ?? []) as Deck[])
       setLoading(false)
     }
     load()
@@ -52,19 +49,6 @@ export default function DecksPage() {
             </div>
           ) : (
             <>
-              {savedCount > 0 && (
-                <section>
-                  <DeckLabelBadge label="マイリスト" variant="primary" />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    <DeckCard
-                      title="My単語帳"
-                      wordCount={savedCount}
-                      onClick={() => router.push('/wordlist')}
-                    />
-                  </div>
-                </section>
-              )}
-
               {LABEL_ORDER.map(label => {
                 const group = decks.filter(d => d.label === label)
                 if (group.length === 0) return null
