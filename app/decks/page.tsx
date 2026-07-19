@@ -11,7 +11,7 @@ type Deck = { id: string; name: string; label: string; word_count: number }
 const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
 
 function toShortName(name: string, label: string) {
-  return name.replace(new RegExp(`^${label}\\s*`), '').trim() || name
+  return name.replace(new RegExp(`^${label}\\s*`), '').replace(/\+$/, '').trim() || name
 }
 
 export default function DecksPage() {

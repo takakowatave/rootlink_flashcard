@@ -13,10 +13,10 @@ const DECK_GROUPS: DeckGroup[] = [
   {
     label: 'TOEIC',
     decks: [
-      { id: '987c37d0-6053-490f-8949-b3f1f6cb121d', name: 'TOEIC 600+', shortName: '600+', wordCount: 480 },
-      { id: 'bd189d85-4a9b-48e8-9c5a-0bfdcdcfef19', name: 'TOEIC 730+', shortName: '730+', wordCount: 379 },
-      { id: '3c432bc7-766e-4882-88a9-55ddcbb7b308', name: 'TOEIC 860+', shortName: '860+', wordCount: 292 },
-      { id: 'd64d8a2f-ea22-422a-838f-19bb4a55850d', name: 'TOEIC 990+', shortName: '990+', wordCount: 191 },
+      { id: '987c37d0-6053-490f-8949-b3f1f6cb121d', name: 'TOEIC 600+', shortName: '600', wordCount: 480 },
+      { id: 'bd189d85-4a9b-48e8-9c5a-0bfdcdcfef19', name: 'TOEIC 730+', shortName: '730', wordCount: 379 },
+      { id: '3c432bc7-766e-4882-88a9-55ddcbb7b308', name: 'TOEIC 860+', shortName: '860', wordCount: 292 },
+      { id: 'd64d8a2f-ea22-422a-838f-19bb4a55850d', name: 'TOEIC 990+', shortName: '990', wordCount: 191 },
     ],
   },
   {
