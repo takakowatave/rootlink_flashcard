@@ -214,6 +214,7 @@ export default function WordListPage() {
         </button>
       )}
 
+      <div className="max-w-[568px] mx-auto w-full">
       {/* ── 進捗＋クイズ ── */}
       {wordList.length > 0 && (
         <section className="pt-6 px-4">
@@ -302,6 +303,7 @@ export default function WordListPage() {
           </div>
         )}
       </section>
+      </div>
 
 
       {/* Detail modal */}
