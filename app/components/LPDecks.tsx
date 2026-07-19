@@ -9,6 +9,10 @@ type DeckGroup = {
   decks: { name: string; shortName: string; wordCount: number; id: string }[]
 }
 
+const LABEL_IMAGES: Record<string, string> = {
+  TOEIC: '/deck-covers/toeic.png',
+}
+
 const DECK_GROUPS: DeckGroup[] = [
   {
     label: 'TOEIC',
@@ -70,6 +74,7 @@ export default function LPDecks() {
                     key={deck.id}
                     title={deck.shortName}
                     wordCount={deck.wordCount}
+                    imageSrc={LABEL_IMAGES[group.label]}
                     onClick={() => router.push(`/decks/${deck.id}`)}
                   />
                 ))}

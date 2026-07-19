@@ -10,6 +10,10 @@ type Deck = { id: string; name: string; label: string; word_count: number }
 
 const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
 
+const LABEL_IMAGES: Record<string, string> = {
+  TOEIC: '/deck-covers/toeic.png',
+}
+
 function toShortName(name: string, label: string) {
   return name.replace(new RegExp(`^${label}\\s*`), '').replace(/\+$/, '').trim() || name
 }
@@ -61,6 +65,7 @@ export default function DecksPage() {
                           key={deck.id}
                           title={toShortName(deck.name, deck.label)}
                           wordCount={deck.word_count}
+                          imageSrc={LABEL_IMAGES[deck.label]}
                           onClick={() => router.push(`/decks/${deck.id}`)}
                         />
                       ))}
