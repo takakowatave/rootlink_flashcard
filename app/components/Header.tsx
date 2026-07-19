@@ -232,6 +232,13 @@ const Header = () => {
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
 
+        <Link
+          href="/decks"
+          className="hidden md:inline text-sm font-medium text-gray-700 hover:text-primary shrink-0"
+        >
+          教材
+        </Link>
+
         {/* PC検索 */}
         <div className="hidden md:flex flex-1 items-center justify-center" data-tutorial="search">
           <SearchBox
