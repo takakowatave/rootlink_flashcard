@@ -6,8 +6,8 @@ type Props = {
 
 export default function DeckLabelBadge({ label }: Props) {
   return (
-    <div className="mb-3 text-sm font-semibold text-gray-700">
+    <h3 className="mb-3 text-2xl font-bold text-gray-950 tracking-tight">
       {label}
-    </div>
+    </h3>
   )
 }

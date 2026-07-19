@@ -13,9 +13,9 @@ export default function DeckCard({ label, title, imageSrc, onClick }: Props) {
       onClick={onClick}
       className="bg-white rounded-2xl px-6 py-4 flex flex-col items-center justify-between aspect-square hover:bg-gray-50 transition-colors active:scale-[0.98] cursor-pointer"
     >
-      <div className="text-center leading-tight tracking-[-0.33px]">
-        <p className="text-3xl font-bold text-gray-950">{label}</p>
-        <p className="text-3xl font-bold text-gray-950">{title}</p>
+      <div className="text-center leading-6 tracking-[-0.33px]">
+        <p className="text-[22px] font-bold text-gray-950">{label}</p>
+        <p className="text-[22px] font-bold text-gray-950">{title}</p>
       </div>
       {imageSrc ? (
         <img
