@@ -17,6 +17,8 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload } from '@/types/Dictionary'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+
 // 内部で保持する多言語 meaning shape
 type LocalizedText = {
   en: string
@@ -1033,7 +1035,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     if (dictionary?.audio?.audioPath) {
       return {
         phoneticSpelling: dictionary.ipa ?? undefined,
-        audioFile: undefined,
+        audioFile: `${SUPABASE_URL}/storage/v1/object/public/${dictionary.audio.audioPath}`,
       }
     }
 

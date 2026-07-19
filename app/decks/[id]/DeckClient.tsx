@@ -114,7 +114,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
         {/* デッキ情報カード */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
+        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm mb-6">
           <div className="mb-2">
             <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
             <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
@@ -135,7 +135,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setQuizScope('random')}
-                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-white'}`}
+                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
                 >
                   <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
                   <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
@@ -143,7 +143,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
                 <button
                   onClick={() => setQuizScope('review')}
                   disabled={reviewWords.length === 0}
-                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-white'}`}
+                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-quiz-review bg-orange-50' : 'border-line bg-white'}`}
                 >
                   <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
                   <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>

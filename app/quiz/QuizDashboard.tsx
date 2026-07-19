@@ -178,7 +178,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-line p-6 mb-4">
 
             {/* ドーナツ */}
             <div className="flex justify-center mb-4">
@@ -212,7 +212,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
                   className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                     selectedMode === m.key
                       ? 'border-primary bg-primary-subtle'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      : 'border-line bg-white hover:border-muted'
                   }`}
                 >
                   <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-primary' : 'text-gray-600'}`}>{m.label}</span>

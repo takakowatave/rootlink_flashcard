@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
+import SharedDeckCard from '@/components/DeckCard'
+import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
 
 type Deck = {
   id: string
@@ -115,40 +119,55 @@ function StreakModal({ streak, onClose }: { streak: number; onClose: () => void 
   )
 }
 
-function DeckCard({ name, onClick }: { name: string; onClick: () => void }) {
-  const needsTwoLines = name.includes(' ') || name.includes('-') || name.length > 10
-  return (
-    <button
-      onClick={onClick}
-      className="bg-white border border-line rounded-2xl px-6 py-4 flex flex-col items-center justify-between shrink-0 hover:border-primary/40 hover:shadow-sm transition-all active:scale-[0.98]"
-      style={{ width: 146, height: needsTwoLines ? 176 : 152 }}
-    >
-      <div className="flex items-center justify-center text-center">
-        <p className="font-bold text-[22px] tracking-tight text-gray-950 leading-6">{name}</p>
-      </div>
-      <div className="flex items-center justify-center size-20 select-none text-5xl leading-none">
-        🌱
-      </div>
-    </button>
-  )
+type DeckItem = {
+  key: string
+  label?: string
+  title: string
+  imageSrc?: string
+  href: string
 }
 
-function DeckSection({ title, items }: { title: string; items: Array<{ name: string; href: string }> }) {
+function DeckSection({
+  title,
+  items,
+  moreHref,
+}: {
+  title: string
+  items: DeckItem[]
+  moreHref?: string
+}) {
   const router = useRouter()
   if (items.length === 0) return null
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xl font-bold text-gray-950">{title}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-950">{title}</h2>
+        {moreHref && (
+          <Link
+            href={moreHref}
+            className="flex items-center gap-0.5 text-sm text-muted hover:text-gray-700"
+          >
+            もっと見る
+            <HiChevronRight className="size-4" />
+          </Link>
+        )}
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-        {items.map((item, i) => (
-          <DeckCard key={i} name={item.name} onClick={() => router.push(item.href)} />
+        {items.map(item => (
+          <SharedDeckCard
+            key={item.key}
+            label={item.label}
+            title={item.title}
+            imageSrc={item.imageSrc}
+            onClick={() => router.push(item.href)}
+            className="shrink-0 w-[180px]"
+          />
         ))}
       </div>
     </section>
   )
 }
 
-const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
 const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 
 export default function Dashboard() {
@@ -216,16 +235,36 @@ export default function Dashboard() {
     load()
   }, [])
 
-  const myDeck = { name: 'My単語帳', href: '/wordlist' }
-  const myDeckEntry = savedCount > 0 ? [myDeck] : []
-  const activeDeckItems = activeDeckIds
+  const myDeckItem: DeckItem = { key: 'my-wordlist', title: 'My単語帳', href: '/wordlist' }
+  const myDeckEntry: DeckItem[] = savedCount > 0 ? [myDeckItem] : []
+  const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
     .filter((d): d is Deck => d !== undefined)
-    .map(d => ({ name: d.name, href: `/decks/${d.id}` }))
+    .map(d => {
+      const shortName = toShortName(d.name, d.label)
+      return {
+        key: d.id,
+        label: d.label,
+        title: shortName,
+        imageSrc: getDeckImage(d.label, shortName),
+        href: `/decks/${d.id}`,
+      }
+    })
   const historyItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 4 : 5)]
   const studyingItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 3 : 4)]
-  const examItems = LABEL_ORDER.flatMap(label =>
-    decks.filter(d => d.label === label).map(d => ({ name: d.name, href: `/decks/${d.id}` }))
+  const examItems: DeckItem[] = LABEL_ORDER.flatMap(label =>
+    decks
+      .filter(d => d.label === label)
+      .map(d => {
+        const shortName = toShortName(d.name, d.label)
+        return {
+          key: d.id,
+          label: d.label,
+          title: shortName,
+          imageSrc: getDeckImage(d.label, shortName),
+          href: `/decks/${d.id}`,
+        }
+      })
   )
 
   return (
@@ -261,7 +300,7 @@ export default function Dashboard() {
 
             <DeckSection title="履歴" items={historyItems} />
             <DeckSection title="学習中" items={studyingItems} />
-            {examItems.length > 0 && <DeckSection title="試験対策" items={examItems} />}
+            <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
 
           </div>
         </div>

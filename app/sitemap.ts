@@ -32,6 +32,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
 
+  // 公開済みブログ記事
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("slug, published_at, update_at")
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(5000)
+
+  const postEntries: MetadataRoute.Sitemap =
+    (posts ?? [])
+      .map((p) => {
+        const slug = (p as { slug: string | null }).slug
+        if (!slug) return null
+        const updated =
+          (p as { update_at: string | null }).update_at ??
+          (p as { published_at: string | null }).published_at
+        return {
+          url: `${BASE_URL}/blog/${encodeURIComponent(slug)}`,
+          lastModified: updated ? new Date(updated) : new Date(),
+          changeFrequency: "monthly" as const,
+          priority: 0.8,
+        }
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+
   return [
     {
       url: BASE_URL,
@@ -39,6 +64,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1.0,
     },
+    {
+      url: `${BASE_URL}/blog`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    ...postEntries,
     ...wordEntries,
   ]
 }

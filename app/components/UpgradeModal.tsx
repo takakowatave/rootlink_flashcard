@@ -67,8 +67,8 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
           <button
             className={`w-full border rounded-xl p-4 text-left transition-colors ${
               selectedPlan === "monthly"
-                ? "border-gray-900 bg-gray-50"
-                : "border-gray-200 hover:border-gray-300"
+                ? "border-primary bg-primary-subtle"
+                : "border-line hover:border-muted"
             }`}
             onClick={() => setSelectedPlan("monthly")}
           >
@@ -86,8 +86,8 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
           <button
             className={`w-full border rounded-xl p-4 text-left transition-colors ${
               selectedPlan === "yearly"
-                ? "border-gray-900 bg-gray-50"
-                : "border-gray-200 hover:border-gray-300"
+                ? "border-primary bg-primary-subtle"
+                : "border-line hover:border-muted"
             }`}
             onClick={() => setSelectedPlan("yearly")}
           >

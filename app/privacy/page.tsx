@@ -42,8 +42,8 @@ export default function PrivacyPage() {
           <table className="text-sm w-full border-collapse">
             <thead>
               <tr className="bg-gray-50">
-                <th className="text-left px-3 py-2 border border-gray-200">サービス</th>
-                <th className="text-left px-3 py-2 border border-gray-200">用途</th>
+                <th className="text-left px-3 py-2 border border-line">サービス</th>
+                <th className="text-left px-3 py-2 border border-line">用途</th>
               </tr>
             </thead>
             <tbody>
@@ -57,8 +57,8 @@ export default function PrivacyPage() {
                 ['Google Cloud Run', 'APIサーバーホスティング'],
               ].map(([name, use]) => (
                 <tr key={name}>
-                  <td className="px-3 py-2 border border-gray-200">{name}</td>
-                  <td className="px-3 py-2 border border-gray-200">{use}</td>
+                  <td className="px-3 py-2 border border-line">{name}</td>
+                  <td className="px-3 py-2 border border-line">{use}</td>
                 </tr>
               ))}
             </tbody>

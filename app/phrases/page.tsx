@@ -1,14 +1,26 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
+import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import CardShell from '@/components/CardShell'
+import SenseExample from '@/components/SenseExample'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
+
+type PhraseSense = {
+  sense_id: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  explanation_ja: string | null
+  explanation_en: string | null
+  example_en: string | null
+  example_ja: string | null
+}
 
 type PhraseCard = {
   id: string
@@ -22,6 +34,7 @@ type PhraseCard = {
   type: string | null
   register: string | null
   locale: string | null
+  senses: PhraseSense[] | null
   created_at: string
   skip_reason: string | null
 }
@@ -32,7 +45,8 @@ function cleanPhrase(phrase: string): string {
 
 function isToday(dateStr: string): boolean {
   const today = new Date().toLocaleDateString('sv')
-  return dateStr.startsWith(today)
+  const localDate = new Date(dateStr).toLocaleDateString('sv')
+  return localDate === today
 }
 
 function PhraseCardItem({
@@ -47,9 +61,41 @@ function PhraseCardItem({
   const meaning = displayLocale === 'ja'
     ? (card.meaning_ja ?? card.meaning_en ?? '')
     : (card.meaning_en ?? card.meaning_ja ?? '')
-  const explanation = displayLocale === 'ja'
-    ? (card.explanation_ja ?? card.explanation_en ?? null)
-    : (card.explanation_en ?? card.explanation_ja ?? null)
+
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioLoading, setAudioLoading] = useState(false)
+  const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
+  const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
+
+  const playAudio = async () => {
+    if (audioUrl) { new Audio(audioUrl).play(); return }
+    setAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
+
+  const playHeadwordAudio = async (e: ReactMouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
+    setHeadwordAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase/headword`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: card.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
+  }
 
   const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
   const registerLabel = card.register && card.register !== 'neutral'
@@ -61,8 +107,18 @@ function PhraseCardItem({
   return (
     <CardShell onClick={() => router.push(href)}>
       {/* HEADER */}
-      <div className="flex items-center justify-between py-1 px-1">
-        <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+      <div className="flex items-center justify-between py-1 px-1 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
+          <button
+            type="button"
+            onClick={playHeadwordAudio}
+            disabled={headwordAudioLoading}
+            className="shrink-0"
+          >
+            <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+          </button>
+        </div>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onSave() }}
@@ -76,43 +132,35 @@ function PhraseCardItem({
       </div>
 
       {/* メタ */}
-      <div className="flex flex-wrap items-center gap-1.5 px-1 mb-2">
+      <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
         {typeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{typeLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
         )}
         {localeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{localeLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
         )}
         {registerLabel && (
-          <span className="text-xs text-muted border border-line rounded px-1.5 py-0.5">{registerLabel}</span>
+          <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
         )}
       </div>
 
       {/* 意味 */}
       {meaning && (
-        <div className="px-1 mb-2">
-          <p className="text-base text-gray-800">{meaning}</p>
-        </div>
-      )}
-
-      {/* 説明 */}
-      {explanation && (
-        <div className="px-1 mb-2">
-          <p className="text-sm text-muted">{explanation}</p>
+        <div className="px-1">
+          <p className="text-base font-medium text-black">{meaning}</p>
         </div>
       )}
 
       {/* 例文 */}
-      {card.example_en && (
-        <div className="mt-2 px-1">
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="text-sm text-gray-800 italic">{card.example_en}</p>
-            {card.example_ja && displayLocale === 'ja' && (
-              <p className="text-xs text-muted mt-1">{card.example_ja}</p>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="px-1">
+        <SenseExample
+          example={card.example_en}
+          translation={card.example_ja}
+          displayLocale={displayLocale}
+          onPlay={playAudio}
+          isLoading={audioLoading}
+        />
+      </div>
 
     </CardShell>
   )
@@ -140,8 +188,7 @@ function PhrasesPageInner() {
 
       const [cardsRes, savedRes] = await Promise.all([
         supabase.from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, created_at, skip_reason')
-          .order('type', { ascending: true })
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, senses, created_at, skip_reason')
           .order('created_at', { ascending: false })
           .limit(200),
         user

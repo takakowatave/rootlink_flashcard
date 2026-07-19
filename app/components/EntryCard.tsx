@@ -4,13 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
-import { BsPin, BsPinFill } from 'react-icons/bs'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import GrammarTags from '@/components/GrammarTags'
 import CardShell from '@/components/CardShell'
+import SenseRow from '@/components/SenseRow'
+import SenseExample from '@/components/SenseExample'
 import { supabase } from '@/lib/supabaseClient'
 
 type Pronunciation = {
@@ -92,8 +92,14 @@ export default function EntryCard({
 
   const router = useRouter()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation.audioFile ?? null)
   const [audioLoading, setAudioLoading] = useState(false)
+
+  useEffect(() => {
+    if (pronunciation.audioFile) setAudioUrl(pronunciation.audioFile)
+  }, [pronunciation.audioFile])
+  const [exampleAudioUrls, setExampleAudioUrls] = useState<Record<string, string>>({})
+  const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
 
@@ -119,7 +125,10 @@ export default function EntryCard({
   const playAudio = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (audioUrl) { new Audio(audioUrl).play(); return }
+    if (audioUrl) {
+      new Audio(audioUrl).play().catch(() => {})
+      return
+    }
     setAudioLoading(true)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
@@ -128,8 +137,34 @@ export default function EntryCard({
         body: JSON.stringify({ word: headword }),
       })
       const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+      if (data.ok && data.audioUrl) {
+        setAudioUrl(data.audioUrl)
+        new Audio(data.audioUrl).play().catch(() => {})
+      }
     } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
+
+  const playExampleAudio = async (senseId: string) => {
+    const cached = exampleAudioUrls[senseId]
+    if (cached) {
+      new Audio(cached).play().catch(() => {})
+      return
+    }
+    setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/word/example`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: headword, sense_id: senseId }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) {
+        setExampleAudioUrls(prev => ({ ...prev, [senseId]: data.audioUrl }))
+        new Audio(data.audioUrl).play().catch(() => {})
+      }
+    } catch { /* silent */ } finally {
+      setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
+    }
   }
 
   const labels = displayLocale === 'ja'
@@ -354,16 +389,14 @@ export default function EntryCard({
                   <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
                     {getPosLabel(pos, displayLocale)}
                   </span>
-                  <div className="mt-2 flex items-start gap-2">
-                    <p className="flex-1 text-base font-medium text-black">{sense.meaning}</p>
-                    <BsPinFill className="size-4 text-muted shrink-0 mt-1" />
-                  </div>
-                  {(sense.example || sense.exampleTranslation) && (
-                    <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                      {sense.example && <p>{sense.example}</p>}
-                      {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
-                    </div>
-                  )}
+                  <p className="mt-2 text-base font-medium text-black">{sense.meaning}</p>
+                  <SenseExample
+                    example={sense.example}
+                    translation={sense.exampleTranslation}
+                    displayLocale={displayLocale}
+                    onPlay={() => playExampleAudio(sense.senseId)}
+                    isLoading={!!exampleAudioLoading[sense.senseId]}
+                  />
                 </div>
               )]
             }
@@ -379,49 +412,22 @@ export default function EntryCard({
                 )}
 
                 <div className="mt-2 flex flex-col gap-6">
-                  {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => {
-                    const isPinned = pinnedSenseId === sense.senseId
-                    return (
-                      <div key={sense.senseId} className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-base font-medium text-black">{sense.meaning}</p>
-
-                          {grammarTags[sense.senseId]?.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1.5">
-                              <GrammarTags tags={grammarTags[sense.senseId]} displayLocale={displayLocale} />
-                            </div>
-                          )}
-
-                          {(sense.example || sense.exampleTranslation) && (
-                            <div className="mt-2 flex flex-col gap-2 text-sm text-black">
-                              {sense.example && <p>{sense.example}</p>}
-                              {displayLocale === 'ja' && sense.exampleTranslation && <p>{sense.exampleTranslation}</p>}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="group/pin relative shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => onTogglePin(sense.senseId)}
-                            data-tutorial="pin-button"
-                            className="flex size-10 items-center justify-center -mr-1"
-                            aria-label={labels.pinThisSense}
-                          >
-                            {isPinned
-                              ? <BsPinFill className="size-4 text-primary" />
-                              : <BsPin className="size-4 text-muted opacity-40 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-hover/pin:opacity-100" />
-                            }
-                          </button>
-                          <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/pin:opacity-100">
-                            {isPinned
-                              ? (displayLocale === 'ja' ? 'この意味がピン留めされています' : 'This sense is pinned')
-                              : labels.pinThisSense}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {(items.some((s) => !!s.example) ? items.filter((s) => !!s.example) : items).map((sense) => (
+                    <SenseRow
+                      key={sense.senseId}
+                      meaning={sense.meaning}
+                      example={sense.example}
+                      translation={sense.exampleTranslation}
+                      displayLocale={displayLocale}
+                      onPlayExample={() => playExampleAudio(sense.senseId)}
+                      exampleLoading={!!exampleAudioLoading[sense.senseId]}
+                      grammarTags={grammarTags[sense.senseId]}
+                      showPinButton
+                      isPinned={pinnedSenseId === sense.senseId}
+                      onTogglePin={() => onTogglePin(sense.senseId)}
+                      tutorialPinAttr
+                    />
+                  ))}
                 </div>
               </div>
             ))
