@@ -30,7 +30,7 @@ export type RewrittenPayload = {
   etymology?: string
   etymologyData?: EtymologyData | null
   ipa?: string
-  audio?: { audioPath: string }
+  audio?: { audioUrl?: string; audioPath?: string }
   locales?: {
     ja?: {
       senses?: Record<

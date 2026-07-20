@@ -120,7 +120,7 @@ type OxfordResult = {
 
 type OxfordPayload = {
   ipa?: string
-  audio?: { audioPath: string }
+  audio?: { audioUrl?: string; audioPath?: string }
   results?: OxfordResult[]
 }
 
@@ -1032,6 +1032,14 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // IPA / audio を決定
   const pronunciation = useMemo(() => {
+    // Oxford の公式音声 URL が最優先（フルURL）
+    if (dictionary?.audio?.audioUrl) {
+      return {
+        phoneticSpelling: dictionary.ipa ?? undefined,
+        audioFile: dictionary.audio.audioUrl,
+      }
+    }
+
     if (dictionary?.audio?.audioPath) {
       return {
         phoneticSpelling: dictionary.ipa ?? undefined,
