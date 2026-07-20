@@ -33,6 +33,12 @@ type DisplaySense = { senseId: string; meaning: string; example?: string; exampl
 
 function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  if (dictionary?.audio?.audioUrl) {
+    return {
+      phoneticSpelling: dictionary.ipa ?? undefined,
+      audioFile: dictionary.audio.audioUrl,
+    }
+  }
   if (dictionary?.audio?.audioPath) {
     return {
       phoneticSpelling: dictionary.ipa ?? undefined,

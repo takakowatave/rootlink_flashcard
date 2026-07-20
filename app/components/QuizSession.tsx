@@ -57,9 +57,10 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
     const meaning = ja.meaning ?? targetSense.definition ?? ''
     if (!meaning) continue
 
-    const audioFile = d.audio?.audioPath
-      ? `${supabaseUrl}/storage/v1/object/public/${d.audio.audioPath}`
-      : undefined
+    const audioFile = d.audio?.audioUrl
+      ?? (d.audio?.audioPath
+        ? `${supabaseUrl}/storage/v1/object/public/${d.audio.audioPath}`
+        : undefined)
 
     cards.push({
       word: item.word,
