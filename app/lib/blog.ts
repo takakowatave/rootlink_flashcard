@@ -6,6 +6,7 @@ export type Post = {
   tags: string[] | null
   published_at: string | null
   created_at: string
+  hero_image_url: string | null
 }
 
 export type Heading = { id: string; level: number; text: string }
