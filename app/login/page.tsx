@@ -30,10 +30,20 @@ export default function AuthLogin() {
 
   const handleGoogleLogin = async () => {
     if (inAppBrowser) return;
-    await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+        skipBrowserRedirect: true,
+      },
     });
+    if (error) {
+      setError("email", { message: "Googleログインに失敗しました。時間をおいて再試行してください" });
+      return;
+    }
+    if (data?.url) {
+      window.location.href = data.url;
+    }
   };
 
   const onSubmit = async (data: FormData) => {
