@@ -16,13 +16,10 @@ interface FormData {
 export default function AuthLogin() {
   const router = useRouter();
   const [inAppBrowser, setInAppBrowser] = useState(false);
-  const [debugMsg, setDebugMsg] = useState<string>("(未クリック)");
+  const [copyLabel, setCopyLabel] = useState("URLをコピー");
 
   useEffect(() => {
-    const inApp = isInAppBrowser();
-    setInAppBrowser(inApp);
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "n/a";
-    setDebugMsg(`init: inApp=${inApp} | UA=${ua.slice(0, 100)}`);
+    setInAppBrowser(isInAppBrowser());
   }, []);
 
   const {
@@ -33,12 +30,7 @@ export default function AuthLogin() {
   } = useForm<FormData>();
 
   const handleGoogleLogin = async () => {
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "n/a";
-    setDebugMsg(`① click | UA=${ua}`);
-    if (inAppBrowser) {
-      setDebugMsg(`② early return | UA=${ua}`);
-      return;
-    }
+    if (inAppBrowser) return;
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -48,17 +40,25 @@ export default function AuthLogin() {
         },
       });
       if (error) {
-        setDebugMsg(`③ supabase error: ${error.message}`);
+        setError("email", { message: "Googleログインに失敗しました。時間をおいて再試行してください" });
         return;
       }
       if (data?.url) {
-        setDebugMsg(`④ redirecting: ${data.url.slice(0, 80)}`);
         window.location.href = data.url;
-        return;
       }
-      setDebugMsg("⑤ no data.url returned");
-    } catch (e) {
-      setDebugMsg(`⑥ exception: ${e instanceof Error ? e.message : String(e)}`);
+    } catch {
+      setError("email", { message: "Googleログインに失敗しました。時間をおいて再試行してください" });
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopyLabel("コピーしました");
+      setTimeout(() => setCopyLabel("URLをコピー"), 2000);
+    } catch {
+      setCopyLabel("コピー失敗");
+      setTimeout(() => setCopyLabel("URLをコピー"), 2000);
     }
   };
 
@@ -113,9 +113,26 @@ export default function AuthLogin() {
           <div className="flex-1 border-t" />
         </div>
 
+        {inAppBrowser && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-md text-xs text-gray-700 leading-relaxed">
+            <p className="font-semibold mb-1">Googleログインをご利用の方へ</p>
+            <p className="mb-2">
+              このアプリ内ブラウザでは Google の仕様によりログインできません。<br />
+              Safari や Chrome で開き直してください。
+            </p>
+            <button
+              onClick={handleCopyUrl}
+              className="text-primary underline text-xs"
+            >
+              {copyLabel}
+            </button>
+          </div>
+        )}
+
         <button
           onClick={handleGoogleLogin}
-          className="w-full py-3 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
+          disabled={inAppBrowser}
+          className="w-full py-3 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
           Googleでログイン
@@ -124,10 +141,6 @@ export default function AuthLogin() {
         <p className="text-center text-xs text-gray-400 mt-4">
           アカウントをお持ちでない方は{" "}
           <Link href="/signup" className="text-primary underline">新規登録</Link>
-        </p>
-
-        <p className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-[10px] text-gray-700 break-all font-mono">
-          DEBUG: {debugMsg}
         </p>
       </div>
 
