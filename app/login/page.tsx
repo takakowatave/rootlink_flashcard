@@ -33,9 +33,10 @@ export default function AuthLogin() {
   } = useForm<FormData>();
 
   const handleGoogleLogin = async () => {
-    setDebugMsg("① click received");
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "n/a";
+    setDebugMsg(`① click | UA=${ua}`);
     if (inAppBrowser) {
-      setDebugMsg("② early return: inAppBrowser=true");
+      setDebugMsg(`② early return | UA=${ua}`);
       return;
     }
     try {
