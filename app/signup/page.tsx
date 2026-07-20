@@ -16,6 +16,7 @@ interface FormData {
 export default function AuthSignup() {
   const [done, setDone] = useState(false);
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [copyLabel, setCopyLabel] = useState("URLをコピー");
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
@@ -30,10 +31,35 @@ export default function AuthSignup() {
 
   const handleGoogleLogin = async () => {
     if (inAppBrowser) return;
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/callback` },
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) {
+        setError("email", { message: "Googleログインに失敗しました。時間をおいて再試行してください" });
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch {
+      setError("email", { message: "Googleログインに失敗しました。時間をおいて再試行してください" });
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopyLabel("コピーしました");
+      setTimeout(() => setCopyLabel("URLをコピー"), 2000);
+    } catch {
+      setCopyLabel("コピー失敗");
+      setTimeout(() => setCopyLabel("URLをコピー"), 2000);
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -106,9 +132,26 @@ export default function AuthSignup() {
               <div className="flex-1 border-t" />
             </div>
 
+            {inAppBrowser && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-md text-xs text-gray-700 leading-relaxed">
+                <p className="font-semibold mb-1">Google登録をご利用の方へ</p>
+                <p className="mb-2">
+                  このアプリ内ブラウザでは Google の仕様により登録できません。<br />
+                  Safari や Chrome で開き直してください。
+                </p>
+                <button
+                  onClick={handleCopyUrl}
+                  className="text-primary underline text-xs"
+                >
+                  {copyLabel}
+                </button>
+              </div>
+            )}
+
             <button
               onClick={handleGoogleLogin}
-              className="w-full py-3 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
+              disabled={inAppBrowser}
+              className="w-full py-3 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
               Googleで登録
