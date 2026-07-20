@@ -14,7 +14,7 @@ type Params = { params: { slug: string } }
 async function fetchPost(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url')
     .eq('slug', slug)
     .not('published_at', 'is', null)
     .maybeSingle()
@@ -25,11 +25,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost(params.slug)
   if (!post) return { title: 'Not Found' }
   const description = post.content.replace(/[#>*`_\[\]()]/g, '').slice(0, 120)
+  const images = post.hero_image_url ? [{ url: post.hero_image_url }] : undefined
   return {
     title: post.title,
     description,
-    openGraph: { title: post.title, description, type: 'article' },
-    twitter: { card: 'summary', title: post.title, description },
+    openGraph: { title: post.title, description, type: 'article', images },
+    twitter: { card: images ? 'summary_large_image' : 'summary', title: post.title, description, images },
   }
 }
 
@@ -83,57 +84,69 @@ export default async function BlogPostPage({ params }: Params) {
       </nav>
 
       <article>
-        <div className="rounded-2xl border border-line bg-white px-5 py-8 sm:px-8 sm:py-10">
-          <header className="mb-8">
-            {post.tags && post.tags.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {post.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-            <p className="mt-3 text-xs text-muted">
-              {new Date(post.published_at!).toLocaleDateString('ja-JP')}
-            </p>
-          </header>
+        <div className="overflow-hidden rounded-2xl border border-line bg-white">
+          {post.hero_image_url && (
+            <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={post.hero_image_url}
+                alt={post.title}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
 
-          <div className="prose prose-sm max-w-none
-            prose-headings:text-gray-950 prose-headings:font-semibold
-            prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
-            prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
-            prose-p:text-gray-800 prose-p:leading-relaxed
-            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-            prose-blockquote:border-l-4 prose-blockquote:border-primary
-            prose-blockquote:not-italic prose-blockquote:text-gray-700
-            prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-            prose-code:text-primary-dark prose-code:before:content-none prose-code:after:content-none
-            prose-hr:border-line
-          ">
-            <BlogContent content={post.content} phraseMap={phraseMap} />
+          <div className="px-5 py-8 sm:px-8 sm:py-10">
+            <header className="mb-8">
+              {post.tags && post.tags.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {post.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
+              <p className="mt-3 text-xs text-muted">
+                {new Date(post.published_at!).toLocaleDateString('ja-JP')}
+              </p>
+            </header>
+
+            {headings.length > 0 && (
+              <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
+                <p className="mb-2 text-xs font-semibold text-muted">目次</p>
+                <ul className="space-y-1 text-sm">
+                  {headings.map((h) => (
+                    <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
+                      <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
+                        {h.text}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            )}
+
+            <div className="prose prose-sm max-w-none
+              prose-headings:text-gray-950 prose-headings:font-semibold
+              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
+              prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
+              prose-p:text-gray-800 prose-p:leading-relaxed
+              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+              prose-blockquote:border-l-4 prose-blockquote:border-primary
+              prose-blockquote:not-italic prose-blockquote:text-gray-700
+              prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
+              prose-code:text-primary-dark prose-code:before:content-none prose-code:after:content-none
+              prose-hr:border-line
+            ">
+              <BlogContent content={post.content} phraseMap={phraseMap} />
+            </div>
           </div>
         </div>
-
-        {/* 目次（見出し1つ以上ある記事のみ、本文下・モバイル向け） */}
-        {headings.length > 0 && (
-          <aside className="mt-10 rounded-2xl border border-line bg-white px-5 py-4">
-            <p className="mb-2 text-xs font-semibold text-muted">目次</p>
-            <ul className="space-y-1 text-sm">
-              {headings.map((h) => (
-                <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
-                  <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
-                    {h.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </aside>
-        )}
 
         {/* 末尾 CTA */}
         <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
