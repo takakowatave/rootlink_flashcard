@@ -211,19 +211,30 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
+    const loadStreak = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       await recordActivity(user.id)
-      const [profileData, dates] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
-        getActivityLog(user.id),
-      ]);
-      if (profileData.data) setProfile(profileData.data);
+      const dates = await getActivityLog(user.id)
       setCurrentStreak(calcStreak(dates));
     };
-    load();
-  }, []);
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+      if (data) setProfile(data);
+    };
+    loadProfile();
+    loadStreak();
+
+    const onVisible = () => { if (document.visibilityState === 'visible') loadStreak(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('streak-updated', loadStreak);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('streak-updated', loadStreak);
+    };
+  }, [pathname]);
 
   return (
     <>
