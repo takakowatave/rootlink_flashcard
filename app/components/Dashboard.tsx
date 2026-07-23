@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
-import PlantStatus from '@/components/PlantStatus'
+import PlantStatus, { getPlantImageSrc } from '@/components/PlantStatus'
 import SharedDeckCard from '@/components/DeckCard'
 import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
 
@@ -118,6 +118,7 @@ type DeckItem = {
   label?: string
   title: string
   imageSrc?: string
+  imageContain?: boolean
   href: string
 }
 
@@ -153,6 +154,7 @@ function DeckSection({
             label={item.label}
             title={item.title}
             imageSrc={item.imageSrc}
+            imageContain={item.imageContain}
             onClick={() => router.push(item.href)}
             className="shrink-0 w-[180px]"
           />
@@ -230,7 +232,13 @@ export default function Dashboard() {
     load()
   }, [])
 
-  const myDeckItem: DeckItem = { key: 'my-wordlist', title: 'My単語帳', href: '/wordlist' }
+  const myDeckItem: DeckItem = {
+    key: 'my-wordlist',
+    title: 'My単語帳',
+    href: '/wordlist',
+    imageSrc: getPlantImageSrc(activityDates.length),
+    imageContain: true,
+  }
   const myDeckEntry: DeckItem[] = savedCount > 0 ? [myDeckItem] : []
   const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
@@ -246,7 +254,6 @@ export default function Dashboard() {
       }
     })
   const historyItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 4 : 5)]
-  const studyingItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 3 : 4)]
   const examItems: DeckItem[] = LABEL_ORDER.flatMap(label =>
     decks
       .filter(d => d.label === label)
@@ -294,7 +301,6 @@ export default function Dashboard() {
             </section>
 
             <DeckSection title="履歴" items={historyItems} />
-            <DeckSection title="学習中" items={studyingItems} />
             <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
 
           </div>

@@ -4,10 +4,15 @@ type PlantLevel = { level: number; minDays: number; src: string }
 
 const PLANT_LEVELS: PlantLevel[] = [
   { level: 1, minDays: 0, src: '/plant/lv1.png' },
-  { level: 2, minDays: 3, src: '/plant/lv2.png' },
-  { level: 3, minDays: 7, src: '/plant/lv3.png' },
-  { level: 4, minDays: 14, src: '/plant/lv4.png' },
-  { level: 5, minDays: 30, src: '/plant/lv5.png' },
+  { level: 2, minDays: 7, src: '/plant/lv2.png' },
+  { level: 3, minDays: 30, src: '/plant/lv3.png' },
+  { level: 4, minDays: 100, src: '/plant/lv4.png' },
+  { level: 5, minDays: 365, src: '/plant/lv5.png' },
+  { level: 6, minDays: 500, src: '/plant/lv5.png' },
+  { level: 7, minDays: 730, src: '/plant/lv5.png' },
+  { level: 8, minDays: 1000, src: '/plant/lv5.png' },
+  { level: 9, minDays: 1500, src: '/plant/lv5.png' },
+  { level: 10, minDays: 2000, src: '/plant/lv5.png' },
 ]
 
 function resolveLevel(loginDays: number) {
@@ -18,6 +23,11 @@ function resolveLevel(loginDays: number) {
   const next = PLANT_LEVELS.find((lv) => lv.minDays > loginDays) ?? null
   const daysToNext = next ? next.minDays - loginDays : null
   return { current, next, daysToNext }
+}
+
+// My単語帳カード等、別コンポーネントでも同じ鉢植え画像を出すためのヘルパー
+export function getPlantImageSrc(loginDays: number): string {
+  return resolveLevel(loginDays).current.src
 }
 
 export default function PlantStatus({ loginDays }: { loginDays: number }) {
@@ -33,7 +43,7 @@ export default function PlantStatus({ loginDays }: { loginDays: number }) {
         draggable={false}
       />
       <div>
-        <p className="text-xs text-muted leading-snug">単語を覚えて<br />鉢植えを育てよう</p>
+        <p className="text-xs text-muted leading-snug">単語を覚えると<br />鉢植えが育ちます</p>
         <p className="text-sm font-bold text-gray-950 mt-0.5">{levelLabel}</p>
         {next && daysToNext !== null && (
           <p className="text-[11px] text-muted mt-0.5">

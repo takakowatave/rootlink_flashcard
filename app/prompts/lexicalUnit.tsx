@@ -35,10 +35,11 @@ Guidelines:
 - Meanings may be close paraphrases
 - Focus on practical patterns in conversation and work
 - Each meaning should be safe and natural to use
+- Use British English for all English text (examples and any English wording)
 
 For each meaning:
 - End the Japanese meaning with a verb or verb phrase
-- Provide ONE natural English example
+- Provide ONE natural English example (British English)
 - Provide a natural Japanese translation
 
 ────────────────────────
