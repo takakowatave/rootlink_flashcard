@@ -20,11 +20,21 @@ export default function DeckCard({ label, title, imageSrc, imageContain, onClick
         <p className="text-[22px] font-bold text-gray-950">{title}</p>
       </div>
       {imageSrc ? (
-        <img
-          src={imageSrc}
-          alt=""
-          className={`w-full aspect-[544/400] rounded-2xl ${imageContain ? 'object-contain' : 'object-cover'}`}
-        />
+        imageContain ? (
+          <div className="w-full aspect-[544/400] flex items-center justify-center">
+            <img
+              src={imageSrc}
+              alt=""
+              className="h-full aspect-square rounded-full object-cover"
+            />
+          </div>
+        ) : (
+          <img
+            src={imageSrc}
+            alt=""
+            className="w-full aspect-[544/400] object-cover rounded-2xl"
+          />
+        )
       ) : (
         <div className="w-full aspect-[544/400]" />
       )}
