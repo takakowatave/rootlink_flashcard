@@ -29,7 +29,7 @@ export default function PlantStatus({ loginDays }: { loginDays: number }) {
       <img
         src={current.src}
         alt={`鉢植え ${levelLabel}`}
-        className="size-12 select-none shrink-0"
+        className="size-12 rounded-full select-none shrink-0"
         draggable={false}
       />
       <div>

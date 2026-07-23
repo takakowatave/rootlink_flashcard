@@ -108,12 +108,6 @@ function StreakModal({ streak, onClose }: { streak: number; onClose: () => void 
         <p className="text-6xl select-none">🔥</p>
         <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
         <p className="text-base font-medium text-gray-700">今日も継続中！</p>
-        <button
-          onClick={onClose}
-          className="mt-2 bg-quiz-review text-white font-bold px-8 py-2.5 rounded-full text-sm hover:opacity-90 transition-opacity"
-        >
-          やるぞ！
-        </button>
       </div>
     </div>
   )
@@ -198,6 +192,7 @@ export default function Dashboard() {
       const currentStreak = calcStreak(dates)
       setStreak(currentStreak)
       setActivityDates(dates)
+      window.dispatchEvent(new Event('streak-updated'))
       if (savedData.count != null) setSavedCount(savedData.count)
       if (quizData.data) {
         const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
