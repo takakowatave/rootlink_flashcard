@@ -8,6 +8,11 @@ const PLANT_LEVELS: PlantLevel[] = [
   { level: 3, minDays: 7, src: '/plant/lv3.png' },
   { level: 4, minDays: 14, src: '/plant/lv4.png' },
   { level: 5, minDays: 30, src: '/plant/lv5.png' },
+  { level: 6, minDays: 60, src: '/plant/lv5.png' },
+  { level: 7, minDays: 100, src: '/plant/lv5.png' },
+  { level: 8, minDays: 200, src: '/plant/lv5.png' },
+  { level: 9, minDays: 365, src: '/plant/lv5.png' },
+  { level: 10, minDays: 730, src: '/plant/lv5.png' },
 ]
 
 function resolveLevel(loginDays: number) {
