@@ -4,11 +4,12 @@ type Props = {
   label?: string
   title: string
   imageSrc?: string
+  imageContain?: boolean
   onClick: () => void
   className?: string
 }
 
-export default function DeckCard({ label, title, imageSrc, onClick, className }: Props) {
+export default function DeckCard({ label, title, imageSrc, imageContain, onClick, className }: Props) {
   return (
     <button
       onClick={onClick}
@@ -22,7 +23,7 @@ export default function DeckCard({ label, title, imageSrc, onClick, className }:
         <img
           src={imageSrc}
           alt=""
-          className="w-full aspect-[544/400] object-cover rounded-2xl"
+          className={`w-full aspect-[544/400] rounded-2xl ${imageContain ? 'object-contain' : 'object-cover'}`}
         />
       ) : (
         <div className="w-full aspect-[544/400]" />

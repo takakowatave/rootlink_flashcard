@@ -25,6 +25,11 @@ function resolveLevel(loginDays: number) {
   return { current, next, daysToNext }
 }
 
+// My単語帳カード等、別コンポーネントでも同じ鉢植え画像を出すためのヘルパー
+export function getPlantImageSrc(loginDays: number): string {
+  return resolveLevel(loginDays).current.src
+}
+
 export default function PlantStatus({ loginDays }: { loginDays: number }) {
   const { current, next, daysToNext } = resolveLevel(loginDays)
   const levelLabel = `Lv.${String(current.level).padStart(2, '0')}`
@@ -38,7 +43,7 @@ export default function PlantStatus({ loginDays }: { loginDays: number }) {
         draggable={false}
       />
       <div>
-        <p className="text-xs text-muted leading-snug">単語を覚えて<br />鉢植えを育てよう</p>
+        <p className="text-xs text-muted leading-snug">単語を覚えると<br />鉢植えが育ちます</p>
         <p className="text-sm font-bold text-gray-950 mt-0.5">{levelLabel}</p>
         {next && daysToNext !== null && (
           <p className="text-[11px] text-muted mt-0.5">
