@@ -106,8 +106,6 @@ kebab-case 英語。`so that's why` → `so-thats-why`。所有格アポスト�
 
 {explanation_ja を2〜3段落に膨らませる・UK English らしさに触れる}
 
-## RootLinkで復習
-
 <phrase-card id="{返ってきたuuid}" />
 
 ## 動画で聞く
@@ -193,6 +191,6 @@ INSERT 後、kiko には `/blog/preview/{slug}` の URL を提示する。プレ
 - **1構文=1記事**（`rootlink.jp/blog/{slug}`）
 - **記事内 RootLink カード埋め込み**（生きたプロダクトデモ）
 - **Shorts脚本 = そのまま記事化**（動画とブログの1対1連携）
-- **末尾CTA**: 「RootLinkで復習しよう！」（自動生成 markdown の最後に含める）
+- **末尾CTA はブログテンプレ側で共通表示**する（`app/blog/[slug]/page.tsx` の「気に入った表現は、RootLink に保存して復習しよう。」ブロック）。記事本文に「RootLinkで復習」等の CTA 見出しは書かない（しつこいので kiko 明言）
 
 これらから外れる判断は Notion 側を正とする。

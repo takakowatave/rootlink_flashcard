@@ -1,32 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 
-type Sense = {
-  sense_id: string
-  meaning_ja: string | null
-  meaning_en: string | null
-  example_en: string | null
-  example_ja: string | null
-}
+export type EmbeddedPhrase = PhraseCardData
 
-export type EmbeddedPhrase = {
-  id: string
-  phrase: string
-  meaning_ja: string | null
-  example_en: string | null
-  example_ja: string | null
-  senses: Sense[] | null
+function cleanPhrase(phrase: string): string {
+  return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
 }
 
 export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) {
+  const router = useRouter()
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioLoading, setAudioLoading] = useState(false)
+  const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
+  const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -59,46 +54,54 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
     }
   }
 
-  const primary = phrase.senses?.[0]
-  const meaning = primary?.meaning_ja ?? phrase.meaning_ja
-  const example = primary?.example_en ?? phrase.example_en
-  const exampleJa = primary?.example_ja ?? phrase.example_ja
+  const playAudio = async () => {
+    const play = (url: string) => {
+      const a = new Audio(url)
+      a.playbackRate = 1.2
+      a.play()
+    }
+    if (audioUrl) { play(audioUrl); return }
+    setAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: phrase.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); play(data.audioUrl) }
+    } catch { /* silent */ } finally { setAudioLoading(false) }
+  }
+
+  const playHeadwordAudio = async () => {
+    if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
+    setHeadwordAudioLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase/headword`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase_card_id: phrase.id }),
+      })
+      const data = await res.json()
+      if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+    } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
+  }
+
+  const href = `/word/${cleanPhrase(phrase.phrase).replace(/\s+/g, '_')}`
 
   return (
-    <div className="not-prose my-6 border border-line rounded-2xl bg-white px-5 py-4">
+    <div className="not-prose my-6">
       {showModal && <SignupRequiredModal onClose={() => setShowModal(false)} />}
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold text-gray-900">{phrase.phrase}</p>
-          {meaning && <p className="text-sm text-gray-600 mt-1">{meaning}</p>}
-        </div>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="shrink-0 p-1 -mr-1"
-          aria-label={isSaved ? '保存済み' : '保存'}
-        >
-          {isSaved
-            ? <HiBookmark className="size-6 text-muted" />
-            : <HiOutlineBookmark className="size-6 text-primary" />
-          }
-        </button>
-      </div>
-
-      {example && (
-        <div className="mt-3 pt-3 border-t border-line">
-          <p className="text-sm text-gray-800 italic">{example}</p>
-          {exampleJa && <p className="text-xs text-gray-500 mt-1">{exampleJa}</p>}
-        </div>
-      )}
-
-      <Link
-        href={`/phrases/${phrase.id}`}
-        className="inline-flex items-center text-sm text-primary hover:underline mt-3"
-      >
-        詳しく見る →
-      </Link>
+      <PhraseCard
+        card={phrase}
+        isSaved={isSaved}
+        onSave={handleSave}
+        onClick={() => router.push(href)}
+        onPlayHeadword={playHeadwordAudio}
+        headwordAudioLoading={headwordAudioLoading}
+        onPlayExample={playAudio}
+        exampleAudioLoading={audioLoading}
+      />
     </div>
   )
 }

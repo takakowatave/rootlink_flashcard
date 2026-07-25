@@ -46,7 +46,7 @@ export default async function BlogPostPage({ params }: Params) {
   if (phraseIds.length > 0) {
     const { data: phrases } = await supabase
       .from('phrase_cards')
-      .select('id, phrase, meaning_ja, example_en, example_ja, senses')
+      .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
       .in('id', phraseIds)
     if (phrases) {
       phraseMap = Object.fromEntries(
