@@ -145,11 +145,13 @@ export default function EntryCard({
   }
 
   const playExampleAudio = async (senseId: string) => {
-    const cached = exampleAudioUrls[senseId]
-    if (cached) {
-      new Audio(cached).play().catch(() => {})
-      return
+    const play = (url: string) => {
+      const a = new Audio(url)
+      a.playbackRate = 1.2
+      a.play().catch(() => {})
     }
+    const cached = exampleAudioUrls[senseId]
+    if (cached) { play(cached); return }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/word/example`, {
@@ -160,7 +162,7 @@ export default function EntryCard({
       const data = await res.json()
       if (data.ok && data.audioUrl) {
         setExampleAudioUrls(prev => ({ ...prev, [senseId]: data.audioUrl }))
-        new Audio(data.audioUrl).play().catch(() => {})
+        play(data.audioUrl)
       }
     } catch { /* silent */ } finally {
       setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
