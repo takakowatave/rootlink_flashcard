@@ -186,7 +186,7 @@ export default function Dashboard() {
 
       const [savedData, quizData, decksData, dates] = await Promise.all([
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('quiz_results').select('word, correct').eq('user_id', user.id).gte('created_at', oneYearAgo).limit(5000),
+        supabase.from('quiz_results').select('word, correct').eq('user_id', user.id).gte('answered_at', oneYearAgo).limit(5000),
         supabase.from('decks').select('id, name, label, word_count').order('label').order('name').limit(100),
         getActivityLog(user.id),
       ])
