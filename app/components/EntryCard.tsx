@@ -12,6 +12,7 @@ import CardShell from '@/components/CardShell'
 import SenseRow from '@/components/SenseRow'
 import SenseExample from '@/components/SenseExample'
 import { supabase } from '@/lib/supabaseClient'
+import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -92,12 +93,14 @@ export default function EntryCard({
 
   const router = useRouter()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [audioUrl, setAudioUrl] = useState<string | null>(pronunciation.audioFile ?? null)
-  const [audioLoading, setAudioLoading] = useState(false)
 
-  useEffect(() => {
-    if (pronunciation.audioFile) setAudioUrl(pronunciation.audioFile)
-  }, [pronunciation.audioFile])
+  // 見出し音声: Oxford 実録音があればそれを初期URLに、なければ TTS フォールバック
+  const headwordAudio = useTtsAudio({
+    endpoint: '/audio',
+    body: { word: headword },
+    initialUrl: pronunciation.audioFile ?? null,
+  })
+
   const [exampleAudioUrls, setExampleAudioUrls] = useState<Record<string, string>>({})
   const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
@@ -125,46 +128,19 @@ export default function EntryCard({
   const playAudio = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (audioUrl) {
-      new Audio(audioUrl).play().catch(() => {})
-      return
-    }
-    setAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: headword }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) {
-        setAudioUrl(data.audioUrl)
-        new Audio(data.audioUrl).play().catch(() => {})
-      }
-    } catch { /* silent */ } finally { setAudioLoading(false) }
+    await headwordAudio.play()
   }
 
   const playExampleAudio = async (senseId: string) => {
     const cached = exampleAudioUrls[senseId]
-    if (cached) {
-      new Audio(cached).play().catch(() => {})
-      return
-    }
+    if (cached) { playAudioAtRate(cached, 1.2); return }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/word/example`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: headword, sense_id: senseId }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) {
-        setExampleAudioUrls(prev => ({ ...prev, [senseId]: data.audioUrl }))
-        new Audio(data.audioUrl).play().catch(() => {})
-      }
-    } catch { /* silent */ } finally {
-      setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
+    const url = await fetchTtsAudioUrl('/audio/word/example', { word: headword, sense_id: senseId })
+    if (url) {
+      setExampleAudioUrls(prev => ({ ...prev, [senseId]: url }))
+      playAudioAtRate(url, 1.2)
     }
+    setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
   }
 
   const labels = displayLocale === 'ja'
@@ -199,8 +175,8 @@ export default function EntryCard({
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-semibold leading-8 text-black">{headword}</h1>
-            <button type="button" onClick={playAudio} disabled={audioLoading} className="shrink-0">
-              <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+            <button type="button" onClick={playAudio} disabled={headwordAudio.loading} className="shrink-0">
+              <HiSpeakerWave className={`size-6 ${headwordAudio.loading ? 'text-muted animate-pulse' : 'text-muted'}`} />
             </button>
           </div>
           <div className="group/save relative shrink-0">

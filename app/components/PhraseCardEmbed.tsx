@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { useTtsAudio } from '@/lib/useTtsAudio'
 
 export type EmbeddedPhrase = PhraseCardData
 
@@ -18,10 +19,15 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
   const [userId, setUserId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
 
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [audioLoading, setAudioLoading] = useState(false)
-  const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
-  const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
+  const example = useTtsAudio({
+    endpoint: '/audio/phrase',
+    body: { phrase_card_id: phrase.id },
+    playbackRate: 1.2,
+  })
+  const headword = useTtsAudio({
+    endpoint: '/audio/phrase/headword',
+    body: { phrase_card_id: phrase.id },
+  })
 
   useEffect(() => {
     let alive = true
@@ -54,39 +60,6 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
     }
   }
 
-  const playAudio = async () => {
-    const play = (url: string) => {
-      const a = new Audio(url)
-      a.playbackRate = 1.2
-      a.play()
-    }
-    if (audioUrl) { play(audioUrl); return }
-    setAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrase_card_id: phrase.id }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); play(data.audioUrl) }
-    } catch { /* silent */ } finally { setAudioLoading(false) }
-  }
-
-  const playHeadwordAudio = async () => {
-    if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
-    setHeadwordAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase/headword`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrase_card_id: phrase.id }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) { setHeadwordAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
-    } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
-  }
-
   const href = `/word/${cleanPhrase(phrase.phrase).replace(/\s+/g, '_')}`
 
   return (
@@ -97,10 +70,10 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
         isSaved={isSaved}
         onSave={handleSave}
         onClick={() => router.push(href)}
-        onPlayHeadword={playHeadwordAudio}
-        headwordAudioLoading={headwordAudioLoading}
-        onPlayExample={playAudio}
-        exampleAudioLoading={audioLoading}
+        onPlayHeadword={headword.play}
+        headwordAudioLoading={headword.loading}
+        onPlayExample={example.play}
+        exampleAudioLoading={example.loading}
       />
     </div>
   )
