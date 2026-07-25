@@ -93,10 +93,10 @@ export default function WordListPage() {
     const wordNames = words.map((w) => w.word)
     const { data: qr } = await supabase
       .from('quiz_results')
-      .select('word, correct, created_at')
+      .select('word, correct, answered_at')
       .eq('user_id', userId)
       .in('word', wordNames)
-      .order('created_at', { ascending: false })
+      .order('answered_at', { ascending: false })
       .limit(10000)
 
     const latestByWord = new Map<string, boolean>()
