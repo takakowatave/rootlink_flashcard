@@ -1,46 +1,17 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
-import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
-import CardShell from '@/components/CardShell'
-import SenseExample from '@/components/SenseExample'
-import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
+import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 
-type PhraseSense = {
-  sense_id: string
-  meaning_ja: string | null
-  meaning_en: string | null
+type PhraseCardRow = PhraseCardData & {
   explanation_ja: string | null
   explanation_en: string | null
-  example_en: string | null
-  example_ja: string | null
-}
-
-type PhraseCard = {
-  id: string
-  phrase: string
-  meaning_ja: string | null
-  meaning_en: string | null
-  explanation_ja: string | null
-  explanation_en: string | null
-  example_en: string | null
-  example_ja: string | null
-  type: string | null
-  register: string | null
-  locale: string | null
-  senses: PhraseSense[] | null
   created_at: string
   skip_reason: string | null
-}
-
-function cleanPhrase(phrase: string): string {
-  return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
 }
 
 function isToday(dateStr: string): boolean {
@@ -49,19 +20,14 @@ function isToday(dateStr: string): boolean {
   return localDate === today
 }
 
-function PhraseCardItem({
+function PhraseCardWithAudio({
   card, displayLocale, isSaved, onSave,
 }: {
-  card: PhraseCard
+  card: PhraseCardRow
   displayLocale: DisplayLocale
   isSaved: boolean
   onSave: () => void
 }) {
-  const router = useRouter()
-  const meaning = displayLocale === 'ja'
-    ? (card.meaning_ja ?? card.meaning_en ?? '')
-    : (card.meaning_en ?? card.meaning_ja ?? '')
-
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioLoading, setAudioLoading] = useState(false)
   const [headwordAudioUrl, setHeadwordAudioUrl] = useState<string | null>(null)
@@ -81,9 +47,7 @@ function PhraseCardItem({
     } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
-  const playHeadwordAudio = async (e: ReactMouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const playHeadwordAudio = async () => {
     if (headwordAudioUrl) { new Audio(headwordAudioUrl).play(); return }
     setHeadwordAudioLoading(true)
     try {
@@ -97,72 +61,17 @@ function PhraseCardItem({
     } catch { /* silent */ } finally { setHeadwordAudioLoading(false) }
   }
 
-  const typeLabel = pickLabel(TYPE_LABEL, card.type, displayLocale)
-  const registerLabel = card.register && card.register !== 'neutral'
-    ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
-    : null
-  const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
-  const href = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
-
   return (
-    <CardShell onClick={() => router.push(href)}>
-      {/* HEADER */}
-      <div className="flex items-center justify-between py-1 px-1 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
-          <button
-            type="button"
-            onClick={playHeadwordAudio}
-            disabled={headwordAudioLoading}
-            className="shrink-0"
-          >
-            <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onSave() }}
-          className="p-2 -mr-2 -mt-1 shrink-0"
-        >
-          {isSaved
-            ? <HiBookmark className="size-6 text-muted" />
-            : <HiOutlineBookmark className="size-6 text-primary" />
-          }
-        </button>
-      </div>
-
-      {/* メタ */}
-      <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
-        {typeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
-        )}
-        {localeLabel && (
-          <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
-        )}
-        {registerLabel && (
-          <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
-        )}
-      </div>
-
-      {/* 意味 */}
-      {meaning && (
-        <div className="px-1">
-          <p className="text-base font-medium text-black">{meaning}</p>
-        </div>
-      )}
-
-      {/* 例文 */}
-      <div className="px-1">
-        <SenseExample
-          example={card.example_en}
-          translation={card.example_ja}
-          displayLocale={displayLocale}
-          onPlay={playAudio}
-          isLoading={audioLoading}
-        />
-      </div>
-
-    </CardShell>
+    <PhraseCard
+      card={card}
+      isSaved={isSaved}
+      onSave={onSave}
+      displayLocale={displayLocale}
+      onPlayHeadword={playHeadwordAudio}
+      headwordAudioLoading={headwordAudioLoading}
+      onPlayExample={playAudio}
+      exampleAudioLoading={audioLoading}
+    />
   )
 }
 
@@ -171,7 +80,7 @@ function PhrasesPageInner() {
   const searchQuery = searchParams.get('q') ?? ''
   const highlightRef = useRef<HTMLDivElement>(null)
 
-  const [cards, setCards] = useState<PhraseCard[]>([])
+  const [cards, setCards] = useState<PhraseCardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
@@ -195,7 +104,7 @@ function PhrasesPageInner() {
           ? supabase.from('saved_phrase_cards').select('phrase_card_id').eq('user_id', user.id)
           : Promise.resolve({ data: [] }),
       ])
-      setCards((cardsRes.data ?? []) as PhraseCard[])
+      setCards((cardsRes.data ?? []) as PhraseCardRow[])
       setSavedIds(new Set((savedRes.data ?? []).map((r: { phrase_card_id: string }) => r.phrase_card_id)))
       setLoading(false)
     }
@@ -222,7 +131,6 @@ function PhrasesPageInner() {
     }
   }
 
-  // ?q= で検索ヒットしたカードをトップに移動 + スクロール
   useEffect(() => {
     if (searchQuery && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -241,13 +149,11 @@ function PhrasesPageInner() {
     <div className="bg-surface min-h-screen">
       <div className="flex justify-center w-full">
         <div className="w-full max-w-[812px] px-4 py-6">
-          {/* ヘッダー */}
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-950">表現・フレーズ</h1>
             <span className="text-sm text-muted">{displayed.length}件</span>
           </div>
 
-          {/* フィルター */}
           <div className="flex gap-2 mb-5">
             <button
               onClick={() => setTodayOnly(false)}
@@ -286,7 +192,7 @@ function PhrasesPageInner() {
                     {keptCards.map((card) => (
                       <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
                         className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
-                        <PhraseCardItem
+                        <PhraseCardWithAudio
                           card={card}
                           displayLocale={displayLocale}
                           isSaved={savedIds.has(card.id)}
@@ -307,7 +213,7 @@ function PhrasesPageInner() {
                     {droppedCards.map((card) => (
                       <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
                         className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
-                        <PhraseCardItem
+                        <PhraseCardWithAudio
                           card={card}
                           displayLocale={displayLocale}
                           isSaved={savedIds.has(card.id)}
