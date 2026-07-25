@@ -34,7 +34,12 @@ function PhraseCardWithAudio({
   const [headwordAudioLoading, setHeadwordAudioLoading] = useState(false)
 
   const playAudio = async () => {
-    if (audioUrl) { new Audio(audioUrl).play(); return }
+    const play = (url: string) => {
+      const a = new Audio(url)
+      a.playbackRate = 1.2
+      a.play()
+    }
+    if (audioUrl) { play(audioUrl); return }
     setAudioLoading(true)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio/phrase`, {
@@ -43,7 +48,7 @@ function PhraseCardWithAudio({
         body: JSON.stringify({ phrase_card_id: card.id }),
       })
       const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
+      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); play(data.audioUrl) }
     } catch { /* silent */ } finally { setAudioLoading(false) }
   }
 
