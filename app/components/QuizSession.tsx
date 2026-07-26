@@ -194,13 +194,21 @@ function CardView({
   const renderExample = () => {
     const text = card.example
     if (!text) return null
-    const regex = new RegExp(`(${card.word})`, 'gi')
+    // 活用形もハイライトする（run→ran/running, shove→shoving/shoved 等）。
+    // サーバ側 exampleContainsHeadword と同じ語幹戦略：短語は完全語＋短い接尾辞、長語は先頭 stem 前方一致。
+    const hw = card.word.toLowerCase().trim()
+    const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = hw.length <= 3
+      ? `\\b${escape(hw)}[a-z]{0,3}\\b`
+      : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
+    const regex = new RegExp(`(${pattern})`, 'gi')
     const parts = text.split(regex)
+    const isMatch = (s: string) => new RegExp(`^${pattern}$`, 'i').test(s)
     return (
       <div>
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
-            part.toLowerCase() === card.word.toLowerCase()
+            isMatch(part)
               ? <span key={i} className="text-orange-400">{part}</span>
               : part
           )}
