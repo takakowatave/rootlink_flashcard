@@ -6,6 +6,7 @@ import { HiX } from 'react-icons/hi'
 import Button from '@/components/Button'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
+import { useTtsAudio } from '@/lib/useTtsAudio'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
@@ -20,6 +21,7 @@ export type QuizCard = {
   meaningEn: string
   example?: string
   exampleJa?: string
+  senseId?: string
 }
 
 export type QuizEntry = {
@@ -70,6 +72,7 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
       meaningEn: targetSense.definition ?? '',
       example: typeof targetSense.example === 'string' ? targetSense.example : undefined,
       exampleJa: ja.exampleTranslation ?? undefined,
+      senseId,
     })
   }
 
@@ -157,28 +160,21 @@ function CardView({
   onQuit: () => void
 }) {
   const [revealed, setRevealed] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | undefined>(card.audioPath)
-  const [audioLoading, setAudioLoading] = useState(false)
+  const headword = useTtsAudio({
+    endpoint: '/audio',
+    body: { word: card.word },
+    initialUrl: card.audioPath ?? null,
+  })
+  const example = useTtsAudio({
+    endpoint: '/audio/word/example',
+    body: { word: card.word, sense_id: card.senseId ?? '' },
+    playbackRate: 1.2,
+  })
 
   useEffect(() => {
     setRevealed(false)
-    setAudioUrl(card.audioPath)
     if (!card.example) onModeChange('word')
-  }, [current, card.audioPath, card.example, onModeChange])
-
-  const playAudio = async () => {
-    if (audioUrl) { new Audio(audioUrl).play(); return }
-    setAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: card.word }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
-    } catch { /* silent */ } finally { setAudioLoading(false) }
-  }
+  }, [current, card.example, onModeChange])
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
@@ -209,6 +205,13 @@ function CardView({
               : part
           )}
         </p>
+        <div className="mt-2 h-5 text-gray-400">
+          <button onClick={example.play} disabled={example.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+            {example.loading
+              ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+              : <BsVolumeUp size={20} />}
+          </button>
+        </div>
         {revealed && card.exampleJa && (
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
@@ -242,8 +245,8 @@ function CardView({
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
                   {card.ipa && <span className="text-base">/{card.ipa}/</span>}
-                  <button onClick={playAudio} disabled={audioLoading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
-                    {audioLoading
+                  <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+                    {headword.loading
                       ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
                       : <BsVolumeUp size={20} />}
                   </button>
@@ -408,6 +411,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
   return (
     <>
       <CardView
+        key={`${currentIndex}-${cards[currentIndex]?.word}`}
         card={cards[currentIndex]}
         onAnswer={handleAnswer}
         current={currentIndex + 1}
