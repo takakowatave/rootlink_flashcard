@@ -19,7 +19,7 @@ export default function QuizClient() {
 
   useEffect(() => { toast.dismiss() }, [])
 
-  const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
+  const loadCards = async (quizMode: 'all' | 'unseen' | 'review' | 'hard' = 'all') => {
     setLoading(true)
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); setLoading(false); return }
@@ -31,16 +31,29 @@ export default function QuizClient() {
       pinned_sense_id: w.pinned_sense_id ?? null,
     }))
 
-    if (quizMode === 'review') {
+    if (quizMode !== 'all') {
       const { data: mastery } = await supabase
         .from('word_mastery')
-        .select('word')
+        .select('word, status, wrong_count')
         .eq('user_id', data.user.id)
-        .eq('status', 'needs_review')
-        .order('wrong_count', { ascending: false })
-        .limit(10)
-      const reviewWords = new Set((mastery ?? []).map(m => m.word))
-      entries = entries.filter(e => reviewWords.has(e.word))
+        .limit(5000)
+      const rows = (mastery ?? []) as { word: string; status: string; wrong_count: number | null }[]
+
+      if (quizMode === 'review') {
+        const target = new Set(
+          rows.filter(r => r.status === 'needs_review' && (r.wrong_count ?? 0) < 2).map(r => r.word),
+        )
+        entries = entries.filter(e => target.has(e.word))
+      } else if (quizMode === 'hard') {
+        const target = new Set(rows.filter(r => (r.wrong_count ?? 0) >= 2).map(r => r.word))
+        entries = entries.filter(e => target.has(e.word))
+      } else {
+        // unseen: not in word_mastery OR status is unlearned
+        const seen = new Set(
+          rows.filter(r => r.status === 'needs_review' || r.status === 'mastered').map(r => r.word),
+        )
+        entries = entries.filter(e => !seen.has(e.word))
+      }
     }
 
     const cards = shuffleCards(buildQuizCards(entries)).slice(0, 10)

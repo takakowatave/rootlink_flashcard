@@ -9,6 +9,7 @@ import type { SavedWordDictionary } from '@/types/Dictionary'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import TriDonutChart from '@/components/TriDonutChart'
+import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -27,15 +28,14 @@ type DeckWordEntry = {
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
-type QuizScope = 'random' | 'review'
-
 export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const router = useRouter()
   const [entries, setEntries] = useState<DeckWordEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
+  const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
-  const [quizScope, setQuizScope] = useState<QuizScope>('random')
+  const [quizScope, setQuizScope] = useState<QuizScope>('all')
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
@@ -48,8 +48,10 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       .limit(10000)
 
     const latestByWord = new Map<string, boolean>()
+    const wrongByWord = new Map<string, number>()
     for (const row of ((qr ?? []) as { word: string; correct: boolean }[])) {
       if (!latestByWord.has(row.word)) latestByWord.set(row.word, row.correct)
+      if (!row.correct) wrongByWord.set(row.word, (wrongByWord.get(row.word) ?? 0) + 1)
     }
     const statusMap = new Map<string, WordStatus>()
     for (const entry of data) {
@@ -57,6 +59,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       statusMap.set(entry.word, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
     }
     setWordStatus(statusMap)
+    setWrongCounts(wrongByWord)
   }, [])
 
   useEffect(() => {
@@ -73,25 +76,38 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     load()
   }, [deck.id, loadStatus])
 
-  const availableCount = entries.filter(e => !!e.dictionary).length
+  const availableEntries = entries.filter(e => !!e.dictionary)
+  const availableCount = availableEntries.length
   const masteredCount = [...wordStatus.values()].filter(s => s === 'mastered').length
   const reviewCount = [...wordStatus.values()].filter(s => s === 'review').length
   const unseenCount = entries.length - masteredCount - reviewCount
 
-  const reviewWords = entries.filter(e => wordStatus.get(e.word) === 'review' && !!e.dictionary)
+  const hardWords = availableEntries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2)
+  const reviewWords = availableEntries.filter(
+    e => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
+  )
+  const unseenWords = availableEntries.filter(e => wordStatus.get(e.word) === 'unseen')
+
+  const scopeSource: Record<QuizScope, typeof availableEntries> = {
+    all: availableEntries,
+    unseen: unseenWords,
+    review: reviewWords,
+    hard: hardWords,
+  }
 
   const startQuiz = useCallback(() => {
-    const sourceEntries = quizScope === 'review' ? reviewWords : entries
+    const sourceEntries = scopeSource[quizScope]
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [entries, quizScope, reviewWords])
+  }, [quizScope, scopeSource])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct)
     setWordStatus(prev => new Map(prev).set(word, correct ? 'mastered' : 'review'))
+    if (!correct) setWrongCounts(prev => new Map(prev).set(word, (prev.get(word) ?? 0) + 1))
   }, [])
 
   if (quizEntries !== null) {
@@ -132,23 +148,16 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           {!loading && availableCount > 0 && (
             <div className="mt-4">
               <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setQuizScope('random')}
-                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
-                >
-                  <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
-                  <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
-                </button>
-                <button
-                  onClick={() => setQuizScope('review')}
-                  disabled={reviewWords.length === 0}
-                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-quiz-review bg-orange-50' : 'border-line bg-white'}`}
-                >
-                  <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
-                  <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>
-                </button>
-              </div>
+              <QuizScopeSelector
+                items={[
+                  { key: 'all', count: availableCount },
+                  { key: 'unseen', count: unseenWords.length },
+                  { key: 'review', count: reviewWords.length },
+                  { key: 'hard', count: hardWords.length },
+                ]}
+                selected={quizScope}
+                onChange={setQuizScope}
+              />
             </div>
           )}
         </div>
@@ -156,7 +165,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         {/* クイズボタン */}
         <Button
           onClick={startQuiz}
-          disabled={loading || availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
+          disabled={loading || scopeSource[quizScope].length === 0}
           variant="primary"
           size="lg"
           fullWidth

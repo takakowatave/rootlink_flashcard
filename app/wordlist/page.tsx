@@ -9,6 +9,7 @@ import Button from "@/components/Button"
 import TriDonutChart from "@/components/TriDonutChart"
 import QuizSession, { buildQuizCards, shuffleCards } from "@/components/QuizSession"
 import type { QuizEntry } from "@/components/QuizSession"
+import QuizScopeSelector, { type QuizScope } from "@/components/QuizScopeSelector"
 import { fetchWordlists, toggleSaveStatus, updateStreak, saveQuizResult } from "@/lib/supabaseApi"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
@@ -19,7 +20,6 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/D
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
-type QuizScope = 'random' | 'review'
 
 export type SavedWordRow = {
   word_id: string
@@ -82,8 +82,9 @@ export default function WordListPage() {
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
+  const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
-  const [quizScope, setQuizScope] = useState<QuizScope>('random')
+  const [quizScope, setQuizScope] = useState<QuizScope>('all')
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -100,8 +101,10 @@ export default function WordListPage() {
       .limit(10000)
 
     const latestByWord = new Map<string, boolean>()
+    const wrongByWord = new Map<string, number>()
     for (const row of ((qr ?? []) as { word: string; correct: boolean }[])) {
       if (!latestByWord.has(row.word)) latestByWord.set(row.word, row.correct)
+      if (!row.correct) wrongByWord.set(row.word, (wrongByWord.get(row.word) ?? 0) + 1)
     }
     const statusMap = new Map<string, WordStatus>()
     for (const w of words) {
@@ -109,6 +112,7 @@ export default function WordListPage() {
       statusMap.set(w.word, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
     }
     setWordStatus(statusMap)
+    setWrongCounts(wrongByWord)
   }
 
   const load = async () => {
@@ -164,11 +168,24 @@ export default function WordListPage() {
     setSelectedItem(item)
   }
 
-  const availableCount = wordList.filter((w) => !!w.dictionary).length
+  const availableWords = wordList.filter((w) => !!w.dictionary)
+  const availableCount = availableWords.length
   const masteredCount = [...wordStatus.values()].filter((s) => s === 'mastered').length
   const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
   const unseenCount = wordList.length - masteredCount - reviewCount
-  const reviewWords = wordList.filter((w) => wordStatus.get(w.word) === 'review' && !!w.dictionary)
+
+  const hardWords = availableWords.filter((w) => (wrongCounts.get(w.word) ?? 0) >= 2)
+  const reviewWords = availableWords.filter(
+    (w) => wordStatus.get(w.word) === 'review' && (wrongCounts.get(w.word) ?? 0) < 2,
+  )
+  const unseenWords = availableWords.filter((w) => wordStatus.get(w.word) === 'unseen')
+
+  const scopeSource: Record<QuizScope, SavedWordRow[]> = {
+    all: availableWords,
+    unseen: unseenWords,
+    review: reviewWords,
+    hard: hardWords,
+  }
 
   const toQuizEntry = (w: SavedWordRow): QuizEntry => ({
     word: w.word,
@@ -177,8 +194,7 @@ export default function WordListPage() {
   })
 
   const startQuiz = () => {
-    const source = quizScope === 'review' ? reviewWords : wordList
-    const sourceEntries = source.map(toQuizEntry)
+    const sourceEntries = scopeSource[quizScope].map(toQuizEntry)
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(
       (c) => sourceEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
@@ -189,6 +205,7 @@ export default function WordListPage() {
   const handleQuizAnswer = async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct)
     setWordStatus((prev) => new Map(prev).set(word, correct ? 'mastered' : 'review'))
+    if (!correct) setWrongCounts((prev) => new Map(prev).set(word, (prev.get(word) ?? 0) + 1))
   }
 
   if (quizEntries !== null) {
@@ -232,30 +249,23 @@ export default function WordListPage() {
             {availableCount > 0 && (
               <div className="mt-4">
                 <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setQuizScope('random')}
-                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
-                  >
-                    <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
-                    <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
-                  </button>
-                  <button
-                    onClick={() => setQuizScope('review')}
-                    disabled={reviewWords.length === 0}
-                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'review' ? 'border-quiz-review bg-orange-50' : 'border-line bg-white'}`}
-                  >
-                    <p className={`font-semibold text-base ${quizScope === 'review' ? 'text-orange-500' : 'text-gray-700'}`}>要復習</p>
-                    <p className={`text-xs mt-0.5 ${quizScope === 'review' ? 'text-orange-400' : 'text-gray-400'}`}>{reviewWords.length}問</p>
-                  </button>
-                </div>
+                <QuizScopeSelector
+                  items={[
+                    { key: 'all', count: availableCount },
+                    { key: 'unseen', count: unseenWords.length },
+                    { key: 'review', count: reviewWords.length },
+                    { key: 'hard', count: hardWords.length },
+                  ]}
+                  selected={quizScope}
+                  onChange={setQuizScope}
+                />
               </div>
             )}
           </div>
 
           <Button
             onClick={startQuiz}
-            disabled={availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
+            disabled={scopeSource[quizScope].length === 0}
             variant="primary"
             size="lg"
             fullWidth

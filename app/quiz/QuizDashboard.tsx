@@ -5,17 +5,20 @@ import { supabase } from '@/lib/supabaseClient'
 import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
+import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
 type MasteryStats = {
   unlearned: number
-  needs_review: number
+  needs_review: number     // all needs_review — for donut
+  review_only: number      // needs_review AND wrong_count == 1 — for scope 「要復習」
   mastered: number
+  hard: number             // wrong_count >= 2 — for scope 「苦手」
   total: number
 }
 
-type QuizMode = 'all' | 'review'
+type QuizMode = QuizScope
 
 function DonutChart({ stats }: { stats: MasteryStats }) {
   const { mastered, needs_review, total } = stats
@@ -87,7 +90,7 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
 }
 
 export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: QuizMode) => void, onBack: () => void }) {
-  const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, mastered: 0, total: 0 })
+  const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, review_only: 0, mastered: 0, hard: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedMode, setSelectedMode] = useState<QuizMode>('all')
@@ -106,19 +109,27 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
 
       const { data: mastery } = await supabase
         .from('word_mastery')
-        .select('status')
+        .select('status, wrong_count')
         .eq('user_id', auth.user.id)
         .limit(5000)
 
-      const masteryMap = { unlearned: 0, needs_review: 0, mastered: 0 }
-      for (const row of mastery ?? []) {
-        if (row.status in masteryMap) masteryMap[row.status as keyof typeof masteryMap]++
+      let needsReviewAll = 0
+      let reviewOnly = 0
+      let mastered = 0
+      let hard = 0
+      for (const row of (mastery ?? []) as { status: string; wrong_count: number | null }[]) {
+        const wrong = row.wrong_count ?? 0
+        if (wrong >= 2) hard++
+        if (row.status === 'mastered') mastered++
+        else if (row.status === 'needs_review') {
+          needsReviewAll++
+          if (wrong < 2) reviewOnly++
+        }
       }
+      const learnedTotal = needsReviewAll + mastered
+      const unlearned = Math.max(0, (count ?? 0) - learnedTotal)
 
-      const learned = masteryMap.needs_review + masteryMap.mastered
-      const unlearned = Math.max(0, (count ?? 0) - learned)
-
-      setStats({ unlearned, needs_review: masteryMap.needs_review, mastered: masteryMap.mastered, total: count ?? 0 })
+      setStats({ unlearned, needs_review: needsReviewAll, review_only: reviewOnly, mastered, hard, total: count ?? 0 })
       setLoading(false)
     }
     load()
@@ -163,10 +174,12 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
     )
   }
 
-  const modes: { key: QuizMode; label: string; count: number; color: string }[] = [
-    { key: 'all', label: 'ランダム', count: stats.total, color: colors.secondary },
-    { key: 'review', label: '要復習', count: stats.needs_review, color: colors.quizReview },
-  ]
+  const scopeCounts: Record<QuizScope, number> = {
+    all: stats.total,
+    unseen: stats.unlearned,
+    review: stats.review_only,
+    hard: stats.hard,
+  }
 
   return (
     <>
@@ -203,22 +216,17 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
 
             {/* モード選択タブ */}
             <p className="text-sm font-semibold text-gray-400 mb-3">出題範囲</p>
-            <div className="flex gap-3 mb-8">
-              {modes.map(m => (
-                <button
-                  key={m.key}
-                  onClick={() => setSelectedMode(m.key)}
-                  disabled={m.key === 'review' && m.count === 0}
-                  className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    selectedMode === m.key
-                      ? 'border-primary bg-primary-subtle'
-                      : 'border-line bg-white hover:border-muted'
-                  }`}
-                >
-                  <span className={`text-sm font-bold ${selectedMode === m.key ? 'text-primary' : 'text-gray-600'}`}>{m.label}</span>
-                  <span className={`text-xs ${selectedMode === m.key ? 'text-primary' : 'text-gray-400'}`}>{m.count}問</span>
-                </button>
-              ))}
+            <div className="mb-8">
+              <QuizScopeSelector
+                items={[
+                  { key: 'all', count: scopeCounts.all },
+                  { key: 'unseen', count: scopeCounts.unseen },
+                  { key: 'review', count: scopeCounts.review },
+                  { key: 'hard', count: scopeCounts.hard },
+                ]}
+                selected={selectedMode}
+                onChange={setSelectedMode}
+              />
             </div>
 
             </div>{/* white card end */}
@@ -226,7 +234,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
             {/* スタートボタン */}
             <Button
               onClick={() => onStart(selectedMode)}
-              disabled={selectedMode === 'review' && stats.needs_review === 0}
+              disabled={scopeCounts[selectedMode] === 0}
               variant="primary"
               size="lg"
               fullWidth

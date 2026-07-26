@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { BsArrowUpRightSquare, BsVolumeUp, BsX } from 'react-icons/bs'
+import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
+import { HiSpeakerWave } from 'react-icons/hi2'
 import Button from '@/components/Button'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
+import { useTtsAudio } from '@/lib/useTtsAudio'
+import { POS_LABEL_JA } from '@/lib/pos'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
@@ -20,6 +23,8 @@ export type QuizCard = {
   meaningEn: string
   example?: string
   exampleJa?: string
+  senseId?: string
+  pos?: string
 }
 
 export type QuizEntry = {
@@ -44,10 +49,11 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
     const pinnedSenseId: string | null = item.pinned_sense_id ?? null
 
     let targetSense: SavedWordSense | null = null
+    let targetPos: string | undefined
     outer: for (const group of senseGroups) {
       for (const sense of group.senses ?? []) {
-        if (!targetSense) targetSense = sense
-        if (sense.senseId === pinnedSenseId) { targetSense = sense; break outer }
+        if (!targetSense) { targetSense = sense; targetPos = group.partOfSpeech }
+        if (sense.senseId === pinnedSenseId) { targetSense = sense; targetPos = group.partOfSpeech; break outer }
       }
     }
     if (!targetSense) continue
@@ -70,6 +76,8 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
       meaningEn: targetSense.definition ?? '',
       example: typeof targetSense.example === 'string' ? targetSense.example : undefined,
       exampleJa: ja.exampleTranslation ?? undefined,
+      senseId,
+      pos: targetPos,
     })
   }
 
@@ -157,28 +165,21 @@ function CardView({
   onQuit: () => void
 }) {
   const [revealed, setRevealed] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | undefined>(card.audioPath)
-  const [audioLoading, setAudioLoading] = useState(false)
+  const headword = useTtsAudio({
+    endpoint: '/audio',
+    body: { word: card.word },
+    initialUrl: card.audioPath ?? null,
+  })
+  const example = useTtsAudio({
+    endpoint: '/audio/word/example',
+    body: { word: card.word, sense_id: card.senseId ?? '' },
+    playbackRate: 1.2,
+  })
 
   useEffect(() => {
     setRevealed(false)
-    setAudioUrl(card.audioPath)
     if (!card.example) onModeChange('word')
-  }, [current, card.audioPath, card.example, onModeChange])
-
-  const playAudio = async () => {
-    if (audioUrl) { new Audio(audioUrl).play(); return }
-    setAudioLoading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/audio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: card.word }),
-      })
-      const data = await res.json()
-      if (data.ok && data.audioUrl) { setAudioUrl(data.audioUrl); new Audio(data.audioUrl).play() }
-    } catch { /* silent */ } finally { setAudioLoading(false) }
-  }
+  }, [current, card.example, onModeChange])
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
@@ -198,17 +199,32 @@ function CardView({
   const renderExample = () => {
     const text = card.example
     if (!text) return null
-    const regex = new RegExp(`(${card.word})`, 'gi')
+    // 活用形もハイライトする（run→ran/running, shove→shoving/shoved 等）。
+    // サーバ側 exampleContainsHeadword と同じ語幹戦略：短語は完全語＋短い接尾辞、長語は先頭 stem 前方一致。
+    const hw = card.word.toLowerCase().trim()
+    const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = hw.length <= 3
+      ? `\\b${escape(hw)}[a-z]{0,3}\\b`
+      : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
+    const regex = new RegExp(`(${pattern})`, 'gi')
     const parts = text.split(regex)
+    const isMatch = (s: string) => new RegExp(`^${pattern}$`, 'i').test(s)
     return (
       <div>
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
-            part.toLowerCase() === card.word.toLowerCase()
+            isMatch(part)
               ? <span key={i} className="text-orange-400">{part}</span>
               : part
           )}
         </p>
+        <div className="mt-2 h-5 text-gray-400">
+          <button onClick={example.play} disabled={example.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+            {example.loading
+              ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+              : <HiSpeakerWave className="size-5" />}
+          </button>
+        </div>
         {revealed && card.exampleJa && (
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
@@ -239,13 +255,18 @@ function CardView({
             </div>
             {mode === 'example' && card.example ? renderExample() : (
               <div>
+                {card.pos && (
+                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
+                    {POS_LABEL_JA[card.pos] ?? card.pos}
+                  </span>
+                )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
                   {card.ipa && <span className="text-base">/{card.ipa}/</span>}
-                  <button onClick={playAudio} disabled={audioLoading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
-                    {audioLoading
+                  <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+                    {headword.loading
                       ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                      : <BsVolumeUp size={20} />}
+                      : <HiSpeakerWave className="size-5" />}
                   </button>
                 </div>
               </div>
@@ -408,6 +429,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
   return (
     <>
       <CardView
+        key={`${currentIndex}-${cards[currentIndex]?.word}`}
         card={cards[currentIndex]}
         onAnswer={handleAnswer}
         current={currentIndex + 1}
