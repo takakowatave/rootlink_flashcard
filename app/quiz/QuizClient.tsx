@@ -19,7 +19,7 @@ export default function QuizClient() {
 
   useEffect(() => { toast.dismiss() }, [])
 
-  const loadCards = async (quizMode: 'all' | 'review' = 'all') => {
+  const loadCards = async (quizMode: 'unseen' | 'review' = 'unseen') => {
     setLoading(true)
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); setLoading(false); return }
@@ -41,6 +41,18 @@ export default function QuizClient() {
         .limit(10)
       const reviewWords = new Set((mastery ?? []).map(m => m.word))
       entries = entries.filter(e => reviewWords.has(e.word))
+    } else {
+      const { data: mastery } = await supabase
+        .from('word_mastery')
+        .select('word, status')
+        .eq('user_id', data.user.id)
+        .limit(5000)
+      const seenWords = new Set(
+        (mastery ?? [])
+          .filter(m => m.status === 'needs_review' || m.status === 'mastered')
+          .map(m => m.word),
+      )
+      entries = entries.filter(e => !seenWords.has(e.word))
     }
 
     const cards = shuffleCards(buildQuizCards(entries)).slice(0, 10)

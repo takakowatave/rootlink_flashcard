@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { BsArrowUpRightSquare, BsVolumeUp, BsX } from 'react-icons/bs'
+import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
+import { HiSpeakerWave } from 'react-icons/hi2'
 import Button from '@/components/Button'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { useTtsAudio } from '@/lib/useTtsAudio'
+import { POS_LABEL_JA } from '@/lib/pos'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
@@ -22,6 +24,7 @@ export type QuizCard = {
   example?: string
   exampleJa?: string
   senseId?: string
+  pos?: string
 }
 
 export type QuizEntry = {
@@ -46,10 +49,11 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
     const pinnedSenseId: string | null = item.pinned_sense_id ?? null
 
     let targetSense: SavedWordSense | null = null
+    let targetPos: string | undefined
     outer: for (const group of senseGroups) {
       for (const sense of group.senses ?? []) {
-        if (!targetSense) targetSense = sense
-        if (sense.senseId === pinnedSenseId) { targetSense = sense; break outer }
+        if (!targetSense) { targetSense = sense; targetPos = group.partOfSpeech }
+        if (sense.senseId === pinnedSenseId) { targetSense = sense; targetPos = group.partOfSpeech; break outer }
       }
     }
     if (!targetSense) continue
@@ -73,6 +77,7 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
       example: typeof targetSense.example === 'string' ? targetSense.example : undefined,
       exampleJa: ja.exampleTranslation ?? undefined,
       senseId,
+      pos: targetPos,
     })
   }
 
@@ -217,7 +222,7 @@ function CardView({
           <button onClick={example.play} disabled={example.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
             {example.loading
               ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-              : <BsVolumeUp size={20} />}
+              : <HiSpeakerWave className="size-5" />}
           </button>
         </div>
         {revealed && card.exampleJa && (
@@ -250,13 +255,18 @@ function CardView({
             </div>
             {mode === 'example' && card.example ? renderExample() : (
               <div>
+                {card.pos && (
+                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
+                    {POS_LABEL_JA[card.pos] ?? card.pos}
+                  </span>
+                )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
                   {card.ipa && <span className="text-base">/{card.ipa}/</span>}
                   <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
                     {headword.loading
                       ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                      : <BsVolumeUp size={20} />}
+                      : <HiSpeakerWave className="size-5" />}
                   </button>
                 </div>
               </div>

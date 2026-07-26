@@ -27,7 +27,7 @@ type DeckWordEntry = {
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
-type QuizScope = 'random' | 'review'
+type QuizScope = 'unseen' | 'review'
 
 export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const router = useRouter()
@@ -35,7 +35,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [loading, setLoading] = useState(true)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
-  const [quizScope, setQuizScope] = useState<QuizScope>('random')
+  const [quizScope, setQuizScope] = useState<QuizScope>('unseen')
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
@@ -79,15 +79,16 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const unseenCount = entries.length - masteredCount - reviewCount
 
   const reviewWords = entries.filter(e => wordStatus.get(e.word) === 'review' && !!e.dictionary)
+  const unseenWords = entries.filter(e => wordStatus.get(e.word) === 'unseen' && !!e.dictionary)
 
   const startQuiz = useCallback(() => {
-    const sourceEntries = quizScope === 'review' ? reviewWords : entries
+    const sourceEntries = quizScope === 'review' ? reviewWords : unseenWords
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [entries, quizScope, reviewWords])
+  }, [quizScope, reviewWords, unseenWords])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct)
@@ -134,11 +135,12 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setQuizScope('random')}
-                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
+                  onClick={() => setQuizScope('unseen')}
+                  disabled={unseenWords.length === 0}
+                  className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'unseen' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
                 >
-                  <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
-                  <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
+                  <p className={`font-semibold text-base ${quizScope === 'unseen' ? 'text-green-600' : 'text-gray-700'}`}>未習得</p>
+                  <p className={`text-xs mt-0.5 ${quizScope === 'unseen' ? 'text-green-500' : 'text-gray-400'}`}>{unseenWords.length}問</p>
                 </button>
                 <button
                   onClick={() => setQuizScope('review')}
@@ -156,7 +158,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         {/* クイズボタン */}
         <Button
           onClick={startQuiz}
-          disabled={loading || availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
+          disabled={loading || availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0) || (quizScope === 'unseen' && unseenWords.length === 0)}
           variant="primary"
           size="lg"
           fullWidth

@@ -15,7 +15,7 @@ type MasteryStats = {
   total: number
 }
 
-type QuizMode = 'all' | 'review'
+type QuizMode = 'unseen' | 'review'
 
 function DonutChart({ stats }: { stats: MasteryStats }) {
   const { mastered, needs_review, total } = stats
@@ -90,7 +90,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, mastered: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [selectedMode, setSelectedMode] = useState<QuizMode>('all')
+  const [selectedMode, setSelectedMode] = useState<QuizMode>('unseen')
   const [tutorialVisible, setTutorialVisible] = useState(false)
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
   }
 
   const modes: { key: QuizMode; label: string; count: number; color: string }[] = [
-    { key: 'all', label: 'ランダム', count: stats.total, color: colors.secondary },
+    { key: 'unseen', label: '未習得', count: stats.unlearned, color: colors.secondary },
     { key: 'review', label: '要復習', count: stats.needs_review, color: colors.quizReview },
   ]
 
@@ -208,7 +208,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
                 <button
                   key={m.key}
                   onClick={() => setSelectedMode(m.key)}
-                  disabled={m.key === 'review' && m.count === 0}
+                  disabled={m.count === 0}
                   className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                     selectedMode === m.key
                       ? 'border-primary bg-primary-subtle'
@@ -226,7 +226,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
             {/* スタートボタン */}
             <Button
               onClick={() => onStart(selectedMode)}
-              disabled={selectedMode === 'review' && stats.needs_review === 0}
+              disabled={(selectedMode === 'review' && stats.needs_review === 0) || (selectedMode === 'unseen' && stats.unlearned === 0)}
               variant="primary"
               size="lg"
               fullWidth

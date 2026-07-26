@@ -19,7 +19,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/D
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
-type QuizScope = 'random' | 'review'
+type QuizScope = 'unseen' | 'review'
 
 export type SavedWordRow = {
   word_id: string
@@ -83,7 +83,7 @@ export default function WordListPage() {
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
-  const [quizScope, setQuizScope] = useState<QuizScope>('random')
+  const [quizScope, setQuizScope] = useState<QuizScope>('unseen')
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -169,6 +169,7 @@ export default function WordListPage() {
   const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
   const unseenCount = wordList.length - masteredCount - reviewCount
   const reviewWords = wordList.filter((w) => wordStatus.get(w.word) === 'review' && !!w.dictionary)
+  const unseenWords = wordList.filter((w) => wordStatus.get(w.word) === 'unseen' && !!w.dictionary)
 
   const toQuizEntry = (w: SavedWordRow): QuizEntry => ({
     word: w.word,
@@ -177,7 +178,7 @@ export default function WordListPage() {
   })
 
   const startQuiz = () => {
-    const source = quizScope === 'review' ? reviewWords : wordList
+    const source = quizScope === 'review' ? reviewWords : unseenWords
     const sourceEntries = source.map(toQuizEntry)
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(
@@ -234,11 +235,12 @@ export default function WordListPage() {
                 <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => setQuizScope('random')}
-                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors ${quizScope === 'random' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
+                    onClick={() => setQuizScope('unseen')}
+                    disabled={unseenWords.length === 0}
+                    className={`py-3 px-4 rounded-xl border-2 text-center transition-colors disabled:opacity-40 ${quizScope === 'unseen' ? 'border-primary bg-primary-subtle' : 'border-line bg-white'}`}
                   >
-                    <p className={`font-semibold text-base ${quizScope === 'random' ? 'text-green-600' : 'text-gray-700'}`}>ランダム</p>
-                    <p className={`text-xs mt-0.5 ${quizScope === 'random' ? 'text-green-500' : 'text-gray-400'}`}>{availableCount}問</p>
+                    <p className={`font-semibold text-base ${quizScope === 'unseen' ? 'text-green-600' : 'text-gray-700'}`}>未習得</p>
+                    <p className={`text-xs mt-0.5 ${quizScope === 'unseen' ? 'text-green-500' : 'text-gray-400'}`}>{unseenWords.length}問</p>
                   </button>
                   <button
                     onClick={() => setQuizScope('review')}
@@ -255,7 +257,7 @@ export default function WordListPage() {
 
           <Button
             onClick={startQuiz}
-            disabled={availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0)}
+            disabled={availableCount === 0 || (quizScope === 'review' && reviewWords.length === 0) || (quizScope === 'unseen' && unseenWords.length === 0)}
             variant="primary"
             size="lg"
             fullWidth
