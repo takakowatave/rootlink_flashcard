@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
@@ -109,6 +110,26 @@ function PhrasesPageInner() {
     }
   }
 
+  const [bulkSaving, setBulkSaving] = useState(false)
+  const handleBulkSave = async (targetIds: string[]) => {
+    if (!userId || targetIds.length === 0 || bulkSaving) return
+    setBulkSaving(true)
+    const { error } = await supabase
+      .from('saved_phrase_cards')
+      .insert(targetIds.map(phrase_card_id => ({ user_id: userId, phrase_card_id })))
+    if (error) {
+      toast.error('保存に失敗しました')
+    } else {
+      setSavedIds(prev => {
+        const s = new Set(prev)
+        for (const id of targetIds) s.add(id)
+        return s
+      })
+      toast.success(`${targetIds.length}件保存しました`)
+    }
+    setBulkSaving(false)
+  }
+
   useEffect(() => {
     if (searchQuery && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -162,9 +183,24 @@ function PhrasesPageInner() {
             <>
               {keptCards.length > 0 && (
                 <div className="mb-4">
-                  <div className="flex items-baseline justify-between mb-2 px-1">
-                    <h2 className="text-sm font-semibold text-gray-700">残す</h2>
-                    <span className="text-xs text-muted">{keptCards.length}件</span>
+                  <div className="flex items-center justify-between mb-2 px-1 gap-3">
+                    <h2 className="text-sm font-semibold text-gray-700 shrink-0">残す</h2>
+                    <div className="flex items-center gap-3">
+                      {userId && (() => {
+                        const unsavedIds = keptCards.filter(c => !savedIds.has(c.id)).map(c => c.id)
+                        if (unsavedIds.length === 0) return null
+                        return (
+                          <button
+                            onClick={() => handleBulkSave(unsavedIds)}
+                            disabled={bulkSaving}
+                            className="text-xs font-semibold text-primary border border-primary rounded-full px-3 py-1 hover:bg-primary-subtle transition-colors disabled:opacity-50"
+                          >
+                            {bulkSaving ? '保存中...' : `まとめて保存 (${unsavedIds.length})`}
+                          </button>
+                        )
+                      })()}
+                      <span className="text-xs text-muted">{keptCards.length}件</span>
+                    </div>
                   </div>
                   <div className="flex flex-col gap-3">
                     {keptCards.map((card) => (
