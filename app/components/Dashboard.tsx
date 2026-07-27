@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
 import PlantStatus, { getPlantImageSrc } from '@/components/PlantStatus'
 import SharedDeckCard from '@/components/DeckCard'
+import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
 
 type Deck = {
@@ -167,6 +168,7 @@ function DeckSection({
 const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 
 export default function Dashboard() {
+  const router = useRouter()
   const [streak, setStreak] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [masteredCount, setMasteredCount] = useState(0)
@@ -239,7 +241,6 @@ export default function Dashboard() {
     imageSrc: getPlantImageSrc(activityDates.length),
     imageContain: true,
   }
-  const myDeckEntry: DeckItem[] = savedCount > 0 ? [myDeckItem] : []
   const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
     .filter((d): d is Deck => d !== undefined)
@@ -253,7 +254,7 @@ export default function Dashboard() {
         href: `/decks/${d.id}`,
       }
     })
-  const historyItems = [...myDeckEntry, ...activeDeckItems.slice(0, myDeckEntry.length > 0 ? 4 : 5)]
+  const historyItems = activeDeckItems.slice(0, 5)
   const examItems: DeckItem[] = LABEL_ORDER.flatMap(label =>
     decks
       .filter(d => d.label === label)
@@ -298,6 +299,26 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
+            </section>
+
+            {/* My単語帳 */}
+            <section className="flex flex-col gap-3">
+              <h2 className="text-xl font-bold text-gray-950">My単語帳</h2>
+              {savedCount > 0 ? (
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                  <SharedDeckCard
+                    title={myDeckItem.title}
+                    imageSrc={myDeckItem.imageSrc}
+                    imageContain={myDeckItem.imageContain}
+                    onClick={() => router.push(myDeckItem.href)}
+                    className="shrink-0 w-[180px]"
+                  />
+                </div>
+              ) : (
+                <WordlistEmptyCard
+                  onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+                />
+              )}
             </section>
 
             <DeckSection title="履歴" items={historyItems} />
