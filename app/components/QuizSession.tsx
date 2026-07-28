@@ -25,12 +25,19 @@ export type QuizCard = {
   exampleJa?: string
   senseId?: string
   pos?: string
+  phrase_card_id?: string
 }
 
 export type QuizEntry = {
   word: string
   dictionary: SavedWordDictionary | null
   pinned_sense_id?: string | null
+  phrase_card_id?: string
+  phrase_meaning_ja?: string | null
+  phrase_meaning_en?: string | null
+  phrase_example_en?: string | null
+  phrase_example_ja?: string | null
+  phrase_type?: string | null
 }
 
 // ─── buildQuizCards ───────────────────────────────────────────────────────────
@@ -41,6 +48,22 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
 
   for (const item of entries) {
     if (!item.word) continue
+
+    // フレーズ
+    if (item.phrase_card_id) {
+      const meaning = item.phrase_meaning_ja ?? item.phrase_meaning_en ?? ''
+      if (!meaning) continue
+      cards.push({
+        word: item.word,
+        meaning,
+        meaningEn: item.phrase_meaning_en ?? '',
+        example: item.phrase_example_en ?? undefined,
+        exampleJa: item.phrase_example_ja ?? undefined,
+        phrase_card_id: item.phrase_card_id,
+      })
+      continue
+    }
+
     const d = item.dictionary
     if (!d) continue
 
@@ -165,16 +188,17 @@ function CardView({
   onQuit: () => void
 }) {
   const [revealed, setRevealed] = useState(false)
-  const headword = useTtsAudio({
-    endpoint: '/audio',
-    body: { word: card.word },
-    initialUrl: card.audioPath ?? null,
-  })
-  const example = useTtsAudio({
-    endpoint: '/audio/word/example',
-    body: { word: card.word, sense_id: card.senseId ?? '' },
-    playbackRate: 1.2,
-  })
+  const isPhrase = !!card.phrase_card_id
+  const headword = useTtsAudio(
+    isPhrase
+      ? { endpoint: '/audio/phrase/headword', body: { phrase_card_id: card.phrase_card_id! } }
+      : { endpoint: '/audio', body: { word: card.word }, initialUrl: card.audioPath ?? null }
+  )
+  const example = useTtsAudio(
+    isPhrase
+      ? { endpoint: '/audio/phrase', body: { phrase_card_id: card.phrase_card_id! }, playbackRate: 1.2 }
+      : { endpoint: '/audio/word/example', body: { word: card.word, sense_id: card.senseId ?? '' }, playbackRate: 1.2 }
+  )
 
   useEffect(() => {
     setRevealed(false)
@@ -203,9 +227,11 @@ function CardView({
     // サーバ側 exampleContainsHeadword と同じ語幹戦略：短語は完全語＋短い接尾辞、長語は先頭 stem 前方一致。
     const hw = card.word.toLowerCase().trim()
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const pattern = hw.length <= 3
-      ? `\\b${escape(hw)}[a-z]{0,3}\\b`
-      : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
+    const pattern = isPhrase
+      ? escape(hw)
+      : hw.length <= 3
+        ? `\\b${escape(hw)}[a-z]{0,3}\\b`
+        : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
     const regex = new RegExp(`(${pattern})`, 'gi')
     const parts = text.split(regex)
     const isMatch = (s: string) => new RegExp(`^${pattern}$`, 'i').test(s)

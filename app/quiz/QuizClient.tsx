@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchWordlists, saveQuizResult } from '@/lib/supabaseApi'
+import { fetchWordlists, fetchSavedPhrases, saveQuizResult } from '@/lib/supabaseApi'
 import toast from 'react-hot-toast'
 import QuizDashboard from './QuizDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
@@ -24,12 +24,27 @@ export default function QuizClient() {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); setLoading(false); return }
 
-    const wordList = await fetchWordlists(data.user.id)
-    let entries: QuizEntry[] = wordList.map(w => ({
-      word: w.word,
-      dictionary: w.dictionary ?? null,
-      pinned_sense_id: w.pinned_sense_id ?? null,
-    }))
+    const [wordList, phraseList] = await Promise.all([
+      fetchWordlists(data.user.id),
+      fetchSavedPhrases(data.user.id),
+    ])
+    let entries: QuizEntry[] = [
+      ...wordList.map(w => ({
+        word: w.word,
+        dictionary: w.dictionary ?? null,
+        pinned_sense_id: w.pinned_sense_id ?? null,
+      })),
+      ...phraseList.map(p => ({
+        word: p.phrase,
+        dictionary: null,
+        phrase_card_id: p.phrase_card_id,
+        phrase_meaning_ja: p.meaning_ja,
+        phrase_meaning_en: p.meaning_en,
+        phrase_example_en: p.example_en,
+        phrase_example_ja: p.example_ja,
+        phrase_type: p.type,
+      })),
+    ]
 
     if (quizMode !== 'all') {
       const { data: mastery } = await supabase

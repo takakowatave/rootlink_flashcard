@@ -5,12 +5,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import EntryCard from "@/components/EntryCard"
 import WordPageClient from "@/components/WordPageClient"
+import PhraseCard from "@/components/PhraseCard"
 import Button from "@/components/Button"
 import TriDonutChart from "@/components/TriDonutChart"
 import QuizSession, { buildQuizCards, shuffleCards } from "@/components/QuizSession"
 import type { QuizEntry } from "@/components/QuizSession"
 import QuizScopeSelector, { type QuizScope } from "@/components/QuizScopeSelector"
-import { fetchWordlists, toggleSaveStatus, updateStreak, saveQuizResult } from "@/lib/supabaseApi"
+import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, updateStreak, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
+import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
@@ -27,6 +29,50 @@ export type SavedWordRow = {
   saved_id?: string
   dictionary?: SavedWordDictionary | null
   pinned_sense_id?: string | null
+  created_at?: string
+}
+
+function PhraseListCard({
+  row, isSaved, onSave, displayLocale,
+}: {
+  row: SavedPhraseRow
+  isSaved: boolean
+  onSave: () => void
+  displayLocale: DisplayLocale
+}) {
+  const example = useTtsAudio({
+    endpoint: '/audio/phrase',
+    body: { phrase_card_id: row.phrase_card_id },
+    playbackRate: 1.2,
+  })
+  const headword = useTtsAudio({
+    endpoint: '/audio/phrase/headword',
+    body: { phrase_card_id: row.phrase_card_id },
+  })
+  const card = {
+    id: row.phrase_card_id,
+    phrase: row.phrase,
+    meaning_ja: row.meaning_ja,
+    meaning_en: row.meaning_en,
+    example_en: row.example_en,
+    example_ja: row.example_ja,
+    type: row.type,
+    register: row.register,
+    locale: row.locale,
+    senses: (row.senses ?? null) as never,
+  }
+  return (
+    <PhraseCard
+      card={card}
+      isSaved={isSaved}
+      onSave={onSave}
+      displayLocale={displayLocale}
+      onPlayHeadword={headword.play}
+      headwordAudioLoading={headword.loading}
+      onPlayExample={example.play}
+      exampleAudioLoading={example.loading}
+    />
+  )
 }
 
 type DisplaySense = { senseId: string; meaning: string; example?: string; exampleTranslation?: string }
@@ -77,7 +123,9 @@ function buildSenses(dictionary: SavedWordDictionary | null | undefined, locale:
 export default function WordListPage() {
   const router = useRouter()
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
+  const [phraseList, setPhraseList] = useState<SavedPhraseRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
+  const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -85,18 +133,19 @@ export default function WordListPage() {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
+  const [userId, setUserId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
   })
 
-  const loadStatus = async (words: SavedWordRow[], userId: string) => {
-    const wordNames = words.map((w) => w.word)
+  const loadStatus = async (keys: string[], userId: string) => {
+    if (keys.length === 0) { setWordStatus(new Map()); setWrongCounts(new Map()); return }
     const { data: qr } = await supabase
       .from('quiz_results')
       .select('word, correct, answered_at')
       .eq('user_id', userId)
-      .in('word', wordNames)
+      .in('word', keys)
       .order('answered_at', { ascending: false })
       .limit(10000)
 
@@ -107,9 +156,9 @@ export default function WordListPage() {
       if (!row.correct) wrongByWord.set(row.word, (wrongByWord.get(row.word) ?? 0) + 1)
     }
     const statusMap = new Map<string, WordStatus>()
-    for (const w of words) {
-      const latest = latestByWord.get(w.word)
-      statusMap.set(w.word, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
+    for (const k of keys) {
+      const latest = latestByWord.get(k)
+      statusMap.set(k, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
     }
     setWordStatus(statusMap)
     setWrongCounts(wrongByWord)
@@ -118,13 +167,18 @@ export default function WordListPage() {
   const load = async () => {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); return }
-    const [words] = await Promise.all([
+    setUserId(data.user.id)
+    const [words, phrases] = await Promise.all([
       fetchWordlists(data.user.id),
+      fetchSavedPhrases(data.user.id),
       updateStreak(data.user.id),
     ])
     setWordList(words)
+    setPhraseList(phrases)
     setSavedWords(words.map((w) => w.word))
-    if (words.length > 0) await loadStatus(words, data.user.id)
+    setSavedPhraseIds(new Set(phrases.map((p) => p.phrase_card_id)))
+    const allKeys = [...words.map((w) => w.word), ...phrases.map((p) => p.phrase)]
+    if (allKeys.length > 0) await loadStatus(allKeys, data.user.id)
   }
 
   useEffect(() => {
@@ -169,37 +223,57 @@ export default function WordListPage() {
   }
 
   const availableWords = wordList.filter((w) => !!w.dictionary)
-  const availableCount = availableWords.length
-  const masteredCount = [...wordStatus.values()].filter((s) => s === 'mastered').length
-  const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
-  const unseenCount = wordList.length - masteredCount - reviewCount
-
-  const hardWords = availableWords.filter((w) => (wrongCounts.get(w.word) ?? 0) >= 2)
-  const reviewWords = availableWords.filter(
-    (w) => wordStatus.get(w.word) === 'review' && (wrongCounts.get(w.word) ?? 0) < 2,
-  )
-  const unseenWords = availableWords.filter((w) => wordStatus.get(w.word) === 'unseen')
-
-  const scopeSource: Record<QuizScope, SavedWordRow[]> = {
-    all: availableWords,
-    unseen: unseenWords,
-    review: reviewWords,
-    hard: hardWords,
-  }
-
-  const toQuizEntry = (w: SavedWordRow): QuizEntry => ({
+  const wordEntries: QuizEntry[] = availableWords.map((w) => ({
     word: w.word,
     dictionary: w.dictionary ?? null,
     pinned_sense_id: w.pinned_sense_id ?? null,
-  })
+  }))
+  const phraseEntries: QuizEntry[] = phraseList.map((p) => ({
+    word: p.phrase,
+    dictionary: null,
+    phrase_card_id: p.phrase_card_id,
+    phrase_meaning_ja: p.meaning_ja,
+    phrase_meaning_en: p.meaning_en,
+    phrase_example_en: p.example_en,
+    phrase_example_ja: p.example_ja,
+    phrase_type: p.type,
+  }))
+  const allEntries: QuizEntry[] = [...wordEntries, ...phraseEntries]
+  const availableCount = allEntries.length
+  const masteredCount = [...wordStatus.values()].filter((s) => s === 'mastered').length
+  const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
+  const totalItems = wordList.length + phraseList.length
+  const unseenCount = totalItems - masteredCount - reviewCount
+
+  const hardEntries = allEntries.filter((e) => (wrongCounts.get(e.word) ?? 0) >= 2)
+  const reviewEntries = allEntries.filter(
+    (e) => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
+  )
+  const unseenEntries = allEntries.filter((e) => wordStatus.get(e.word) === 'unseen')
+
+  const scopeSource: Record<QuizScope, QuizEntry[]> = {
+    all: allEntries,
+    unseen: unseenEntries,
+    review: reviewEntries,
+    hard: hardEntries,
+  }
 
   const startQuiz = () => {
-    const sourceEntries = scopeSource[quizScope].map(toQuizEntry)
+    const sourceEntries = scopeSource[quizScope]
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(
       (c) => sourceEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
+  }
+
+  const handleTogglePhraseSave = async (phraseCardId: string) => {
+    if (!userId) return
+    if (savedPhraseIds.has(phraseCardId)) {
+      await supabase.from('saved_phrase_cards').delete().eq('user_id', userId).eq('phrase_card_id', phraseCardId)
+      setSavedPhraseIds((prev) => { const s = new Set(prev); s.delete(phraseCardId); return s })
+      setPhraseList((prev) => prev.filter((p) => p.phrase_card_id !== phraseCardId))
+    }
   }
 
   const handleQuizAnswer = async (word: string, correct: boolean) => {
@@ -239,7 +313,7 @@ export default function WordListPage() {
 
       <div className="max-w-[568px] mx-auto w-full">
       {/* ── 進捗＋クイズ ── */}
-      {wordList.length > 0 && (
+      {totalItems > 0 && (
         <section className="pt-6 px-4">
           <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
             <div className="flex justify-center py-2">
@@ -252,9 +326,9 @@ export default function WordListPage() {
                 <QuizScopeSelector
                   items={[
                     { key: 'all', count: availableCount },
-                    { key: 'unseen', count: unseenWords.length },
-                    { key: 'review', count: reviewWords.length },
-                    { key: 'hard', count: hardWords.length },
+                    { key: 'unseen', count: unseenEntries.length },
+                    { key: 'review', count: reviewEntries.length },
+                    { key: 'hard', count: hardEntries.length },
                   ]}
                   selected={quizScope}
                   onChange={setQuizScope}
@@ -276,46 +350,64 @@ export default function WordListPage() {
         </section>
       )}
 
-      {/* ── オリジナル単語リスト ── */}
+      {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
         <div className="px-4 flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-gray-900">
             オリジナル単語リスト
             <span className="text-muted ml-1">›</span>
           </h2>
-          <span className="text-sm text-muted">{wordList.length}語</span>
+          <span className="text-sm text-muted">{totalItems}件</span>
         </div>
 
-        {wordList.length === 0 ? (
+        {totalItems === 0 ? (
           <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
         ) : (
           <div className="flex flex-col gap-3 px-3">
-            {wordList.map((item) => {
-              const d = item.dictionary
-              const pronunciation = buildPronunciation(d)
-              const senses = buildSenses(d, displayLocale)
-              const inflections: string[] = d?.inflections ?? []
-              const allSenses = Object.values(senses).flat()
-              const firstSenseId = allSenses[0]?.senseId ?? null
-              const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
-              return (
-                <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
-                  <EntryCard
-                    headword={item.word}
-                    pronunciation={pronunciation}
-                    etymology=""
-                    senses={senses}
-                    inflections={inflections}
-                    grammarTags={{}}
-                    isBookmarked={savedWords.includes(item.word)}
-                    onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
-                    pinnedSenseId={pinnedSenseId}
-                    displayLocale={displayLocale}
-                    compact
-                  />
-                </div>
-              )
-            })}
+            {[
+              ...wordList.map((w) => ({ kind: 'word' as const, sortAt: w.created_at ?? '', word: w })),
+              ...phraseList.map((p) => ({ kind: 'phrase' as const, sortAt: p.created_at, phrase: p })),
+            ]
+              .sort((a, b) => b.sortAt.localeCompare(a.sortAt))
+              .map((entry) => {
+                if (entry.kind === 'phrase') {
+                  const p = entry.phrase
+                  return (
+                    <PhraseListCard
+                      key={`phrase-${p.saved_id}`}
+                      row={p}
+                      isSaved={savedPhraseIds.has(p.phrase_card_id)}
+                      onSave={() => handleTogglePhraseSave(p.phrase_card_id)}
+                      displayLocale={displayLocale}
+                    />
+                  )
+                }
+                const item = entry.word
+                const d = item.dictionary
+                const pronunciation = buildPronunciation(d)
+                const senses = buildSenses(d, displayLocale)
+                const inflections: string[] = d?.inflections ?? []
+                const allSenses = Object.values(senses).flat()
+                const firstSenseId = allSenses[0]?.senseId ?? null
+                const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
+                return (
+                  <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
+                    <EntryCard
+                      headword={item.word}
+                      pronunciation={pronunciation}
+                      etymology=""
+                      senses={senses}
+                      inflections={inflections}
+                      grammarTags={{}}
+                      isBookmarked={savedWords.includes(item.word)}
+                      onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
+                      pinnedSenseId={pinnedSenseId}
+                      displayLocale={displayLocale}
+                      compact
+                    />
+                  </div>
+                )
+              })}
           </div>
         )}
       </section>
