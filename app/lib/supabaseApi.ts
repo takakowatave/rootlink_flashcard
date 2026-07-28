@@ -365,14 +365,12 @@ export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[
     .select(`
       id,
       phrase_card_id,
-      created_at,
       phrase_cards (
         id, phrase, meaning_ja, meaning_en, example_en, example_ja,
-        type, register, locale, senses, skip_reason
+        type, register, locale, senses, skip_reason, created_at
       )
     `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false })
     .limit(500)
 
   if (error) {
@@ -383,7 +381,6 @@ export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[
   type Row = {
     id: string
     phrase_card_id: string
-    created_at: string
     phrase_cards: {
       id: string
       phrase: string
@@ -396,6 +393,7 @@ export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[
       locale: string | null
       senses: unknown
       skip_reason: string | null
+      created_at: string | null
     } | null
   }
 
@@ -413,8 +411,9 @@ export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[
       register: r.phrase_cards!.register,
       locale: r.phrase_cards!.locale,
       senses: r.phrase_cards!.senses,
-      created_at: r.created_at,
+      created_at: r.phrase_cards!.created_at ?? '',
     }))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
 /* =========================================

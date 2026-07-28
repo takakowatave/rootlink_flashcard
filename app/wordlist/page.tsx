@@ -311,7 +311,7 @@ export default function WordListPage() {
         </button>
       )}
 
-      <div className="max-w-[568px] mx-auto w-full">
+      <div className="max-w-[812px] mx-auto w-full">
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
         <section className="pt-6 px-4">
