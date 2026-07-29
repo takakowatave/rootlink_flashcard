@@ -42,22 +42,26 @@ function getWeekDates(): { date: string; label: string; isToday: boolean; isFutu
   })
 }
 
-function WeeklyStreak({ streak, activityDates }: { streak: number; activityDates: string[] }) {
+function WeeklyStreak({ streak, activityDates, compact = false }: { streak: number; activityDates: string[]; compact?: boolean }) {
   const dateSet = new Set(activityDates)
   const weekDates = getWeekDates()
 
   return (
     <div className="bg-white rounded-xl border border-line px-5 py-4 flex items-center gap-6">
-      {/* 連続日数 */}
-      <div className="flex flex-col items-center shrink-0">
-        <p className="text-xs text-muted mb-0.5">連続ログイン</p>
-        <div className="flex items-end gap-1">
-          <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
-          <span className="text-lg font-bold text-quiz-review mb-1">日</span>
-        </div>
-      </div>
+      {!compact && (
+        <>
+          {/* 連続日数 */}
+          <div className="flex flex-col items-center shrink-0">
+            <p className="text-xs text-muted mb-0.5">連続ログイン</p>
+            <div className="flex items-end gap-1">
+              <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
+              <span className="text-lg font-bold text-quiz-review mb-1">日</span>
+            </div>
+          </div>
 
-      <div className="w-px self-stretch bg-line shrink-0" />
+          <div className="w-px self-stretch bg-line shrink-0" />
+        </>
+      )}
 
       {/* 今週カレンダー */}
       <div className="flex gap-2 flex-1 justify-around">
@@ -330,9 +334,9 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* SP: weekly-streak-card は下に単独で */}
+              {/* SP: weekly-streak-card は下に単独で（連続日数は複合カードに既に出してるので非表示） */}
               <div className="sm:hidden">
-                <WeeklyStreak streak={streak} activityDates={activityDates} />
+                <WeeklyStreak streak={streak} activityDates={activityDates} compact />
               </div>
             </section>
 
