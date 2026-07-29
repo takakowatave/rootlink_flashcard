@@ -8,6 +8,9 @@ const DECK_IMAGES: Record<string, string> = {
   'IELTS-5.5': '/deck-covers/ielts-5.5.png',
   'IELTS-6.5': '/deck-covers/ielts-6.5.png',
   'IELTS-7.5': '/deck-covers/ielts-7.5.png',
+  'TOEFL-iBT 60': '/deck-covers/toefl-60.png',
+  'TOEFL-iBT 80': '/deck-covers/toefl-80.png',
+  'TOEFL-iBT 100': '/deck-covers/toefl-100.png',
   '英検-準1級': '/deck-covers/eiken-jun1.png',
   '英検-1級': '/deck-covers/eiken-1.png',
 }
