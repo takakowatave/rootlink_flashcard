@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
-import PlantStatus, { getPlantImageSrc } from '@/components/PlantStatus'
+import PlantStatus from '@/components/PlantStatus'
+import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
@@ -176,6 +177,7 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [masteredCount, setMasteredCount] = useState(0)
+  const [quizAttemptCount, setQuizAttemptCount] = useState(0)
   const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
@@ -205,6 +207,7 @@ export default function Dashboard() {
       if (quizData.data) {
         const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
         setMasteredCount(masteredWords.size)
+        setQuizAttemptCount(quizData.data.length)
       }
       if (decksData.data) setDecks(decksData.data as Deck[])
 
@@ -242,7 +245,7 @@ export default function Dashboard() {
     key: 'my-wordlist',
     title: 'My単語帳',
     href: '/wordlist',
-    imageSrc: getPlantImageSrc(activityDates.length),
+    imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
     imageContain: true,
   }
   const activeDeckItems: DeckItem[] = activeDeckIds
@@ -286,7 +289,7 @@ export default function Dashboard() {
             <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">利用状況</h2>
 
-              {/* SP: Figma準拠 コンパクト複合カード */}
+              {/* SP: Figma準拠 コンパクト複合カード (鉢植え部は PlantStatus 経由でロジック統一) */}
               <div className="sm:hidden bg-white rounded-2xl border border-line p-4 flex items-center gap-3">
                 <div className="pr-3 border-r border-line shrink-0">
                   <p className="text-[11px] text-muted mb-0.5">連続ログイン</p>
@@ -295,23 +298,7 @@ export default function Dashboard() {
                     <span className="text-base font-bold text-quiz-review">日</span>
                   </div>
                 </div>
-                <div className="bg-orange-50 rounded-full size-[72px] flex items-center justify-center overflow-hidden shrink-0">
-                  <img
-                    src={getPlantImageSrc(activityDates.length)}
-                    alt=""
-                    className="size-full object-cover"
-                    draggable={false}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs leading-tight text-gray-950 mb-2">単語を覚えて<br />鉢植えを育てよう</p>
-                  <div className="bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (activityDates.length / 30) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                <PlantStatus variant="compact" quizCount={quizAttemptCount} loginDays={activityDates.length} />
               </div>
 
               {/* PC: 既存レイアウト維持 */}
@@ -319,7 +306,7 @@ export default function Dashboard() {
                 <WeeklyStreak streak={streak} activityDates={activityDates} />
               </div>
               <div className="hidden sm:flex bg-white rounded-xl border border-line items-stretch overflow-hidden">
-                <PlantStatus loginDays={activityDates.length} />
+                <PlantStatus quizCount={quizAttemptCount} loginDays={activityDates.length} />
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
                   <p className="text-xs text-muted">学習中の単語数</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
