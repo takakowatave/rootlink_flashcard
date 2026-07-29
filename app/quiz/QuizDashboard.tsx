@@ -101,11 +101,12 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       const { data: auth } = await supabase.auth.getUser()
       if (!auth.user) return
 
-      const { count } = await supabase
-        .from('saved_words')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', auth.user.id)
-      setSavedTotal(count ?? 0)
+      const [{ count: wordCount }, { count: phraseCount }] = await Promise.all([
+        supabase.from('saved_words').select('*', { count: 'exact', head: true }).eq('user_id', auth.user.id),
+        supabase.from('saved_phrase_cards').select('*', { count: 'exact', head: true }).eq('user_id', auth.user.id),
+      ])
+      const count = (wordCount ?? 0) + (phraseCount ?? 0)
+      setSavedTotal(count)
 
       const { data: mastery } = await supabase
         .from('word_mastery')

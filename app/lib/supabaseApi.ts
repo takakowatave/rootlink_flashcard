@@ -6,6 +6,7 @@ type SavedWordQueryRow = {
   id: string
   word_id: string
   pinned_sense_id: string | null
+  created_at: string | null
   words: { id: string; word: string } | null
 }
 
@@ -274,6 +275,7 @@ export const fetchWordlists = async (userId: string) => {
       id,
       word_id,
       pinned_sense_id,
+      created_at,
       words (
         id,
         word
@@ -299,6 +301,7 @@ export const fetchWordlists = async (userId: string) => {
       word: row.words?.word ?? '',
       dictionary: null as SavedWordDictionary | null,
       pinned_sense_id: row.pinned_sense_id ?? null,
+      created_at: row.created_at ?? '',
     }))
   }
 
@@ -317,6 +320,7 @@ export const fetchWordlists = async (userId: string) => {
       word: row.words?.word ?? '',
       dictionary: null as SavedWordDictionary | null,
       pinned_sense_id: row.pinned_sense_id ?? null,
+      created_at: row.created_at ?? '',
     }))
   }
 
@@ -333,7 +337,83 @@ export const fetchWordlists = async (userId: string) => {
     word: row.words?.word ?? '',
     dictionary: payloadByWordId.get(row.word_id) ?? null,
     pinned_sense_id: row.pinned_sense_id ?? null,
+    created_at: row.created_at ?? '',
   }))
+}
+
+/* =========================================
+ 保存フレーズ一覧取得（saved_phrase_cards + phrase_cards）
+========================================= */
+export type SavedPhraseRow = {
+  saved_id: string
+  phrase_card_id: string
+  phrase: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  example_en: string | null
+  example_ja: string | null
+  type: string | null
+  register: string | null
+  locale: string | null
+  senses: unknown
+  created_at: string
+}
+
+export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[]> => {
+  const { data, error } = await supabase
+    .from('saved_phrase_cards')
+    .select(`
+      id,
+      phrase_card_id,
+      phrase_cards (
+        id, phrase, meaning_ja, meaning_en, example_en, example_ja,
+        type, register, locale, senses, skip_reason, created_at
+      )
+    `)
+    .eq('user_id', userId)
+    .limit(500)
+
+  if (error) {
+    console.error('fetchSavedPhrases error:', error)
+    return []
+  }
+
+  type Row = {
+    id: string
+    phrase_card_id: string
+    phrase_cards: {
+      id: string
+      phrase: string
+      meaning_ja: string | null
+      meaning_en: string | null
+      example_en: string | null
+      example_ja: string | null
+      type: string | null
+      register: string | null
+      locale: string | null
+      senses: unknown
+      skip_reason: string | null
+      created_at: string | null
+    } | null
+  }
+
+  return ((data ?? []) as unknown as Row[])
+    .filter((r) => r.phrase_cards && !r.phrase_cards.skip_reason)
+    .map((r) => ({
+      saved_id: r.id,
+      phrase_card_id: r.phrase_card_id,
+      phrase: r.phrase_cards!.phrase,
+      meaning_ja: r.phrase_cards!.meaning_ja,
+      meaning_en: r.phrase_cards!.meaning_en,
+      example_en: r.phrase_cards!.example_en,
+      example_ja: r.phrase_cards!.example_ja,
+      type: r.phrase_cards!.type,
+      register: r.phrase_cards!.register,
+      locale: r.phrase_cards!.locale,
+      senses: r.phrase_cards!.senses,
+      created_at: r.phrase_cards!.created_at ?? '',
+    }))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
 /* =========================================

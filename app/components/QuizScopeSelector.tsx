@@ -12,7 +12,7 @@ export type QuizScopeItem = {
 
 const META: Record<QuizScope, { label: string; icon: ReactNode; selectedClass: string; iconColor: string }> = {
   all: {
-    label: 'おまかせ',
+    label: 'ランダム',
     icon: <HiSparkles className="size-5" />,
     selectedClass: 'border-primary bg-primary-subtle',
     iconColor: 'text-primary',
