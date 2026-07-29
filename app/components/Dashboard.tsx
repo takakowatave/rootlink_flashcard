@@ -157,7 +157,7 @@ function DeckSection({
             imageSrc={item.imageSrc}
             imageContain={item.imageContain}
             onClick={() => router.push(item.href)}
-            className="shrink-0 w-[180px]"
+            className="shrink-0 w-[146px] sm:w-[180px]"
           />
         ))}
       </div>
@@ -311,7 +311,7 @@ export default function Dashboard() {
                     imageSrc={myDeckItem.imageSrc}
                     imageContain={myDeckItem.imageContain}
                     onClick={() => router.push(myDeckItem.href)}
-                    className="shrink-0 w-[180px]"
+                    className="shrink-0 w-[146px] sm:w-[180px]"
                   />
                 </div>
               ) : (
