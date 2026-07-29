@@ -282,9 +282,39 @@ export default function Dashboard() {
             <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">利用状況</h2>
 
-              <WeeklyStreak streak={streak} activityDates={activityDates} />
+              {/* SP: Figma準拠 コンパクト複合カード */}
+              <div className="sm:hidden bg-white rounded-2xl border border-line p-4 flex items-center gap-3">
+                <div className="pr-3 border-r border-line shrink-0">
+                  <p className="text-[11px] text-muted mb-0.5">連続ログイン</p>
+                  <div className="flex items-baseline gap-0.5 leading-none">
+                    <span className="text-[40px] font-black text-quiz-review tabular-nums">{streak}</span>
+                    <span className="text-base font-bold text-quiz-review">日</span>
+                  </div>
+                </div>
+                <div className="bg-orange-50 rounded-full size-[72px] flex items-center justify-center overflow-hidden shrink-0">
+                  <img
+                    src={getPlantImageSrc(activityDates.length)}
+                    alt=""
+                    className="size-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs leading-tight text-gray-950 mb-2">単語を覚えて<br />鉢植えを育てよう</p>
+                  <div className="bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (activityDates.length / 30) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
 
-              <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
+              {/* PC: 既存レイアウト維持 */}
+              <div className="hidden sm:block">
+                <WeeklyStreak streak={streak} activityDates={activityDates} />
+              </div>
+              <div className="hidden sm:flex bg-white rounded-xl border border-line items-stretch overflow-hidden">
                 <PlantStatus loginDays={activityDates.length} />
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
                   <p className="text-xs text-muted">学習中の単語数</p>
@@ -298,6 +328,11 @@ export default function Dashboard() {
                     {masteredCount.toLocaleString()}
                   </p>
                 </div>
+              </div>
+
+              {/* SP: weekly-streak-card は下に単独で */}
+              <div className="sm:hidden">
+                <WeeklyStreak streak={streak} activityDates={activityDates} />
               </div>
             </section>
 
