@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { FaUserCircle } from "react-icons/fa";
@@ -10,7 +9,6 @@ import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
-import Button from "@/components/Button";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -35,29 +33,30 @@ export default function EditProfileModal({
     register,
     handleSubmit,
     setValue,
-    formState: { isSubmitting },
   } = useForm<FormData>();
-  const [plan, setPlan] = useState<"premium" | "free" | null>(null)
-  const [hasStripeSubscription, setHasStripeSubscription] = useState(false)
-  const [isPortalLoading, setIsPortalLoading] = useState(false)
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.href = "/"
-  }
+  const [plan, setPlan] = useState<"premium" | "free" | null>(null);
+  const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja');
+  const [email, setEmail] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
-    "https://rootlink-server-v2-774622345521.asia-northeast1.run.app"
+    "https://rootlink-server-v2-774622345521.asia-northeast1.run.app";
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
 
   const handleManagePlan = async () => {
-    setIsPortalLoading(true)
+    setIsPortalLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       const res = await fetch(`${API_BASE}/stripe/portal`, {
         method: "POST",
         headers: {
@@ -65,19 +64,54 @@ export default function EditProfileModal({
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ origin: window.location.origin, locale: navigator.language.startsWith("ja") ? "ja" : "auto" }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.ok && data.url) {
-        window.location.href = data.url
+        window.location.href = data.url;
       } else {
-        toast.error("サブスクリプション情報が見つかりません")
+        toast.error("サブスクリプション情報が見つかりません");
       }
-    } catch (e) {
-      toast.error("エラーが発生しました")
+    } catch {
+      toast.error("エラーが発生しました");
     } finally {
-      setIsPortalLoading(false)
+      setIsPortalLoading(false);
     }
-  }
+  };
+
+  const handleChangeEmail = async () => {
+    if (!email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) toast.error("送信に失敗しました");
+    else toast.success("変更手続きのメールを送信しました");
+  };
+
+  const handleChangePassword = async () => {
+    if (!email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) toast.error("送信に失敗しました");
+    else toast.success("パスワード再設定メールを送信しました");
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${profile.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const { error: updErr } = await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", profile.id);
+      if (updErr) throw updErr;
+      toast.success("アイコンを更新しました");
+      onUpdated();
+    } catch {
+      toast.error("アップロードに失敗しました");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -87,29 +121,29 @@ export default function EditProfileModal({
 
   useEffect(() => {
     if (isOpen) {
-      getUserPlan().then(setPlan)
-      // Stripe経由の課金ユーザーかどうかを確認（is_testerなど手動付与は除く）
+      getUserPlan().then(setPlan);
       supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return
+        if (!user) return;
+        setEmail(user.email ?? "");
         supabase
           .from("subscriptions")
           .select("stripe_customer_id")
           .eq("user_id", user.id)
           .maybeSingle()
           .then(({ data }) => {
-            setHasStripeSubscription(!!data?.stripe_customer_id)
-          })
-      })
-      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY)
-      if (saved === 'en' || saved === 'ja') setDisplayLocale(saved)
+            setHasStripeSubscription(!!data?.stripe_customer_id);
+          });
+      });
+      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
+      if (saved === 'en' || saved === 'ja') setDisplayLocale(saved);
     }
   }, [isOpen]);
 
   const handleLocaleChange = (locale: DisplayLocale) => {
-    setDisplayLocale(locale)
-    localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale)
-    window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME))
-  }
+    setDisplayLocale(locale);
+    localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
+    window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME));
+  };
 
   if (!isOpen || !profile) return null;
 
@@ -123,107 +157,137 @@ export default function EditProfileModal({
       toast.error("更新に失敗しました");
       return;
     }
-
     toast.success("保存しました");
     onUpdated();
-    onClose();
   };
 
   return (
     <>
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-6">Edit profile</h2>
+      <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 sm:items-center overflow-y-auto">
+        <div className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden">
+          {/* close bar (SP top) */}
+          <div className="flex items-center justify-end px-4 py-3 sm:hidden">
+            <button onClick={onClose} className="text-sm text-muted">閉じる</button>
+          </div>
+          <div className="hidden sm:flex items-center justify-between px-6 py-4 border-b border-line">
+            <h2 className="text-base font-bold text-gray-950">設定</h2>
+            <button onClick={onClose} className="text-sm text-muted">閉じる</button>
+          </div>
 
-        {/* Avatar */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-28 h-28 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center mb-3">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <FaUserCircle className="w-20 h-20 text-gray-300" />
-            )}
+          <div className="px-4 sm:px-6 py-6 flex flex-col gap-8">
+            {/* プロフィール */}
+            <section className="flex flex-col gap-4">
+              <h3 className="text-sm font-bold text-gray-950">プロフィール</h3>
+
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-20 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center shrink-0">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <FaUserCircle className="w-full h-full text-gray-400" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded"
+                >
+                  {uploading ? "..." : "アップロード"}
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
+                <label className="text-sm text-gray-800">表示される名前</label>
+                <input
+                  {...register("display_name")}
+                  onBlur={handleSubmit(onSubmit)}
+                  className="h-10 border border-line rounded px-2 text-sm text-gray-800 bg-white"
+                />
+              </form>
+            </section>
+
+            <div className="h-px bg-line" />
+
+            {/* 設定 */}
+            <section className="flex flex-col gap-4">
+              <h3 className="text-sm font-bold text-gray-950">設定</h3>
+
+              <div className="flex items-center justify-between h-14 border-b border-line">
+                <p className="text-sm text-gray-800">現在のプラン</p>
+                {plan === "premium" ? (
+                  hasStripeSubscription ? (
+                    <button
+                      type="button"
+                      onClick={handleManagePlan}
+                      disabled={isPortalLoading}
+                      className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded disabled:opacity-50"
+                    >
+                      {isPortalLoading ? "..." : "Premium"}
+                    </button>
+                  ) : (
+                    <span className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded inline-flex items-center">
+                      Premium
+                    </span>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded"
+                  >
+                    アップグレード
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between h-[50px] border-b border-line">
+                <p className="text-sm text-gray-800">辞書の表示言語</p>
+                <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
+              </div>
+            </section>
+
+            {/* セキュリティ */}
+            <section className="flex flex-col gap-4">
+              <h3 className="text-sm font-bold text-gray-950">セキュリティ</h3>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-gray-800">メールアドレス</p>
+                <p className="text-xs text-muted">{email || "—"}</p>
+                <button
+                  type="button"
+                  onClick={handleChangeEmail}
+                  className="h-8 px-4 border border-primary text-primary text-sm font-bold rounded self-start"
+                >
+                  変更
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-gray-800">パスワード</p>
+                <p className="text-xs text-muted tracking-widest">••••••</p>
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  className="h-8 px-4 border border-primary text-primary text-sm font-bold rounded self-start"
+                >
+                  変更
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-sm text-red-700 self-start py-2"
+              >
+                ログアウト
+              </button>
+            </section>
           </div>
         </div>
-
-        {/* プラン */}
-        <div className="mb-4 px-1 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">現在のプラン</p>
-            {plan === null ? (
-              <p className="text-sm text-gray-400">読み込み中...</p>
-            ) : plan === "premium" ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-sm font-medium border border-amber-200">
-                ✦ Premium
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium border border-line">
-                Free
-              </span>
-            )}
-          </div>
-          {plan === "premium" && hasStripeSubscription && (
-            <button
-              type="button"
-              onClick={handleManagePlan}
-              disabled={isPortalLoading}
-              className="text-xs text-gray-500 underline hover:text-gray-700 disabled:opacity-50"
-            >
-              {isPortalLoading ? "..." : "プランを管理"}
-            </button>
-          )}
-          {plan === "free" && (
-            <button
-              type="button"
-              onClick={() => setShowUpgradeModal(true)}
-              className="text-xs text-amber-600 underline hover:text-amber-800 font-medium"
-            >
-              アップグレード →
-            </button>
-          )}
-        </div>
-
-        {/* 表示言語 */}
-        <div className="mb-4 px-1 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">辞書の表示言語</p>
-            <p className="text-xs text-gray-400">英英 / 和英</p>
-          </div>
-          <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Display name
-            </label>
-            <input
-              {...register("display_name")}
-              className="w-full border rounded-lg px-3 py-2"
-            />
-          </div>
-
-          <div className="flex items-center justify-between pt-4">
-            <Button type="button" onClick={handleLogout} variant="secondary" size="md" radius="lg">
-              ログアウト
-            </Button>
-            <div className="flex gap-3">
-              <Button type="button" onClick={onClose} variant="secondary" size="md" radius="lg">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg">
-                {isSubmitting ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </form>
       </div>
-    </div>
-    {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
     </>
   );
 }
