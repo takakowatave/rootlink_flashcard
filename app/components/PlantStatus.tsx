@@ -1,38 +1,57 @@
-// 累計ログイン日数に応じて鉢植えを育てる表示。
-// しきい値は定数なので運用しながら調整可。
-type PlantLevel = { level: number; minDays: number; src: string }
+// 鉢植えの成長状態を表示するコンポーネント。
+// ロジック・しきい値・文言は lib/plantGrowth.ts に集約。PC/SP どちらもここを経由すること。
+import { resolveGrowth, GROWTH_HEADING, formatLevelLabel } from '@/lib/plantGrowth'
 
-const PLANT_LEVELS: PlantLevel[] = [
-  { level: 1, minDays: 0, src: '/plant/lv1.png' },
-  { level: 2, minDays: 7, src: '/plant/lv2.png' },
-  { level: 3, minDays: 30, src: '/plant/lv3.png' },
-  { level: 4, minDays: 100, src: '/plant/lv4.png' },
-  { level: 5, minDays: 365, src: '/plant/lv5.png' },
-  { level: 6, minDays: 500, src: '/plant/lv5.png' },
-  { level: 7, minDays: 730, src: '/plant/lv5.png' },
-  { level: 8, minDays: 1000, src: '/plant/lv5.png' },
-  { level: 9, minDays: 1500, src: '/plant/lv5.png' },
-  { level: 10, minDays: 2000, src: '/plant/lv5.png' },
-]
+export { getPlantImageSrc } from '@/lib/plantGrowth'
 
-function resolveLevel(loginDays: number) {
-  let current = PLANT_LEVELS[0]
-  for (const lv of PLANT_LEVELS) {
-    if (loginDays >= lv.minDays) current = lv
+type Variant = 'default' | 'compact'
+
+export default function PlantStatus({
+  quizCount,
+  loginDays,
+  variant = 'default',
+}: {
+  quizCount: number
+  loginDays: number
+  variant?: Variant
+}) {
+  const { current, next, quizzesToNext, progressRatio } = resolveGrowth(quizCount, loginDays)
+  const levelLabel = formatLevelLabel(current.level)
+  const nextText =
+    next && quizzesToNext !== null
+      ? `あとクイズ${quizzesToNext}問でLv.${String(next.level).padStart(2, '0')}`
+      : null
+
+  if (variant === 'compact') {
+    return (
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="bg-orange-50 rounded-full size-[72px] flex items-center justify-center overflow-hidden shrink-0">
+          <img
+            src={current.src}
+            alt={`鉢植え ${levelLabel}`}
+            className="size-full object-cover"
+            draggable={false}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs leading-tight text-gray-950 mb-2">
+            {GROWTH_HEADING.split('\n').map((line, i) => (
+              <span key={i} className="block">{line}</span>
+            ))}
+          </p>
+          <div className="bg-slate-200 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-primary h-2 rounded-full transition-all"
+              style={{ width: `${Math.round(progressRatio * 100)}%` }}
+            />
+          </div>
+          {nextText && (
+            <p className="text-[10px] text-muted mt-1 leading-tight">{nextText}</p>
+          )}
+        </div>
+      </div>
+    )
   }
-  const next = PLANT_LEVELS.find((lv) => lv.minDays > loginDays) ?? null
-  const daysToNext = next ? next.minDays - loginDays : null
-  return { current, next, daysToNext }
-}
-
-// My単語帳カード等、別コンポーネントでも同じ鉢植え画像を出すためのヘルパー
-export function getPlantImageSrc(loginDays: number): string {
-  return resolveLevel(loginDays).current.src
-}
-
-export default function PlantStatus({ loginDays }: { loginDays: number }) {
-  const { current, next, daysToNext } = resolveLevel(loginDays)
-  const levelLabel = `Lv.${String(current.level).padStart(2, '0')}`
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">
@@ -43,12 +62,14 @@ export default function PlantStatus({ loginDays }: { loginDays: number }) {
         draggable={false}
       />
       <div>
-        <p className="text-xs text-muted leading-snug">単語を覚えると<br />鉢植えが育ちます</p>
+        <p className="text-xs text-muted leading-snug">
+          {GROWTH_HEADING.split('\n').map((line, i) => (
+            <span key={i} className="block">{line}</span>
+          ))}
+        </p>
         <p className="text-sm font-bold text-gray-950 mt-0.5">{levelLabel}</p>
-        {next && daysToNext !== null && (
-          <p className="text-[11px] text-muted mt-0.5">
-            あと{daysToNext}日でLv.{String(next.level).padStart(2, '0')}
-          </p>
+        {nextText && (
+          <p className="text-[11px] text-muted mt-0.5">{nextText}</p>
         )}
       </div>
     </div>

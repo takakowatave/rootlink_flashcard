@@ -11,6 +11,9 @@ const DECK_IMAGES: Record<string, string> = {
   'TOEFL-iBT 60': '/deck-covers/toefl-60.png',
   'TOEFL-iBT 80': '/deck-covers/toefl-80.png',
   'TOEFL-iBT 100': '/deck-covers/toefl-100.png',
+  'TOEFL-60': '/deck-covers/toefl-60.png',
+  'TOEFL-80': '/deck-covers/toefl-80.png',
+  'TOEFL-100': '/deck-covers/toefl-100.png',
   '英検-準1級': '/deck-covers/eiken-jun1.png',
   '英検-1級': '/deck-covers/eiken-1.png',
 }

@@ -9,6 +9,7 @@ import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 import SenseRow from '@/components/SenseRow'
+import CardShell from '@/components/CardShell'
 
 type PhraseSense = {
   sense_id: string
@@ -174,90 +175,87 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   return (
     <div className="bg-surface min-h-screen">
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
-      <div className="max-w-[640px] mx-auto px-4 py-6">
-        <div className="bg-white rounded-xl border border-line px-5 py-5">
-
-          {/* タイトル + 再生 + ブックマーク */}
-          <div className="flex items-start justify-between mb-3 gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-3xl font-bold text-black leading-tight">{cleanPhrase(card.phrase)}</h1>
-              <button
-                type="button"
-                onClick={playHeadwordAudio}
-                disabled={headwordAudioLoading}
-                className="shrink-0"
-              >
-                <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-              </button>
-            </div>
-            <button type="button" onClick={handleSave} className="p-2 -mr-2 -mt-1 shrink-0">
-              {isSaved
-                ? <HiBookmark className="size-6 text-muted" />
-                : <HiOutlineBookmark className="size-6 text-primary" />
-              }
+      <CardShell>
+        {/* タイトル + 再生 + ブックマーク */}
+        <div className="flex items-start justify-between py-1 px-1 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h1>
+            <button
+              type="button"
+              onClick={playHeadwordAudio}
+              disabled={headwordAudioLoading}
+              className="shrink-0"
+            >
+              <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
             </button>
           </div>
-
-          {/* メタバッジ */}
-          {(typeLabel || localeLabel || registerLabel) && (
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              {typeLabel && (
-                <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
-              )}
-              {localeLabel && (
-                <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
-              )}
-              {registerLabel && (
-                <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
-              )}
-            </div>
-          )}
-
-          {/* Senses ループ */}
-          <div className="flex flex-col gap-5">
-            {senses.map((sense, idx) => {
-              const meaning = displayLocale === 'ja'
-                ? (sense.meaning_ja ?? sense.meaning_en ?? '')
-                : (sense.meaning_en ?? sense.meaning_ja ?? '')
-              const hasMultiple = senses.length > 1
-
-              return (
-                <SenseRow
-                  key={sense.sense_id}
-                  meaning={meaning}
-                  ordinal={hasMultiple ? idx + 1 : undefined}
-                  example={sense.example_en}
-                  translation={sense.example_ja}
-                  displayLocale={displayLocale}
-                  onPlayExample={() => playExampleAudio(sense.sense_id)}
-                  exampleLoading={!!exampleAudioLoading[sense.sense_id]}
-                  showPinButton={hasMultiple}
-                  isPinned={pinnedSenseId === sense.sense_id}
-                  onTogglePin={() => togglePin(sense.sense_id)}
-                />
-              )
-            })}
-          </div>
-
-          {/* 構成単語リンク */}
-          {componentWords.length > 0 && (
-            <div className="border-t border-line pt-4 mt-5">
-              <p className="text-xs text-muted mb-2">{displayLocale === 'ja' ? '構成単語' : 'Component words'}</p>
-              <div className="flex flex-wrap gap-2">
-                {componentWords.map(w => (
-                  <Link
-                    key={w}
-                    href={`/word/${w}`}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {w}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          <button type="button" onClick={handleSave} className="p-2 -mr-2 -mt-1 shrink-0">
+            {isSaved
+              ? <HiBookmark className="size-6 text-muted" />
+              : <HiOutlineBookmark className="size-6 text-primary" />
+            }
+          </button>
         </div>
-      </div>
+
+        {/* メタバッジ */}
+        {(typeLabel || localeLabel || registerLabel) && (
+          <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
+            {typeLabel && (
+              <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
+            )}
+            {localeLabel && (
+              <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
+            )}
+            {registerLabel && (
+              <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
+            )}
+          </div>
+        )}
+
+        {/* Senses ループ */}
+        <div className="flex flex-col gap-5 px-1">
+          {senses.map((sense, idx) => {
+            const meaning = displayLocale === 'ja'
+              ? (sense.meaning_ja ?? sense.meaning_en ?? '')
+              : (sense.meaning_en ?? sense.meaning_ja ?? '')
+            const hasMultiple = senses.length > 1
+
+            return (
+              <SenseRow
+                key={sense.sense_id}
+                meaning={meaning}
+                ordinal={hasMultiple ? idx + 1 : undefined}
+                example={sense.example_en}
+                translation={sense.example_ja}
+                displayLocale={displayLocale}
+                onPlayExample={() => playExampleAudio(sense.sense_id)}
+                exampleLoading={!!exampleAudioLoading[sense.sense_id]}
+                showPinButton={hasMultiple}
+                isPinned={pinnedSenseId === sense.sense_id}
+                onTogglePin={() => togglePin(sense.sense_id)}
+              />
+            )
+          })}
+        </div>
+
+        {/* 構成単語リンク */}
+        {componentWords.length > 0 && (
+          <div className="border-t border-line pt-4 mt-5 px-1">
+            <p className="text-xs text-muted mb-2">{displayLocale === 'ja' ? '構成単語' : 'Component words'}</p>
+            <div className="flex flex-wrap gap-2">
+              {componentWords.map(w => (
+                <Link
+                  key={w}
+                  href={`/word/${w}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {w}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardShell>
     </div>
   )
 }

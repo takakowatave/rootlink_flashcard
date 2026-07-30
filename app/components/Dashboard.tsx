@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
-import PlantStatus, { getPlantImageSrc } from '@/components/PlantStatus'
+import PlantStatus from '@/components/PlantStatus'
+import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
@@ -42,22 +43,26 @@ function getWeekDates(): { date: string; label: string; isToday: boolean; isFutu
   })
 }
 
-function WeeklyStreak({ streak, activityDates }: { streak: number; activityDates: string[] }) {
+function WeeklyStreak({ streak, activityDates, compact = false }: { streak: number; activityDates: string[]; compact?: boolean }) {
   const dateSet = new Set(activityDates)
   const weekDates = getWeekDates()
 
   return (
     <div className="bg-white rounded-xl border border-line px-5 py-4 flex items-center gap-6">
-      {/* 連続日数 */}
-      <div className="flex flex-col items-center shrink-0">
-        <p className="text-xs text-muted mb-0.5">連続ログイン</p>
-        <div className="flex items-end gap-1">
-          <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
-          <span className="text-lg font-bold text-quiz-review mb-1">日</span>
-        </div>
-      </div>
+      {!compact && (
+        <>
+          {/* 連続日数 */}
+          <div className="flex flex-col items-center shrink-0">
+            <p className="text-xs text-muted mb-0.5">連続ログイン</p>
+            <div className="flex items-end gap-1">
+              <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
+              <span className="text-lg font-bold text-quiz-review mb-1">日</span>
+            </div>
+          </div>
 
-      <div className="w-px self-stretch bg-line shrink-0" />
+          <div className="w-px self-stretch bg-line shrink-0" />
+        </>
+      )}
 
       {/* 今週カレンダー */}
       <div className="flex gap-2 flex-1 justify-around">
@@ -157,7 +162,7 @@ function DeckSection({
             imageSrc={item.imageSrc}
             imageContain={item.imageContain}
             onClick={() => router.push(item.href)}
-            className="shrink-0 w-[180px]"
+            className="shrink-0 w-[146px] sm:w-[180px]"
           />
         ))}
       </div>
@@ -172,6 +177,7 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [masteredCount, setMasteredCount] = useState(0)
+  const [quizAttemptCount, setQuizAttemptCount] = useState(0)
   const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
@@ -201,6 +207,7 @@ export default function Dashboard() {
       if (quizData.data) {
         const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
         setMasteredCount(masteredWords.size)
+        setQuizAttemptCount(quizData.data.length)
       }
       if (decksData.data) setDecks(decksData.data as Deck[])
 
@@ -238,7 +245,7 @@ export default function Dashboard() {
     key: 'my-wordlist',
     title: 'My単語帳',
     href: '/wordlist',
-    imageSrc: getPlantImageSrc(activityDates.length),
+    imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
     imageContain: true,
   }
   const activeDeckItems: DeckItem[] = activeDeckIds
@@ -282,10 +289,24 @@ export default function Dashboard() {
             <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">利用状況</h2>
 
-              <WeeklyStreak streak={streak} activityDates={activityDates} />
+              {/* SP: Figma準拠 コンパクト複合カード (鉢植え部は PlantStatus 経由でロジック統一) */}
+              <div className="sm:hidden bg-white rounded-2xl border border-line p-4 flex items-center gap-3">
+                <div className="pr-3 border-r border-line shrink-0">
+                  <p className="text-[11px] text-muted mb-0.5">連続ログイン</p>
+                  <div className="flex items-baseline gap-0.5 leading-none">
+                    <span className="text-[40px] font-black text-quiz-review tabular-nums">{streak}</span>
+                    <span className="text-base font-bold text-quiz-review">日</span>
+                  </div>
+                </div>
+                <PlantStatus variant="compact" quizCount={quizAttemptCount} loginDays={activityDates.length} />
+              </div>
 
-              <div className="bg-white rounded-xl border border-line flex items-stretch overflow-hidden">
-                <PlantStatus loginDays={activityDates.length} />
+              {/* PC: 既存レイアウト維持 */}
+              <div className="hidden sm:block">
+                <WeeklyStreak streak={streak} activityDates={activityDates} />
+              </div>
+              <div className="hidden sm:flex bg-white rounded-xl border border-line items-stretch overflow-hidden">
+                <PlantStatus quizCount={quizAttemptCount} loginDays={activityDates.length} />
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
                   <p className="text-xs text-muted">学習中の単語数</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
@@ -299,6 +320,11 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
+
+              {/* SP: weekly-streak-card は下に単独で（連続日数は複合カードに既に出してるので非表示） */}
+              <div className="sm:hidden">
+                <WeeklyStreak streak={streak} activityDates={activityDates} compact />
+              </div>
             </section>
 
             {/* My単語帳 */}
@@ -311,7 +337,7 @@ export default function Dashboard() {
                     imageSrc={myDeckItem.imageSrc}
                     imageContain={myDeckItem.imageContain}
                     onClick={() => router.push(myDeckItem.href)}
-                    className="shrink-0 w-[180px]"
+                    className="shrink-0 w-[146px] sm:w-[180px]"
                   />
                 </div>
               ) : (
