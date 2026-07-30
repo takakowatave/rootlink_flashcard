@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, saveQuizResult } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
@@ -30,7 +30,6 @@ type DeckWordEntry = {
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
 export default function DeckClient({ deck }: { deck: DeckInfo }) {
-  const router = useRouter()
   const [entries, setEntries] = useState<DeckWordEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
@@ -129,12 +128,16 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   return (
     <div className="flex flex-col bg-white min-h-screen">
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
-      <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
-        <Button onClick={() => router.push(isAuthed ? '/wordlist' : '/')} variant="secondary" size="sm">戻る</Button>
-        <h1 className="text-sm font-semibold text-gray-800 ml-3">{deck.name}</h1>
-      </header>
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
+        <nav aria-label="Breadcrumb" className="text-xs text-muted flex items-center gap-1 flex-wrap mb-4">
+          <Link href="/" className="hover:text-primary">ホーム</Link>
+          <span>›</span>
+          <Link href="/decks" className="hover:text-primary">教材一覧</Link>
+          <span>›</span>
+          <span className="text-gray-700">{deck.name}</span>
+        </nav>
+
         {/* デッキ情報カード */}
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm mb-6">
           <div className="mb-2">
