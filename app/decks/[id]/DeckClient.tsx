@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, saveQuizResult } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
+import Breadcrumb from '@/components/Breadcrumb'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
@@ -130,13 +130,13 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
-        <nav aria-label="Breadcrumb" className="text-xs text-muted flex items-center gap-1 flex-wrap mb-4">
-          <Link href="/" className="hover:text-primary">ホーム</Link>
-          <span>›</span>
-          <Link href="/decks" className="hover:text-primary">教材一覧</Link>
-          <span>›</span>
-          <span className="text-gray-700">{deck.name}</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: 'ホーム', href: '/' },
+            { label: '教材一覧', href: '/decks' },
+            { label: deck.name },
+          ]}
+        />
 
         {/* デッキ情報カード */}
         <div className="bg-white border border-line rounded-2xl p-6 shadow-sm mb-6">
