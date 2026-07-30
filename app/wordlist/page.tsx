@@ -352,14 +352,6 @@ export default function WordListPage() {
 
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
-        <div className="px-4 flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-gray-900">
-            オリジナル単語リスト
-            <span className="text-muted ml-1">›</span>
-          </h2>
-          <span className="text-sm text-muted">{totalItems}件</span>
-        </div>
-
         {totalItems === 0 ? (
           <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
         ) : (
