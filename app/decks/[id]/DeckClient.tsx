@@ -10,6 +10,7 @@ import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSess
 import type { QuizEntry } from '@/components/QuizSession'
 import TriDonutChart from '@/components/TriDonutChart'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
+import SignupRequiredModal from '@/components/SignupRequiredModal'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -36,6 +37,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
+  const [isAuthed, setIsAuthed] = useState<boolean>(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
@@ -70,6 +73,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         supabase.auth.getUser(),
       ])
       setEntries(data)
+      setIsAuthed(!!authData.user)
       if (authData.user && data.length > 0) await loadStatus(data, authData.user.id)
       setLoading(false)
     }
@@ -96,13 +100,14 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   }
 
   const startQuiz = useCallback(() => {
+    if (!isAuthed) { setShowSignupModal(true); return }
     const sourceEntries = scopeSource[quizScope]
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [quizScope, scopeSource])
+  }, [isAuthed, quizScope, scopeSource])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct)
@@ -123,8 +128,9 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
   return (
     <div className="flex flex-col bg-white min-h-screen">
+      {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
-        <Button onClick={() => router.push('/wordlist')} variant="secondary" size="sm">戻る</Button>
+        <Button onClick={() => router.push(isAuthed ? '/wordlist' : '/')} variant="secondary" size="sm">戻る</Button>
         <h1 className="text-sm font-semibold text-gray-800 ml-3">{deck.name}</h1>
       </header>
 
