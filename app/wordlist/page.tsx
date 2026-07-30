@@ -20,6 +20,7 @@ import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionar
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
+import Breadcrumb from "@/components/Breadcrumb"
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
@@ -312,9 +313,18 @@ export default function WordListPage() {
       )}
 
       <div className="max-w-[812px] mx-auto w-full">
+      <div className="pt-6 px-4">
+        <Breadcrumb
+          items={[
+            { label: 'ホーム', href: '/' },
+            { label: 'My単語帳' },
+          ]}
+        />
+      </div>
+
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
-        <section className="pt-6 px-4">
+        <section className="px-4">
           <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
             <div className="flex justify-center py-2">
               <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
