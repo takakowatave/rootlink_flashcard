@@ -259,7 +259,7 @@ function CardView({
   }
 
   return (
-    <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
         <Button onClick={onQuit} variant="secondary" size="sm">終了</Button>
       </header>
