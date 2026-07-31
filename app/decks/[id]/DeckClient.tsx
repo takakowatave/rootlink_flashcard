@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchDeckWords, saveQuizResult } from '@/lib/supabaseApi'
+import { fetchDeckWords, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
 import Breadcrumb from '@/components/Breadcrumb'
+import EntryCard from '@/components/EntryCard'
+import WordDetailModal from '@/components/WordDetailModal'
+import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
 import type { SavedWordDictionary } from '@/types/Dictionary'
+import type { DisplayLocale } from '@/types/DisplayLocale'
+import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import TriDonutChart from '@/components/TriDonutChart'
@@ -29,6 +34,9 @@ type DeckWordEntry = {
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
+const INITIAL_VISIBLE = 30
+const LOAD_MORE_STEP = 30
+
 export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [entries, setEntries] = useState<DeckWordEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +46,22 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
+  const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
+    if (typeof window === 'undefined') return 'ja'
+    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
+  })
+
+  useEffect(() => {
+    const handler = () => {
+      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+      if (saved) setDisplayLocale(saved)
+    }
+    window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+    return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+  }, [])
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
@@ -64,20 +88,54 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     setWrongCounts(wrongByWord)
   }, [])
 
+  const loadSavedWords = useCallback(async (userId: string, deckWords: string[]) => {
+    if (deckWords.length === 0) { setSavedWords(new Set()); return }
+    const { data: wordRows } = await supabase
+      .from('words')
+      .select('id, word')
+      .in('word', deckWords)
+      .limit(2000)
+    const wordIds = (wordRows ?? []).map(r => r.id)
+    if (wordIds.length === 0) { setSavedWords(new Set()); return }
+    const idToWord = new Map((wordRows ?? []).map(r => [r.id, r.word as string]))
+    const { data: savedRows } = await supabase
+      .from('saved_words')
+      .select('word_id')
+      .eq('user_id', userId)
+      .in('word_id', wordIds)
+      .limit(2000)
+    setSavedWords(new Set((savedRows ?? []).map(r => idToWord.get(r.word_id as string) ?? '').filter(Boolean)))
+  }, [])
+
+  const reload = useCallback(async () => {
+    const [data, { data: authData }] = await Promise.all([
+      fetchDeckWords(deck.id),
+      supabase.auth.getUser(),
+    ])
+    setEntries(data)
+    setIsAuthed(!!authData.user)
+    if (authData.user) {
+      if (data.length > 0) await loadStatus(data, authData.user.id)
+      await loadSavedWords(authData.user.id, data.map(e => e.word))
+    }
+    setLoading(false)
+  }, [deck.id, loadStatus, loadSavedWords])
+
   useEffect(() => {
     toast.dismiss()
-    const load = async () => {
-      const [data, { data: authData }] = await Promise.all([
-        fetchDeckWords(deck.id),
-        supabase.auth.getUser(),
-      ])
-      setEntries(data)
-      setIsAuthed(!!authData.user)
-      if (authData.user && data.length > 0) await loadStatus(data, authData.user.id)
-      setLoading(false)
-    }
-    load()
-  }, [deck.id, loadStatus])
+    reload()
+  }, [reload])
+
+  const handleToggleSave = async (entry: DeckWordEntry) => {
+    if (!isAuthed) { setShowSignupModal(true); return }
+    const result = await toggleSaveStatus({ word: entry.word, dictionary: entry.dictionary ?? undefined })
+    if (!result.success) { toast.error('処理に失敗しました'); return }
+    setSavedWords(prev => {
+      const s = new Set(prev)
+      if (s.has(entry.word)) s.delete(entry.word); else s.add(entry.word)
+      return s
+    })
+  }
 
   const availableEntries = entries.filter(e => !!e.dictionary)
   const availableCount = availableEntries.length
@@ -182,7 +240,66 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         >
           {loading ? '読み込み中...' : availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
         </Button>
+
+        {/* ── 単語一覧プレビュー ── */}
+        {!loading && availableEntries.length > 0 && (
+          <section className="-mx-4">
+            <div className="flex flex-col gap-3 px-3">
+              {availableEntries.slice(0, visibleCount).map((entry) => {
+                const d = entry.dictionary
+                const pronunciation = buildPronunciation(d)
+                const senses = buildSenses(d, displayLocale)
+                const inflections: string[] = d?.inflections ?? []
+                const allSenses = Object.values(senses).flat()
+                const firstSenseId = allSenses[0]?.senseId ?? null
+                const pinnedSenseId = entry.pinned_sense_id ?? firstSenseId
+                return (
+                  <div
+                    key={entry.word}
+                    onClick={() => setSelectedEntry(entry)}
+                    className="cursor-pointer"
+                  >
+                    <EntryCard
+                      headword={entry.word}
+                      pronunciation={pronunciation}
+                      etymology=""
+                      senses={senses}
+                      inflections={inflections}
+                      grammarTags={{}}
+                      isBookmarked={savedWords.has(entry.word)}
+                      onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(entry) }}
+                      pinnedSenseId={pinnedSenseId}
+                      displayLocale={displayLocale}
+                      compact
+                    />
+                  </div>
+                )
+              })}
+            </div>
+            {availableEntries.length > visibleCount && (
+              <div className="px-3 mt-4">
+                <Button
+                  onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+                  variant="secondary"
+                  fullWidth
+                >
+                  もっと見る（+{Math.min(LOAD_MORE_STEP, availableEntries.length - visibleCount)}）
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
       </div>
+
+      {selectedEntry && (
+        <WordDetailModal
+          word={selectedEntry.word}
+          dictionary={selectedEntry.dictionary}
+          initialPinnedSenseId={selectedEntry.pinned_sense_id}
+          displayLocale={displayLocale}
+          onClose={() => setSelectedEntry(null)}
+        />
+      )}
     </div>
   )
 }
