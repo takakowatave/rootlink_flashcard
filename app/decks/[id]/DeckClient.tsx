@@ -139,7 +139,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         />
 
         {/* デッキ情報カード */}
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm mb-6">
+        <div className="bg-white border border-line rounded-2xl px-6 py-4 shadow-sm mb-2">
           <div className="mb-2">
             <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
             <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
@@ -148,7 +148,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
           {/* ドーナツチャート */}
           {!loading && (
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-2">
               <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
             </div>
           )}
