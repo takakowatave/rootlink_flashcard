@@ -280,11 +280,10 @@ const Header = () => {
         </div>
       </header>
 
-      {/* SP: 検索オーバーレイ */}
+      {/* SP: 検索オーバーレイ (画面全白・1発で最終形状) */}
       {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex flex-col">
-          <div className="flex-1 bg-black/40" onClick={() => setMobileSearchOpen(false)} />
-          <div className="bg-white px-4 pt-3 pb-6">
+        <div className="fixed inset-0 z-50 md:hidden bg-white flex flex-col">
+          <div className="px-4 pt-3 pb-6">
             <div className="flex items-center justify-between mb-3">
               <button type="button" onClick={() => setMobileSearchOpen(false)} className="text-sm font-bold text-primary">
                 閉じる
