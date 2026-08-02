@@ -243,8 +243,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
         {/* ── 単語一覧プレビュー ── */}
         {!loading && availableEntries.length > 0 && (
-          <section className="-mx-4">
-            <div className="flex flex-col gap-3 px-3">
+          <section>
+            <div className="flex flex-col gap-3">
               {availableEntries.slice(0, visibleCount).map((entry) => {
                 const d = entry.dictionary
                 const pronunciation = buildPronunciation(d)
@@ -277,7 +277,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               })}
             </div>
             {availableEntries.length > visibleCount && (
-              <div className="px-3 mt-4">
+              <div className="mt-4">
                 <Button
                   onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
                   variant="secondary"

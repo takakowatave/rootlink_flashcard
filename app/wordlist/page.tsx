@@ -311,7 +311,7 @@ export default function WordListPage() {
           <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
         ) : (
           <>
-            <div className="flex flex-col gap-3 px-3">
+            <div className="flex flex-col gap-3 px-4">
               {[
                 ...wordList.map((w) => ({ kind: 'word' as const, sortAt: w.created_at ?? '', word: w })),
                 ...phraseList.map((p) => ({ kind: 'phrase' as const, sortAt: p.created_at, phrase: p })),
@@ -359,7 +359,7 @@ export default function WordListPage() {
                 })}
             </div>
             {totalItems > visibleCount && (
-              <div className="px-3 mt-4">
+              <div className="px-4 mt-4">
                 <Button
                   onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
                   variant="secondary"
