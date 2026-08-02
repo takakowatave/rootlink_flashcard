@@ -27,58 +27,20 @@ export const toggleSaveStatus = async (
   const user = auth?.user;
   if (!user) return { success: false };
 
-  // ① words に存在するか確認
+  // words の書き込みは /resolve (Cloud Run, service_role) が担当。
+  // ここでは既存 word_id を引くだけ。無ければ保存不可としてUI側で再検索を促す。
   const { data: existingWord, error: wordFetchError } = await supabase
     .from("words")
     .select("id")
     .eq("word", word.word)
     .maybeSingle();
 
-  if (wordFetchError) {
+  if (wordFetchError || !existingWord) {
     console.error("words 取得エラー:", wordFetchError);
     return { success: false };
   }
 
-  let wordId: string;
-  
-
-  // ② 無ければ作る（辞書データは保存しない）
-  if (!existingWord) {
-    const { data: newWord, error: wordInsertError } = await supabase
-      .from("words")
-      .insert({ word: word.word })
-      .select("id")
-      .single();
-
-    if (wordInsertError || !newWord) {
-      console.error("words 作成エラー:", wordInsertError);
-      return { success: false };
-    }
-
-    wordId = newWord.id;
-  } else {
-    wordId = existingWord.id;
-  }
-
-  // words を作った直後に dictionary_cache を upsert（dictionary が渡ってきた時だけ）
-  const raw = word.dictionary
-  if (raw) {
-    // first-write-wins: 既存 payload を UPDATE しない (RLS UPDATE 権限も不要)
-    const { error: upsertErr } = await supabase
-      .from("dictionary_cache")
-      .upsert(
-        {
-          word_id: wordId,
-          payload: raw,
-          fetched_at: new Date().toISOString(),
-        },
-        { onConflict: "word_id", ignoreDuplicates: true }
-      )
-
-    if (upsertErr) {
-      console.error("dictionary_cache upsert error:", upsertErr)
-    }
-  }
+  const wordId: string = existingWord.id;
 
   // ③ 保存済み確認
   const { data: existingSaved, error: savedCheckError } = await supabase
