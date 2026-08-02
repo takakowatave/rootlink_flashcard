@@ -44,9 +44,21 @@ export default function WordDetailModal({
         className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90dvh] flex flex-col shadow-xl overflow-x-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-3 border-b border-line flex-shrink-0">
+        {/* SP: grabber (drag handle indicator) */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+        <div className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 sm:border-b sm:border-line flex-shrink-0">
+          {/* SP: close on left / PC: title fades in on left */}
+          <button
+            onClick={onClose}
+            className="sm:hidden p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
+            aria-label="閉じる"
+          >
+            <BsX size={24} />
+          </button>
           <span
-            className={`text-base font-semibold text-gray-800 transition-opacity duration-150 ${scrolled ? 'opacity-100' : 'opacity-0'}`}
+            className={`hidden sm:inline text-base font-semibold text-gray-800 transition-opacity duration-150 ${scrolled ? 'opacity-100' : 'opacity-0'}`}
           >
             {word}
           </span>
@@ -58,9 +70,10 @@ export default function WordDetailModal({
             >
               <BsArrowUpRightSquare size={24} />
             </a>
+            {/* PC only: close on right */}
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
+              className="hidden sm:inline-flex p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
               aria-label="閉じる"
             >
               <BsX size={24} />
