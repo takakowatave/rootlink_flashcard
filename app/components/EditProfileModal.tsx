@@ -85,6 +85,9 @@ export default function EditProfileModal({
   };
 
   const handleResetPassword = async () => {
+    // Google 認証ユーザーはパスワードを持たない。UI からは辿れないが
+    // 将来のルート追加や古いリンク経由での誤起動に備えた二重防御
+    if (provider !== "email") return;
     if (!email) return;
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) toast.error("送信に失敗しました");
