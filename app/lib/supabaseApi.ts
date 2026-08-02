@@ -63,6 +63,7 @@ export const toggleSaveStatus = async (
   // words を作った直後に dictionary_cache を upsert（dictionary が渡ってきた時だけ）
   const raw = word.dictionary
   if (raw) {
+    // first-write-wins: 既存 payload を UPDATE しない (RLS UPDATE 権限も不要)
     const { error: upsertErr } = await supabase
       .from("dictionary_cache")
       .upsert(
@@ -71,7 +72,7 @@ export const toggleSaveStatus = async (
           payload: raw,
           fetched_at: new Date().toISOString(),
         },
-        { onConflict: "word_id" }
+        { onConflict: "word_id", ignoreDuplicates: true }
       )
 
     if (upsertErr) {
