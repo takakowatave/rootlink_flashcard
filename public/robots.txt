@@ -1,9 +1,17 @@
 User-agent: *
 Allow: /
 Allow: /word/
+Allow: /blog
 
+Disallow: /Profile
+Disallow: /profile
 Disallow: /wordlist
 Disallow: /quiz
-Disallow: /profile
+Disallow: /decks
+Disallow: /phrases
+Disallow: /callback
+Disallow: /premium
+Disallow: /blog/preview
+Disallow: /api/
 
 Sitemap: https://www.rootlink.app/sitemap.xml

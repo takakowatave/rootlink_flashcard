@@ -38,21 +38,22 @@ export async function apiRequest(
     ...options,
   });
 
-  // ステータス確認
   if (!res.ok) {
     const text = await res.text();
-    console.error("API error:", res.status, text);
+    if (process.env.NODE_ENV === "development") {
+      console.error("API error:", res.status, text);
+    }
     throw new Error(`API error: ${res.status}`);
   }
 
-  // ===== AI RAWログ（重要デバッグポイント）=====
   const rawText = await res.text();
-  console.log("🔴 AI RAW:", rawText);
 
   try {
     return JSON.parse(rawText);
-  } catch (e) {
-    console.error("JSON parse error:", rawText);
+  } catch {
+    if (process.env.NODE_ENV === "development") {
+      console.error("JSON parse error:", rawText);
+    }
     throw new Error("Invalid JSON response");
   }
 }
