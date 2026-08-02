@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
+import { useAuthProvider } from "@/lib/useAuthProvider";
 import { FaUserCircle } from "react-icons/fa";
+import { BsChevronLeft, BsChevronRight, BsPencil } from "react-icons/bs";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -23,23 +25,24 @@ interface FormData {
   display_name: string;
 }
 
+// サーバー側 /account/delete が未実装のため、UIを隠す
+const DELETE_ACCOUNT_ENABLED = false;
+
 export default function EditProfileModal({
   isOpen,
   onClose,
   profile,
   onUpdated,
 }: Props) {
-  const {
-    register,
-    handleSubmit,
-    setValue,
-  } = useForm<FormData>();
+  const { register, handleSubmit, setValue } = useForm<FormData>();
+  const provider = useAuthProvider();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja');
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
   const [email, setEmail] = useState<string>("");
+  const [editingName, setEditingName] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -63,7 +66,10 @@ export default function EditProfileModal({
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ origin: window.location.origin, locale: navigator.language.startsWith("ja") ? "ja" : "auto" }),
+        body: JSON.stringify({
+          origin: window.location.origin,
+          locale: navigator.language.startsWith("ja") ? "ja" : "auto",
+        }),
       });
       const data = await res.json();
       if (data.ok && data.url) {
@@ -78,18 +84,14 @@ export default function EditProfileModal({
     }
   };
 
-  const handleChangeEmail = async () => {
+  const handleResetPassword = async () => {
+    // Google 認証ユーザーはパスワードを持たない。UI からは辿れないが
+    // 将来のルート追加や古いリンク経由での誤起動に備えた二重防御
+    if (provider !== "email") return;
     if (!email) return;
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) toast.error("送信に失敗しました");
-    else toast.success("変更手続きのメールを送信しました");
-  };
-
-  const handleChangePassword = async () => {
-    if (!email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) toast.error("送信に失敗しました");
-    else toast.success("パスワード再設定メールを送信しました");
+    else toast.success("登録メールアドレスに再設定用リンクを送信しました");
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,10 +101,15 @@ export default function EditProfileModal({
     try {
       const ext = file.name.split(".").pop();
       const path = `${profile.id}/avatar-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-      const { error: updErr } = await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", profile.id);
+      const { error: updErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: urlData.publicUrl })
+        .eq("id", profile.id);
       if (updErr) throw updErr;
       toast.success("アイコンを更新しました");
       onUpdated();
@@ -114,29 +121,24 @@ export default function EditProfileModal({
   };
 
   useEffect(() => {
-    if (profile) {
-      setValue("display_name", profile.username ?? "");
-    }
+    if (profile) setValue("display_name", profile.username ?? "");
   }, [profile, setValue]);
 
   useEffect(() => {
-    if (isOpen) {
-      getUserPlan().then(setPlan);
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return;
-        setEmail(user.email ?? "");
-        supabase
-          .from("subscriptions")
-          .select("stripe_customer_id")
-          .eq("user_id", user.id)
-          .maybeSingle()
-          .then(({ data }) => {
-            setHasStripeSubscription(!!data?.stripe_customer_id);
-          });
-      });
-      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
-      if (saved === 'en' || saved === 'ja') setDisplayLocale(saved);
-    }
+    if (!isOpen) return;
+    getUserPlan().then(setPlan);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      setEmail(user.email ?? "");
+      supabase
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setHasStripeSubscription(!!data?.stripe_customer_id));
+    });
+    const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
+    if (saved === "en" || saved === "ja") setDisplayLocale(saved);
   }, [isOpen]);
 
   const handleLocaleChange = (locale: DisplayLocale) => {
@@ -158,29 +160,43 @@ export default function EditProfileModal({
       return;
     }
     toast.success("保存しました");
+    setEditingName(false);
     onUpdated();
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 sm:items-center overflow-y-auto">
-        <div className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden">
-          {/* close bar (SP top) */}
-          <div className="flex items-center justify-end px-4 py-3 sm:hidden">
-            <button onClick={onClose} className="text-sm text-muted">閉じる</button>
-          </div>
-          <div className="hidden sm:flex items-center justify-between px-6 py-4 border-b border-line">
-            <h2 className="text-base font-bold text-gray-950">設定</h2>
-            <button onClick={onClose} className="text-sm text-muted">閉じる</button>
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 sm:items-center overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header — SP: back arrow / PC: 設定タイトル + 閉じる */}
+          <div className="flex items-center justify-between px-3 sm:px-6 h-14 border-b border-line flex-shrink-0">
+            <button
+              onClick={onClose}
+              className="sm:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-700"
+              aria-label="戻る"
+            >
+              <BsChevronLeft size={22} />
+            </button>
+            <h2 className="hidden sm:block text-base font-bold text-gray-950">設定</h2>
+            <button
+              onClick={onClose}
+              className="hidden sm:block text-sm text-muted hover:text-gray-700"
+            >
+              閉じる
+            </button>
           </div>
 
-          <div className="px-4 sm:px-6 py-6 flex flex-col gap-8">
-            {/* プロフィール */}
-            <section className="flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-gray-950">プロフィール</h3>
-
-              <div className="flex items-center gap-2">
-                <div className="w-20 h-20 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6">
+            {/* アバター */}
+            <div className="flex justify-center pt-2">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
                   ) : (
@@ -191,103 +207,144 @@ export default function EditProfileModal({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded"
+                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  aria-label="アイコン変更"
                 >
-                  {uploading ? "..." : "アップロード"}
+                  <BsPencil size={14} />
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-              </div>
-
-              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
-                <label className="text-sm text-gray-800">表示される名前</label>
                 <input
-                  {...register("display_name")}
-                  onBlur={handleSubmit(onSubmit)}
-                  className="h-10 border border-line rounded px-2 text-sm text-gray-800 bg-white"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
                 />
+              </div>
+            </div>
+
+            {/* 名前 */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-gray-500">名前</p>
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
+                  <input
+                    {...register("display_name")}
+                    onFocus={() => setEditingName(true)}
+                    onBlur={handleSubmit(onSubmit)}
+                    className="flex-1 bg-transparent text-base text-gray-950 outline-none"
+                    placeholder="表示名"
+                  />
+                  <BsPencil size={16} className="text-muted flex-shrink-0" />
+                </div>
+                {editingName && (
+                  <p className="text-[11px] text-muted mt-1">フォーカスを外すと自動保存されます</p>
+                )}
               </form>
-            </section>
+            </div>
 
-            <div className="h-px bg-line" />
-
-            {/* 設定 */}
-            <section className="flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-gray-950">設定</h3>
-
-              <div className="flex items-center justify-between h-14 border-b border-line">
-                <p className="text-sm text-gray-800">現在のプラン</p>
+            {/* 現在のプラン */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-gray-500">現在のプラン</p>
+              <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
                 {plan === "premium" ? (
-                  hasStripeSubscription ? (
-                    <button
-                      type="button"
-                      onClick={handleManagePlan}
-                      disabled={isPortalLoading}
-                      className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded disabled:opacity-50"
-                    >
-                      {isPortalLoading ? "..." : "Premium"}
-                    </button>
-                  ) : (
-                    <span className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded inline-flex items-center">
-                      Premium
-                    </span>
-                  )
+                  <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
+                    Premium
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-700">Free</span>
+                )}
+                {plan === "premium" && hasStripeSubscription ? (
+                  <button
+                    type="button"
+                    onClick={handleManagePlan}
+                    disabled={isPortalLoading}
+                    className="p-1 -mr-1 rounded-full hover:bg-gray-100 text-muted disabled:opacity-50"
+                    aria-label="プランを管理"
+                  >
+                    <BsChevronRight size={20} />
+                  </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
-                    className="h-6 px-2 border border-primary text-primary text-xs font-bold rounded"
+                    className="h-7 px-3 border border-primary text-primary text-xs font-bold rounded"
                   >
                     アップグレード
                   </button>
                 )}
               </div>
+            </div>
 
-              <div className="flex items-center justify-between h-[50px] border-b border-line">
-                <p className="text-sm text-gray-800">辞書の表示言語</p>
+            {/* 辞書の表示言語 */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-gray-500">辞書の表示言語</p>
+              <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
                 <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
               </div>
-            </section>
+            </div>
 
-            {/* セキュリティ */}
-            <section className="flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-gray-950">セキュリティ</h3>
+            {/* メールアドレス */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-gray-500">メールアドレス</p>
+                {provider === "google" && (
+                  <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded">
+                    Googleアカウント
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
+                <p className="flex-1 text-base text-gray-950 truncate">{email || "—"}</p>
+              </div>
+            </div>
 
+            {/* パスワード (email 認証のみ) */}
+            {provider === "email" && (
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-gray-800">メールアドレス</p>
-                <p className="text-xs text-muted">{email || "—"}</p>
+                <p className="text-xs font-semibold text-gray-500">パスワード</p>
+                <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
+                  <p className="flex-1 text-base text-gray-950 tracking-widest">••••••••</p>
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    className="text-sm font-bold text-primary hover:underline"
+                  >
+                    再設定
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* アカウント削除 — サーバー側実装まで hidden */}
+            {DELETE_ACCOUNT_ENABLED && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold text-gray-500">アカウント削除</p>
                 <button
                   type="button"
-                  onClick={handleChangeEmail}
-                  className="h-8 px-4 border border-primary text-primary text-sm font-bold rounded self-start"
+                  className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3 text-left hover:bg-gray-50"
                 >
-                  変更
+                  <span className="text-base text-red-600">退会手続きへ</span>
+                  <BsChevronRight size={20} className="text-muted" />
                 </button>
               </div>
+            )}
 
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-gray-800">パスワード</p>
-                <p className="text-xs text-muted tracking-widest">••••••</p>
-                <button
-                  type="button"
-                  onClick={handleChangePassword}
-                  className="h-8 px-4 border border-primary text-primary text-sm font-bold rounded self-start"
-                >
-                  変更
-                </button>
-              </div>
-
+            {/* ログアウト */}
+            <div className="flex justify-center pt-2">
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-sm text-red-700 self-start py-2"
+                className="px-8 h-11 rounded-full bg-gray-100 text-sm font-bold text-gray-700 hover:bg-gray-200"
               >
                 ログアウト
               </button>
-            </section>
+            </div>
           </div>
         </div>
       </div>
-      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
+      {showUpgradeModal && (
+        <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />
+      )}
     </>
   );
 }
