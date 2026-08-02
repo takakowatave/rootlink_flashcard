@@ -184,7 +184,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   }
 
   return (
-    <div className="flex flex-col bg-white min-h-screen">
+    <>
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
@@ -300,6 +300,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           onClose={() => setSelectedEntry(null)}
         />
       )}
-    </div>
+    </>
   )
 }
