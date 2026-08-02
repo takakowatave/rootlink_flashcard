@@ -1,10 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import EntryCard from "@/components/EntryCard"
-import WordPageClient from "@/components/WordPageClient"
 import PhraseCard from "@/components/PhraseCard"
 import Button from "@/components/Button"
 import TriDonutChart from "@/components/TriDonutChart"
@@ -15,12 +12,13 @@ import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, updateStreak, save
 import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
-import { BsX, BsArrowUpRightSquare } from "react-icons/bs"
-import type { SavedWordDictionary, SavedWordSenseGroup } from "@/types/Dictionary"
+import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import Breadcrumb from "@/components/Breadcrumb"
+import WordDetailModal from "@/components/WordDetailModal"
+import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
 
@@ -76,60 +74,17 @@ function PhraseListCard({
   )
 }
 
-type DisplaySense = { senseId: string; meaning: string; example?: string; exampleTranslation?: string }
-
-function buildPronunciation(dictionary: SavedWordDictionary | null | undefined) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-  if (dictionary?.audio?.audioUrl) {
-    return {
-      phoneticSpelling: dictionary.ipa ?? undefined,
-      audioFile: dictionary.audio.audioUrl,
-    }
-  }
-  if (dictionary?.audio?.audioPath) {
-    return {
-      phoneticSpelling: dictionary.ipa ?? undefined,
-      audioFile: `${supabaseUrl}/storage/v1/object/public/${dictionary.audio.audioPath}`,
-    }
-  }
-  return {
-    phoneticSpelling: dictionary?.ipa ?? undefined,
-    audioFile: undefined,
-  }
-}
-
-function buildSenses(dictionary: SavedWordDictionary | null | undefined, locale: DisplayLocale = 'ja'): Record<string, DisplaySense[]> {
-  const senseGroups: SavedWordSenseGroup[] = dictionary?.senseGroups ?? []
-  const jaLocales = dictionary?.locales?.ja?.senses ?? {}
-  const result: Record<string, DisplaySense[]> = {}
-
-  for (const group of senseGroups) {
-    const pos = String(group.partOfSpeech ?? '').toLowerCase()
-    if (!pos) continue
-    const senses: DisplaySense[] = (group.senses ?? [])
-      .map((sense) => {
-        const senseId = String(sense.senseId ?? '')
-        const ja = jaLocales[senseId]
-        const meaning = locale === 'ja'
-          ? (ja?.meaning ?? sense.definition ?? '')
-          : (sense.definition ?? ja?.meaning ?? '')
-        return { senseId, meaning, example: sense.example ?? undefined, exampleTranslation: ja?.exampleTranslation ?? undefined }
-      })
-      .filter((s) => s.senseId && s.meaning)
-    if (senses.length > 0) result[pos] = senses
-  }
-  return result
-}
+const INITIAL_VISIBLE = 30
+const LOAD_MORE_STEP = 30
 
 export default function WordListPage() {
-  const router = useRouter()
   const [wordList, setWordList] = useState<SavedWordRow[]>([])
   const [phraseList, setPhraseList] = useState<SavedPhraseRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
-  const [modalScrolled, setModalScrolled] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
@@ -205,21 +160,11 @@ export default function WordListPage() {
   }
 
   const handleCloseModal = () => {
-    const scrollY = parseInt(document.body.style.top || '0') * -1
-    document.body.style.position = ''
-    document.body.style.top = ''
-    document.body.style.width = ''
-    window.scrollTo(0, scrollY)
     setSelectedItem(null)
     load()
   }
 
   const handleOpenModal = (item: SavedWordRow) => {
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    setModalScrolled(false)
     setSelectedItem(item)
   }
 
@@ -365,91 +310,80 @@ export default function WordListPage() {
         {totalItems === 0 ? (
           <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
         ) : (
-          <div className="flex flex-col gap-3 px-3">
-            {[
-              ...wordList.map((w) => ({ kind: 'word' as const, sortAt: w.created_at ?? '', word: w })),
-              ...phraseList.map((p) => ({ kind: 'phrase' as const, sortAt: p.created_at, phrase: p })),
-            ]
-              .sort((a, b) => b.sortAt.localeCompare(a.sortAt))
-              .map((entry) => {
-                if (entry.kind === 'phrase') {
-                  const p = entry.phrase
+          <>
+            <div className="flex flex-col gap-3 px-4">
+              {[
+                ...wordList.map((w) => ({ kind: 'word' as const, sortAt: w.created_at ?? '', word: w })),
+                ...phraseList.map((p) => ({ kind: 'phrase' as const, sortAt: p.created_at, phrase: p })),
+              ]
+                .sort((a, b) => b.sortAt.localeCompare(a.sortAt))
+                .slice(0, visibleCount)
+                .map((entry) => {
+                  if (entry.kind === 'phrase') {
+                    const p = entry.phrase
+                    return (
+                      <PhraseListCard
+                        key={`phrase-${p.saved_id}`}
+                        row={p}
+                        isSaved={savedPhraseIds.has(p.phrase_card_id)}
+                        onSave={() => handleTogglePhraseSave(p.phrase_card_id)}
+                        displayLocale={displayLocale}
+                      />
+                    )
+                  }
+                  const item = entry.word
+                  const d = item.dictionary
+                  const pronunciation = buildPronunciation(d)
+                  const senses = buildSenses(d, displayLocale)
+                  const inflections: string[] = d?.inflections ?? []
+                  const allSenses = Object.values(senses).flat()
+                  const firstSenseId = allSenses[0]?.senseId ?? null
+                  const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
                   return (
-                    <PhraseListCard
-                      key={`phrase-${p.saved_id}`}
-                      row={p}
-                      isSaved={savedPhraseIds.has(p.phrase_card_id)}
-                      onSave={() => handleTogglePhraseSave(p.phrase_card_id)}
-                      displayLocale={displayLocale}
-                    />
+                    <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
+                      <EntryCard
+                        headword={item.word}
+                        pronunciation={pronunciation}
+                        etymology=""
+                        senses={senses}
+                        inflections={inflections}
+                        grammarTags={{}}
+                        isBookmarked={savedWords.includes(item.word)}
+                        onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
+                        pinnedSenseId={pinnedSenseId}
+                        displayLocale={displayLocale}
+                        compact
+                      />
+                    </div>
                   )
-                }
-                const item = entry.word
-                const d = item.dictionary
-                const pronunciation = buildPronunciation(d)
-                const senses = buildSenses(d, displayLocale)
-                const inflections: string[] = d?.inflections ?? []
-                const allSenses = Object.values(senses).flat()
-                const firstSenseId = allSenses[0]?.senseId ?? null
-                const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
-                return (
-                  <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
-                    <EntryCard
-                      headword={item.word}
-                      pronunciation={pronunciation}
-                      etymology=""
-                      senses={senses}
-                      inflections={inflections}
-                      grammarTags={{}}
-                      isBookmarked={savedWords.includes(item.word)}
-                      onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
-                      pinnedSenseId={pinnedSenseId}
-                      displayLocale={displayLocale}
-                      compact
-                    />
-                  </div>
-                )
-              })}
-          </div>
+                })}
+            </div>
+            {totalItems > visibleCount && (
+              <div className="px-4 mt-4">
+                <Button
+                  onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+                  variant="secondary"
+                  fullWidth
+                >
+                  もっと見る（+{Math.min(LOAD_MORE_STEP, totalItems - visibleCount)}）
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </section>
       </div>
 
 
-      {/* Detail modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-hidden" onClick={handleCloseModal}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90dvh] flex flex-col shadow-xl overflow-x-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-line flex-shrink-0">
-              <span className={`text-base font-semibold text-gray-800 transition-opacity duration-150 ${modalScrolled ? 'opacity-100' : 'opacity-0'}`}>{selectedItem.word}</span>
-              <div className="flex items-center gap-1">
-                <a href={`/word/${selectedItem.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-muted" aria-label="単語ページへ">
-                  <BsArrowUpRightSquare size={24} />
-                </a>
-                <button onClick={handleCloseModal} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-muted" aria-label="閉じる">
-                  <BsX size={24} />
-                </button>
-              </div>
-            </div>
-            <div
-              className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8"
-              onScroll={(e) => setModalScrolled((e.currentTarget as HTMLDivElement).scrollTop > 40)}
-            >
-              <WordPageClient
-                word={selectedItem.word}
-                dictionary={selectedItem.dictionary}
-                savedId={selectedItem.saved_id}
-                initialPinnedSenseId={selectedItem.pinned_sense_id}
-                initialDisplayLocale={displayLocale}
-                noCard
-              />
-            </div>
-          </div>
-        </div>
+        <WordDetailModal
+          word={selectedItem.word}
+          dictionary={selectedItem.dictionary}
+          savedId={selectedItem.saved_id}
+          initialPinnedSenseId={selectedItem.pinned_sense_id}
+          displayLocale={displayLocale}
+          onClose={handleCloseModal}
+        />
       )}
     </>
   )

@@ -61,13 +61,19 @@ export default function PlantStatus({
         className="size-12 rounded-full select-none shrink-0"
         draggable={false}
       />
-      <div>
+      <div className="min-w-0">
         <p className="text-xs text-muted leading-snug">
           {GROWTH_HEADING.split('\n').map((line, i) => (
             <span key={i} className="block">{line}</span>
           ))}
         </p>
         <p className="text-sm font-bold text-gray-950 mt-0.5">{levelLabel}</p>
+        <div className="bg-slate-200 h-2 rounded-full overflow-hidden mt-1">
+          <div
+            className="bg-primary h-2 rounded-full transition-all"
+            style={{ width: `${Math.round(progressRatio * 100)}%` }}
+          />
+        </div>
         {nextText && (
           <p className="text-[11px] text-muted mt-0.5">{nextText}</p>
         )}
