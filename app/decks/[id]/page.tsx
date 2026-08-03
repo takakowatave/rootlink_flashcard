@@ -10,7 +10,7 @@ export default async function DeckPage({ params }: { params: { id: string } }) {
 
   const { data: deck } = await supabase
     .from('decks')
-    .select('id, name, label, description')
+    .select('id, name, label, description, is_premium')
     .eq('id', params.id)
     .single()
 
