@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
-import { recordActivity, getActivityLog, calcStreak } from '@/lib/supabaseApi'
+import { recordActivity, getActivityLog, calcStreak, getUserPlan } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
 import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
@@ -17,6 +17,7 @@ type Deck = {
   name: string
   label: string
   word_count: number
+  is_premium: boolean
 }
 
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
@@ -125,6 +126,7 @@ type DeckItem = {
   title: string
   imageSrc?: string
   imageContain?: boolean
+  isLocked?: boolean
   href: string
 }
 
@@ -161,6 +163,7 @@ function DeckSection({
             title={item.title}
             imageSrc={item.imageSrc}
             imageContain={item.imageContain}
+            isLocked={item.isLocked}
             onClick={() => router.push(item.href)}
             className="shrink-0 w-[146px] sm:w-[180px]"
           />
@@ -181,6 +184,7 @@ export default function Dashboard() {
   const [activityDates, setActivityDates] = useState<string[]>([])
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
+  const [plan, setPlan] = useState<'premium' | 'free'>('free')
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
@@ -195,7 +199,7 @@ export default function Dashboard() {
       const [savedData, quizData, decksData, dates] = await Promise.all([
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('quiz_results').select('word, correct').eq('user_id', user.id).gte('answered_at', oneYearAgo).limit(5000),
-        supabase.from('decks').select('id, name, label, word_count').order('label').order('name').limit(100),
+        supabase.from('decks').select('id, name, label, word_count, is_premium').order('label').order('name').limit(100),
         getActivityLog(user.id),
       ])
 
@@ -210,6 +214,7 @@ export default function Dashboard() {
         setQuizAttemptCount(quizData.data.length)
       }
       if (decksData.data) setDecks(decksData.data as Deck[])
+      setPlan(await getUserPlan())
 
       // quiz済み単語からアクティブなデッキIDを特定（最近学習した順）
       const quizWords = [...new Set((quizData.data ?? []).map(r => r.word))].slice(0, 500)
@@ -258,6 +263,7 @@ export default function Dashboard() {
         label: d.label,
         title: shortName,
         imageSrc: getDeckImage(d.label, shortName),
+        isLocked: d.is_premium && plan === 'free',
         href: `/decks/${d.id}`,
       }
     })
@@ -272,6 +278,7 @@ export default function Dashboard() {
           label: d.label,
           title: shortName,
           imageSrc: getDeckImage(d.label, shortName),
+          isLocked: d.is_premium && plan === 'free',
           href: `/decks/${d.id}`,
         }
       })

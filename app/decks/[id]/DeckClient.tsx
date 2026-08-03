@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchDeckWords, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
+import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
 import Breadcrumb from '@/components/Breadcrumb'
 import EntryCard from '@/components/EntryCard'
@@ -16,6 +16,7 @@ import type { QuizEntry } from '@/components/QuizSession'
 import TriDonutChart from '@/components/TriDonutChart'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import UpgradeModal from '@/components/UpgradeModal'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -23,6 +24,7 @@ type DeckInfo = {
   name: string
   label: string
   description: string | null
+  is_premium: boolean
 }
 
 type DeckWordEntry = {
@@ -46,6 +48,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [plan, setPlan] = useState<'premium' | 'free' | null>(null)
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
@@ -117,6 +121,9 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     if (authData.user) {
       if (data.length > 0) await loadStatus(data, authData.user.id)
       await loadSavedWords(authData.user.id, data.map(e => e.word))
+      setPlan(await getUserPlan())
+    } else {
+      setPlan('free')
     }
     setLoading(false)
   }, [deck.id, loadStatus, loadSavedWords])
@@ -156,15 +163,18 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     hard: hardWords,
   }
 
+  const isLocked = deck.is_premium && plan === 'free'
+
   const startQuiz = useCallback(() => {
     if (!isAuthed) { setShowSignupModal(true); return }
+    if (isLocked) { setShowUpgradeModal(true); return }
     const sourceEntries = scopeSource[quizScope]
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [isAuthed, quizScope, scopeSource])
+  }, [isAuthed, isLocked, quizScope, scopeSource])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct)
@@ -186,6 +196,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   return (
     <>
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
 
       <div className="max-w-[700px] mx-auto w-full px-4 py-6">
         <Breadcrumb
@@ -232,13 +243,19 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         {/* クイズボタン */}
         <Button
           onClick={startQuiz}
-          disabled={loading || scopeSource[quizScope].length === 0}
+          disabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
           variant="primary"
           size="lg"
           fullWidth
           className="mb-6"
         >
-          {loading ? '読み込み中...' : availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
+          {loading
+            ? '読み込み中...'
+            : isLocked
+              ? '🔒 プレミアム登録でクイズを開始'
+              : availableCount === 0
+                ? '単語データがまだありません'
+                : 'クイズを始める'}
         </Button>
 
         {/* ── 単語一覧プレビュー ── */}
