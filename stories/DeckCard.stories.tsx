@@ -59,3 +59,13 @@ export const NoImage: Story = {
     title: '5.5',
   },
 }
+
+export const Locked: Story = {
+  name: 'Locked (premium, free plan)',
+  args: {
+    label: 'TOEIC',
+    title: '600',
+    imageSrc: '/deck-covers/toeic-600.png',
+    isLocked: true,
+  },
+}

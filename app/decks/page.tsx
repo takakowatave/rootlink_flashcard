@@ -3,26 +3,32 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { getUserPlan } from '@/lib/supabaseApi'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
 import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
 
-type Deck = { id: string; name: string; label: string; word_count: number }
+type Deck = { id: string; name: string; label: string; word_count: number; is_premium: boolean }
 
 export default function DecksPage() {
   const router = useRouter()
   const [decks, setDecks] = useState<Deck[]>([])
+  const [plan, setPlan] = useState<'premium' | 'free'>('free')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from('decks')
-        .select('id, name, label, word_count')
-        .order('label')
-        .order('name')
-        .limit(100)
+      const [{ data }, userPlan] = await Promise.all([
+        supabase
+          .from('decks')
+          .select('id, name, label, word_count, is_premium')
+          .order('label')
+          .order('name')
+          .limit(100),
+        getUserPlan(),
+      ])
       setDecks((data ?? []) as Deck[])
+      setPlan(userPlan)
       setLoading(false)
     }
     load()
@@ -59,6 +65,7 @@ export default function DecksPage() {
                             label={deck.label}
                             title={shortName}
                             imageSrc={getDeckImage(deck.label, shortName)}
+                            isLocked={deck.is_premium && plan === 'free'}
                             onClick={() => router.push(`/decks/${deck.id}`)}
                           />
                         )
