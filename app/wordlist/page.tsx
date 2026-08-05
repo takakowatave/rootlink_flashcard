@@ -269,7 +269,7 @@ export default function WordListPage() {
 
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
-        <section className="px-4">
+        <section className="mx-auto max-w-[600px] px-4">
           <div className="bg-white border border-line rounded-2xl px-6 py-4 shadow-sm">
             <div className="flex justify-center py-2">
               <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
