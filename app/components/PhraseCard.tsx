@@ -104,7 +104,7 @@ export default function PhraseCard({
   return (
     <CardShell onClick={handleCardClick}>
       {/* HEADER */}
-      <div className="flex items-center justify-between py-1 px-1 gap-2">
+      <div className="flex items-center justify-between py-1 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
           {onPlayHeadword && (
@@ -133,7 +133,7 @@ export default function PhraseCard({
 
       {/* メタ */}
       {(typeLabel || localeLabel || registerLabel) && (
-        <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           {typeLabel && (
             <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
           )}
@@ -148,13 +148,11 @@ export default function PhraseCard({
 
       {/* 意味 */}
       {meaning && (
-        <div className="px-1">
-          <p className="text-base font-medium text-black">{meaning}</p>
-        </div>
+        <p className="text-base font-medium text-black">{meaning}</p>
       )}
 
       {/* 例文 */}
-      <div className="px-1">
+      <div>
         <SenseExample
           example={example}
           translation={exampleJa}
