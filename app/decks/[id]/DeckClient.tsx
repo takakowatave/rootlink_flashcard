@@ -177,10 +177,10 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   }, [isAuthed, isLocked, quizScope, scopeSource])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
-    await saveQuizResult(word, correct)
+    await saveQuizResult(word, correct, deck.id)
     setWordStatus(prev => new Map(prev).set(word, correct ? 'mastered' : 'review'))
     if (!correct) setWrongCounts(prev => new Map(prev).set(word, (prev.get(word) ?? 0) + 1))
-  }, [])
+  }, [deck.id])
 
   if (quizEntries !== null) {
     return (

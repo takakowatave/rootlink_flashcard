@@ -123,7 +123,8 @@ export const updatePinnedSense = async (
 ========================================= */
 export const saveQuizResult = async (
   word: string,
-  correct: boolean
+  correct: boolean,
+  deckId?: string | null
 ): Promise<void> => {
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
@@ -133,6 +134,7 @@ export const saveQuizResult = async (
     user_id: user.id,
     word,
     correct,
+    deck_id: deckId ?? null,
   })
 
   if (error) {
