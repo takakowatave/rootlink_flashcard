@@ -177,7 +177,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       <CardShell>
         {/* タイトル + 再生 + ブックマーク */}
-        <div className="flex items-start justify-between py-1 px-1 gap-2">
+        <div className="flex items-start justify-between py-1 gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h1>
             <button
@@ -199,7 +199,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
 
         {/* メタバッジ */}
         {(typeLabel || localeLabel || registerLabel) && (
-          <div className="flex flex-wrap items-center gap-2 px-1 mb-2">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             {typeLabel && (
               <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
             )}
@@ -213,7 +213,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
         )}
 
         {/* Senses ループ */}
-        <div className="flex flex-col gap-5 px-1">
+        <div className="flex flex-col gap-5">
           {senses.map((sense, idx) => {
             const meaning = displayLocale === 'ja'
               ? (sense.meaning_ja ?? sense.meaning_en ?? '')
@@ -240,7 +240,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
 
         {/* 構成単語リンク */}
         {componentWords.length > 0 && (
-          <div className="border-t border-line pt-4 mt-5 px-1">
+          <div className="border-t border-line pt-4 mt-5">
             <p className="text-xs text-muted mb-2">{displayLocale === 'ja' ? '構成単語' : 'Component words'}</p>
             <div className="flex flex-wrap gap-2">
               {componentWords.map(w => (
