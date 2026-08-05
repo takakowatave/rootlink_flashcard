@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import EntryCard from "@/components/EntryCard"
 import PhraseCard from "@/components/PhraseCard"
 import Button from "@/components/Button"
-import TriDonutChart from "@/components/TriDonutChart"
 import QuizSession, { buildQuizCards, shuffleCards } from "@/components/QuizSession"
 import type { QuizEntry } from "@/components/QuizSession"
-import QuizScopeSelector, { type QuizScope } from "@/components/QuizScopeSelector"
+import { type QuizScope } from "@/components/QuizScopeSelector"
+import QuizProgressPanel from "@/components/QuizProgressPanel"
 import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, updateStreak, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
 import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
@@ -269,40 +269,22 @@ export default function WordListPage() {
 
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
-        <section className="mx-auto max-w-[600px] px-4">
-          <div className="bg-white border border-line rounded-2xl px-6 py-4 shadow-sm">
-            <div className="flex justify-center py-2">
-              <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
-            </div>
-
-            {availableCount > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
-                <QuizScopeSelector
-                  items={[
-                    { key: 'all', count: availableCount },
-                    { key: 'unseen', count: unseenEntries.length },
-                    { key: 'review', count: reviewEntries.length },
-                    { key: 'hard', count: hardEntries.length },
-                  ]}
-                  selected={quizScope}
-                  onChange={setQuizScope}
-                />
-              </div>
-            )}
-          </div>
-
-          <Button
-            onClick={startQuiz}
-            disabled={scopeSource[quizScope].length === 0}
-            variant="primary"
-            size="lg"
-            fullWidth
-            className="mt-2"
-          >
-            {availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
-          </Button>
-        </section>
+        <QuizProgressPanel
+          mastered={masteredCount}
+          review={reviewCount}
+          unseen={unseenCount}
+          scopeItems={[
+            { key: 'all', count: availableCount },
+            { key: 'unseen', count: unseenEntries.length },
+            { key: 'review', count: reviewEntries.length },
+            { key: 'hard', count: hardEntries.length },
+          ]}
+          selectedScope={quizScope}
+          onScopeChange={setQuizScope}
+          buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
+          buttonDisabled={scopeSource[quizScope].length === 0}
+          onStart={startQuiz}
+        />
       )}
 
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
