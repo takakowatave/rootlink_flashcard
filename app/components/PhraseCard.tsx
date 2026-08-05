@@ -1,12 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import CardShell from '@/components/CardShell'
+import CardHeader from '@/components/CardHeader'
 import SenseExample from '@/components/SenseExample'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 
@@ -75,17 +74,6 @@ export default function PhraseCard({
     return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
   }, [displayLocaleProp])
 
-  const handleSaveClick = (e: ReactMouseEvent) => {
-    e.stopPropagation()
-    onSave()
-  }
-
-  const handleHeadwordClick = (e: ReactMouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    onPlayHeadword?.()
-  }
-
   const primary = card.senses?.[0]
   const meaning = displayLocale === 'ja'
     ? (primary?.meaning_ja ?? card.meaning_ja ?? card.meaning_en ?? '')
@@ -104,32 +92,14 @@ export default function PhraseCard({
   return (
     <CardShell onClick={handleCardClick}>
       {/* HEADER */}
-      <div className="flex items-center justify-between py-1 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h2>
-          {onPlayHeadword && (
-            <button
-              type="button"
-              onClick={handleHeadwordClick}
-              disabled={!!headwordAudioLoading}
-              className="shrink-0"
-            >
-              <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-            </button>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleSaveClick}
-          className="p-2 -mr-2 -mt-1 shrink-0"
-          aria-label={isSaved ? '保存済み' : '保存'}
-        >
-          {isSaved
-            ? <HiBookmark className="size-6 text-muted" />
-            : <HiOutlineBookmark className="size-6 text-primary" />
-          }
-        </button>
-      </div>
+      <CardHeader
+        title={cleanPhrase(card.phrase)}
+        audioLoading={headwordAudioLoading}
+        onPlayAudio={onPlayHeadword}
+        isSaved={isSaved}
+        onSave={onSave}
+        headingLevel="h2"
+      />
 
       {/* メタ */}
       {(typeLabel || localeLabel || registerLabel) && (

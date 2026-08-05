@@ -5,11 +5,11 @@ import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
-import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
+import CardHeader from '@/components/CardHeader'
 
 type PhraseSense = {
   sense_id: string
@@ -177,25 +177,14 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       <CardShell>
         {/* タイトル + 再生 + ブックマーク */}
-        <div className="flex items-start justify-between py-1 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-2xl font-semibold leading-8 text-black">{cleanPhrase(card.phrase)}</h1>
-            <button
-              type="button"
-              onClick={playHeadwordAudio}
-              disabled={headwordAudioLoading}
-              className="shrink-0"
-            >
-              <HiSpeakerWave className={`size-6 ${headwordAudioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-            </button>
-          </div>
-          <button type="button" onClick={handleSave} className="p-2 -mr-2 -mt-1 shrink-0">
-            {isSaved
-              ? <HiBookmark className="size-6 text-muted" />
-              : <HiOutlineBookmark className="size-6 text-primary" />
-            }
-          </button>
-        </div>
+        <CardHeader
+          title={cleanPhrase(card.phrase)}
+          audioLoading={headwordAudioLoading}
+          onPlayAudio={playHeadwordAudio}
+          isSaved={isSaved}
+          onSave={handleSave}
+          headingLevel="h1"
+        />
 
         {/* メタバッジ */}
         {(typeLabel || localeLabel || registerLabel) && (
