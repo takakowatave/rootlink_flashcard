@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { HiSpeakerWave, HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import CardShell from '@/components/CardShell'
+import CardHeader from '@/components/CardHeader'
 import SenseRow from '@/components/SenseRow'
 import SenseExample from '@/components/SenseExample'
 import { supabase } from '@/lib/supabaseClient'
@@ -125,9 +125,7 @@ export default function EntryCard({
     })
   }, [parts, headword])
 
-  const playAudio = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const playAudio = async () => {
     await headwordAudio.play()
   }
 
@@ -172,27 +170,16 @@ export default function EntryCard({
     <CardShell noCard={noCard}>
 
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-between py-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-semibold leading-8 text-black">{headword}</h1>
-            <button type="button" onClick={playAudio} disabled={headwordAudio.loading} className="shrink-0">
-              <HiSpeakerWave className={`size-6 ${headwordAudio.loading ? 'text-muted animate-pulse' : 'text-muted'}`} />
-            </button>
-          </div>
-          <div className="group/save relative shrink-0">
-            <button type="button" onClick={onSave} data-tutorial="save-button" className="p-2 -mr-2 -mt-1">
-              {isBookmarked
-                ? <HiBookmark className="size-6 text-muted" />
-                : <HiOutlineBookmark className="size-6 text-primary" />
-              }
-            </button>
-            <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
-              {isBookmarked
-                ? labels.removeFromList
-                : labels.saveToList}
-            </span>
-          </div>
-        </div>
+        <CardHeader
+          title={headword}
+          audioLoading={headwordAudio.loading}
+          onPlayAudio={playAudio}
+          isSaved={isBookmarked}
+          onSave={onSave}
+          saveTooltip={{ saved: labels.removeFromList, unsaved: labels.saveToList }}
+          headingLevel="h1"
+          tutorialAttr
+        />
 
         {/* IPA */}
         {pronunciation?.phoneticSpelling && (
