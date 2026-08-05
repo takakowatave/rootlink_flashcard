@@ -13,8 +13,8 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
-import TriDonutChart from '@/components/TriDonutChart'
-import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
+import { type QuizScope } from '@/components/QuizScopeSelector'
+import QuizProgressPanel from '@/components/QuizProgressPanel'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import UpgradeModal from '@/components/UpgradeModal'
 import toast from 'react-hot-toast'
@@ -198,7 +198,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
 
-      <div className="max-w-[700px] mx-auto w-full px-4 py-6">
+      <div className="mx-auto max-w-[600px] md:px-4 pt-6">
         <Breadcrumb
           items={[
             { label: 'ホーム', href: '/' },
@@ -206,107 +206,88 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
             { label: deck.name },
           ]}
         />
+      </div>
 
-        {/* デッキ情報カード */}
-        <div className="bg-white border border-line rounded-2xl px-6 py-4 shadow-sm mb-2">
-          <div className="mb-2">
+      <QuizProgressPanel
+        header={
+          <div>
             <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
             <h2 className="text-xl font-bold text-gray-900 mt-2">{deck.name}</h2>
             {deck.description && <p className="text-sm text-gray-500 mt-1">{deck.description}</p>}
           </div>
-
-          {/* ドーナツチャート */}
-          {!loading && (
-            <div className="flex justify-center py-2">
-              <TriDonutChart mastered={masteredCount} review={reviewCount} unseen={unseenCount} />
-            </div>
-          )}
-
-          {/* 出題範囲セレクター */}
-          {!loading && availableCount > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
-              <QuizScopeSelector
-                items={[
-                  { key: 'all', count: availableCount },
-                  { key: 'unseen', count: unseenWords.length },
-                  { key: 'review', count: reviewWords.length },
-                  { key: 'hard', count: hardWords.length },
-                ]}
-                selected={quizScope}
-                onChange={setQuizScope}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* クイズボタン */}
-        <Button
-          onClick={startQuiz}
-          disabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
-          variant="primary"
-          size="lg"
-          fullWidth
-          className="mb-6"
-        >
-          {loading
+        }
+        mastered={masteredCount}
+        review={reviewCount}
+        unseen={unseenCount}
+        scopeItems={[
+          { key: 'all', count: availableCount },
+          { key: 'unseen', count: unseenWords.length },
+          { key: 'review', count: reviewWords.length },
+          { key: 'hard', count: hardWords.length },
+        ]}
+        selectedScope={quizScope}
+        onScopeChange={setQuizScope}
+        buttonLabel={
+          loading
             ? '読み込み中...'
             : isLocked
               ? '🔒 プレミアム登録でクイズを開始'
               : availableCount === 0
                 ? '単語データがまだありません'
-                : 'クイズを始める'}
-        </Button>
+                : 'クイズを始める'
+        }
+        buttonDisabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
+        onStart={startQuiz}
+      />
 
-        {/* ── 単語一覧プレビュー ── */}
-        {!loading && availableEntries.length > 0 && (
-          <section>
-            <div className="flex flex-col gap-3">
-              {availableEntries.slice(0, visibleCount).map((entry) => {
-                const d = entry.dictionary
-                const pronunciation = buildPronunciation(d)
-                const senses = buildSenses(d, displayLocale)
-                const inflections: string[] = d?.inflections ?? []
-                const allSenses = Object.values(senses).flat()
-                const firstSenseId = allSenses[0]?.senseId ?? null
-                const pinnedSenseId = entry.pinned_sense_id ?? firstSenseId
-                return (
-                  <div
-                    key={entry.word}
-                    onClick={() => setSelectedEntry(entry)}
-                    className="cursor-pointer"
-                  >
-                    <EntryCard
-                      headword={entry.word}
-                      pronunciation={pronunciation}
-                      etymology=""
-                      senses={senses}
-                      inflections={inflections}
-                      grammarTags={{}}
-                      isBookmarked={savedWords.has(entry.word)}
-                      onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(entry) }}
-                      pinnedSenseId={pinnedSenseId}
-                      displayLocale={displayLocale}
-                      compact
-                    />
-                  </div>
-                )
-              })}
-            </div>
-            {availableEntries.length > visibleCount && (
-              <div className="mt-4">
-                <Button
-                  onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
-                  variant="secondary"
-                  fullWidth
+      {/* ── 単語一覧プレビュー ── */}
+      {!loading && availableEntries.length > 0 && (
+        <section>
+          <div className="flex flex-col gap-3">
+            {availableEntries.slice(0, visibleCount).map((entry) => {
+              const d = entry.dictionary
+              const pronunciation = buildPronunciation(d)
+              const senses = buildSenses(d, displayLocale)
+              const inflections: string[] = d?.inflections ?? []
+              const allSenses = Object.values(senses).flat()
+              const firstSenseId = allSenses[0]?.senseId ?? null
+              const pinnedSenseId = entry.pinned_sense_id ?? firstSenseId
+              return (
+                <div
+                  key={entry.word}
+                  onClick={() => setSelectedEntry(entry)}
+                  className="cursor-pointer"
                 >
-                  もっと見る（+{Math.min(LOAD_MORE_STEP, availableEntries.length - visibleCount)}）
-                </Button>
-              </div>
-            )}
-          </section>
-        )}
-      </div>
+                  <EntryCard
+                    headword={entry.word}
+                    pronunciation={pronunciation}
+                    etymology=""
+                    senses={senses}
+                    inflections={inflections}
+                    grammarTags={{}}
+                    isBookmarked={savedWords.has(entry.word)}
+                    onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(entry) }}
+                    pinnedSenseId={pinnedSenseId}
+                    displayLocale={displayLocale}
+                    compact
+                  />
+                </div>
+              )
+            })}
+          </div>
+          {availableEntries.length > visibleCount && (
+            <div className="mx-auto max-w-[600px] md:px-4 mt-4 mb-6">
+              <Button
+                onClick={() => setVisibleCount((n) => n + LOAD_MORE_STEP)}
+                variant="secondary"
+                fullWidth
+              >
+                もっと見る（+{Math.min(LOAD_MORE_STEP, availableEntries.length - visibleCount)}）
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
 
       {selectedEntry && (
         <WordDetailModal
