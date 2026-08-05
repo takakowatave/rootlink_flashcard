@@ -101,35 +101,37 @@ export default function PhraseCard({
         headingLevel="h2"
       />
 
-      {/* メタ */}
-      {(typeLabel || localeLabel || registerLabel) && (
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          {typeLabel && (
-            <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
+      <div className="mt-2 flex flex-col gap-4">
+        <div>
+          {/* メタ */}
+          {(typeLabel || localeLabel || registerLabel) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {typeLabel && (
+                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{typeLabel}</span>
+              )}
+              {localeLabel && (
+                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{localeLabel}</span>
+              )}
+              {registerLabel && (
+                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{registerLabel}</span>
+              )}
+            </div>
           )}
-          {localeLabel && (
-            <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
+
+          {/* 意味 */}
+          {meaning && (
+            <p className="mt-2 text-base font-medium text-black">{meaning}</p>
           )}
-          {registerLabel && (
-            <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
-          )}
+
+          {/* 例文 */}
+          <SenseExample
+            example={example}
+            translation={exampleJa}
+            displayLocale={displayLocale}
+            onPlay={onPlayExample}
+            isLoading={exampleAudioLoading}
+          />
         </div>
-      )}
-
-      {/* 意味 */}
-      {meaning && (
-        <p className="text-base font-medium text-black">{meaning}</p>
-      )}
-
-      {/* 例文 */}
-      <div>
-        <SenseExample
-          example={example}
-          translation={exampleJa}
-          displayLocale={displayLocale}
-          onPlay={onPlayExample}
-          isLoading={exampleAudioLoading}
-        />
       </div>
     </CardShell>
   )
