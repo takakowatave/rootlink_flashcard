@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Header from './Header'
 import Footer from './Footer'
 import TutorialOverlay from './TutorialOverlay'
+import OnboardingQuestions from './OnboardingQuestions'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -14,7 +15,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={isLP || isAuth || isQuiz ? '' : 'min-h-screen bg-[#f8fafc]'}>
       {!isQuiz && !isAuth && <Header />}
-      {!isLP && !isAuth && <TutorialOverlay />}
+      {!isAuth && !isQuiz && <OnboardingQuestions />}
+      {!isAuth && !isQuiz && <TutorialOverlay />}
       {children}
       {!isLP && !isAuth && !isQuiz && <Footer />}
     </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
+import { ONBOARDING_COMPLETE_EVENT } from './OnboardingQuestions'
 
 // チュートリアル完了フラグはDB（profiles.tutorial_completed）で管理。
 // 途中ステップだけページ遷移をまたぐためユーザーIDごとに localStorage に保持する。
@@ -53,23 +54,9 @@ const STEPS: Step[] = [
   },
   {
     emoji: '🌳',
-    title: '語源パーツとは？',
+    title: '語源パーツで意味を掴む',
     description: '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
     selector: '[data-tutorial="etymology-tree"]',
-    requiredPath: /^\/word\//,
-  },
-  {
-    emoji: '🔖',
-    title: '気になった単語を保存',
-    description: '右上のブックマークアイコンをタップするとマイリストに追加できます。後でいつでも復習できます。',
-    selector: '[data-tutorial="save-button"]',
-    requiredPath: /^\/word\//,
-  },
-  {
-    emoji: '📌',
-    title: '多義語はピン止めで整理',
-    description: '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
-    selector: '[data-tutorial="pin-button"]',
     requiredPath: /^\/word\//,
   },
 ]
@@ -95,7 +82,7 @@ export default function TutorialOverlay() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('tutorial_completed')
+        .select('tutorial_completed, expectation')
         .eq('id', uid)
         .single()
       if (cancelled) return
@@ -103,6 +90,9 @@ export default function TutorialOverlay() {
         _completedUsers.add(uid)
         return
       }
+      // オンボーディング属性質問が未回答の間はツアーを起こさない。
+      // 回答完了で ONBOARDING_COMPLETE_EVENT が飛んできて再初期化される。
+      if (!profile.expectation) return
 
       // 「表示する」と決まった時点で即DBに完了を記録する。
       // 完了まで到達しなくても二度と再表示されないようにするため。
@@ -120,7 +110,17 @@ export default function TutorialOverlay() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       init(session?.user?.id)
     })
-    return () => { cancelled = true; subscription.unsubscribe() }
+
+    const onOnboardingComplete = () => {
+      supabase.auth.getSession().then(({ data }) => init(data.session?.user?.id))
+    }
+    window.addEventListener(ONBOARDING_COMPLETE_EVENT, onOnboardingComplete)
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+      window.removeEventListener(ONBOARDING_COMPLETE_EVENT, onOnboardingComplete)
+    }
   }, [])
 
   useEffect(() => {
