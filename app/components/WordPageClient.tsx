@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { HiOutlinePhoto } from 'react-icons/hi2'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
@@ -1127,6 +1128,19 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       displayLocale={displayLocale}
       noCard={noCard}
     />
+
+    {dictionary && (
+      <div className="mx-auto max-w-[600px] px-4 pb-6 flex justify-center">
+        <a
+          href={`/word/${encodeURIComponent(word)}/card.png`}
+          download={`${word}-rootlink.png`}
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-muted shadow-sm hover:text-primary hover:border-primary transition-colors"
+        >
+          <HiOutlinePhoto className="size-4" />
+          画像として保存
+        </a>
+      </div>
+    )}
 
     </div>
   )
