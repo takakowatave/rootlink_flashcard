@@ -60,12 +60,12 @@ export const NoImage: Story = {
   },
 }
 
-export const Locked: Story = {
-  name: 'Locked (premium, free plan)',
+export const Premium: Story = {
+  name: 'Premium (crown badge)',
   args: {
-    label: 'TOEIC',
-    title: '600',
-    imageSrc: '/deck-covers/toeic-600.png',
-    isLocked: true,
+    label: 'IELTS',
+    title: '5.5 - 6.0',
+    imageSrc: '/deck-covers/ielts-5.5.png',
+    isPremium: true,
   },
 }
