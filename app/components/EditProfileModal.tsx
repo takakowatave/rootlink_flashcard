@@ -253,15 +253,14 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" && hasStripeSubscription ? (
+                {plan === "premium" ? (
                   <button
                     type="button"
                     onClick={handleManagePlan}
                     disabled={isPortalLoading}
-                    className="p-1 -mr-1 rounded-full hover:bg-gray-100 text-muted disabled:opacity-50"
-                    aria-label="プランを管理"
+                    className="h-7 px-3 border border-primary text-primary text-xs font-bold rounded disabled:opacity-50"
                   >
-                    <BsChevronRight size={20} />
+                    プランを管理
                   </button>
                 ) : (
                   <button

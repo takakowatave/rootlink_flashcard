@@ -24,6 +24,7 @@ module.exports = {
         dim:     '#6f777f',    // dimmed secondary text (quiz tabs)
         divider: '#dbe0e5',    // soft divider border (quiz tabs)
         line:    '#e2e8f0',    // standard borders
+        premium: '#fff085',    // premium crown badge bg (Figma yellow-200)
         quiz: {
           review: '#FF7B3A',   // quiz needs-review status
         },

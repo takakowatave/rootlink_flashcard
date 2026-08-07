@@ -126,7 +126,7 @@ type DeckItem = {
   title: string
   imageSrc?: string
   imageContain?: boolean
-  isLocked?: boolean
+  isPremium?: boolean
   href: string
 }
 
@@ -163,7 +163,7 @@ function DeckSection({
             title={item.title}
             imageSrc={item.imageSrc}
             imageContain={item.imageContain}
-            isLocked={item.isLocked}
+            isPremium={item.isPremium}
             onClick={() => router.push(item.href)}
             className="shrink-0 w-[146px] sm:w-[180px]"
           />
@@ -263,7 +263,7 @@ export default function Dashboard() {
         label: d.label,
         title: shortName,
         imageSrc: getDeckImage(d.label, shortName),
-        isLocked: d.is_premium && plan === 'free',
+        isPremium: d.is_premium && plan === 'free',
         href: `/decks/${d.id}`,
       }
     })
@@ -278,7 +278,7 @@ export default function Dashboard() {
           label: d.label,
           title: shortName,
           imageSrc: getDeckImage(d.label, shortName),
-          isLocked: d.is_premium && plan === 'free',
+          isPremium: d.is_premium && plan === 'free',
           href: `/decks/${d.id}`,
         }
       })

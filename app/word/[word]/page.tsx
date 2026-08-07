@@ -62,11 +62,22 @@ export async function generateMetadata({ params }: { params: { word: string } })
   const data = await resolveWord(raw)
   const word = data?.resolved ?? raw
   const description = extractDescription(data?.dictionary ?? data?.raw ?? null, word)
+  const cardUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`
   return {
     title: word,
     description,
-    openGraph: { title: `${word} | RootLink`, description, url: `https://www.rootlink.app/word/${encodeURIComponent(word)}` },
-    twitter: { card: "summary", title: `${word} | RootLink`, description },
+    openGraph: {
+      title: `${word} | RootLink`,
+      description,
+      url: `https://www.rootlink.app/word/${encodeURIComponent(word)}`,
+      images: [{ url: cardUrl, width: 1200, height: 675, alt: `${word} — RootLink` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${word} | RootLink`,
+      description,
+      images: [cardUrl],
+    },
   }
 }
 
