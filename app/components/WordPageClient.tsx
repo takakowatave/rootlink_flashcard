@@ -10,6 +10,7 @@ import { MdIosShare } from 'react-icons/md'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import ShareMenu from '@/components/ShareMenu'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
@@ -930,6 +931,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   )
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false)
   const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
   // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
@@ -1091,33 +1093,26 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* SP only: share button — Figma 2319:8255 (ios_share) */}
+    {/* Share button — Figma 2319:8255 (ios_share) */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : 'md:hidden'} flex justify-end px-4 pt-2`}>
+      <div className={`${noCard ? 'hidden' : ''} flex justify-end px-4 pt-2`}>
         <button
           type="button"
-          onClick={async () => {
-            const shareUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}`
-            const shareText = `${word} — 語源から学ぶ英単語｜RootLink`
-            if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-              try {
-                await navigator.share({ title: shareText, text: shareText, url: shareUrl })
-                return
-              } catch {
-                return
-              }
-            }
-            const intent =
-              `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}` +
-              `&url=${encodeURIComponent(shareUrl)}`
-            window.open(intent, '_blank', 'noopener,noreferrer')
-          }}
+          onClick={() => setShowShareMenu(true)}
           className="p-2 rounded-full hover:bg-gray-100 text-gray-950"
           aria-label="共有"
         >
           <MdIosShare className="size-6" />
         </button>
       </div>
+    )}
+    {dictionary && (
+      <ShareMenu
+        open={showShareMenu}
+        onClose={() => setShowShareMenu(false)}
+        shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
+        shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+      />
     )}
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
