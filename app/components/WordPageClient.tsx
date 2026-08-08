@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { MdIosShare } from 'react-icons/md'
+import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
@@ -1093,13 +1093,21 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* Share button — Figma 2319:8255 (ios_share) */}
+    {/* Header row — Figma 2319:8255 (arrow_back_ios + ios_share) */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} flex justify-end px-4 pt-2`}>
+      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between border-b border-line h-14 px-4`}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          aria-label="戻る"
+        >
+          <MdArrowBackIosNew className="size-6" />
+        </button>
         <button
           type="button"
           onClick={() => setShowShareMenu(true)}
-          className="p-2 rounded-full hover:bg-gray-100 text-gray-950"
+          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="共有"
         >
           <MdIosShare className="size-6" />
