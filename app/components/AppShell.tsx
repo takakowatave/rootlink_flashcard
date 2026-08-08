@@ -14,12 +14,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isWordDetail = pathname?.startsWith('/word/') ?? false
 
   return (
-    <div className={isLP || isAuth || isQuiz || isWordDetail ? '' : 'min-h-screen bg-[#f8fafc]'}>
-      {!isQuiz && !isAuth && !isWordDetail && <Header />}
+    <div className={isLP || isAuth || isQuiz ? '' : 'min-h-screen bg-[#f8fafc]'}>
+      {!isQuiz && !isAuth && (
+        <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
+          <Header />
+        </div>
+      )}
       {!isAuth && !isQuiz && <OnboardingQuestions />}
       {!isAuth && !isQuiz && <TutorialOverlay />}
       {children}
-      {!isLP && !isAuth && !isQuiz && !isWordDetail && <Footer />}
+      {!isLP && !isAuth && !isQuiz && (
+        <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
+          <Footer />
+        </div>
+      )}
     </div>
   )
 }

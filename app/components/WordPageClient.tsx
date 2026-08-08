@@ -1093,13 +1093,13 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* Header row — Figma 2319:8255 (arrow_back_ios + ios_share) */}
+    {/* Header row — SP=Figma 2319:8255 (arrow_back_ios + ios_share) / PC=share only */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0`}>
+      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0 md:border-0 md:h-auto md:py-3 md:justify-end md:max-w-[600px] md:mx-auto md:w-full`}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          className="md:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="戻る"
         >
           <MdArrowBackIosNew className="size-6" />
