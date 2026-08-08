@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BsX, BsArrowUpRightSquare } from 'react-icons/bs'
+import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import WordPageClient from '@/components/WordPageClient'
+import ShareMenu from '@/components/ShareMenu'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -18,16 +19,9 @@ type Props = {
 export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
 }: Props) {
-  const [scrolled, setScrolled] = useState(false)
-  const [isSp] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
-  )
+  const [showShareMenu, setShowShareMenu] = useState(false)
 
   useEffect(() => {
-    if (isSp) {
-      window.location.assign(`/word/${encodeURIComponent(word)}`)
-      return
-    }
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
@@ -39,70 +33,45 @@ export default function WordDetailModal({
       document.body.style.width = ''
       window.scrollTo(0, restoreY)
     }
-  }, [isSp, word])
-
-  if (isSp) return null
+  }, [])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-hidden"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40" />
-      <div
-        className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl h-[90dvh] flex flex-col shadow-xl overflow-x-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* SP: grabber (drag handle indicator) */}
-        <div className="sm:hidden flex justify-center pt-2 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-300" />
-        </div>
-        <div className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 sm:border-b sm:border-line flex-shrink-0">
-          {/* SP: close on left / PC: title fades in on left */}
-          <button
-            onClick={onClose}
-            className="sm:hidden p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
-            aria-label="閉じる"
-          >
-            <BsX size={24} />
-          </button>
-          <span
-            className={`hidden sm:inline text-base font-semibold text-gray-800 transition-opacity duration-150 ${scrolled ? 'opacity-100' : 'opacity-0'}`}
-          >
-            {word}
-          </span>
-          <div className="flex items-center gap-1">
-            <a
-              href={`/word/${word}`}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
-              aria-label="単語ページへ"
-            >
-              <BsArrowUpRightSquare size={24} />
-            </a>
-            {/* PC only: close on right */}
-            <button
-              onClick={onClose}
-              className="hidden sm:inline-flex p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
-              aria-label="閉じる"
-            >
-              <BsX size={24} />
-            </button>
-          </div>
-        </div>
-        <div
-          className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8"
-          onScroll={(e) => setScrolled((e.currentTarget as HTMLDivElement).scrollTop > 40)}
+    <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
+      {/* Figma 2319:8255 header — arrow_back_ios (left) / ios_share (right) */}
+      <div className="flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          aria-label="戻る"
         >
-          <WordPageClient
-            word={word}
-            dictionary={dictionary}
-            savedId={savedId}
-            initialPinnedSenseId={initialPinnedSenseId ?? null}
-            initialDisplayLocale={displayLocale}
-            noCard
-          />
-        </div>
+          <MdArrowBackIosNew className="size-6" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowShareMenu(true)}
+          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
+          aria-label="共有"
+        >
+          <MdIosShare className="size-6" />
+        </button>
       </div>
+      <div className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8">
+        <WordPageClient
+          word={word}
+          dictionary={dictionary}
+          savedId={savedId}
+          initialPinnedSenseId={initialPinnedSenseId ?? null}
+          initialDisplayLocale={displayLocale}
+          noCard
+        />
+      </div>
+      <ShareMenu
+        open={showShareMenu}
+        onClose={() => setShowShareMenu(false)}
+        shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
+        shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+      />
     </div>
   )
 }

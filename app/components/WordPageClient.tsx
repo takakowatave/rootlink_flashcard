@@ -1095,7 +1095,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     </button>
     {/* Header row — Figma 2319:8255 (arrow_back_ios + ios_share) */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between px-4`}>
+      <div className={`${noCard ? 'hidden' : ''} w-full mx-auto max-w-[600px] md:px-4 md:-mb-3 flex items-center justify-between px-4`}>
         <button
           type="button"
           onClick={() => router.back()}
