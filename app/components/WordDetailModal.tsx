@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { BsX, BsArrowUpRightSquare } from 'react-icons/bs'
+import { MdIosShare } from 'react-icons/md'
 import WordPageClient from '@/components/WordPageClient'
+import ShareMenu from '@/components/ShareMenu'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -19,6 +21,7 @@ export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
 }: Props) {
   const [scrolled, setScrolled] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false)
 
   useEffect(() => {
     const scrollY = window.scrollY
@@ -70,6 +73,14 @@ export default function WordDetailModal({
             >
               <BsArrowUpRightSquare size={24} />
             </a>
+            <button
+              type="button"
+              onClick={() => setShowShareMenu(true)}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors text-muted"
+              aria-label="共有"
+            >
+              <MdIosShare size={24} />
+            </button>
             {/* PC only: close on right */}
             <button
               onClick={onClose}
@@ -80,6 +91,12 @@ export default function WordDetailModal({
             </button>
           </div>
         </div>
+        <ShareMenu
+          open={showShareMenu}
+          onClose={() => setShowShareMenu(false)}
+          shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
+          shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        />
         <div
           className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8"
           onScroll={(e) => setScrolled((e.currentTarget as HTMLDivElement).scrollTop > 40)}
