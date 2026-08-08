@@ -19,8 +19,15 @@ export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
 }: Props) {
   const [scrolled, setScrolled] = useState(false)
+  const [isSp] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
+  )
 
   useEffect(() => {
+    if (isSp) {
+      window.location.assign(`/word/${encodeURIComponent(word)}`)
+      return
+    }
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
@@ -32,7 +39,9 @@ export default function WordDetailModal({
       document.body.style.width = ''
       window.scrollTo(0, restoreY)
     }
-  }, [])
+  }, [isSp, word])
+
+  if (isSp) return null
 
   return (
     <div
