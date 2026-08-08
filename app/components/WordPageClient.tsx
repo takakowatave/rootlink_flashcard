@@ -1095,16 +1095,15 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     </button>
     {/* Header row — Figma 2319:8255 (arrow_back_ios + ios_share) */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} w-full mx-auto max-w-[600px] md:px-4 md:-mb-3 flex items-center justify-between px-4`}>
+      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0`}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="md:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="戻る"
         >
           <MdArrowBackIosNew className="size-6" />
         </button>
-        <span className="hidden md:block" />
         <button
           type="button"
           onClick={() => setShowShareMenu(true)}
