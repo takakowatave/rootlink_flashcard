@@ -66,9 +66,9 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
   if (!res.ok) return null
   const rows = (await res.json()) as Array<{
     id: string
-    dictionary_cache: Array<{ payload: RewrittenPayload }> | null
+    dictionary_cache: { payload: RewrittenPayload } | null
   }>
-  return rows?.[0]?.dictionary_cache?.[0]?.payload ?? null
+  return rows?.[0]?.dictionary_cache?.payload ?? null
 }
 
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
