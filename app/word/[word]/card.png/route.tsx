@@ -1,5 +1,5 @@
 // 単語カード PNG (/word/[word]/card.png)
-// og:image と SNS 投稿DL の両用画像。1200×675。
+// og:image と SNS 投稿DL の両用画像。1200×675。Figma design node 2319:8251 準拠。
 // - フォントはリポジトリに同梱したサブセット TTF を使う（実行時 Google Fonts fetch はしない）
 // - ロゴは PNG（satori の SVG サポートは限定的）
 // - Route Handler では revalidate が効かないので Cache-Control ヘッダを明示
@@ -18,16 +18,19 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // ── asset ローダー（プロセス内キャッシュ） ─────────
-let fontPromise: Promise<Buffer> | null = null
+type FontWeights = { regular: Buffer; medium: Buffer; bold: Buffer }
+let fontsPromise: Promise<FontWeights> | null = null
 let logoPromise: Promise<string> | null = null
 
-function loadFont(): Promise<Buffer> {
-  if (!fontPromise) {
-    fontPromise = readFile(
-      join(process.cwd(), 'public/fonts/NotoSansJP-Regular-subset.ttf')
-    )
+function loadFonts(): Promise<FontWeights> {
+  if (!fontsPromise) {
+    fontsPromise = Promise.all([
+      readFile(join(process.cwd(), 'public/fonts/NotoSansJP-Regular-subset.ttf')),
+      readFile(join(process.cwd(), 'public/fonts/NotoSansJP-Medium-subset.ttf')),
+      readFile(join(process.cwd(), 'public/fonts/NotoSansJP-Bold-subset.ttf')),
+    ]).then(([regular, medium, bold]) => ({ regular, medium, bold }))
   }
-  return fontPromise
+  return fontsPromise
 }
 
 function loadLogoDataUrl(): Promise<string> {
@@ -43,13 +46,9 @@ function loadLogoDataUrl(): Promise<string> {
 type EtymologyPartLite = { text: string; meaningJa?: string | null; meaning?: string | null }
 type CardData = {
   word: string
-  ipa: string | null
   parts: EtymologyPartLite[]
-  pos: string | null
   meaning: string | null
   etymologyDescription: string | null
-  exampleEn: string | null
-  exampleJa: string | null
 }
 
 async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
@@ -71,18 +70,26 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
   return rows?.[0]?.dictionary_cache?.payload ?? null
 }
 
+// Figma: "機械や車両の部品" (DB は "より大きなものの一部、特に機械や車両の部品")
+// → 「特に」以降のより具体的な部分を優先。無ければ全文。
+function compactMeaning(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const marker = '、特に'
+  const idx = raw.indexOf(marker)
+  const compact = idx >= 0 ? raw.slice(idx + marker.length) : raw
+  return compact.trim()
+}
+
+// Figma: 語源説明は 1 文だけ (最初の「。」まで)
+function firstSentence(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const end = raw.indexOf('。')
+  return end >= 0 ? raw.slice(0, end + 1) : raw
+}
+
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
   if (!payload) {
-    return {
-      word,
-      ipa: null,
-      parts: [],
-      pos: null,
-      meaning: null,
-      etymologyDescription: null,
-      exampleEn: null,
-      exampleJa: null,
-    }
+    return { word, parts: [], meaning: null, etymologyDescription: null }
   }
 
   const parts: EtymologyPartLite[] =
@@ -104,13 +111,9 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
 
   return {
     word,
-    ipa: payload.ipa ?? null,
     parts,
-    pos: firstGroup?.partOfSpeech ?? null,
-    meaning: jaSense?.meaning ?? firstSense?.definition ?? null,
-    etymologyDescription: payload.locales?.ja?.etymology?.description ?? null,
-    exampleEn: firstSense?.example ?? null,
-    exampleJa: jaSense?.exampleTranslation ?? null,
+    meaning: compactMeaning(jaSense?.meaning ?? firstSense?.definition ?? null),
+    etymologyDescription: firstSentence(payload.locales?.ja?.etymology?.description ?? null),
   }
 }
 
@@ -119,7 +122,7 @@ function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text
 }
 
-// ── card layout ────────────────────────────────
+// ── card layout (Figma 2319:8251 準拠) ─────────
 type CardProps = { data: CardData; logo: string }
 
 function Card({ data, logo }: CardProps) {
@@ -134,21 +137,20 @@ function Card({ data, logo }: CardProps) {
         width: '100%',
         height: '100%',
         display: 'flex',
-        backgroundColor: '#96f7e4', // teal-200 outer border
-        padding: 28,
+        backgroundColor: '#ffffff',
+        border: '24px solid #96f7e4', // teal-200
         fontFamily: 'NotoSansJP',
       }}
     >
       <div
         style={{
           flex: 1,
-          backgroundColor: '#ffffff',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '48px 100px',
-          gap: 40,
+          padding: '0 76px',
+          gap: 49,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -156,11 +158,12 @@ function Card({ data, logo }: CardProps) {
 
         <div
           style={{
-            fontSize: 96,
+            fontSize: 90,
             fontWeight: 700,
             color: '#000000',
             lineHeight: 1,
             letterSpacing: '-0.02em',
+            display: 'flex',
           }}
         >
           {truncate(data.word, 22)}
@@ -173,6 +176,7 @@ function Card({ data, logo }: CardProps) {
               color: '#000000',
               lineHeight: 1.1,
               textAlign: 'center',
+              display: 'flex',
             }}
           >
             {meaning}
@@ -188,7 +192,7 @@ function Card({ data, logo }: CardProps) {
               borderRadius: 4,
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 16,
             }}
           >
             <div style={{ display: 'flex', gap: 8, width: '100%' }}>
@@ -199,7 +203,7 @@ function Card({ data, logo }: CardProps) {
                     flex: 1,
                     backgroundColor: '#cbfbf1', // teal-100
                     borderRadius: 8,
-                    padding: 12,
+                    padding: 8,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 16,
@@ -210,10 +214,10 @@ function Card({ data, logo }: CardProps) {
                       backgroundColor: '#ffffff',
                       border: '2px solid #00d5be', // teal-400
                       borderRadius: 90,
-                      padding: '10px 22px',
+                      padding: '10px 24px',
                       fontSize: 36,
-                      color: '#00786f', // teal-700
                       fontWeight: 500,
+                      color: '#00786f', // teal-700
                       display: 'flex',
                     }}
                   >
@@ -222,9 +226,10 @@ function Card({ data, logo }: CardProps) {
                   {(p.meaningJa || p.meaning) && (
                     <div
                       style={{
-                        fontSize: 30,
-                        color: '#00786f',
+                        fontSize: 32,
                         fontWeight: 500,
+                        color: '#00786f',
+                        display: 'flex',
                       }}
                     >
                       {p.meaningJa ?? p.meaning}
@@ -236,9 +241,11 @@ function Card({ data, logo }: CardProps) {
             {etymologyDesc && (
               <div
                 style={{
-                  fontSize: 26,
-                  color: '#00786f', // teal-700
-                  lineHeight: 1.35,
+                  fontSize: 32,
+                  fontWeight: 400,
+                  color: '#00786f',
+                  lineHeight: '42px',
+                  display: 'flex',
                 }}
               >
                 {etymologyDesc}
@@ -262,39 +269,30 @@ function FallbackCard({ word, logo }: { word: string; logo: string }) {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#ffffff',
+        border: '24px solid #96f7e4',
         fontFamily: 'NotoSansJP',
-        position: 'relative',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '6px',
-          backgroundColor: '#00AD82',
-        }}
-      />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logo}
         width={280}
-        height={40}
+        height={39}
         alt="RootLink"
-        style={{ marginBottom: 40 }}
+        style={{ marginBottom: 49 }}
       />
       <div
         style={{
-          fontSize: 88,
+          fontSize: 90,
           fontWeight: 700,
-          color: '#0f172a',
+          color: '#000000',
           letterSpacing: '-0.02em',
+          display: 'flex',
         }}
       >
         {truncate(word, 22)}
       </div>
-      <div style={{ fontSize: 24, color: '#64748b', marginTop: 20 }}>
+      <div style={{ fontSize: 32, color: '#00786f', marginTop: 20, display: 'flex' }}>
         語源から学ぶ英単語 — RootLink
       </div>
     </div>
@@ -308,8 +306,8 @@ export async function GET(
 ) {
   const raw = decodeURIComponent(params.word).replace(/_/g, ' ').trim().toLowerCase()
 
-  const [font, logo, payload] = await Promise.all([
-    loadFont(),
+  const [fonts, logo, payload] = await Promise.all([
+    loadFonts(),
     loadLogoDataUrl(),
     fetchPayload(raw).catch(() => null),
   ])
@@ -322,12 +320,9 @@ export async function GET(
     {
       ...SIZE,
       fonts: [
-        {
-          name: 'NotoSansJP',
-          data: font,
-          weight: 400,
-          style: 'normal',
-        },
+        { name: 'NotoSansJP', data: fonts.regular, weight: 400, style: 'normal' },
+        { name: 'NotoSansJP', data: fonts.medium, weight: 500, style: 'normal' },
+        { name: 'NotoSansJP', data: fonts.bold, weight: 700, style: 'normal' },
       ],
       headers: {
         'Cache-Control': CACHE_HEADER,
