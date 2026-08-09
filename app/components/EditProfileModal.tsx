@@ -280,6 +280,7 @@ export default function EditProfileModal({
               <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
                 <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
               </div>
+              <p className="text-xs text-muted">英英モードと和英モードの切り替えができます。</p>
             </div>
 
             {/* メールアドレス */}
