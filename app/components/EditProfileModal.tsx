@@ -172,7 +172,7 @@ export default function EditProfileModal({
         onClick={onClose}
       >
         <div
-          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
+          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:max-h-[calc(100dvh-64px)] sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header — SP: back arrow / PC: 設定タイトル + 閉じる */}
@@ -193,7 +193,7 @@ export default function EditProfileModal({
             </button>
           </div>
 
-          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6">
+          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6 sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
             {/* アバター */}
             <div className="flex justify-center pt-2">
               <div className="relative">
