@@ -87,6 +87,12 @@ function firstSentence(raw: string | null | undefined): string | null {
   return end >= 0 ? raw.slice(0, end + 1) : raw
 }
 
+// "componentから来ています。" 系の空 description は非表示
+function isJunkDescription(raw: string | null | undefined): boolean {
+  if (!raw) return false
+  return /^[^。]{1,80}から来てい(ます|る)[。．]?\s*$/.test(raw.trim())
+}
+
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
   if (!payload) {
     return { word, parts: [], meaning: null, etymologyDescription: null }
@@ -111,12 +117,16 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
 
   const etymologyJa = payload.locales?.ja?.etymology
   const hook = etymologyJa?.hook?.trim() || null
+  const rawDescription = etymologyJa?.description ?? null
+  const description = isJunkDescription(rawDescription)
+    ? null
+    : firstSentence(rawDescription)
 
   return {
     word,
     parts,
     meaning: compactMeaning(jaSense?.meaning ?? firstSense?.definition ?? null),
-    etymologyDescription: hook ?? firstSentence(etymologyJa?.description ?? null),
+    etymologyDescription: hook ?? description,
   }
 }
 
