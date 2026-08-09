@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaLink, FaXTwitter, FaLine, FaFacebook, FaThreads } from 'react-icons/fa6'
 
@@ -9,6 +9,7 @@ type Props = {
   onClose: () => void
   shareUrl: string
   shareText: string
+  anchorRef?: React.RefObject<HTMLElement | null>
 }
 
 type Item = {
@@ -19,7 +20,12 @@ type Item = {
   onClick: () => void
 }
 
-export default function ShareMenu({ open, onClose, shareUrl, shareText }: Props) {
+const MENU_WIDTH = 280
+const MENU_GAP = 8
+
+export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRef }: Props) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -28,6 +34,28 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText }: Props)
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef?.current) {
+      setPos(null)
+      return
+    }
+    const compute = () => {
+      const el = anchorRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const rawLeft = rect.right - MENU_WIDTH
+      const left = Math.max(8, Math.min(rawLeft, window.innerWidth - MENU_WIDTH - 8))
+      setPos({ top: rect.bottom + MENU_GAP, left })
+    }
+    compute()
+    window.addEventListener('resize', compute)
+    window.addEventListener('scroll', compute, true)
+    return () => {
+      window.removeEventListener('resize', compute)
+      window.removeEventListener('scroll', compute, true)
+    }
+  }, [open, anchorRef])
 
   if (!open) return null
 
@@ -86,12 +114,15 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText }: Props)
       label: 'Threads',
       icon: <FaThreads />,
       bg: 'bg-black',
-      // Threads intent は URL 専用パラメータを持たないため text に連結
       onClick: () => openWindow(
         `https://www.threads.net/intent/post?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`
       ),
     },
   ]
+
+  const pcStyle: React.CSSProperties = pos
+    ? { top: pos.top, left: pos.left, width: MENU_WIDTH }
+    : { top: 64, right: 16, width: MENU_WIDTH }
 
   return (
     <>
@@ -101,9 +132,10 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText }: Props)
         aria-label="閉じる"
       />
 
-      {/* PC: floating popover */}
+      {/* PC: floating popover anchored to trigger */}
       <div
-        className="hidden md:block fixed right-4 top-16 z-50 w-[280px] bg-white rounded-2xl shadow-xl border border-line overflow-hidden"
+        className="hidden md:block fixed z-50 bg-white rounded-2xl shadow-xl border border-line overflow-hidden"
+        style={pcStyle}
         role="dialog"
         aria-label="共有"
       >

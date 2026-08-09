@@ -3,7 +3,7 @@
 // wordページのデータ整形担当
 // Oxford / rewritten / normalized の辞書データを画面表示用 shape にそろえて EntryCard に渡す
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
@@ -932,6 +932,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
+  const shareBtnRef = useRef<HTMLButtonElement>(null)
   const [showCorrectionBanner, setShowCorrectionBanner] = useState(!!correctedFrom)
 
   // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
@@ -1093,13 +1094,13 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* Header row — SP=Figma 2319:8255 (arrow_back_ios + ios_share) / PC=share only */}
+    {/* SP top bar — Figma 2319:8255 (arrow_back_ios + ios_share). PC は CardHeader 内に共有を出す */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0 md:border-0 md:h-auto md:py-3 md:justify-end md:max-w-[600px] md:mx-auto md:w-full`}>
+      <div className={`${noCard ? 'hidden' : ''} md:hidden flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0`}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="md:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="戻る"
         >
           <MdArrowBackIosNew className="size-6" />
@@ -1120,6 +1121,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         onClose={() => setShowShareMenu(false)}
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
         shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        anchorRef={shareBtnRef}
       />
     )}
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
@@ -1154,6 +1156,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       grammarTags={grammarTags}
       isBookmarked={savedWords.includes(word)}
       onSave={handleSave}
+      onShare={dictionary ? () => setShowShareMenu(true) : undefined}
+      shareBtnRef={shareBtnRef}
       pinnedSenseId={pinnedSenseId}
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}

@@ -2,6 +2,7 @@
 
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
+import { MdIosShare } from 'react-icons/md'
 
 type Props = {
   title: string
@@ -9,6 +10,8 @@ type Props = {
   onPlayAudio?: () => void
   isSaved: boolean
   onSave: (e?: ReactMouseEvent) => void
+  onShare?: (e?: ReactMouseEvent) => void
+  shareBtnRef?: React.Ref<HTMLButtonElement>
   saveTooltip?: { saved: string; unsaved: string }
   headingLevel?: 'h1' | 'h2'
   tutorialAttr?: boolean
@@ -20,6 +23,8 @@ export default function CardHeader({
   onPlayAudio,
   isSaved,
   onSave,
+  onShare,
+  shareBtnRef,
   saveTooltip,
   headingLevel = 'h1',
   tutorialAttr = false,
@@ -52,24 +57,37 @@ export default function CardHeader({
           </button>
         )}
       </div>
-      <div className="group/save relative shrink-0">
-        <button
-          type="button"
-          onClick={handleSaveClick}
-          {...(tutorialAttr ? { 'data-tutorial': 'save-button' } : {})}
-          aria-label={isSaved ? '保存済み' : '保存'}
-          className="p-2 -mr-2 -mt-1"
-        >
-          {isSaved
-            ? <HiBookmark className="size-6 text-muted" />
-            : <HiOutlineBookmark className="size-6 text-primary" />
-          }
-        </button>
-        {saveTooltip && (
-          <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
-            {isSaved ? saveTooltip.saved : saveTooltip.unsaved}
-          </span>
+      <div className="flex items-center shrink-0">
+        {onShare && (
+          <button
+            ref={shareBtnRef}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShare(e) }}
+            aria-label="共有"
+            className="hidden md:inline-flex p-2 -mt-1 rounded-full hover:bg-gray-100 text-muted"
+          >
+            <MdIosShare className="size-6" />
+          </button>
         )}
+        <div className="group/save relative">
+          <button
+            type="button"
+            onClick={handleSaveClick}
+            {...(tutorialAttr ? { 'data-tutorial': 'save-button' } : {})}
+            aria-label={isSaved ? '保存済み' : '保存'}
+            className="p-2 -mr-2 -mt-1"
+          >
+            {isSaved
+              ? <HiBookmark className="size-6 text-muted" />
+              : <HiOutlineBookmark className="size-6 text-primary" />
+            }
+          </button>
+          {saveTooltip && (
+            <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
+              {isSaved ? saveTooltip.saved : saveTooltip.unsaved}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

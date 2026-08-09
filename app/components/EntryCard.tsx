@@ -42,6 +42,8 @@ type Props = {
   grammarTags?: Record<string, string[]>
   isBookmarked: boolean
   onSave: (e?: React.MouseEvent) => void
+  onShare?: (e?: React.MouseEvent) => void
+  shareBtnRef?: React.Ref<HTMLButtonElement>
   pinnedSenseId?: string | null
   onTogglePin?: (senseId: string) => void
   displayLocale?: DisplayLocale
@@ -80,6 +82,8 @@ export default function EntryCard({
   displayLocale = 'en',
   onTogglePin = () => {},
   onSave,
+  onShare,
+  shareBtnRef,
   compact = false,
   noCard = false,
 }: Props) {
@@ -176,6 +180,8 @@ export default function EntryCard({
           onPlayAudio={playAudio}
           isSaved={isBookmarked}
           onSave={onSave}
+          onShare={onShare}
+          shareBtnRef={shareBtnRef}
           saveTooltip={{ saved: labels.removeFromList, unsaved: labels.saveToList }}
           headingLevel="h1"
           tutorialAttr
