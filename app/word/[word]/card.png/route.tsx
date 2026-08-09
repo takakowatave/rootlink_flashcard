@@ -1,5 +1,5 @@
 // 単語カード PNG (/word/[word]/card.png)
-// og:image と SNS 投稿DL の両用画像。1200×675。Figma design node 2319:8251 準拠。
+// og:image と SNS 投稿DL の両用画像。1200×675。
 // - フォントはリポジトリに同梱したサブセット TTF を使う（実行時 Google Fonts fetch はしない）
 // - ロゴは PNG（satori の SVG サポートは限定的）
 // - Route Handler では revalidate が効かないので Cache-Control ヘッダを明示
@@ -48,7 +48,7 @@ type CardData = {
   word: string
   parts: EtymologyPartLite[]
   meaning: string | null
-  etymologyDescription: string | null
+  hook: string | null
 }
 
 async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
@@ -70,8 +70,7 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
   return rows?.[0]?.dictionary_cache?.payload ?? null
 }
 
-// Figma: "機械や車両の部品" (DB は "より大きなものの一部、特に機械や車両の部品")
-// → 「特に」以降のより具体的な部分を優先。無ければ全文。
+// "より大きなものの一部、特に機械や車両の部品" → "機械や車両の部品"
 function compactMeaning(raw: string | null | undefined): string | null {
   if (!raw) return null
   const marker = '、特に'
@@ -80,22 +79,9 @@ function compactMeaning(raw: string | null | undefined): string | null {
   return compact.trim()
 }
 
-// Figma: 語源説明は 1 文だけ (最初の「。」まで)
-function firstSentence(raw: string | null | undefined): string | null {
-  if (!raw) return null
-  const end = raw.indexOf('。')
-  return end >= 0 ? raw.slice(0, end + 1) : raw
-}
-
-// "componentから来ています。" 系の空 description は非表示
-function isJunkDescription(raw: string | null | undefined): boolean {
-  if (!raw) return false
-  return /^[^。]{1,80}から来てい(ます|る)[。．]?\s*$/.test(raw.trim())
-}
-
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
   if (!payload) {
-    return { word, parts: [], meaning: null, etymologyDescription: null }
+    return { word, parts: [], meaning: null, hook: null }
   }
 
   const parts: EtymologyPartLite[] =
@@ -115,18 +101,13 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
   const senseId = firstSense?.senseId ?? ''
   const jaSense = payload.locales?.ja?.senses?.[senseId]
 
-  const etymologyJa = payload.locales?.ja?.etymology
-  const hook = etymologyJa?.hook?.trim() || null
-  const rawDescription = etymologyJa?.description ?? null
-  const description = isJunkDescription(rawDescription)
-    ? null
-    : firstSentence(rawDescription)
+  const hook = payload.locales?.ja?.etymology?.hook?.trim() || null
 
   return {
     word,
     parts,
     meaning: compactMeaning(jaSense?.meaning ?? firstSense?.definition ?? null),
-    etymologyDescription: hook ?? description,
+    hook,
   }
 }
 
@@ -135,14 +116,20 @@ function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text
 }
 
-// ── card layout (Figma 2319:8251 準拠) ─────────
+// ── card layout ────────────────────────────────
 type CardProps = { data: CardData; logo: string }
+
+function BulbIcon() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="#00d5be" style={{ flexShrink: 0 }}>
+      <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" />
+    </svg>
+  )
+}
 
 function Card({ data, logo }: CardProps) {
   const meaning = data.meaning ? truncate(data.meaning, 22) : null
-  const etymologyDesc = data.etymologyDescription
-    ? truncate(data.etymologyDescription, 60)
-    : null
+  const hook = data.hook ? truncate(data.hook, 60) : null
 
   return (
     <div
@@ -150,123 +137,121 @@ function Card({ data, logo }: CardProps) {
         width: '100%',
         height: '100%',
         display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#ffffff',
-        border: '24px solid #96f7e4', // teal-200
+        padding: '48px 76px',
+        gap: 32,
         fontFamily: 'NotoSansJP',
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logo} width={220} height={31} alt="RootLink" />
+
       <div
         style={{
-          flex: 1,
+          fontSize: 96,
+          fontWeight: 700,
+          color: '#000000',
+          lineHeight: 1,
+          letterSpacing: '-0.02em',
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 76px',
-          gap: 49,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} width={280} height={39} alt="RootLink" />
+        {truncate(data.word, 22)}
+      </div>
 
+      {meaning && (
         <div
           style={{
-            fontSize: 90,
-            fontWeight: 700,
+            fontSize: 44,
             color: '#000000',
-            lineHeight: 1,
-            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            textAlign: 'center',
             display: 'flex',
           }}
         >
-          {truncate(data.word, 22)}
+          {meaning}
         </div>
+      )}
 
-        {meaning && (
-          <div
-            style={{
-              fontSize: 52,
-              color: '#000000',
-              lineHeight: 1.1,
-              textAlign: 'center',
-              display: 'flex',
-            }}
-          >
-            {meaning}
-          </div>
-        )}
-
-        {data.parts.length > 0 && (
-          <div
-            style={{
-              width: '100%',
-              backgroundColor: '#f0fdfa', // teal-50
-              padding: 16,
-              borderRadius: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-            }}
-          >
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-              {data.parts.slice(0, 2).map((p, i) => (
+      {data.parts.length > 0 && (
+        <div
+          style={{
+            width: '100%',
+            backgroundColor: '#f0fdfa', // teal-50
+            padding: '24px 28px',
+            borderRadius: 12,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 24, width: '100%' }}>
+            {data.parts.slice(0, 2).map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                }}
+              >
                 <div
-                  key={i}
                   style={{
-                    flex: 1,
-                    backgroundColor: '#cbfbf1', // teal-100
-                    borderRadius: 8,
-                    padding: 8,
+                    backgroundColor: '#ffffff',
+                    border: '2px solid #00d5be', // teal-400
+                    borderRadius: 90,
+                    padding: '8px 24px',
+                    fontSize: 32,
+                    fontWeight: 500,
+                    color: '#00786f', // teal-700
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
                   }}
                 >
+                  {p.text}
+                </div>
+                {(p.meaningJa || p.meaning) && (
                   <div
                     style={{
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #00d5be', // teal-400
-                      borderRadius: 90,
-                      padding: '10px 24px',
-                      fontSize: 36,
+                      fontSize: 30,
                       fontWeight: 500,
-                      color: '#00786f', // teal-700
+                      color: '#000000',
                       display: 'flex',
                     }}
                   >
-                    {p.text}
+                    {p.meaningJa ?? p.meaning}
                   </div>
-                  {(p.meaningJa || p.meaning) && (
-                    <div
-                      style={{
-                        fontSize: 32,
-                        fontWeight: 500,
-                        color: '#00786f',
-                        display: 'flex',
-                      }}
-                    >
-                      {p.meaningJa ?? p.meaning}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            {etymologyDesc && (
+                )}
+              </div>
+            ))}
+          </div>
+          {hook && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <BulbIcon />
               <div
                 style={{
-                  fontSize: 32,
+                  fontSize: 26,
                   fontWeight: 400,
                   color: '#00786f',
-                  lineHeight: '42px',
+                  lineHeight: 1.4,
                   display: 'flex',
                 }}
               >
-                {etymologyDesc}
+                {hook}
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -282,21 +267,20 @@ function FallbackCard({ word, logo }: { word: string; logo: string }) {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#ffffff',
-        border: '24px solid #96f7e4',
         fontFamily: 'NotoSansJP',
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logo}
-        width={280}
-        height={39}
+        width={220}
+        height={31}
         alt="RootLink"
-        style={{ marginBottom: 49 }}
+        style={{ marginBottom: 40 }}
       />
       <div
         style={{
-          fontSize: 90,
+          fontSize: 96,
           fontWeight: 700,
           color: '#000000',
           letterSpacing: '-0.02em',
@@ -305,7 +289,7 @@ function FallbackCard({ word, logo }: { word: string; logo: string }) {
       >
         {truncate(word, 22)}
       </div>
-      <div style={{ fontSize: 32, color: '#00786f', marginTop: 20, display: 'flex' }}>
+      <div style={{ fontSize: 30, color: '#00786f', marginTop: 20, display: 'flex' }}>
         語源から学ぶ英単語 — RootLink
       </div>
     </div>
