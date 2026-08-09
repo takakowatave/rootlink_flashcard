@@ -278,9 +278,7 @@ export default function EditProfileModal({
             {/* 辞書の表示言語 */}
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold text-gray-500">辞書の表示言語</p>
-              <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
-                <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-              </div>
+              <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
               <p className="text-xs text-muted">英英モードと和英モードの切り替えができます。</p>
             </div>
 
