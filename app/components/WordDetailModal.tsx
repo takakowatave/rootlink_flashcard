@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
+import { MdIosShare, MdClose } from 'react-icons/md'
+import { BsArrowUpRightSquare } from 'react-icons/bs'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
 import type { SavedWordDictionary } from '@/types/Dictionary'
@@ -22,49 +23,62 @@ export default function WordDetailModal({
   const [showShareMenu, setShowShareMenu] = useState(false)
 
   useEffect(() => {
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
     return () => {
-      const restoreY = parseInt(document.body.style.top || '0') * -1
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      window.scrollTo(0, restoreY)
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
     }
-  }, [])
+  }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
-      {/* Figma 2319:8255 header — arrow_back_ios (left) / ios_share (right) */}
-      <div className="flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0">
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
-          aria-label="戻る"
-        >
-          <MdArrowBackIosNew className="size-6" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowShareMenu(true)}
-          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
-          aria-label="共有"
-        >
-          <MdIosShare className="size-6" />
-        </button>
-      </div>
-      <div className="overflow-y-auto overflow-x-hidden flex-1 w-full pb-8">
-        <WordPageClient
-          word={word}
-          dictionary={dictionary}
-          savedId={savedId}
-          initialPinnedSenseId={initialPinnedSenseId ?? null}
-          initialDisplayLocale={displayLocale}
-          noCard
-        />
+    <div
+      className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-6"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative z-10 bg-white w-full max-w-[720px] max-h-[85dvh] rounded-2xl shadow-xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-line h-12 px-3 flex-shrink-0">
+          <a
+            href={`/word/${encodeURIComponent(word)}`}
+            className="p-2 rounded-full hover:bg-gray-100 text-muted"
+            aria-label="単語ページを開く"
+          >
+            <BsArrowUpRightSquare className="size-5" />
+          </a>
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => setShowShareMenu(true)}
+              className="p-2 rounded-full hover:bg-gray-100 text-muted"
+              aria-label="共有"
+            >
+              <MdIosShare className="size-6" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-gray-100 text-muted"
+              aria-label="閉じる"
+            >
+              <MdClose className="size-6" />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 w-full">
+          <WordPageClient
+            word={word}
+            dictionary={dictionary}
+            savedId={savedId}
+            initialPinnedSenseId={initialPinnedSenseId ?? null}
+            initialDisplayLocale={displayLocale}
+            noCard
+          />
+        </div>
       </div>
       <ShareMenu
         open={showShareMenu}

@@ -18,6 +18,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/D
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import Breadcrumb from "@/components/Breadcrumb"
 import { useRouter } from "next/navigation"
+import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
 type WordStatus = 'mastered' | 'review' | 'unseen'
@@ -82,6 +83,7 @@ export default function WordListPage() {
   const [phraseList, setPhraseList] = useState<SavedPhraseRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
+  const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const router = useRouter()
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
@@ -160,9 +162,19 @@ export default function WordListPage() {
   }
 
   const handleOpenModal = (item: SavedWordRow) => {
-    const path = `/word/${encodeURIComponent(item.word)}`
-    const url = item.pinned_sense_id ? `${path}?pin=${encodeURIComponent(item.pinned_sense_id)}` : path
-    router.push(url)
+    const isPC = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+    if (isPC) {
+      setSelectedItem(item)
+    } else {
+      const path = `/word/${encodeURIComponent(item.word)}`
+      const url = item.pinned_sense_id ? `${path}?pin=${encodeURIComponent(item.pinned_sense_id)}` : path
+      router.push(url)
+    }
+  }
+
+  const handleCloseModal = () => {
+    setSelectedItem(null)
+    load()
   }
 
   const availableWords = wordList.filter((w) => !!w.dictionary)
@@ -350,6 +362,17 @@ export default function WordListPage() {
         )}
       </section>
       </div>
+
+      {selectedItem && (
+        <WordDetailModal
+          word={selectedItem.word}
+          dictionary={selectedItem.dictionary}
+          savedId={selectedItem.saved_id}
+          initialPinnedSenseId={selectedItem.pinned_sense_id}
+          displayLocale={displayLocale}
+          onClose={handleCloseModal}
+        />
+      )}
     </>
   )
 }
