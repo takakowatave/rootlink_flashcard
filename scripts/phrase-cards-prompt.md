@@ -208,3 +208,20 @@ RETURNING id;
 - 日本語訳は自然な日本語で（直訳調を避ける）
 - **`explanation_ja` / `explanation_en` に「活用形: rack / racked / racked / racking」のような活用形リストを入れない**（辞書の三変化表ではない。ユーザーは phrase の使い方を知りたいだけ）
 - **JSON以外の文字（前置き・コードフェンス）は出力しない**
+
+### 例文の著作権・独立性ルール（必読）
+
+マイニング元がハリー・ポッター等の著作物であっても、`example_en` / `example_ja` は**マイニング元と完全に切り離した中立の例文**を新規に書き起こす。以下は絶対NG:
+
+- **固有名詞の流用禁止** — 原作の登場人物・地名・組織名は使わない
+  - ❌ `Malfoy slouched away, muttering under his breath.`
+  - ❌ `Harry entered the Great Hall.`
+  - ❌ `Hogwarts` / `Dumbledore` / `Voldemort` / `Snape` / `Hermione` / `Ron` / `Malfoy` / `Diagon Alley` / `Quidditch` … 一切禁止
+  - ハリー・ポッター以外でも同様（`Frodo`, `Middle-earth`, `Sherlock Holmes`, `Baker Street`, `Sauron` など任意の著作物の固有名詞は使わない）
+- **原文の文構造をなぞらない** — 原文が `X slouched away, muttering under his breath.` なら、例文は動詞・時制・修飾の骨格を変えて別のシーンで書く
+  - OK: `He slouched away from the counter, disappointed with the news.`
+  - OK: `The student slouched away after being scolded.`
+- **主語は generic で** — `He` / `She` / `The student` / `The teacher` / `My colleague` / `The manager` など日常語彙で。原作の登場人物を「一般名詞化して置く」のもNG（マグルの学校の生徒を意識した文脈にしない）
+- **世界観の固有語も避ける** — 魔法・呪文・魔法生物などのファンタジー語を残さない。日常・仕事・学校・家庭など、辞書例文らしい中立シーンで書く
+
+**チェック手順**: 例文を書いたら、「マイニング元のタイトルを知らない読者が読んで、原作を想起する要素が残っていないか」を1回自問する。残っていたら書き直す。

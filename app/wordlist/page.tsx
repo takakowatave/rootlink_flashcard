@@ -17,7 +17,6 @@ import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import Breadcrumb from "@/components/Breadcrumb"
-import { useRouter } from "next/navigation"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
@@ -85,7 +84,6 @@ export default function WordListPage() {
   const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const router = useRouter()
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
@@ -162,14 +160,7 @@ export default function WordListPage() {
   }
 
   const handleOpenModal = (item: SavedWordRow) => {
-    const isPC = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-    if (isPC) {
-      setSelectedItem(item)
-    } else {
-      const path = `/word/${encodeURIComponent(item.word)}`
-      const url = item.pinned_sense_id ? `${path}?pin=${encodeURIComponent(item.pinned_sense_id)}` : path
-      router.push(url)
-    }
+    setSelectedItem(item)
   }
 
   const handleCloseModal = () => {

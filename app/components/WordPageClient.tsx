@@ -1094,7 +1094,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* SP top bar — 共有のみ (戻るは付けない: 保存前の単語一覧に戻っても意味がないため) */}
+    {/* SP top bar — 共有のみ (戻るはスタンドアローンには不要。モーダル起動時はモーダル chrome の戻る/閉じるを使う) */}
     {dictionary && (
       <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-end border-b border-line h-14 px-4`}>
         <button

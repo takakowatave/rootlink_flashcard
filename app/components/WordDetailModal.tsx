@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MdIosShare, MdClose } from 'react-icons/md'
+import { MdIosShare, MdClose, MdArrowBackIosNew } from 'react-icons/md'
 import { BsArrowUpRightSquare } from 'react-icons/bs'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
@@ -34,18 +34,27 @@ export default function WordDetailModal({
 
   return (
     <div
-      className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-6"
+      className="fixed inset-0 z-50 flex items-stretch justify-center md:items-center md:p-6"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/40 hidden md:block" />
       <div
-        className="relative z-10 bg-white w-full max-w-[720px] max-h-[85dvh] rounded-2xl shadow-xl flex flex-col overflow-hidden"
+        className="relative z-10 bg-white w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] md:rounded-2xl md:shadow-xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-line h-12 px-3 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-line h-14 md:h-12 px-3 flex-shrink-0">
+          {/* SP: 戻る / PC: 拡大リンク */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
+            aria-label="戻る"
+          >
+            <MdArrowBackIosNew className="size-6" />
+          </button>
           <a
             href={`/word/${encodeURIComponent(word)}`}
-            className="p-2 rounded-full hover:bg-gray-100 text-muted"
+            className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
             aria-label="単語ページを開く"
           >
             <BsArrowUpRightSquare className="size-5" />
@@ -62,7 +71,7 @@ export default function WordDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 text-muted"
+              className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
               aria-label="閉じる"
             >
               <MdClose className="size-6" />

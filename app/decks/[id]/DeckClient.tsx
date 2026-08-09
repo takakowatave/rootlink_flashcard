@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
@@ -54,18 +53,10 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
-  const router = useRouter()
 
   const openWord = useCallback((entry: DeckWordEntry) => {
-    const isPC = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-    if (isPC) {
-      setSelectedEntry(entry)
-    } else {
-      const path = `/word/${encodeURIComponent(entry.word)}`
-      const url = entry.pinned_sense_id ? `${path}?pin=${encodeURIComponent(entry.pinned_sense_id)}` : path
-      router.push(url)
-    }
-  }, [router])
+    setSelectedEntry(entry)
+  }, [])
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
