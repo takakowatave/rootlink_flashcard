@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport'
 import WordDetailModal from '../app/components/WordDetailModal'
 import type { SavedWordDictionary } from '../app/types/Dictionary'
 
@@ -39,12 +40,32 @@ export default meta
 
 type Story = StoryObj<typeof WordDetailModal>
 
-export const Default: Story = {
+/** PC: 中央 max-w-[720px] のダイアログ。chrome は 拡大↗ / 共有 / 閉じる */
+export const PC: Story = {
   args: {
     word: 'persist',
     dictionary,
     displayLocale: 'ja',
     onClose: () => {},
+  },
+  parameters: {
+    viewport: { defaultViewport: 'responsive' },
+  },
+}
+
+/** SP: 全面モーダル。chrome は 戻る< / 共有 のみ */
+export const SP: Story = {
+  args: {
+    word: 'persist',
+    dictionary,
+    displayLocale: 'ja',
+    onClose: () => {},
+  },
+  parameters: {
+    viewport: {
+      viewports: INITIAL_VIEWPORTS,
+      defaultViewport: 'iphone6',
+    },
   },
 }
 

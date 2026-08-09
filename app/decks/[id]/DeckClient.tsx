@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
-import Breadcrumb from '@/components/Breadcrumb'
+import PageHeader from '@/components/PageHeader'
 import EntryCard from '@/components/EntryCard'
 import WordDetailModal from '@/components/WordDetailModal'
 import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
@@ -53,6 +53,10 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
+
+  const openWord = useCallback((entry: DeckWordEntry) => {
+    setSelectedEntry(entry)
+  }, [])
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -198,15 +202,13 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
 
-      <div className="mx-auto max-w-[600px] md:px-4 pt-6">
-        <Breadcrumb
-          items={[
-            { label: 'ホーム', href: '/' },
-            { label: '教材一覧', href: '/decks' },
-            { label: deck.name },
-          ]}
-        />
-      </div>
+      <PageHeader
+        items={[
+          { label: 'ホーム', href: '/' },
+          { label: '教材一覧', href: '/decks' },
+          { label: deck.name },
+        ]}
+      />
 
       <QuizProgressPanel
         header={
@@ -255,7 +257,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               return (
                 <div
                   key={entry.word}
-                  onClick={() => setSelectedEntry(entry)}
+                  onClick={() => openWord(entry)}
                   className="cursor-pointer"
                 >
                   <EntryCard

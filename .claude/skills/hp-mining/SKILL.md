@@ -80,7 +80,18 @@ RETURNING id;
 
 既存 phrase の場合は `RETURNING` が空になるので `SELECT id FROM phrase_cards WHERE phrase = $1` で id を取り直す。フラットカラム（meaning_ja/en など）は DB トリガー `phrase_cards_sync_flat` が senses[0] から自動同期するので手書きしない。
 
-**重要**: 各 sense の `example_en` に HP固有名詞（Harry / Ron / Hermione / Hogwarts / Dumbledore 等）は絶対に入れない。中立的な日常シーンで作る。
+**重要（例文の著作権・独立性）**: 各 sense の `example_en` / `example_ja` は**マイニング元と完全に切り離した中立の例文を新規に書き起こす**。以下は絶対NG:
+
+- **HP固有名詞の流用禁止** — `Harry` / `Ron` / `Hermione` / `Malfoy` / `Snape` / `Dumbledore` / `Voldemort` / `Hagrid` / `Neville` / `Ginny` / `Draco` / `Hogwarts` / `Diagon Alley` / `Quidditch` / `Muggle` / `Gryffindor` / `Slytherin` … 一切禁止。ここに載っていないHP由来語（人名・地名・魔法用語）も同様に禁止
+- **原文の文構造をなぞらない** — 例: 原文 `Malfoy slouched away, muttering under his breath.` を、`He slouched away, muttering under his breath.` のように主語だけ差し替えるのは NG。動詞・時制・修飾句の骨格ごと別シーンで書き直す
+  - OK例: `He slouched away from the counter, disappointed with the news.`
+  - OK例: `The student slouched away after being scolded by the teacher.`
+- **主語は generic で** — `He` / `She` / `The student` / `The teacher` / `My colleague` / `The manager` / `A customer` など日常語彙で
+- **魔法・呪文・魔法生物などのファンタジー語は残さない** — 学校・仕事・家庭・買い物などの中立シーンで書く
+
+**チェック手順**: 例文を書いたら「マイニング元がハリー・ポッターだと知らない読者が読んで、原作を想起する要素が残っていないか」を1回自問する。残っていたら書き直す。
+
+（Notion spec `phrase-cards-prompt.md` の「例文の著作権・独立性ルール」と同期。差分は Notion 正）
 
 ### 6. slug 生成
 kebab-case 英語。`so that's why` → `so-thats-why`。所有格アポストロフィ除去、スペースはハイフン、非ASCII は削除。

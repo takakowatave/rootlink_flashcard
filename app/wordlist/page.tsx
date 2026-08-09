@@ -16,7 +16,7 @@ import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
-import Breadcrumb from "@/components/Breadcrumb"
+import PageHeader from "@/components/PageHeader"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
@@ -159,13 +159,13 @@ export default function WordListPage() {
     toast.success("更新しました")
   }
 
+  const handleOpenModal = (item: SavedWordRow) => {
+    setSelectedItem(item)
+  }
+
   const handleCloseModal = () => {
     setSelectedItem(null)
     load()
-  }
-
-  const handleOpenModal = (item: SavedWordRow) => {
-    setSelectedItem(item)
   }
 
   const availableWords = wordList.filter((w) => !!w.dictionary)
@@ -244,28 +244,24 @@ export default function WordListPage() {
       <Toaster position="top-center" />
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
-      {!selectedItem && (
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-          className="md:hidden fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-secondary flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
-          aria-label="Search"
-        >
-          <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+        className="md:hidden fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-secondary flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
+        aria-label="Search"
+      >
+        <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
 
       <div className="max-w-[812px] mx-auto w-full">
-      <div className="pt-6 px-4">
-        <Breadcrumb
-          items={[
-            { label: 'ホーム', href: '/' },
-            { label: 'My単語帳' },
-          ]}
-        />
-      </div>
+      <PageHeader
+        items={[
+          { label: 'ホーム', href: '/' },
+          { label: 'My単語帳' },
+        ]}
+      />
 
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
@@ -355,7 +351,6 @@ export default function WordListPage() {
         )}
       </section>
       </div>
-
 
       {selectedItem && (
         <WordDetailModal

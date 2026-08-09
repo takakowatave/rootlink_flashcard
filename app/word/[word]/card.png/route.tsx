@@ -47,6 +47,7 @@ type CardData = {
   parts: EtymologyPartLite[]
   pos: string | null
   meaning: string | null
+  etymologyDescription: string | null
   exampleEn: string | null
   exampleJa: string | null
 }
@@ -65,9 +66,9 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
   if (!res.ok) return null
   const rows = (await res.json()) as Array<{
     id: string
-    dictionary_cache: Array<{ payload: RewrittenPayload }> | null
+    dictionary_cache: { payload: RewrittenPayload } | null
   }>
-  return rows?.[0]?.dictionary_cache?.[0]?.payload ?? null
+  return rows?.[0]?.dictionary_cache?.payload ?? null
 }
 
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
@@ -78,6 +79,7 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
       parts: [],
       pos: null,
       meaning: null,
+      etymologyDescription: null,
       exampleEn: null,
       exampleJa: null,
     }
@@ -87,7 +89,7 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
     payload.etymologyData?.structure.type === 'parts'
       ? payload.etymologyData.structure.parts
           .filter((p) => p.text)
-          .slice(0, 3)
+          .slice(0, 2)
           .map((p) => ({
             text: p.text,
             meaningJa: p.meaningJa ?? null,
@@ -106,25 +108,10 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
     parts,
     pos: firstGroup?.partOfSpeech ?? null,
     meaning: jaSense?.meaning ?? firstSense?.definition ?? null,
+    etymologyDescription: payload.locales?.ja?.etymology?.description ?? null,
     exampleEn: firstSense?.example ?? null,
     exampleJa: jaSense?.exampleTranslation ?? null,
   }
-}
-
-const POS_JA: Record<string, string> = {
-  noun: '名詞',
-  verb: '動詞',
-  adjective: '形容詞',
-  adverb: '副詞',
-  pronoun: '代名詞',
-  preposition: '前置詞',
-  conjunction: '接続詞',
-  determiner: '限定詞',
-  interjection: '間投詞',
-}
-
-const PART_COLORS: Record<string, { border: string; text: string; bg: string }> = {
-  default: { border: '#22c55e', text: '#16a34a', bg: '#f0fdf4' },
 }
 
 function truncate(text: string, max: number): string {
@@ -136,11 +123,10 @@ function truncate(text: string, max: number): string {
 type CardProps = { data: CardData; logo: string }
 
 function Card({ data, logo }: CardProps) {
-  const chip = PART_COLORS.default
-  const posLabel = data.pos ? POS_JA[data.pos] ?? data.pos : null
-  const meaning = data.meaning ? truncate(data.meaning, 90) : null
-  const exampleEn = data.exampleEn ? truncate(data.exampleEn, 110) : null
-  const exampleJa = data.exampleJa ? truncate(data.exampleJa, 80) : null
+  const meaning = data.meaning ? truncate(data.meaning, 22) : null
+  const etymologyDesc = data.etymologyDescription
+    ? truncate(data.etymologyDescription, 60)
+    : null
 
   return (
     <div
@@ -148,152 +134,115 @@ function Card({ data, logo }: CardProps) {
         width: '100%',
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: '#ffffff',
-        padding: '56px 72px',
+        backgroundColor: '#96f7e4', // teal-200 outer border
+        padding: 28,
         fontFamily: 'NotoSansJP',
-        position: 'relative',
       }}
     >
-      {/* 背景アクセント */}
       <div
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '6px',
-          backgroundColor: '#00AD82',
+          flex: 1,
+          backgroundColor: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 100px',
+          gap: 40,
         }}
-      />
-
-      {/* Header: logo */}
-      <div style={{ display: 'flex', alignItems: 'center', height: 40 }}>
-        {/* logoは 240x34。高さ 34 で表示 */}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} width={240} height={34} alt="RootLink" />
-      </div>
+        <img src={logo} width={280} height={39} alt="RootLink" />
 
-      {/* Headword */}
-      <div style={{ display: 'flex', flexDirection: 'column', marginTop: 32 }}>
         <div
           style={{
             fontSize: 96,
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#000000',
             lineHeight: 1,
             letterSpacing: '-0.02em',
           }}
         >
           {truncate(data.word, 22)}
         </div>
-        {data.ipa && (
-          <div
-            style={{
-              fontSize: 28,
-              color: '#64748b',
-              marginTop: 14,
-              lineHeight: 1,
-            }}
-          >
-            /{data.ipa}/
-          </div>
-        )}
-      </div>
 
-      {/* Etymology parts */}
-      {data.parts.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 16,
-            marginTop: 28,
-            flexWrap: 'wrap',
-          }}
-        >
-          {data.parts.map((p, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                backgroundColor: chip.bg,
-                border: `2px solid ${chip.border}`,
-                borderRadius: 999,
-                padding: '10px 18px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 26,
-                  color: chip.text,
-                  fontWeight: 700,
-                }}
-              >
-                {p.text}
-              </div>
-              {(p.meaningJa || p.meaning) && (
-                <div style={{ fontSize: 22, color: '#166534' }}>
-                  {p.meaningJa ?? p.meaning}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Meaning + example */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          marginTop: 'auto',
-          gap: 12,
-        }}
-      >
-        {posLabel && (
-          <div
-            style={{
-              display: 'flex',
-              alignSelf: 'flex-start',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              fontSize: 20,
-              padding: '4px 14px',
-              borderRadius: 6,
-            }}
-          >
-            {posLabel}
-          </div>
-        )}
         {meaning && (
           <div
             style={{
-              fontSize: 32,
-              color: '#1e293b',
-              lineHeight: 1.35,
+              fontSize: 52,
+              color: '#000000',
+              lineHeight: 1.1,
+              textAlign: 'center',
             }}
           >
             {meaning}
           </div>
         )}
-        {exampleEn && (
+
+        {data.parts.length > 0 && (
           <div
             style={{
+              width: '100%',
+              backgroundColor: '#f0fdfa', // teal-50
+              padding: 16,
+              borderRadius: 4,
               display: 'flex',
               flexDirection: 'column',
-              marginTop: 4,
-              paddingLeft: 16,
-              borderLeft: '3px solid #cbd5e1',
-              gap: 4,
+              gap: 12,
             }}
           >
-            <div style={{ fontSize: 22, color: '#475569', fontStyle: 'italic' }}>
-              {exampleEn}
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              {data.parts.slice(0, 2).map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#cbfbf1', // teal-100
+                    borderRadius: 8,
+                    padding: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #00d5be', // teal-400
+                      borderRadius: 90,
+                      padding: '10px 22px',
+                      fontSize: 36,
+                      color: '#00786f', // teal-700
+                      fontWeight: 500,
+                      display: 'flex',
+                    }}
+                  >
+                    {p.text}
+                  </div>
+                  {(p.meaningJa || p.meaning) && (
+                    <div
+                      style={{
+                        fontSize: 30,
+                        color: '#00786f',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {p.meaningJa ?? p.meaning}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            {exampleJa && (
-              <div style={{ fontSize: 20, color: '#94a3b8' }}>{exampleJa}</div>
+            {etymologyDesc && (
+              <div
+                style={{
+                  fontSize: 26,
+                  color: '#00786f', // teal-700
+                  lineHeight: 1.35,
+                }}
+              >
+                {etymologyDesc}
+              </div>
             )}
           </div>
         )}
