@@ -58,11 +58,6 @@ export default function EditProfileModal({
   };
 
   const handleManagePlan = async () => {
-    // テスター等 Stripe 契約なしの premium ユーザーは portal 呼び出し不可
-    if (!hasStripeSubscription) {
-      toast("テスト用プランのため管理画面はありません");
-      return;
-    }
     setIsPortalLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -259,7 +254,7 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" ? (
+                {hasStripeSubscription ? (
                   <button
                     type="button"
                     onClick={handleManagePlan}
