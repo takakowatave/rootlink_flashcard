@@ -16,7 +16,7 @@ import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
-import Breadcrumb from "@/components/Breadcrumb"
+import PageHeader from "@/components/PageHeader"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
@@ -256,14 +256,12 @@ export default function WordListPage() {
       </button>
 
       <div className="max-w-[812px] mx-auto w-full">
-      <div className="pt-6 px-4">
-        <Breadcrumb
-          items={[
-            { label: 'ホーム', href: '/' },
-            { label: 'My単語帳' },
-          ]}
-        />
-      </div>
+      <PageHeader
+        items={[
+          { label: 'ホーム', href: '/' },
+          { label: 'My単語帳' },
+        ]}
+      />
 
       {/* ── 進捗＋クイズ ── */}
       {totalItems > 0 && (
