@@ -81,8 +81,15 @@ export async function generateMetadata({ params }: { params: { word: string } })
   }
 }
 
-export default async function Page({ params }: { params: { word: string } }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: { word: string }
+  searchParams?: { pin?: string }
+}) {
   const raw = decodeURIComponent(params.word).replace(/_/g, ' ').trim().toLowerCase()
+  const pin = searchParams?.pin ?? null
 
   // 複数語はフレーズを優先して検索（語源ツリーを避ける）
   if (raw.includes(' ')) {
@@ -103,6 +110,7 @@ export default async function Page({ params }: { params: { word: string } }) {
         word={resolvedWord}
         dictionary={dictionary}
         correctedFrom={correctedFrom}
+        initialPinnedSenseId={pin}
       />
     )
   }

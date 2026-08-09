@@ -1,12 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
 import Button from '@/components/Button'
 import Breadcrumb from '@/components/Breadcrumb'
 import EntryCard from '@/components/EntryCard'
-import WordDetailModal from '@/components/WordDetailModal'
 import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
@@ -51,8 +51,14 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [plan, setPlan] = useState<'premium' | 'free' | null>(null)
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
-  const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
+  const router = useRouter()
+
+  const openWord = useCallback((entry: DeckWordEntry) => {
+    const path = `/word/${encodeURIComponent(entry.word)}`
+    const url = entry.pinned_sense_id ? `${path}?pin=${encodeURIComponent(entry.pinned_sense_id)}` : path
+    router.push(url)
+  }, [router])
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
     return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
@@ -255,7 +261,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               return (
                 <div
                   key={entry.word}
-                  onClick={() => setSelectedEntry(entry)}
+                  onClick={() => openWord(entry)}
                   className="cursor-pointer"
                 >
                   <EntryCard
@@ -289,15 +295,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         </section>
       )}
 
-      {selectedEntry && (
-        <WordDetailModal
-          word={selectedEntry.word}
-          dictionary={selectedEntry.dictionary}
-          initialPinnedSenseId={selectedEntry.pinned_sense_id}
-          displayLocale={displayLocale}
-          onClose={() => setSelectedEntry(null)}
-        />
-      )}
     </>
   )
 }
