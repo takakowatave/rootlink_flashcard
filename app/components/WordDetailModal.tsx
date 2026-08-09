@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { MdIosShare, MdClose, MdArrowBackIosNew } from 'react-icons/md'
 import { BsArrowUpRightSquare } from 'react-icons/bs'
 import ModalShell from '@/components/ModalShell'
@@ -22,6 +22,7 @@ export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
 }: Props) {
   const [showShareMenu, setShowShareMenu] = useState(false)
+  const shareBtnRef = useRef<HTMLButtonElement>(null)
 
   return (
     <>
@@ -50,6 +51,7 @@ export default function WordDetailModal({
         headerRight={
           <>
             <button
+              ref={shareBtnRef}
               type="button"
               onClick={() => setShowShareMenu(true)}
               className="p-2 rounded-full hover:bg-gray-100 text-muted"
@@ -82,6 +84,7 @@ export default function WordDetailModal({
         onClose={() => setShowShareMenu(false)}
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
         shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        anchorRef={shareBtnRef}
       />
     </>
   )
