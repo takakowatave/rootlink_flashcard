@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
+import { BsCheck2 } from "react-icons/bs";
 import { isInAppBrowser } from "../lib/isInAppBrowser";
 import Button from "@/components/Button";
+import { TextInput } from "@/components/TextInput";
 
 interface FormData {
   email: string;
@@ -91,35 +93,34 @@ export default function AuthSignup() {
         ) : (
           <>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mb-6">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-gray-600">メールアドレス</label>
-                <input
-                  type="email"
-                  {...register("email", { required: "メールアドレスは必須です" })}
-                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-                {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-gray-600">パスワード</label>
-                <input
-                  type="password"
-                  {...register("password", { required: "パスワードは必須です", minLength: { value: 8, message: "8文字以上で設定してください" } })}
-                  className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-                {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-              </div>
-              <div className="flex items-start gap-2">
+              <TextInput
+                type="email"
+                label="メールアドレス"
+                error={errors.email}
+                {...register("email", { required: "メールアドレスは必須です" })}
+              />
+              <TextInput
+                type="password"
+                label="パスワード"
+                error={errors.password}
+                {...register("password", {
+                  required: "パスワードは必須です",
+                  minLength: { value: 8, message: "8文字以上で設定してください" },
+                })}
+              />
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  id="agreeToPrivacy"
-                  className="mt-0.5 accent-primary"
+                  className="peer sr-only"
                   {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
                 />
-                <label htmlFor="agreeToPrivacy" className="text-xs text-gray-600 leading-relaxed">
+                <span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-line bg-white flex items-center justify-center text-transparent transition-colors peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-dark">
+                  <BsCheck2 size={14} className="text-current" />
+                </span>
+                <span className="text-xs text-gray-600 leading-relaxed">
                   <Link href="/privacy" target="_blank" className="text-primary underline">プライバシーポリシー</Link>に同意する
-                </label>
-              </div>
+                </span>
+              </label>
               {errors.agreeToPrivacy && <p className="text-xs text-red-500 -mt-2">{errors.agreeToPrivacy.message}</p>}
               <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
                 {isSubmitting ? "登録中..." : "新規作成"}

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { isInAppBrowser } from "../lib/isInAppBrowser";
 import Button from "@/components/Button";
+import { TextInput } from "@/components/TextInput";
 
 interface FormData {
   email: string;
@@ -84,24 +85,18 @@ export default function AuthLogin() {
         <h2 className="text-lg font-semibold text-center mb-6">アカウントにログイン</h2>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-600">メールアドレス</label>
-            <input
-              type="email"
-              {...register("email", { required: "メールアドレスは必須です" })}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-            {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-600">パスワード</label>
-            <input
-              type="password"
-              {...register("password", { required: "パスワードは必須です" })}
-              className="border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-          </div>
+          <TextInput
+            type="email"
+            label="メールアドレス"
+            error={errors.email}
+            {...register("email", { required: "メールアドレスは必須です" })}
+          />
+          <TextInput
+            type="password"
+            label="パスワード"
+            error={errors.password}
+            {...register("password", { required: "パスワードは必須です" })}
+          />
           <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
             {isSubmitting ? "ログイン中..." : "ログイン"}
           </Button>
