@@ -253,7 +253,7 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" ? (
+                {plan === "premium" && hasStripeSubscription ? (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -262,7 +262,7 @@ export default function EditProfileModal({
                   >
                     プランを管理
                   </button>
-                ) : (
+                ) : plan === "premium" ? null : (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
