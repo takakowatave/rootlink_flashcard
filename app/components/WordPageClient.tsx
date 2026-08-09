@@ -1096,11 +1096,11 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     </button>
     {/* SP top bar — Figma 2319:8255 (arrow_back_ios + ios_share). PC は CardHeader 内に共有を出す */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} md:hidden flex items-center justify-between border-b border-line h-14 px-4 flex-shrink-0`}>
+      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-between border-b border-line h-14 px-4`}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-900"
           aria-label="戻る"
         >
           <MdArrowBackIosNew className="size-6" />
@@ -1108,7 +1108,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <button
           type="button"
           onClick={() => setShowShareMenu(true)}
-          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
+          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-gray-900"
           aria-label="共有"
         >
           <MdIosShare className="size-6" />
