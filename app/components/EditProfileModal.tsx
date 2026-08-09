@@ -145,6 +145,7 @@ export default function EditProfileModal({
     setDisplayLocale(locale);
     localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
     window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME));
+    toast.success(locale === "ja" ? "和英モードに切り替えました" : "英英モードに切り替えました");
   };
 
   if (!isOpen || !profile) return null;
