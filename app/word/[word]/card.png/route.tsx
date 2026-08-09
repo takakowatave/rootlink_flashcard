@@ -109,11 +109,14 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
   const senseId = firstSense?.senseId ?? ''
   const jaSense = payload.locales?.ja?.senses?.[senseId]
 
+  const etymologyJa = payload.locales?.ja?.etymology
+  const hook = etymologyJa?.hook?.trim() || null
+
   return {
     word,
     parts,
     meaning: compactMeaning(jaSense?.meaning ?? firstSense?.definition ?? null),
-    etymologyDescription: firstSentence(payload.locales?.ja?.etymology?.description ?? null),
+    etymologyDescription: hook ?? firstSentence(etymologyJa?.description ?? null),
   }
 }
 
