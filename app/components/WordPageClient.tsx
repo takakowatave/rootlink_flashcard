@@ -1100,7 +1100,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <button
           type="button"
           onClick={() => setShowShareMenu(true)}
-          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-gray-900"
+          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="共有"
         >
           <MdIosShare className="size-6" />
