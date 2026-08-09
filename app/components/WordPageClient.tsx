@@ -1156,7 +1156,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       grammarTags={grammarTags}
       isBookmarked={savedWords.includes(word)}
       onSave={handleSave}
-      onShare={dictionary ? () => setShowShareMenu(true) : undefined}
+      onShare={dictionary && !noCard ? () => setShowShareMenu(true) : undefined}
       shareBtnRef={shareBtnRef}
       pinnedSenseId={pinnedSenseId}
       onTogglePin={handleTogglePin}
