@@ -145,6 +145,7 @@ export default function EditProfileModal({
     setDisplayLocale(locale);
     localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
     window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME));
+    toast.success(locale === "ja" ? "和英モードに切り替えました" : "英英モードに切り替えました");
   };
 
   if (!isOpen || !profile) return null;
@@ -171,7 +172,7 @@ export default function EditProfileModal({
         onClick={onClose}
       >
         <div
-          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
+          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:max-h-[calc(100dvh-64px)] sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header — SP: back arrow / PC: 設定タイトル + 閉じる */}
@@ -192,7 +193,7 @@ export default function EditProfileModal({
             </button>
           </div>
 
-          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6">
+          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6 sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
             {/* アバター */}
             <div className="flex justify-center pt-2">
               <div className="relative">
@@ -253,7 +254,7 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" ? (
+                {plan === "premium" && hasStripeSubscription ? (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -262,7 +263,7 @@ export default function EditProfileModal({
                   >
                     プランを管理
                   </button>
-                ) : (
+                ) : plan === "premium" ? null : (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
@@ -277,9 +278,8 @@ export default function EditProfileModal({
             {/* 辞書の表示言語 */}
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold text-gray-500">辞書の表示言語</p>
-              <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
-                <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-              </div>
+              <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
+              <p className="text-xs text-muted">英英モードと和英モードの切り替えができます。</p>
             </div>
 
             {/* メールアドレス */}
