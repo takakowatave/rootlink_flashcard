@@ -202,7 +202,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
 
-      <div className="mx-auto max-w-[600px] md:px-4 pt-6">
+      <div className="hidden md:block mx-auto max-w-[600px] md:px-4 pt-6">
         <Breadcrumb
           items={[
             { label: 'ホーム', href: '/' },
