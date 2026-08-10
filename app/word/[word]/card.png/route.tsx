@@ -49,8 +49,7 @@ type CardData = {
   word: string
   parts: EtymologyPartLite[]
   meaning: string | null
-  hook: string | null
-  rawEtymology: string | null
+  etymologyDescription: string | null
 }
 
 async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
@@ -74,7 +73,7 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
 
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
   if (!payload) {
-    return { word, parts: [], meaning: null, hook: null, rawEtymology: null }
+    return { word, parts: [], meaning: null, etymologyDescription: null }
   }
 
   const parts: EtymologyPartLite[] =
@@ -94,15 +93,14 @@ function extractCardData(word: string, payload: RewrittenPayload | null): CardDa
   const senseId = firstSense?.senseId ?? ''
   const jaSense = payload.locales?.ja?.senses?.[senseId]
 
-  const hook = payload.locales?.ja?.etymology?.hook?.trim() || null
+  const jaDescription = payload.locales?.ja?.etymology?.description?.trim() || null
   const rawEtymology = payload.etymology?.trim() || null
 
   return {
     word,
     parts,
     meaning: (jaSense?.meaning ?? firstSense?.definition ?? '').trim() || null,
-    hook,
-    rawEtymology,
+    etymologyDescription: jaDescription ?? rawEtymology,
   }
 }
 
@@ -114,18 +112,10 @@ function truncate(text: string, max: number): string {
 // ── card layout ────────────────────────────────
 type CardProps = { data: CardData; logo: string }
 
-function BulbIcon() {
-  return (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="#00786f" style={{ flexShrink: 0 }}>
-      <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" />
-    </svg>
-  )
-}
-
 function Card({ data, logo }: CardProps) {
   const meaning = data.meaning ? truncate(data.meaning, 34) : null
-  // hook は品質問題で一旦封印。Oxford の rawEtymology のみ描画。
-  const hook = data.rawEtymology ? truncate(data.rawEtymology, 60) : null
+  // hook は品質問題で一旦封印。ja 訳優先で etymology description を描画。
+  const description = data.etymologyDescription ? truncate(data.etymologyDescription, 90) : null
 
   return (
     // ミント外枠（16px の面取り + 内側白）
@@ -182,7 +172,7 @@ function Card({ data, logo }: CardProps) {
           </div>
         )}
 
-        {(data.parts.length > 0 || hook) && (
+        {(data.parts.length > 0 || description) && (
           <div
             style={{
               width: '100%',
@@ -236,27 +226,17 @@ function Card({ data, logo }: CardProps) {
                 ))}
               </div>
             )}
-            {hook && (
+            {description && (
               <div
                 style={{
+                  fontSize: 28,
+                  fontWeight: 400,
+                  color: '#00786f',
+                  lineHeight: 1.4,
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 12,
                 }}
               >
-                <BulbIcon />
-                <div
-                  style={{
-                    fontSize: 34,
-                    fontWeight: 500,
-                    color: '#00786f',
-                    lineHeight: 1.35,
-                    display: 'flex',
-                    flex: 1,
-                  }}
-                >
-                  {hook}
-                </div>
+                {description}
               </div>
             )}
           </div>
