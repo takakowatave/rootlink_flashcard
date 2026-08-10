@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MdRemoveCircle, MdAddCircle, MdLightbulb } from 'react-icons/md'
+import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
@@ -155,20 +155,15 @@ export default function EntryCard({
     ? localizedEtymologyJa?.description ?? etymology
     : etymology
 
-  const displayedEtymologyHook = displayLocale === 'ja'
-    ? localizedEtymologyJa?.hook?.trim() || null
-    : null
-
   // 「〜から来ています。」系の冗長テキストは非表示（パーツがある場合は語源パーツで伝わる）
   const isRedundantDescription = (text: string) =>
     /から来てい(ます|る)[。．]?\s*$/.test(text.trim()) ||
     /^.{0,30}から来てい(ます|る)[。．]?\s*$/.test(text.trim())
 
-  const hasDescription = Boolean(
+  const hasEtymologyText = Boolean(
     displayedEtymologyDescription?.trim() &&
     !isRedundantDescription(displayedEtymologyDescription)
   )
-  const hasEtymologyText = hasDescription || Boolean(displayedEtymologyHook)
 
   const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
     const score = (v: string) => v.endsWith('ing') ? 3 : v.endsWith('ed') ? 2 : v.endsWith('s') ? 1 : 0
@@ -336,16 +331,9 @@ export default function EntryCard({
             })}
             </div>
 
-            {/* Etymology description (Oxford) */}
-            {hasDescription && (
+            {/* Etymology description */}
+            {hasEtymologyText && (
               <p className="text-[14px] text-primary-dark leading-[20px]">{displayedEtymologyDescription}</p>
-            )}
-            {/* Etymology hook (AI summary with bulb) */}
-            {displayedEtymologyHook && (
-              <div className="flex items-start gap-2">
-                <MdLightbulb className="size-4 text-primary-dark shrink-0 mt-[3px]" />
-                <p className="text-[14px] text-primary-dark leading-[20px]">{displayedEtymologyHook}</p>
-              </div>
             )}
           </div>
         )}
