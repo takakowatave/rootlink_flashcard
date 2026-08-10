@@ -16,6 +16,17 @@ const CACHE_HEADER = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const CLOUDRUN_URL = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
+
+// hook が無い単語は Cloud Run に非同期で生成依頼する。次回アクセス時に反映される想定。
+function requestHookGeneration(word: string): void {
+  if (!CLOUDRUN_URL) return
+  fetch(`${CLOUDRUN_URL}/hook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ word }),
+  }).catch(() => {})
+}
 
 // ── asset ローダー（プロセス内キャッシュ） ─────────
 type FontWeights = { regular: Buffer; medium: Buffer; bold: Buffer }
@@ -311,6 +322,10 @@ export async function GET(
 
   const data = extractCardData(raw, payload)
   const hasContent = Boolean(data.meaning || data.parts.length > 0)
+
+  if (!data.hook && hasContent) {
+    requestHookGeneration(raw)
+  }
 
   return new ImageResponse(
     hasContent ? <Card data={data} logo={logo} /> : <FallbackCard word={raw} logo={logo} />,
