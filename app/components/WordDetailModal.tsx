@@ -6,6 +6,7 @@ import { BsArrowUpRightSquare } from 'react-icons/bs'
 import ModalShell from '@/components/ModalShell'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
+import { buildShareText } from '@/lib/shareText'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -83,7 +84,7 @@ export default function WordDetailModal({
         open={showShareMenu}
         onClose={() => setShowShareMenu(false)}
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
-        shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        shareText={buildShareText(word, dictionary, initialPinnedSenseId ?? null)}
         anchorRef={shareBtnRef}
       />
     </>

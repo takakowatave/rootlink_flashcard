@@ -11,13 +11,14 @@ import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
+import { buildShareText } from '@/lib/shareText'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
-import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload } from '@/types/Dictionary'
+import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload, SavedWordDictionary } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -1112,7 +1113,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         open={showShareMenu}
         onClose={() => setShowShareMenu(false)}
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
-        shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        shareText={buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId)}
         anchorRef={shareBtnRef}
       />
     )}

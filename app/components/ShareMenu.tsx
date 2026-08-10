@@ -87,8 +87,10 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
       label: 'X',
       icon: <FaXTwitter />,
       bg: 'bg-black',
+      // X は URL 抜き（URL 付きツイートは X アルゴリズム対象外のため、
+      // テキスト＋（他人が URL 貼ったとき自動生成される）OGP 画像で拡散させる）
       onClick: () => openWindow(
-        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
       ),
     },
     {
