@@ -74,6 +74,17 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
     }
   }
 
+  // X は URL に card.png を直接指定して画像プレビューを出す（記事 URL ではなく画像 URL）。
+  const shareToX = () => {
+    const cardUrl = `${shareUrl}/card.png`
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(cardUrl)}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
+    onClose()
+  }
+
   const items: Item[] = [
     {
       key: 'copy',
@@ -87,11 +98,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
       label: 'X',
       icon: <FaXTwitter />,
       bg: 'bg-black',
-      // X は URL 抜き（URL 付きツイートは X アルゴリズム対象外のため、
-      // テキスト＋（他人が URL 貼ったとき自動生成される）OGP 画像で拡散させる）
-      onClick: () => openWindow(
-        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
-      ),
+      onClick: shareToX,
     },
     {
       key: 'line',
