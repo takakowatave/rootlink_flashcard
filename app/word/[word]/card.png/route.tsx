@@ -1,6 +1,6 @@
 // 単語カード PNG (/word/[word]/card.png)
 // og:image と SNS 投稿 DL の両用画像。1200×675。
-// - hook を主役に描画。無ければ Cloud Run /hook を await して生成、それでも駄目なら rawEtymology にフォールバック
+// - Oxford の rawEtymology を語源説明として描画（hook は品質問題で一旦封印）
 // - 意味は末尾を「…」で truncate（頭切り禁止）
 // - 中央 1200×628 のセーフゾーンに重要要素を収める
 // - ミントの外枠とロゴは残す
@@ -17,7 +17,6 @@ const CACHE_HEADER = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const CLOUDRUN_URL = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
 
 // ── asset ローダー（プロセス内キャッシュ） ─────────
 type FontWeights = { regular: Buffer; medium: Buffer; bold: Buffer }
@@ -73,25 +72,6 @@ async function fetchPayload(word: string): Promise<RewrittenPayload | null> {
   return rows?.[0]?.dictionary_cache?.payload ?? null
 }
 
-// hook 欠落時に Cloud Run に生成させて hook を返す（最大 4 秒）。
-// SNS クローラーは最初の card.png fetch でこの経路を通り、以降 24h は Vercel edge cache で hook 入り画像を配る。
-async function ensureHookServerSide(word: string): Promise<string | null> {
-  if (!CLOUDRUN_URL) return null
-  try {
-    const res = await fetch(`${CLOUDRUN_URL}/hook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word }),
-      signal: AbortSignal.timeout(4000),
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as { ok: boolean; hook?: string | null }
-    return data.ok ? data.hook ?? null : null
-  } catch {
-    return null
-  }
-}
-
 function extractCardData(word: string, payload: RewrittenPayload | null): CardData {
   if (!payload) {
     return { word, parts: [], meaning: null, hook: null, rawEtymology: null }
@@ -144,8 +124,8 @@ function BulbIcon() {
 
 function Card({ data, logo }: CardProps) {
   const meaning = data.meaning ? truncate(data.meaning, 34) : null
-  const hookText = data.hook ?? data.rawEtymology
-  const hook = hookText ? truncate(hookText, 60) : null
+  // hook は品質問題で一旦封印。Oxford の rawEtymology のみ描画。
+  const hook = data.rawEtymology ? truncate(data.rawEtymology, 60) : null
 
   return (
     // ミント外枠（16px の面取り + 内側白）
@@ -342,15 +322,8 @@ export async function GET(
     fetchPayload(raw).catch(() => null),
   ])
 
-  let data = extractCardData(raw, payload)
+  const data = extractCardData(raw, payload)
   const hasContent = Boolean(data.meaning || data.parts.length > 0)
-
-  // hook 欠落なら Cloud Run に await で生成依頼（最大 4 秒）。
-  // 生成できたら hook 付きで描画、駄目なら rawEtymology にフォールバック。
-  if (hasContent && !data.hook) {
-    const generated = await ensureHookServerSide(raw)
-    if (generated) data = { ...data, hook: generated }
-  }
 
   return new ImageResponse(
     hasContent ? <Card data={data} logo={logo} /> : <FallbackCard word={raw} logo={logo} />,
