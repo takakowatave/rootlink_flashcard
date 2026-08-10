@@ -152,7 +152,7 @@ export default function EntryCard({
   const hasParts = parts.length > 0
 
   const displayedEtymologyDescription = displayLocale === 'ja'
-    ? localizedEtymologyJa?.hook?.trim() || localizedEtymologyJa?.description || etymology
+    ? localizedEtymologyJa?.description ?? etymology
     : etymology
 
   // 「〜から来ています。」系の冗長テキストは非表示（パーツがある場合は語源パーツで伝わる）
