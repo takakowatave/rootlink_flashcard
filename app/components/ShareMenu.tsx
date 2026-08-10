@@ -74,11 +74,10 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
     }
   }
 
-  // X は URL に card.png を直接指定して画像プレビューを出す（記事 URL ではなく画像 URL）。
+  // X は word ページ URL を渡して OGP プレビュー（twitter:card=summary_large_image + card.png）で画像を出す。
   const shareToX = () => {
-    const cardUrl = `${shareUrl}/card.png`
     window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(cardUrl)}`,
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',
       'noopener,noreferrer'
     )
