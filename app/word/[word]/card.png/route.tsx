@@ -115,7 +115,7 @@ type CardProps = { data: CardData; logo: string }
 function Card({ data, logo }: CardProps) {
   const meaning = data.meaning ? truncate(data.meaning, 34) : null
   // hook は品質問題で一旦封印。ja 訳優先で etymology description を描画。
-  const description = data.etymologyDescription ? truncate(data.etymologyDescription, 90) : null
+  const description = data.etymologyDescription ? truncate(data.etymologyDescription, 190) : null
 
   return (
     // ミント外枠（16px の面取り + 内側白）
