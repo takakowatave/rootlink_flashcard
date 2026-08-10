@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import { MdIosShare, MdClose, MdArrowBackIosNew } from 'react-icons/md'
 import { BsArrowUpRightSquare } from 'react-icons/bs'
+import ModalShell from '@/components/ModalShell'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
+import { buildShareText } from '@/lib/shareText'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -21,46 +23,36 @@ export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
 }: Props) {
   const [showShareMenu, setShowShareMenu] = useState(false)
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [onClose])
+  const shareBtnRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center md:items-center md:p-6"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40 hidden md:block" />
-      <div
-        className="relative z-10 bg-white w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] md:rounded-2xl md:shadow-xl flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-line h-14 md:h-12 px-3 flex-shrink-0">
-          {/* SP: 戻る / PC: 拡大リンク */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
-            aria-label="戻る"
-          >
-            <MdArrowBackIosNew className="size-6" />
-          </button>
-          <a
-            href={`/word/${encodeURIComponent(word)}`}
-            className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
-            aria-label="単語ページを開く"
-          >
-            <BsArrowUpRightSquare className="size-5" />
-          </a>
-          <div className="flex items-center">
+    <>
+      <ModalShell
+        open
+        onClose={onClose}
+        headerLeft={
+          <>
             <button
+              type="button"
+              onClick={onClose}
+              className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
+              aria-label="戻る"
+            >
+              <MdArrowBackIosNew className="size-6" />
+            </button>
+            <a
+              href={`/word/${encodeURIComponent(word)}`}
+              className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
+              aria-label="単語ページを開く"
+            >
+              <BsArrowUpRightSquare className="size-5" />
+            </a>
+          </>
+        }
+        headerRight={
+          <>
+            <button
+              ref={shareBtnRef}
               type="button"
               onClick={() => setShowShareMenu(true)}
               className="p-2 rounded-full hover:bg-gray-100 text-muted"
@@ -76,25 +68,25 @@ export default function WordDetailModal({
             >
               <MdClose className="size-6" />
             </button>
-          </div>
-        </div>
-        <div className="overflow-y-auto flex-1 w-full">
-          <WordPageClient
-            word={word}
-            dictionary={dictionary}
-            savedId={savedId}
-            initialPinnedSenseId={initialPinnedSenseId ?? null}
-            initialDisplayLocale={displayLocale}
-            noCard
-          />
-        </div>
-      </div>
+          </>
+        }
+      >
+        <WordPageClient
+          word={word}
+          dictionary={dictionary}
+          savedId={savedId}
+          initialPinnedSenseId={initialPinnedSenseId ?? null}
+          initialDisplayLocale={displayLocale}
+          noCard
+        />
+      </ModalShell>
       <ShareMenu
         open={showShareMenu}
         onClose={() => setShowShareMenu(false)}
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
-        shareText={`${word} — 語源から学ぶ英単語｜RootLink`}
+        shareText={buildShareText(word, dictionary, initialPinnedSenseId ?? null)}
+        anchorRef={shareBtnRef}
       />
-    </div>
+    </>
   )
 }

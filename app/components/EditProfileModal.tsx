@@ -6,7 +6,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { useAuthProvider } from "@/lib/useAuthProvider";
 import { FaUserCircle } from "react-icons/fa";
-import { BsChevronLeft, BsChevronRight, BsPencil } from "react-icons/bs";
+import { BsChevronRight, BsPencil } from "react-icons/bs";
+import { MdArrowBackIosNew } from "react-icons/md";
+import ModalShell from "@/components/ModalShell";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -167,33 +169,31 @@ export default function EditProfileModal({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 sm:items-center overflow-y-auto"
-        onClick={onClose}
-      >
-        <div
-          className="bg-surface w-full min-h-full sm:min-h-0 sm:max-w-md sm:max-h-[calc(100dvh-64px)] sm:rounded-2xl sm:my-8 shadow-xl overflow-hidden flex flex-col"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header — SP: back arrow / PC: 設定タイトル + 閉じる */}
-          <div className="flex items-center justify-between px-3 sm:px-6 h-14 border-b border-line flex-shrink-0">
+      <ModalShell
+        open
+        onClose={onClose}
+        headerLeft={
+          <>
             <button
               onClick={onClose}
-              className="sm:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-700"
+              className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
               aria-label="戻る"
             >
-              <BsChevronLeft size={22} />
+              <MdArrowBackIosNew className="size-6" />
             </button>
-            <h2 className="hidden sm:block text-base font-bold text-gray-950">設定</h2>
-            <button
-              onClick={onClose}
-              className="hidden sm:block text-sm text-muted hover:text-gray-700"
-            >
-              閉じる
-            </button>
-          </div>
-
-          <div className="px-5 sm:px-6 pt-4 pb-8 flex flex-col gap-6 sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
+            <h2 className="hidden md:block text-base font-bold text-gray-950 pl-2">設定</h2>
+          </>
+        }
+        headerRight={
+          <button
+            onClick={onClose}
+            className="hidden md:block text-sm text-muted hover:text-gray-700 px-2"
+          >
+            閉じる
+          </button>
+        }
+      >
+        <div className="px-5 md:px-6 pt-4 pb-8 flex flex-col gap-6">
             {/* アバター */}
             <div className="flex justify-center pt-2">
               <div className="relative">
@@ -254,7 +254,7 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" && hasStripeSubscription ? (
+                {plan === "premium" ? (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -263,7 +263,7 @@ export default function EditProfileModal({
                   >
                     プランを管理
                   </button>
-                ) : plan === "premium" ? null : (
+                ) : (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
@@ -338,9 +338,8 @@ export default function EditProfileModal({
                 ログアウト
               </button>
             </div>
-          </div>
         </div>
-      </div>
+      </ModalShell>
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />
       )}
