@@ -9,6 +9,8 @@ import { BsChevronRight, BsPencil } from "react-icons/bs";
 import { MdArrowBackIosNew } from "react-icons/md";
 import ModalShell from "@/components/ModalShell";
 import EditableField from "@/components/EditableField";
+import SettingsSection from "@/components/SettingsSection";
+import SettingsRow from "@/components/SettingsRow";
 import EmailChangeModal from "@/components/EmailChangeModal";
 import EmailSentDialog, { type EmailSentVariant } from "@/components/EmailSentDialog";
 import toast from "react-hot-toast";
@@ -194,7 +196,7 @@ export default function EditProfileModal({
           </button>
         }
       >
-        <div className="px-5 md:px-6 pt-4 pb-8 flex flex-col gap-6">
+        <div className="px-5 md:px-6 pt-4 pb-8 flex flex-col gap-8">
             {/* アバター */}
             <div className="flex justify-center pt-2">
               <div className="relative">
@@ -225,19 +227,64 @@ export default function EditProfileModal({
               </div>
             </div>
 
-            {/* 名前 */}
-            <EditableField
-              label="表示名"
-              value={profile.username ?? ""}
-              placeholder="表示名を入力"
-              emptyLabel="未設定"
-              onSave={handleSaveDisplayName}
-            />
+            <SettingsSection title="プロフィール">
+              <EditableField
+                label="表示名"
+                value={profile.username ?? ""}
+                placeholder="表示名を入力"
+                emptyLabel="未設定"
+                onSave={handleSaveDisplayName}
+              />
+            </SettingsSection>
 
-            {/* 現在のプラン */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-600">現在のプラン</label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-lg h-12 px-3">
+            <SettingsSection title="アカウント">
+              <SettingsRow
+                label={
+                  <span className="flex items-center gap-2">
+                    メールアドレス
+                    {provider === "google" && (
+                      <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded">
+                        Googleアカウント
+                      </span>
+                    )}
+                  </span>
+                }
+                helperText={
+                  provider === "google"
+                    ? "Googleアカウントで管理されているため変更できません。"
+                    : undefined
+                }
+              >
+                <p className="flex-1 text-base text-gray-900 truncate md:flex-none">{email || "—"}</p>
+                {provider === "email" && email && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailChange(true)}
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+                  >
+                    変更
+                  </button>
+                )}
+              </SettingsRow>
+
+              {provider === "email" && (
+                <SettingsRow label="パスワード">
+                  <p className="flex-1 text-base text-gray-900 tracking-widest md:flex-none">
+                    ••••••••
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+                  >
+                    再設定用メールを送信
+                  </button>
+                </SettingsRow>
+              )}
+            </SettingsSection>
+
+            <SettingsSection title="設定">
+              <SettingsRow label="現在のプラン">
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
                     Premium
@@ -250,7 +297,7 @@ export default function EditProfileModal({
                     type="button"
                     onClick={handleManagePlan}
                     disabled={isPortalLoading}
-                    className="text-sm font-bold text-primary hover:underline disabled:opacity-50"
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap disabled:opacity-50"
                   >
                     プランを管理
                   </button>
@@ -258,64 +305,20 @@ export default function EditProfileModal({
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
-                    className="text-sm font-bold text-primary hover:underline"
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
                   >
                     アップグレード
                   </button>
                 )}
-              </div>
-            </div>
+              </SettingsRow>
 
-            {/* 辞書の表示言語 */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm text-gray-600">辞書の表示言語</label>
-              <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-              <p className="text-xs text-gray-500">英英モードと和英モードの切り替えができます。</p>
-            </div>
-
-            {/* メールアドレス */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">メールアドレス</label>
-                {provider === "google" && (
-                  <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded">
-                    Googleアカウント
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
-                <p className="flex-1 text-base text-gray-900 truncate">{email || "—"}</p>
-                {provider === "email" && email && (
-                  <button
-                    type="button"
-                    onClick={() => setShowEmailChange(true)}
-                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
-                  >
-                    変更
-                  </button>
-                )}
-              </div>
-              {provider === "google" && (
-                <p className="text-xs text-gray-500">Googleアカウントで管理されているため変更できません。</p>
-              )}
-            </div>
-
-            {/* パスワード (email 認証のみ) */}
-            {provider === "email" && (
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-gray-600">パスワード</label>
-                <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
-                  <p className="flex-1 text-base text-gray-900 tracking-widest">••••••••</p>
-                  <button
-                    type="button"
-                    onClick={handleResetPassword}
-                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
-                  >
-                    再設定用メールを送信
-                  </button>
-                </div>
-              </div>
-            )}
+              <SettingsRow
+                label="辞書の表示言語"
+                helperText="英英モードと和英モードの切り替えができます。"
+              >
+                <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
+              </SettingsRow>
+            </SettingsSection>
 
             {/* アカウント削除 — サーバー側実装まで hidden */}
             {DELETE_ACCOUNT_ENABLED && (
