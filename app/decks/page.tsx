@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { getUserPlan } from '@/lib/supabaseApi'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
+import PageHeader from '@/components/PageHeader'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
 type Deck = { id: string; name: string; label: string; word_count: number; is_premium: boolean }
@@ -36,6 +37,12 @@ export default function DecksPage() {
 
   return (
     <div className="bg-surface min-h-screen">
+      <PageHeader
+        items={[
+          { label: 'ホーム', href: '/' },
+          { label: '教材一覧' },
+        ]}
+      />
       <div className="flex justify-center w-full">
         <div className="w-full max-w-[860px] px-4 py-6 flex flex-col gap-8">
 
