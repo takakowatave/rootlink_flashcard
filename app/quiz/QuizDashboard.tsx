@@ -40,7 +40,7 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
   return (
     <div className="relative flex items-center justify-center">
       <svg width="234" height="234" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="18" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="18" />
         {masteredLen > 0 && (
           <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.primaryMid} strokeWidth="18"
             strokeDasharray={`${masteredLen} ${C - masteredLen}`}
@@ -254,7 +254,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
             {/* 統計バッジ */}
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 mb-8">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                <div className="w-2.5 h-2.5 rounded-full bg-line" />
                 <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">

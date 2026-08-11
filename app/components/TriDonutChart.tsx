@@ -31,7 +31,7 @@ export default function TriDonutChart({ mastered, review, hard, unseen }: Props)
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
           {/* background (未習得 track) */}
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
           {/* 習得済 (teal-mint) */}
           {mastered > 0 && (
             <circle cx={cx} cy={cy} r={r} fill="none" stroke="#00d5be" strokeWidth={stroke}
@@ -42,7 +42,7 @@ export default function TriDonutChart({ mastered, review, hard, unseen }: Props)
           )}
           {/* 要復習 (orange) */}
           {review > 0 && (
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#FF7B3A" strokeWidth={stroke}
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#ff8904" strokeWidth={stroke}
               strokeLinecap="butt"
               strokeDasharray={seg(mFrac, rFrac).strokeDasharray}
               strokeDashoffset={seg(mFrac, rFrac).strokeDashoffset}
@@ -64,7 +64,7 @@ export default function TriDonutChart({ mastered, review, hard, unseen }: Props)
       </div>
       <div className="flex items-center gap-5 text-sm">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" />
+          <span className="w-2.5 h-2.5 rounded-full bg-line inline-block" />
           <span className="text-gray-500">未習得 <strong className="text-gray-700">{unseen}</strong></span>
         </div>
         <div className="flex items-center gap-1.5">

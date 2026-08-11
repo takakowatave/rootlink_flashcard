@@ -5,7 +5,7 @@ import { HiQuestionMarkCircle } from 'react-icons/hi'
 import { BsX } from 'react-icons/bs'
 
 const CATEGORIES: { label: string; dot: string; desc: string }[] = [
-  { label: '未習得', dot: 'bg-gray-300',    desc: 'まだクイズで出題されていない単語' },
+  { label: '未習得', dot: 'bg-line',        desc: 'まだクイズで出題されていない単語' },
   { label: '要復習', dot: 'bg-quiz-review', desc: '直前のクイズで間違えた単語' },
   { label: '習得済', dot: 'bg-primary-mid', desc: '直前のクイズで正解した単語' },
   { label: '苦手',   dot: 'bg-quiz-hard',   desc: 'これまでに2回以上間違えた単語' },
