@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { useAuthProvider } from "@/lib/useAuthProvider";
 import { FaUserCircle } from "react-icons/fa";
-import { BsChevronRight, BsPencil } from "react-icons/bs";
+import { BsPencil } from "react-icons/bs";
 import { MdArrowBackIosNew } from "react-icons/md";
 import ModalShell from "@/components/ModalShell";
 import EditableField from "@/components/EditableField";
@@ -13,6 +13,7 @@ import SettingsSection from "@/components/SettingsSection";
 import SettingsRow from "@/components/SettingsRow";
 import EmailChangeModal from "@/components/EmailChangeModal";
 import PasswordResetConfirmModal from "@/components/PasswordResetConfirmModal";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 import EmailSentDialog, { type EmailSentVariant } from "@/components/EmailSentDialog";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
@@ -27,9 +28,6 @@ interface Props {
   profile: Profile | null;
   onUpdated: () => void;
 }
-
-// サーバー側 /account/delete が未実装のため、UIを隠す
-const DELETE_ACCOUNT_ENABLED = false;
 
 export default function EditProfileModal({
   isOpen,
@@ -46,6 +44,7 @@ export default function EditProfileModal({
   const [email, setEmail] = useState<string>("");
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [emailSent, setEmailSent] = useState<{ variant: EmailSentVariant; sentTo: string } | null>(
     null,
   );
@@ -154,8 +153,6 @@ export default function EditProfileModal({
   };
 
   if (!isOpen || !profile) return null;
-
-  void hasStripeSubscription;
 
   return (
     <>
@@ -307,19 +304,20 @@ export default function EditProfileModal({
               </SettingsRow>
             </SettingsSection>
 
-            {/* アカウント削除 — サーバー側実装まで hidden */}
-            {DELETE_ACCOUNT_ENABLED && (
-              <div className="flex flex-col gap-2">
-                <label className="text-sm text-gray-600">アカウント削除</label>
+            <SettingsSection title="アカウント削除">
+              <SettingsRow
+                label="退会する"
+                helperText="すべての学習データが削除されます。Premium加入中の場合は自動的に解約されます。"
+              >
                 <button
                   type="button"
-                  className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3 text-left hover:bg-gray-50"
+                  onClick={() => setShowDeleteAccount(true)}
+                  className="text-sm font-bold text-red-600 hover:underline whitespace-nowrap"
                 >
-                  <span className="text-base text-red-600">退会手続きへ</span>
-                  <BsChevronRight size={20} className="text-muted" />
+                  退会手続きへ
                 </button>
-              </div>
-            )}
+              </SettingsRow>
+            </SettingsSection>
 
             {/* ログアウト */}
             <div className="flex justify-center pt-2">
@@ -351,6 +349,16 @@ export default function EditProfileModal({
         onSent={() => {
           setShowPasswordReset(false);
           setEmailSent({ variant: "password-reset", sentTo: email });
+        }}
+      />
+
+      <DeleteAccountModal
+        open={showDeleteAccount}
+        onClose={() => setShowDeleteAccount(false)}
+        hasActiveSubscription={hasStripeSubscription && plan === "premium"}
+        onDeleted={() => {
+          setShowDeleteAccount(false);
+          window.location.href = "/";
         }}
       />
 
