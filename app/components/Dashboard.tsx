@@ -364,6 +364,8 @@ export default function Dashboard() {
                 <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
                   <SharedDeckCard
                     title={`最近の${recentQuizCount}語`}
+                    imageSrc="/dashboard/recent-words.png"
+                    imageContain
                     onClick={() => router.push('/quiz?mode=recent')}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
