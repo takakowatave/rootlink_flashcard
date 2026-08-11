@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
-import { recordActivity, getActivityLog, calcStreak, getUserPlan } from '@/lib/supabaseApi'
+import { recordActivity, getActivityLog, calcStreak, getUserPlan, fetchRecentQuizWords } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
 import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
@@ -185,6 +185,7 @@ export default function Dashboard() {
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
+  const [recentQuizCount, setRecentQuizCount] = useState(0)
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
@@ -214,7 +215,11 @@ export default function Dashboard() {
         setQuizAttemptCount(quizData.data.length)
       }
       if (decksData.data) setDecks(decksData.data as Deck[])
-      setPlan(await getUserPlan())
+      const userPlan = await getUserPlan()
+      setPlan(userPlan)
+
+      const recent = await fetchRecentQuizWords(user.id, userPlan, 20)
+      setRecentQuizCount(recent.length)
 
       // quiz済み単語からアクティブなデッキIDを特定（最近学習した順）
       const quizWords = [...new Set((quizData.data ?? []).map(r => r.word))].slice(0, 500)
@@ -353,6 +358,19 @@ export default function Dashboard() {
                 />
               )}
             </section>
+
+            {recentQuizCount > 0 && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-xl font-bold text-gray-950">最近学習した単語</h2>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                  <SharedDeckCard
+                    title={`最近の${recentQuizCount}語`}
+                    onClick={() => router.push('/quiz?mode=recent')}
+                    className="shrink-0 w-[146px] sm:w-[180px]"
+                  />
+                </div>
+              </section>
+            )}
 
             <DeckSection title="履歴" items={historyItems} />
             <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
