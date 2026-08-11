@@ -89,10 +89,17 @@ export default function AuthSignup() {
 
         {done ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <p className="text-primary font-medium break-all">
-              <span className="font-semibold">{sentEmail}</span> 宛に確認メールを送信しました
+            <p className="text-gray-900 font-medium break-all">
+              <span className="text-primary font-semibold">{sentEmail}</span>
+              <br />
+              宛に確認メールを送信しました
             </p>
             <p className="text-sm text-gray-500">メールのリンクをクリックして登録を完了してください。</p>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+              数分待っても届かない場合、このメールアドレスは既に登録されている可能性があります。
+              <br />
+              <Link href="/login" className="text-primary underline">ログイン</Link>をお試しください。
+            </p>
           </div>
         ) : (
           <>
