@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { useAuthProvider } from "@/lib/useAuthProvider";
@@ -9,6 +8,9 @@ import { FaUserCircle } from "react-icons/fa";
 import { BsChevronRight, BsPencil } from "react-icons/bs";
 import { MdArrowBackIosNew } from "react-icons/md";
 import ModalShell from "@/components/ModalShell";
+import EditableField from "@/components/EditableField";
+import EmailChangeModal from "@/components/EmailChangeModal";
+import EmailSentDialog, { type EmailSentVariant } from "@/components/EmailSentDialog";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -23,10 +25,6 @@ interface Props {
   onUpdated: () => void;
 }
 
-interface FormData {
-  display_name: string;
-}
-
 // サーバー側 /account/delete が未実装のため、UIを隠す
 const DELETE_ACCOUNT_ENABLED = false;
 
@@ -36,7 +34,6 @@ export default function EditProfileModal({
   profile,
   onUpdated,
 }: Props) {
-  const { register, handleSubmit, setValue } = useForm<FormData>();
   const provider = useAuthProvider();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
@@ -44,7 +41,10 @@ export default function EditProfileModal({
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
   const [email, setEmail] = useState<string>("");
-  const [editingName, setEditingName] = useState(false);
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [emailSent, setEmailSent] = useState<{ variant: EmailSentVariant; sentTo: string } | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -91,9 +91,27 @@ export default function EditProfileModal({
     // 将来のルート追加や古いリンク経由での誤起動に備えた二重防御
     if (provider !== "email") return;
     if (!email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) toast.error("送信に失敗しました");
-    else toast.success("登録メールアドレスに再設定用リンクを送信しました");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error("送信に失敗しました");
+      return;
+    }
+    setEmailSent({ variant: "password-reset", sentTo: email });
+  };
+
+  const handleSaveDisplayName = async (draft: string) => {
+    if (!profile) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ username: draft })
+      .eq("id", profile.id);
+    if (error) {
+      throw new Error("更新に失敗しました");
+    }
+    toast.success("保存しました");
+    onUpdated();
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,10 +141,6 @@ export default function EditProfileModal({
   };
 
   useEffect(() => {
-    if (profile) setValue("display_name", profile.username ?? "");
-  }, [profile, setValue]);
-
-  useEffect(() => {
     if (!isOpen) return;
     getUserPlan().then(setPlan);
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -152,20 +166,7 @@ export default function EditProfileModal({
 
   if (!isOpen || !profile) return null;
 
-  const onSubmit = async (data: FormData) => {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ username: data.display_name })
-      .eq("id", profile.id);
-
-    if (error) {
-      toast.error("更新に失敗しました");
-      return;
-    }
-    toast.success("保存しました");
-    setEditingName(false);
-    onUpdated();
-  };
+  void hasStripeSubscription;
 
   return (
     <>
@@ -199,6 +200,7 @@ export default function EditProfileModal({
               <div className="relative">
                 <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
                   {profile.avatar_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
                   ) : (
                     <FaUserCircle className="w-full h-full text-gray-400" />
@@ -224,28 +226,17 @@ export default function EditProfileModal({
             </div>
 
             {/* 名前 */}
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-500">名前</p>
-              <form onSubmit={handleSubmit(onSubmit)}>
-                <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
-                  <input
-                    {...register("display_name")}
-                    onFocus={() => setEditingName(true)}
-                    onBlur={handleSubmit(onSubmit)}
-                    className="flex-1 bg-transparent text-base text-gray-950 outline-none"
-                    placeholder="表示名"
-                  />
-                  <BsPencil size={16} className="text-muted flex-shrink-0" />
-                </div>
-                {editingName && (
-                  <p className="text-[11px] text-muted mt-1">フォーカスを外すと自動保存されます</p>
-                )}
-              </form>
-            </div>
+            <EditableField
+              label="表示名"
+              value={profile.username ?? ""}
+              placeholder="表示名を入力"
+              emptyLabel="未設定"
+              onSave={handleSaveDisplayName}
+            />
 
             {/* 現在のプラン */}
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-500">現在のプラン</p>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-gray-600">現在のプラン</label>
               <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
@@ -259,7 +250,7 @@ export default function EditProfileModal({
                     type="button"
                     onClick={handleManagePlan}
                     disabled={isPortalLoading}
-                    className="h-7 px-3 border border-primary text-primary text-xs font-bold rounded disabled:opacity-50"
+                    className="text-sm font-bold text-primary hover:underline disabled:opacity-50"
                   >
                     プランを管理
                   </button>
@@ -267,7 +258,7 @@ export default function EditProfileModal({
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
-                    className="h-7 px-3 border border-primary text-primary text-xs font-bold rounded"
+                    className="text-sm font-bold text-primary hover:underline"
                   >
                     アップグレード
                   </button>
@@ -277,15 +268,15 @@ export default function EditProfileModal({
 
             {/* 辞書の表示言語 */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-500">辞書の表示言語</p>
+              <label className="text-sm text-gray-600">辞書の表示言語</label>
               <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-              <p className="text-xs text-muted">英英モードと和英モードの切り替えができます。</p>
+              <p className="text-xs text-gray-500">英英モードと和英モードの切り替えができます。</p>
             </div>
 
             {/* メールアドレス */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold text-gray-500">メールアドレス</p>
+                <label className="text-sm text-gray-600">メールアドレス</label>
                 {provider === "google" && (
                   <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded">
                     Googleアカウント
@@ -294,13 +285,25 @@ export default function EditProfileModal({
               </div>
               <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
                 <p className="flex-1 text-base text-gray-950 truncate">{email || "—"}</p>
+                {provider === "email" && email && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailChange(true)}
+                    className="text-sm font-bold text-primary hover:underline"
+                  >
+                    変更
+                  </button>
+                )}
               </div>
+              {provider === "google" && (
+                <p className="text-xs text-gray-500">Googleアカウントで管理されているため変更できません。</p>
+              )}
             </div>
 
             {/* パスワード (email 認証のみ) */}
             {provider === "email" && (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-semibold text-gray-500">パスワード</p>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-gray-600">パスワード</label>
                 <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
                   <p className="flex-1 text-base text-gray-950 tracking-widest">••••••••</p>
                   <button
@@ -317,7 +320,7 @@ export default function EditProfileModal({
             {/* アカウント削除 — サーバー側実装まで hidden */}
             {DELETE_ACCOUNT_ENABLED && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-semibold text-gray-500">アカウント削除</p>
+                <label className="text-sm text-gray-600">アカウント削除</label>
                 <button
                   type="button"
                   className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3 text-left hover:bg-gray-50"
@@ -340,6 +343,26 @@ export default function EditProfileModal({
             </div>
         </div>
       </ModalShell>
+
+      <EmailChangeModal
+        open={showEmailChange}
+        onClose={() => setShowEmailChange(false)}
+        currentEmail={email}
+        onSent={(newEmail) => {
+          setShowEmailChange(false);
+          setEmailSent({ variant: "email-change", sentTo: newEmail });
+        }}
+      />
+
+      {emailSent && (
+        <EmailSentDialog
+          open
+          sentTo={emailSent.sentTo}
+          variant={emailSent.variant}
+          onClose={() => setEmailSent(null)}
+        />
+      )}
+
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />
       )}
