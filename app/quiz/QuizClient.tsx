@@ -19,7 +19,7 @@ import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSess
 import type { QuizEntry } from '@/components/QuizSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 
-type QuizMode = QuizScope | 'recent'
+type QuizMode = QuizScope
 
 export default function QuizClient() {
   const router = useRouter()
@@ -131,17 +131,19 @@ export default function QuizClient() {
     saveQuizResult(word, correct)
   }, [])
 
-  // Dashboard 経由 (`/quiz?mode=recent`) の自動起動
-  useEffect(() => {
-    if (searchParams.get('mode') === 'recent') {
-      loadCards('recent')
-    }
-  }, [searchParams, loadCards])
+  const initialMode = ((): QuizMode => {
+    const m = searchParams.get('mode')
+    return m === 'recent' || m === 'hard' || m === 'all' || m === 'unseen' || m === 'review' ? m : 'all'
+  })()
 
   if (showDashboard) {
     return (
       <>
-        <QuizDashboard onStart={loadCards} onBack={() => router.push('/wordlist')} />
+        <QuizDashboard
+          onStart={loadCards}
+          onBack={() => router.push('/wordlist')}
+          initialMode={initialMode}
+        />
         {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       </>
     )

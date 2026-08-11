@@ -1,9 +1,9 @@
 'use client'
 
-import { HiSparkles, HiBookOpen, HiArrowPath, HiFire } from 'react-icons/hi2'
+import { HiSparkles, HiBookOpen, HiArrowPath, HiFire, HiClock } from 'react-icons/hi2'
 import type { ReactNode } from 'react'
 
-export type QuizScope = 'all' | 'unseen' | 'review' | 'hard'
+export type QuizScope = 'all' | 'unseen' | 'review' | 'hard' | 'recent'
 
 export type QuizScopeItem = {
   key: QuizScope
@@ -14,6 +14,12 @@ const META: Record<QuizScope, { label: string; icon: ReactNode; selectedClass: s
   all: {
     label: 'ランダム',
     icon: <HiSparkles className="size-5" />,
+    selectedClass: 'border-primary bg-primary-subtle',
+    iconColor: 'text-primary',
+  },
+  recent: {
+    label: 'まとめて',
+    icon: <HiClock className="size-5" />,
     selectedClass: 'border-primary bg-primary-subtle',
     iconColor: 'text-primary',
   },

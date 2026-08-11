@@ -64,7 +64,7 @@ export default function LPFeatures() {
       className="flex w-full flex-col items-center gap-[32px] py-[42px] md:gap-[42px] md:py-[80px]"
       style={{ backgroundImage: 'linear-gradient(41.06deg, rgba(0,235,180,0.1) 4.63%, rgba(108,222,109,0.1) 100%)' }}
     >
-      <h2 className="text-[32px] font-bold text-[#00ad82] md:text-[42px]">
+      <h2 className="text-[32px] font-bold text-primary md:text-[42px]">
         RootLinkの3つの特徴
       </h2>
 

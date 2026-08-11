@@ -234,7 +234,7 @@ export default function TutorialOverlay() {
             className="fixed rounded-xl pointer-events-none"
             style={{
               top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-              boxShadow: '0 0 0 3px #00AD82, 0 0 20px rgba(0,173,130,0.4)',
+              boxShadow: '0 0 0 3px #009689, 0 0 20px rgba(0,150,137,0.4)',
             }}
           />
         </>

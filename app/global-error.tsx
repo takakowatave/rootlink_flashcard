@@ -31,7 +31,7 @@ export default function GlobalError({
           color: '#111',
         }}
       >
-        <p style={{ fontSize: 56, fontWeight: 700, color: '#00AD82', margin: 0 }}>
+        <p style={{ fontSize: 56, fontWeight: 700, color: '#009689', margin: 0 }}>
           Error
         </p>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 16 }}>
@@ -54,7 +54,7 @@ export default function GlobalError({
             style={{
               height: 40,
               padding: '0 24px',
-              background: '#00AD82',
+              background: '#009689',
               color: '#fff',
               border: 'none',
               borderRadius: 9999,
@@ -71,8 +71,8 @@ export default function GlobalError({
               height: 40,
               padding: '0 24px',
               background: '#fff',
-              color: '#00AD82',
-              border: '1px solid #00AD82',
+              color: '#009689',
+              border: '1px solid #009689',
               borderRadius: 9999,
               fontSize: 14,
               fontWeight: 500,

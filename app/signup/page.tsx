@@ -93,7 +93,7 @@ export default function AuthSignup() {
                   className="peer sr-only"
                   {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
                 />
-                <span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-line bg-white flex items-center justify-center text-transparent transition-colors peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-dark">
+                <span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-line bg-white flex items-center justify-center text-transparent transition-colors peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-hover">
                   <BsCheck2 size={14} className="text-current" />
                 </span>
                 <span className="text-xs text-gray-600 leading-relaxed">

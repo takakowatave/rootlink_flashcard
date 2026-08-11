@@ -223,18 +223,18 @@ export default function EntryCard({
                           className="bg-white border-2 border-primary-mid rounded-[24px] pl-[4px] pr-[12px] py-[4px] flex items-center gap-[4px]"
                         >
                           {expandedParts[idx]
-                            ? <MdRemoveCircle className="size-5 text-primary-dark" />
-                            : <MdAddCircle    className="size-5 text-primary-dark" />
+                            ? <MdRemoveCircle className="size-5 text-primary-hover" />
+                            : <MdAddCircle    className="size-5 text-primary-hover" />
                           }
-                          <span className="text-base font-medium text-primary-dark leading-4">{part.text}</span>
+                          <span className="text-base font-medium text-primary-hover leading-4">{part.text}</span>
                         </button>
                       ) : (
                         <div className="bg-white border-2 border-primary-mid rounded-[24px] px-[12px] py-[4px]">
-                          <span className="text-base font-medium text-primary-dark leading-4">{part.text}</span>
+                          <span className="text-base font-medium text-primary-hover leading-4">{part.text}</span>
                         </div>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-primary-dark leading-[28px]">{gloss}</span>
+                    <span className="text-sm font-medium text-primary-hover leading-[28px]">{gloss}</span>
                   </div>
 
                   {/* Related words tree */}
@@ -254,7 +254,7 @@ export default function EntryCard({
                         >
                           <path
                             d={`M ${TX},0 L ${TX},${trunkEnd}`}
-                            stroke="#00AD82"
+                            stroke="#009689"
                             strokeWidth="2"
                             strokeLinecap="round"
                             pathLength="1"
@@ -268,7 +268,7 @@ export default function EntryCard({
                               <path
                                 key={wi}
                                 d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 34,${midY}`}
-                                stroke="#00AD82"
+                                stroke="#009689"
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 fill="none"
@@ -306,12 +306,12 @@ export default function EntryCard({
                                 className="bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
                               >
                                 {navigatingWord === rw ? (
-                                  <svg className="size-4 animate-spin text-secondary" fill="none" viewBox="0 0 24 24">
+                                  <svg className="size-4 animate-spin text-primary-hover" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                   </svg>
                                 ) : (
-                                  <span className="text-[14px] font-medium text-secondary leading-4">{rw}</span>
+                                  <span className="text-[14px] font-medium text-primary-hover leading-4">{rw}</span>
                                 )}
                               </button>
                               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
@@ -319,7 +319,7 @@ export default function EntryCard({
                               </span>
                             </div>
                             {part.relatedWordMeanings?.[rw] && (
-                              <span className="text-[12px] font-medium text-secondary w-[33px]">{part.relatedWordMeanings[rw]}</span>
+                              <span className="text-[12px] font-medium text-primary-hover w-[33px]">{part.relatedWordMeanings[rw]}</span>
                             )}
                           </div>
                         ))}
@@ -333,7 +333,7 @@ export default function EntryCard({
 
             {/* Etymology description */}
             {hasEtymologyText && (
-              <p className="text-[14px] text-primary-dark leading-[20px]">{displayedEtymologyDescription}</p>
+              <p className="text-[14px] text-primary-hover leading-[20px]">{displayedEtymologyDescription}</p>
             )}
           </div>
         )}

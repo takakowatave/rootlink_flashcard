@@ -1,5 +1,5 @@
 export type WordStatus = 'mastered' | 'review' | 'unseen'
-export type QuizScope = 'all' | 'unseen' | 'review' | 'hard'
+export type QuizScope = 'all' | 'unseen' | 'review' | 'hard' | 'recent'
 
 export type QuizResultRow = {
   word: string
@@ -31,7 +31,7 @@ export function filterKeysByScope(
   wrongCount: Map<string, number>,
   scope: QuizScope,
 ): string[] {
-  if (scope === 'all') return keys
+  if (scope === 'all' || scope === 'recent') return keys
   if (scope === 'hard') return keys.filter((k) => (wrongCount.get(k) ?? 0) >= 2)
   if (scope === 'review') {
     return keys.filter(

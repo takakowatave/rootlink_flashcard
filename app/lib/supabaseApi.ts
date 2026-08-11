@@ -423,6 +423,66 @@ export const fetchRecentQuizWords = async (
   return results
 }
 
+export const fetchHardQuizWords = async (
+  userId: string,
+  plan: 'premium' | 'free',
+): Promise<RecentQuizWord[]> => {
+  const { data: qrRows } = await supabase
+    .from('quiz_results')
+    .select('word, correct, answered_at')
+    .eq('user_id', userId)
+    .order('answered_at', { ascending: false })
+    .limit(5000)
+  const qr = ((qrRows ?? []) as { word: string; correct: boolean; answered_at: string }[])
+    .filter((r) => r.word)
+  if (qr.length === 0) return []
+
+  const wrongByWord = new Map<string, number>()
+  const latestByWord = new Map<string, string>()
+  for (const r of qr) {
+    if (!r.correct) wrongByWord.set(r.word, (wrongByWord.get(r.word) ?? 0) + 1)
+    if (!latestByWord.has(r.word)) latestByWord.set(r.word, r.answered_at)
+  }
+
+  const hardWords = [...wrongByWord.entries()]
+    .filter(([, n]) => n >= 2)
+    .map(([word]) => word)
+  if (hardWords.length === 0) return []
+
+  let excluded = new Set<string>()
+  if (plan === 'free') {
+    const rows: { deck_id: string; word: string }[] = []
+    for (let i = 0; i < hardWords.length; i += 200) {
+      const { data } = await supabase
+        .from('deck_words')
+        .select('deck_id, word')
+        .in('word', hardWords.slice(i, i + 200))
+      if (data) rows.push(...(data as { deck_id: string; word: string }[]))
+    }
+    const deckIds = [...new Set(rows.map((r) => r.deck_id))]
+    if (deckIds.length > 0) {
+      const { data: deckMeta } = await supabase
+        .from('decks')
+        .select('id, is_premium')
+        .in('id', deckIds)
+      const premiumDecks = new Set(
+        ((deckMeta ?? []) as { id: string; is_premium: boolean }[])
+          .filter((d) => d.is_premium)
+          .map((d) => d.id),
+      )
+      excluded = new Set(rows.filter((r) => premiumDecks.has(r.deck_id)).map((r) => r.word))
+    }
+  }
+
+  return hardWords
+    .filter((w) => !excluded.has(w))
+    .map((word) => ({
+      word,
+      wrongCount: wrongByWord.get(word) ?? 0,
+      latestAt: latestByWord.get(word) ?? '',
+    }))
+}
+
 /* =========================================
  保存フレーズ一覧取得（saved_phrase_cards + phrase_cards）
 ========================================= */

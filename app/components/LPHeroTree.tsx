@@ -143,9 +143,9 @@ export default function LPHeroTree({ root, gloss, words, compact = false }: Prop
       >
         <defs>
           <linearGradient id={`cg-${root}`} gradientUnits="userSpaceOnUse" x1="2" y1="0" x2={SVG_W} y2={SVG_H}>
-            <stop offset="0%"   stopColor="#00AD82" />
+            <stop offset="0%"   stopColor="#009689" />
             <stop offset="50%"  stopColor="#7DE265" />
-            <stop offset="100%" stopColor="#00AD82" />
+            <stop offset="100%" stopColor="#009689" />
           </linearGradient>
         </defs>
         {paths.map((d, i) => (

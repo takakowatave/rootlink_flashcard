@@ -2,7 +2,7 @@
 
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 
-// デザインシステムのボタン。色相はブランド色(primary=#00AD82)に統一し、
+// デザインシステムのボタン。色相はブランド色(primary=#009689)に統一し、
 // variant で「塗り / 枠線 / テキスト」の見た目を切り替える。
 type Variant = 'primary' | 'secondary' | 'tertiary'
 type Size = 'xs' | 'sm' | 'md' | 'lg'
