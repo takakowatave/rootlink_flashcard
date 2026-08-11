@@ -131,10 +131,11 @@ export default function QuizClient() {
     saveQuizResult(word, correct)
   }, [])
 
-  // Dashboard 経由 (`/quiz?mode=recent`) の自動起動
+  // Dashboard 経由 (`/quiz?mode=recent` / `/quiz?mode=hard`) の自動起動
   useEffect(() => {
-    if (searchParams.get('mode') === 'recent') {
-      loadCards('recent')
+    const mode = searchParams.get('mode')
+    if (mode === 'recent' || mode === 'hard') {
+      loadCards(mode)
     }
   }, [searchParams, loadCards])
 
