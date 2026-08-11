@@ -18,7 +18,8 @@ export const WordlistDefault: Story = {
   args: {
     mastered: 12,
     review: 5,
-    unseen: 71,
+    hard: 3,
+    unseen: 68,
     scopeItems: [
       { key: 'all', count: 88 },
       { key: 'unseen', count: 71 },
@@ -42,6 +43,7 @@ export const DeckWithHeader: Story = {
     ),
     mastered: 0,
     review: 0,
+    hard: 0,
     unseen: 88,
     scopeItems: [
       { key: 'all', count: 88 },
@@ -66,6 +68,7 @@ export const PremiumLocked: Story = {
     ),
     mastered: 0,
     review: 0,
+    hard: 0,
     unseen: 100,
     scopeItems: [
       { key: 'all', count: 100 },
@@ -83,6 +86,7 @@ export const NoData: Story = {
   args: {
     mastered: 0,
     review: 0,
+    hard: 0,
     unseen: 0,
     buttonLabel: '単語データがまだありません',
     buttonDisabled: true,

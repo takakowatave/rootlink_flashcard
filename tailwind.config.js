@@ -22,6 +22,7 @@ module.exports = {
         premium: '#fff085',    // premium crown badge bg (Figma yellow-200)
         quiz: {
           review: '#FF7B3A',   // quiz needs-review status
+          hard:   '#C70036',   // quiz weak/hard status (Figma semantic/error/default)
         },
       },
     },

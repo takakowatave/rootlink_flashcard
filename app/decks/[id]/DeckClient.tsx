@@ -141,15 +141,20 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
   const availableEntries = entries.filter(e => !!e.dictionary)
   const availableCount = availableEntries.length
-  const masteredCount = [...wordStatus.values()].filter(s => s === 'mastered').length
-  const reviewCount = [...wordStatus.values()].filter(s => s === 'review').length
-  const unseenCount = entries.length - masteredCount - reviewCount
 
   const hardWords = availableEntries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2)
   const reviewWords = availableEntries.filter(
     e => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
   )
   const unseenWords = availableEntries.filter(e => wordStatus.get(e.word) === 'unseen')
+
+  // 排他4分類（合計 = entries.length）: 苦手 → 習得済 → 要復習 → 未習得
+  const hardCount = entries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2).length
+  const reviewCount = entries.filter(
+    e => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
+  ).length
+  const unseenCount = entries.filter(e => wordStatus.get(e.word) === 'unseen').length
+  const masteredCount = entries.length - hardCount - reviewCount - unseenCount
 
   const scopeSource: Record<QuizScope, typeof availableEntries> = {
     all: availableEntries,
@@ -212,6 +217,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         }
         mastered={masteredCount}
         review={reviewCount}
+        hard={hardCount}
         unseen={unseenCount}
         scopeItems={[
           { key: 'all', count: availableCount },

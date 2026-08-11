@@ -7,4 +7,5 @@ export const colors = {
   muted:        '#90a1b9',
   surface:      '#f8fafc',
   quizReview:   '#FF7B3A',
+  quizHard:     '#C70036',
 } as const
