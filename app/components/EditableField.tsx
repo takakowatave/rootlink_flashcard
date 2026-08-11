@@ -97,13 +97,13 @@ export default function EditableField({
   return (
     <div className="flex flex-col gap-1">
       <label className="text-sm text-gray-600">{label}</label>
-      <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
-        <p className="flex-1 text-base text-gray-950 truncate">{value || emptyLabel}</p>
+      <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
+        <p className="flex-1 text-base text-gray-900 truncate">{value || emptyLabel}</p>
         {!disabled && (
           <button
             type="button"
             onClick={startEdit}
-            className="text-sm font-bold text-primary hover:underline"
+            className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
           >
             {editLabel}
           </button>

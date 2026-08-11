@@ -237,7 +237,7 @@ export default function EditProfileModal({
             {/* 現在のプラン */}
             <div className="flex flex-col gap-1">
               <label className="text-sm text-gray-600">現在のプラン</label>
-              <div className="flex items-center justify-between bg-white border border-line rounded-lg h-12 px-3">
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg h-12 px-3">
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
                     Premium
@@ -283,13 +283,13 @@ export default function EditProfileModal({
                   </span>
                 )}
               </div>
-              <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
-                <p className="flex-1 text-base text-gray-950 truncate">{email || "—"}</p>
+              <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
+                <p className="flex-1 text-base text-gray-900 truncate">{email || "—"}</p>
                 {provider === "email" && email && (
                   <button
                     type="button"
                     onClick={() => setShowEmailChange(true)}
-                    className="text-sm font-bold text-primary hover:underline"
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
                   >
                     変更
                   </button>
@@ -304,8 +304,8 @@ export default function EditProfileModal({
             {provider === "email" && (
               <div className="flex flex-col gap-1">
                 <label className="text-sm text-gray-600">パスワード</label>
-                <div className="flex items-center bg-white border border-line rounded-lg h-12 px-3">
-                  <p className="flex-1 text-base text-gray-950 tracking-widest">••••••••</p>
+                <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
+                  <p className="flex-1 text-base text-gray-900 tracking-widest">••••••••</p>
                   <button
                     type="button"
                     onClick={handleResetPassword}
