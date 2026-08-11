@@ -271,11 +271,11 @@ function CardView({
           <div className="p-5">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
-                className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-secondary' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
+                className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
                 例文
               </button>
               <button onClick={() => onModeChange('word')}
-                className={`px-6 h-8 text-base transition-colors ${mode === 'word' ? 'bg-primary-light text-secondary font-bold' : 'bg-white text-dim font-normal'}`}>
+                className={`px-6 h-8 text-base transition-colors ${mode === 'word' ? 'bg-primary-light text-primary-hover font-bold' : 'bg-white text-dim font-normal'}`}>
                 単語
               </button>
             </div>
@@ -349,7 +349,7 @@ function ResultScreen({
         <Sparkles show={showSparkles} />
         <div className="relative bg-primary-subtle rounded-2xl p-6 mb-6 overflow-hidden flex flex-col items-center">
           <Sparkles show={showSparkles} />
-          <p className="text-xs font-medium text-secondary bg-primary-light px-3 py-1 rounded-full mb-3">わかった数</p>
+          <p className="text-xs font-medium text-primary-hover bg-primary-light px-3 py-1 rounded-full mb-3">わかった数</p>
           <p className="text-5xl font-bold text-gray-900 mb-1">{correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span></p>
           <p className="text-base font-bold italic text-gray-600 mt-2">{message}</p>
         </div>
@@ -372,7 +372,7 @@ function ResultScreen({
         )}
         {correctCards.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-secondary mb-2">わかった（{correctCards.length}語）</h3>
+            <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">

@@ -37,11 +37,11 @@ body {
 .lp-search-glow {
   background: conic-gradient(
     from var(--glow-angle),
-    #00AD82 0%,
+    #009689 0%,
     #7DE265 30%,
-    #00AD82 50%,
+    #009689 50%,
     #7DE265 80%,
-    #00AD82 100%
+    #009689 100%
   );
   animation:
     glow-spin  2s linear        infinite,

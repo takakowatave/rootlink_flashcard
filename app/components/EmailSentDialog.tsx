@@ -68,7 +68,7 @@ export default function EmailSentDialog({ open, onClose, sentTo, variant }: Prop
         className="relative z-10 bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 flex flex-col items-center text-center gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-14 h-14 rounded-full bg-primary-subtle flex items-center justify-center text-primary-dark">
+        <div className="w-14 h-14 rounded-full bg-primary-subtle flex items-center justify-center text-primary-hover">
           <MdMarkEmailRead size={28} />
         </div>
         <h3 className="text-base font-semibold text-gray-950">{HEADING[variant]}</h3>
