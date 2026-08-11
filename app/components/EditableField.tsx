@@ -71,9 +71,9 @@ export default function EditableField({
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 py-4 border-b border-line last:border-b-0">
+        <label className="text-sm text-gray-600">{label}</label>
         <TextInput
-          label={label}
           type={type}
           value={draft}
           placeholder={placeholder}
@@ -95,19 +95,23 @@ export default function EditableField({
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm text-gray-600">{label}</label>
-      <div className="flex items-center bg-gray-50 rounded-lg h-12 px-3">
-        <p className="flex-1 text-base text-gray-900 truncate">{value || emptyLabel}</p>
-        {!disabled && (
-          <button
-            type="button"
-            onClick={startEdit}
-            className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
-          >
-            {editLabel}
-          </button>
-        )}
+    <div className="flex flex-col gap-2 py-4 border-b border-line last:border-b-0">
+      <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-4">
+        <div className="text-sm text-gray-600 md:flex-shrink-0 md:w-40">{label}</div>
+        <div className="flex items-center justify-between gap-3 md:flex-1 md:justify-end">
+          <p className="flex-1 text-base text-gray-900 truncate md:flex-none">
+            {value || emptyLabel}
+          </p>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+            >
+              {editLabel}
+            </button>
+          )}
+        </div>
       </div>
       {helperText && <p className="text-xs text-gray-500">{helperText}</p>}
     </div>
