@@ -358,7 +358,7 @@ export default function EditProfileModal({
         hasActiveSubscription={hasStripeSubscription && plan === "premium"}
         onDeleted={() => {
           setShowDeleteAccount(false);
-          window.location.href = "/";
+          window.location.href = "/goodbye";
         }}
       />
 
