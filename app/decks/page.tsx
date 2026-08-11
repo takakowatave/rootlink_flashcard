@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { getUserPlan } from '@/lib/supabaseApi'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
-import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
+import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
 type Deck = { id: string; name: string; label: string; word_count: number; is_premium: boolean }
 
@@ -51,7 +51,7 @@ export default function DecksPage() {
           ) : (
             <>
               {LABEL_ORDER.map(label => {
-                const group = decks.filter(d => d.label === label)
+                const group = sortDecksByDifficulty(decks.filter(d => d.label === label))
                 if (group.length === 0) return null
                 return (
                   <section key={label}>

@@ -10,7 +10,7 @@ import PlantStatus from '@/components/PlantStatus'
 import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
-import { LABEL_ORDER, toShortName, getDeckImage } from '@/lib/deckDisplay'
+import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
 type Deck = {
   id: string
@@ -274,8 +274,7 @@ export default function Dashboard() {
     })
   const historyItems = activeDeckItems.slice(0, 5)
   const examItems: DeckItem[] = LABEL_ORDER.flatMap(label =>
-    decks
-      .filter(d => d.label === label)
+    sortDecksByDifficulty(decks.filter(d => d.label === label))
       .map(d => {
         const shortName = toShortName(d.name, d.label)
         return {
