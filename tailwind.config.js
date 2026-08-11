@@ -21,7 +21,8 @@ module.exports = {
         line:    '#e2e8f0',    // standard borders
         premium: '#fff085',    // premium crown badge bg (Figma yellow-200)
         quiz: {
-          review: '#FF7B3A',   // quiz needs-review status
+          review: '#ff8904',   // quiz needs-review status (Figma color/orange/400)
+          hard:   '#C70036',   // quiz weak/hard status (Figma semantic/error/default)
         },
       },
     },

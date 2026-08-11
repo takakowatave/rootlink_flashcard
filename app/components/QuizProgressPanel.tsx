@@ -10,6 +10,7 @@ type Props = {
   header?: ReactNode
   mastered: number
   review: number
+  hard: number
   unseen: number
   scopeItems?: QuizScopeItem[]
   selectedScope?: QuizScope
@@ -23,6 +24,7 @@ export default function QuizProgressPanel({
   header,
   mastered,
   review,
+  hard,
   unseen,
   scopeItems,
   selectedScope,
@@ -39,7 +41,7 @@ export default function QuizProgressPanel({
       <CardShell>
         {header && <div className="mb-2">{header}</div>}
         <div className="flex justify-center py-2">
-          <TriDonutChart mastered={mastered} review={review} unseen={unseen} />
+          <TriDonutChart mastered={mastered} review={review} hard={hard} unseen={unseen} />
         </div>
         {hasScope && (
           <div className="mt-4">

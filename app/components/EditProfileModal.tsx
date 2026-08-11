@@ -224,10 +224,10 @@ export default function EditProfileModal({
             <SettingsSection title="アカウント">
               <SettingsRow
                 label={
-                  <span className="flex items-center gap-2">
-                    メールアドレス
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="whitespace-nowrap">メールアドレス</span>
                     {provider === "google" && (
-                      <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded">
+                      <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded shrink-0 whitespace-nowrap">
                         Googleアカウント
                       </span>
                     )}

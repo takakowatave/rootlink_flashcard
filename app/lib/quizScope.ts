@@ -25,6 +25,30 @@ export function classifyQuizStatus(rows: QuizResultRow[], keys: string[]) {
   return { status, wrongCount: wrongByWord }
 }
 
+/**
+ * 進捗ドーナツ用に排他4分類を返す（合計 = keys.length）。
+ * 判定順: 苦手(wrong≥2) → 習得済(latest correct) → 要復習(latest wrong) → 未習得
+ */
+export function classifyForDonut(
+  status: Map<string, WordStatus>,
+  wrongCount: Map<string, number>,
+  keys: string[],
+) {
+  let mastered = 0
+  let review = 0
+  let hard = 0
+  let unseen = 0
+  for (const k of keys) {
+    const w = wrongCount.get(k) ?? 0
+    if (w >= 2) { hard++; continue }
+    const s = status.get(k)
+    if (s === 'mastered') mastered++
+    else if (s === 'review') review++
+    else unseen++
+  }
+  return { mastered, review, hard, unseen }
+}
+
 export function filterKeysByScope(
   keys: string[],
   status: Map<string, WordStatus>,

@@ -6,5 +6,6 @@ export const colors = {
   primarySubtle:'#f0fdfa',   // teal-50  (Figma primary/subtle)
   muted:        '#90a1b9',
   surface:      '#f8fafc',
-  quizReview:   '#FF7B3A',
+  quizReview:   '#ff8904',
+  quizHard:     '#C70036',
 } as const

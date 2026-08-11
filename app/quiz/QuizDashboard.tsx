@@ -6,24 +6,25 @@ import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
-import { classifyQuizStatus } from '@/lib/quizScope'
+import QuizStatusHelp from '@/components/QuizStatusHelp'
+import { classifyQuizStatus, classifyForDonut } from '@/lib/quizScope'
 import { fetchRecentQuizWords, getUserPlan } from '@/lib/supabaseApi'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
 type MasteryStats = {
   unlearned: number
-  needs_review: number     // all needs_review — for donut
-  review_only: number      // needs_review AND wrong_count == 1 — for scope 「要復習」
-  mastered: number
-  hard: number             // wrong_count >= 2 — for scope 「苦手」
+  review: number           // latest wrong AND wrong<2 — 排他バケット
+  mastered: number         // latest correct AND wrong<2 — 排他バケット
+  hard: number             // wrong>=2 — 排他バケット
+  review_scope: number     // scope「要復習」出題数（= review）
   total: number
 }
 
 type QuizMode = QuizScope
 
 function DonutChart({ stats }: { stats: MasteryStats }) {
-  const { mastered, needs_review, total } = stats
+  const { mastered, review, hard, total } = stats
   if (total === 0) return null
 
   const r = 80
@@ -32,28 +33,28 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
   const C = 2 * Math.PI * r
 
   const masteredLen = (mastered / total) * C
-  const reviewLen = (needs_review / total) * C
-  const unlearnedLen = C - masteredLen - reviewLen
+  const reviewLen = (review / total) * C
+  const hardLen = (hard / total) * C
   const masteredPct100 = Math.round((mastered / total) * 100)
 
   return (
     <div className="relative flex items-center justify-center">
       <svg width="234" height="234" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="18" />
-        {unlearnedLen > 0 && (
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#d1d5db" strokeWidth="18"
-            strokeDasharray={`${unlearnedLen} ${C - unlearnedLen}`}
-            strokeDashoffset={C - (masteredLen + reviewLen)} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="18" />
+        {masteredLen > 0 && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.primaryMid} strokeWidth="18"
+            strokeDasharray={`${masteredLen} ${C - masteredLen}`}
+            strokeDashoffset={C} />
         )}
         {reviewLen > 0 && (
           <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.quizReview} strokeWidth="18"
             strokeDasharray={`${reviewLen} ${C - reviewLen}`}
             strokeDashoffset={C - masteredLen} />
         )}
-        {masteredLen > 0 && (
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.primary} strokeWidth="18"
-            strokeDasharray={`${masteredLen} ${C - masteredLen}`}
-            strokeDashoffset={C} />
+        {hardLen > 0 && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={colors.quizHard} strokeWidth="18"
+            strokeDasharray={`${hardLen} ${C - hardLen}`}
+            strokeDashoffset={C - masteredLen - reviewLen} />
         )}
       </svg>
       <div className="absolute flex flex-col items-center">
@@ -92,7 +93,7 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
 }
 
 export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: { onStart: (mode: QuizMode) => void, onBack: () => void, initialMode?: QuizMode }) {
-  const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, review_only: 0, mastered: 0, hard: 0, total: 0 })
+  const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
   const [recentCount, setRecentCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -149,7 +150,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
       setSavedTotal(allKeys.length)
 
       if (allKeys.length === 0) {
-        setStats({ unlearned: 0, needs_review: 0, review_only: 0, mastered: 0, hard: 0, total: 0 })
+        setStats({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
         setLoading(false)
         return
       }
@@ -166,26 +167,16 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
         (qrRows ?? []) as { word: string; correct: boolean }[],
         allKeys,
       )
+      const buckets = classifyForDonut(status, wrongCount, allKeys)
 
-      let unlearned = 0
-      let needsReviewAll = 0
-      let reviewOnly = 0
-      let mastered = 0
-      let hard = 0
-      for (const k of allKeys) {
-        const s = status.get(k)
-        const wrong = wrongCount.get(k) ?? 0
-        if (wrong >= 2) hard++
-        if (s === 'mastered') mastered++
-        else if (s === 'review') {
-          needsReviewAll++
-          if (wrong < 2) reviewOnly++
-        } else {
-          unlearned++
-        }
-      }
-
-      setStats({ unlearned, needs_review: needsReviewAll, review_only: reviewOnly, mastered, hard, total: allKeys.length })
+      setStats({
+        unlearned: buckets.unseen,
+        review: buckets.review,
+        mastered: buckets.mastered,
+        hard: buckets.hard,
+        review_scope: buckets.review,
+        total: allKeys.length,
+      })
       setLoading(false)
     }
     load()
@@ -234,7 +225,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
     all: stats.total,
     recent: recentCount,
     unseen: stats.unlearned,
-    review: stats.review_only,
+    review: stats.review_scope,
     hard: stats.hard,
   }
 
@@ -261,19 +252,24 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
             </div>
 
             {/* 統計バッジ */}
-            <div className="flex justify-center gap-4 mb-8">
+            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 mb-8">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                <div className="w-2.5 h-2.5 rounded-full bg-line" />
                 <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-quiz-review" />
-                <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.needs_review}</strong></span>
+                <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.review}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                <div className="w-2.5 h-2.5 rounded-full bg-primary-mid" />
                 <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-quiz-hard" />
+                <span className="text-sm text-gray-500">苦手 <strong className="text-gray-800">{stats.hard}</strong></span>
+              </div>
+              <QuizStatusHelp />
             </div>
 
             {/* モード選択タブ */}

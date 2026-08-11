@@ -177,16 +177,19 @@ export default function WordListPage() {
   }))
   const allEntries: QuizEntry[] = [...wordEntries, ...phraseEntries]
   const availableCount = allEntries.length
-  const masteredCount = [...wordStatus.values()].filter((s) => s === 'mastered').length
-  const reviewCount = [...wordStatus.values()].filter((s) => s === 'review').length
   const totalItems = wordList.length + phraseList.length
-  const unseenCount = totalItems - masteredCount - reviewCount
 
   const hardEntries = allEntries.filter((e) => (wrongCounts.get(e.word) ?? 0) >= 2)
   const reviewEntries = allEntries.filter(
     (e) => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
   )
   const unseenEntries = allEntries.filter((e) => wordStatus.get(e.word) === 'unseen')
+
+  // 排他4分類（合計 = totalItems）: 苦手 → 習得済 → 要復習 → 未習得
+  const hardCount = hardEntries.length
+  const reviewCount = reviewEntries.length
+  const unseenCount = unseenEntries.length
+  const masteredCount = totalItems - hardCount - reviewCount - unseenCount
 
   const scopeSource: Record<QuizScope, QuizEntry[]> = {
     all: allEntries,
@@ -260,6 +263,7 @@ export default function WordListPage() {
         <QuizProgressPanel
           mastered={masteredCount}
           review={reviewCount}
+          hard={hardCount}
           unseen={unseenCount}
           scopeItems={[
             { key: 'all', count: availableCount },
