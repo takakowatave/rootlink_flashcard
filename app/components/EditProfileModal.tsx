@@ -309,9 +309,9 @@ export default function EditProfileModal({
                   <button
                     type="button"
                     onClick={handleResetPassword}
-                    className="text-sm font-bold text-primary hover:underline"
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
                   >
-                    再設定
+                    再設定用メールを送信
                   </button>
                 </div>
               </div>
