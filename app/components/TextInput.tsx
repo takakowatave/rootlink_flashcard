@@ -4,18 +4,35 @@ import { forwardRef, useState } from "react";
 import { FieldError } from "react-hook-form";
 import { BsEye, BsEyeSlash } from "react-icons/bs";
 
-interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
+type Size = "sm" | "md";
+
+interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   error?: FieldError;
+  helperText?: string;
+  size?: Size;
 }
 
+const sizeClass: Record<Size, string> = {
+  sm: "h-10 text-sm",
+  md: "h-12 text-base",
+};
+
 export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
-  { label, error, type = "text", className, ...props },
+  { label, error, helperText, type = "text", size = "md", className, disabled, ...props },
   ref,
 ) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (show ? "text" : "password") : type;
+
+  const base =
+    "w-full rounded-lg border bg-white px-3 outline-none transition-colors placeholder:text-gray-400";
+  const focus = error
+    ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+    : "focus:border-primary focus:ring-2 focus:ring-primary/20";
+  const borderColor = error ? "border-red-500" : "border-line";
+  const disabledStyle = disabled ? "bg-gray-50 text-gray-400 cursor-not-allowed" : "";
 
   return (
     <div className="flex flex-col gap-1">
@@ -25,9 +42,19 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
           {...props}
           ref={ref}
           type={inputType}
-          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-primary ${
-            isPassword ? "pr-10" : ""
-          } ${error ? "border-red-500" : "border-line"} ${className ?? ""}`}
+          disabled={disabled}
+          aria-invalid={!!error}
+          className={[
+            base,
+            sizeClass[size],
+            borderColor,
+            focus,
+            disabledStyle,
+            isPassword ? "pr-10" : "",
+            className ?? "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
         />
         {isPassword && (
           <button
@@ -41,7 +68,11 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
           </button>
         )}
       </div>
-      {error && <p className="text-xs text-red-500">{error.message}</p>}
+      {error ? (
+        <p className="text-xs text-red-500">{error.message}</p>
+      ) : helperText ? (
+        <p className="text-xs text-gray-500">{helperText}</p>
+      ) : null}
     </div>
   );
 });

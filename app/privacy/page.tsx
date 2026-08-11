@@ -2,7 +2,7 @@ export default function PrivacyPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12 text-gray-700">
       <h1 className="text-2xl font-bold mb-2">プライバシーポリシー</h1>
-      <p className="text-sm text-gray-400 mb-10">制定日：2026年4月　最終更新：2026年4月</p>
+      <p className="text-sm text-gray-400 mb-10">制定日：2026年4月　最終更新：2026年8月</p>
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">1. 事業者情報</h2>
@@ -73,7 +73,14 @@ export default function PrivacyPage() {
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">6. データの保存・管理</h2>
-        <p className="text-sm">収集したデータはSupabase（AWS東京リージョン）上で管理します。アカウント退会後30日以内に個人データを削除します。HTTPS通信による暗号化およびRow Level Securityによるアクセス制御を実施しています。</p>
+        <p className="text-sm mb-3">収集したデータはSupabase（AWS東京リージョン）上で管理します。HTTPS通信による暗号化およびRow Level Securityによるアクセス制御を実施しています。</p>
+        <p className="text-sm mb-2">退会は、ログイン後の設定画面「アカウント削除」からいつでも行えます。退会時のデータの取り扱いは以下のとおりです。</p>
+        <ul className="list-disc pl-5 space-y-1 text-sm mb-3">
+          <li>アカウント情報（メールアドレス・表示名・アイコン）、保存単語・保存フレーズ、クイズ成績・学習ストリーク等のすべての学習履歴は<strong>退会と同時に削除</strong>されます</li>
+          <li>Premiumプランに加入中の場合、退会と同時にサブスクリプションを自動的に解約します</li>
+          <li>バックアップおよびアクセスログに含まれる残存データは、<strong>30日以内に完全に削除</strong>します</li>
+          <li>Stripe上の決済履歴は、法令（税法等）に基づく保存義務のあいだ、Stripeのプライバシーポリシーに従って保管されます</li>
+        </ul>
       </section>
 
       <section className="mb-8">
