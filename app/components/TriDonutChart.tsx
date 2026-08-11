@@ -1,3 +1,5 @@
+import QuizStatusHelp from '@/components/QuizStatusHelp'
+
 export default function TriDonutChart({ mastered, review, unseen }: { mastered: number; review: number; unseen: number }) {
   const total = mastered + review + unseen
   if (total === 0) return null
@@ -57,6 +59,7 @@ export default function TriDonutChart({ mastered, review, unseen }: { mastered: 
           <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />
           <span className="text-gray-500">習得済 <strong className="text-gray-700">{mastered}</strong></span>
         </div>
+        <QuizStatusHelp />
       </div>
     </div>
   )

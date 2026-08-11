@@ -6,6 +6,7 @@ import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
+import QuizStatusHelp from '@/components/QuizStatusHelp'
 import { classifyQuizStatus } from '@/lib/quizScope'
 import { fetchRecentQuizWords, getUserPlan } from '@/lib/supabaseApi'
 
@@ -274,6 +275,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
                 <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                 <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
               </div>
+              <QuizStatusHelp />
             </div>
 
             {/* モード選択タブ */}
