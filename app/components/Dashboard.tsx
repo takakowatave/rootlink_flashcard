@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
-import { recordActivity, getActivityLog, calcStreak, getUserPlan, fetchRecentQuizWords, fetchHardQuizWords } from '@/lib/supabaseApi'
+import { recordActivity, getActivityLog, calcStreak, getUserPlan } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
 import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
@@ -185,8 +185,6 @@ export default function Dashboard() {
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
-  const [recentQuizCount, setRecentQuizCount] = useState(0)
-  const [hardQuizCount, setHardQuizCount] = useState(0)
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
@@ -218,13 +216,6 @@ export default function Dashboard() {
       if (decksData.data) setDecks(decksData.data as Deck[])
       const userPlan = await getUserPlan()
       setPlan(userPlan)
-
-      const [recent, hard] = await Promise.all([
-        fetchRecentQuizWords(user.id, userPlan, 20),
-        fetchHardQuizWords(user.id, userPlan),
-      ])
-      setRecentQuizCount(recent.length)
-      setHardQuizCount(hard.length)
 
       // quiz済み単語からアクティブなデッキIDを特定（最近学習した順）
       const quizWords = [...new Set((quizData.data ?? []).map(r => r.word))].slice(0, 500)
@@ -278,23 +269,6 @@ export default function Dashboard() {
       }
     })
   const historyItems = activeDeckItems.slice(0, 5)
-  const reviewItems: DeckItem[] = []
-  if (recentQuizCount > 0) {
-    reviewItems.push({
-      key: 'review-all',
-      title: 'まとめて復習',
-      imageSrc: '/dashboard/recent-words.png',
-      href: '/quiz?mode=recent',
-    })
-  }
-  if (hardQuizCount > 0) {
-    reviewItems.push({
-      key: 'review-hard',
-      title: '苦手だけ',
-      imageSrc: '/dashboard/hard-words.png',
-      href: '/quiz?mode=hard',
-    })
-  }
   const examItems: DeckItem[] = LABEL_ORDER.flatMap(label =>
     sortDecksByDifficulty(decks.filter(d => d.label === label))
       .map(d => {
@@ -359,8 +333,6 @@ export default function Dashboard() {
                 <WeeklyStreak streak={streak} activityDates={activityDates} compact />
               </div>
             </section>
-
-            <DeckSection title="復習" items={reviewItems} />
 
             {/* My単語帳 */}
             <section className="flex flex-col gap-3">
