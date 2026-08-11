@@ -99,11 +99,24 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
               },
             })}
           />
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="tertiary" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
+            <Button
+              type="button"
+              variant="tertiary"
+              size="md"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="w-full md:w-auto"
+            >
               キャンセル
             </Button>
-            <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={isSubmitting}
+              className="w-full md:w-auto"
+            >
               {isSubmitting ? "送信中..." : "確認メールを送信"}
             </Button>
           </div>

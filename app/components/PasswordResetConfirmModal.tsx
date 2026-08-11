@@ -64,22 +64,24 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
           リンクをクリックしてパスワードを設定し直してください。
         </p>
         {error && <p className="text-xs text-red-500">{error}</p>}
-        <div className="flex gap-2 justify-end">
+        <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
           <Button
             type="button"
             variant="tertiary"
-            size="sm"
+            size="md"
             onClick={onClose}
             disabled={submitting}
+            className="w-full md:w-auto"
           >
             キャンセル
           </Button>
           <Button
             type="button"
             variant="primary"
-            size="sm"
+            size="md"
             onClick={handleSubmit}
             disabled={submitting}
+            className="w-full md:w-auto"
           >
             {submitting ? "送信中..." : "送信"}
           </Button>

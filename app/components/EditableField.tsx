@@ -82,11 +82,25 @@ export default function EditableField({
           onChange={(e) => setDraft(e.target.value)}
           error={error ? { type: "manual", message: error } : undefined}
         />
-        <div className="flex gap-2 justify-end">
-          <Button type="button" variant="tertiary" size="sm" onClick={cancel} disabled={saving}>
+        <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
+          <Button
+            type="button"
+            variant="tertiary"
+            size="md"
+            onClick={cancel}
+            disabled={saving}
+            className="w-full md:w-auto"
+          >
             {cancelLabel}
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={save} disabled={saving}>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={save}
+            disabled={saving}
+            className="w-full md:w-auto"
+          >
             {saving ? "保存中..." : saveLabel}
           </Button>
         </div>
