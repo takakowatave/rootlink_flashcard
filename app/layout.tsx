@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AppShell from "@/components/AppShell";
 import DevBadge from "@/components/DevBadge";
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({
                 {children}
             </AppShell>
             <DevBadge />
+            <Analytics />
         </body>
         </html>
     );
