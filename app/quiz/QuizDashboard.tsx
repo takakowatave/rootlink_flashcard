@@ -7,6 +7,7 @@ import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
 import { classifyQuizStatus } from '@/lib/quizScope'
+import { fetchRecentQuizWords, getUserPlan } from '@/lib/supabaseApi'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
@@ -90,11 +91,12 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: QuizMode) => void, onBack: () => void }) {
+export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: { onStart: (mode: QuizMode) => void, onBack: () => void, initialMode?: QuizMode }) {
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, needs_review: 0, review_only: 0, mastered: 0, hard: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
+  const [recentCount, setRecentCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [selectedMode, setSelectedMode] = useState<QuizMode>('all')
+  const [selectedMode, setSelectedMode] = useState<QuizMode>(initialMode)
   const [tutorialVisible, setTutorialVisible] = useState(false)
 
   useEffect(() => {
@@ -102,10 +104,12 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       const { data: auth } = await supabase.auth.getUser()
       if (!auth.user) return
 
+      const plan = await getUserPlan()
       const [
         { data: savedWordRows },
         { data: savedPhraseRows },
         { data: historyRows },
+        recent,
       ] = await Promise.all([
         supabase
           .from('saved_words')
@@ -123,7 +127,9 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
           .eq('user_id', auth.user.id)
           .order('answered_at', { ascending: false })
           .limit(1000),
+        fetchRecentQuizWords(auth.user.id, plan, 20),
       ])
+      setRecentCount(recent.length)
 
       const savedKeys = new Set<string>()
       for (const r of (savedWordRows ?? []) as unknown as { words: { word: string } | null }[]) {
@@ -226,6 +232,7 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
 
   const scopeCounts: Record<QuizScope, number> = {
     all: stats.total,
+    recent: recentCount,
     unseen: stats.unlearned,
     review: stats.review_only,
     hard: stats.hard,
@@ -242,6 +249,11 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
             <div className="bg-white rounded-2xl shadow-sm border border-line p-6 mb-4">
+
+            {/* 説明 */}
+            <p className="text-xs text-gray-500 text-center mb-4">
+              My単語帳とデッキの単語をまとめて復習できます
+            </p>
 
             {/* ドーナツ */}
             <div className="flex justify-center mb-4">
@@ -269,10 +281,11 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
             <div className="mb-8">
               <QuizScopeSelector
                 items={[
+                  { key: 'recent', count: scopeCounts.recent },
+                  { key: 'hard', count: scopeCounts.hard },
                   { key: 'all', count: scopeCounts.all },
                   { key: 'unseen', count: scopeCounts.unseen },
                   { key: 'review', count: scopeCounts.review },
-                  { key: 'hard', count: scopeCounts.hard },
                 ]}
                 selected={selectedMode}
                 onChange={setSelectedMode}

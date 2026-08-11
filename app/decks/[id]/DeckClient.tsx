@@ -156,6 +156,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     unseen: unseenWords,
     review: reviewWords,
     hard: hardWords,
+    recent: availableEntries,
   }
 
   const isLocked = deck.is_premium && plan === 'free'

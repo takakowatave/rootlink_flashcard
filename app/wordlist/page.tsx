@@ -193,6 +193,7 @@ export default function WordListPage() {
     unseen: unseenEntries,
     review: reviewEntries,
     hard: hardEntries,
+    recent: allEntries,
   }
 
   const startQuiz = () => {
