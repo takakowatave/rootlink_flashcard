@@ -14,6 +14,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { type QuizScope } from '@/components/QuizScopeSelector'
+import { classifyQuizStatus, type WordStatus } from '@/lib/quizScope'
 import QuizProgressPanel from '@/components/QuizProgressPanel'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import UpgradeModal from '@/components/UpgradeModal'
@@ -33,8 +34,6 @@ type DeckWordEntry = {
   dictionary: SavedWordDictionary | null
   pinned_sense_id: string | null
 }
-
-type WordStatus = 'mastered' | 'review' | 'unseen'
 
 const INITIAL_VISIBLE = 30
 const LOAD_MORE_STEP = 30
@@ -80,20 +79,12 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       .in('word', words)
       .order('answered_at', { ascending: false })
       .limit(10000)
-
-    const latestByWord = new Map<string, boolean>()
-    const wrongByWord = new Map<string, number>()
-    for (const row of ((qr ?? []) as { word: string; correct: boolean }[])) {
-      if (!latestByWord.has(row.word)) latestByWord.set(row.word, row.correct)
-      if (!row.correct) wrongByWord.set(row.word, (wrongByWord.get(row.word) ?? 0) + 1)
-    }
-    const statusMap = new Map<string, WordStatus>()
-    for (const entry of data) {
-      const latest = latestByWord.get(entry.word)
-      statusMap.set(entry.word, latest === undefined ? 'unseen' : latest ? 'mastered' : 'review')
-    }
-    setWordStatus(statusMap)
-    setWrongCounts(wrongByWord)
+    const { status, wrongCount } = classifyQuizStatus(
+      (qr ?? []) as { word: string; correct: boolean }[],
+      words,
+    )
+    setWordStatus(status)
+    setWrongCounts(wrongCount)
   }, [])
 
   const loadSavedWords = useCallback(async (userId: string, deckWords: string[]) => {

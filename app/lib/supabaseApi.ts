@@ -307,6 +307,123 @@ export const fetchWordlists = async (userId: string) => {
 }
 
 /* =========================================
+ word 文字列配列から QuizEntry (word + dictionary) を組み立てる
+ - words → dictionary_cache の2クエリ方式 (fetchWordlists と同じ)
+ - dictionary_cache に無い word は dictionary=null で返す
+========================================= */
+export type QuizEntryLite = {
+  word: string
+  dictionary: SavedWordDictionary | null
+  pinned_sense_id: null
+}
+
+export const fetchQuizEntriesByWords = async (
+  words: string[],
+): Promise<QuizEntryLite[]> => {
+  if (words.length === 0) return []
+  const { data: wordRows } = await supabase
+    .from('words')
+    .select('id, word')
+    .in('word', words)
+    .limit(2000)
+  const rows = ((wordRows ?? []) as { id: string; word: string }[]).filter((r) => r.word)
+  if (rows.length === 0) return []
+
+  const ids = rows.map((r) => r.id)
+  const { data: cacheRows } = await supabase
+    .from('dictionary_cache')
+    .select('word_id, payload')
+    .in('word_id', ids)
+    .limit(2000)
+
+  const payloadByWordId = new Map<string, SavedWordDictionary | null>()
+  for (const r of ((cacheRows ?? []) as { word_id: string; payload: unknown }[])) {
+    if (r?.word_id) payloadByWordId.set(r.word_id, (r.payload as SavedWordDictionary) ?? null)
+  }
+
+  return rows.map((r) => ({
+    word: r.word,
+    dictionary: payloadByWordId.get(r.id) ?? null,
+    pinned_sense_id: null,
+  }))
+}
+
+/* =========================================
+ 「最近学習した単語」用の候補取得
+ - quiz_results を answered_at desc で取得 (最大500行)
+ - Free プランなら Premium デッキ由来の word を除外
+ - 重複除去 → 直近 limit 語 (デフォルト20)
+ - 各語の wrongCount / latestAt も返す (呼び出し側で優先度ソート)
+========================================= */
+export type RecentQuizWord = {
+  word: string
+  wrongCount: number
+  latestAt: string
+}
+
+export const fetchRecentQuizWords = async (
+  userId: string,
+  plan: 'premium' | 'free',
+  limit = 20,
+): Promise<RecentQuizWord[]> => {
+  const { data: qrRows } = await supabase
+    .from('quiz_results')
+    .select('word, correct, answered_at')
+    .eq('user_id', userId)
+    .order('answered_at', { ascending: false })
+    .limit(500)
+  const qr = ((qrRows ?? []) as { word: string; correct: boolean; answered_at: string }[])
+    .filter((r) => r.word)
+  if (qr.length === 0) return []
+
+  const wrongByWord = new Map<string, number>()
+  for (const r of qr) {
+    if (!r.correct) wrongByWord.set(r.word, (wrongByWord.get(r.word) ?? 0) + 1)
+  }
+
+  let excluded = new Set<string>()
+  if (plan === 'free') {
+    const uniqueWords = [...new Set(qr.map((r) => r.word))]
+    const rows: { deck_id: string; word: string }[] = []
+    for (let i = 0; i < uniqueWords.length; i += 200) {
+      const { data } = await supabase
+        .from('deck_words')
+        .select('deck_id, word')
+        .in('word', uniqueWords.slice(i, i + 200))
+      if (data) rows.push(...(data as { deck_id: string; word: string }[]))
+    }
+    const deckIds = [...new Set(rows.map((r) => r.deck_id))]
+    if (deckIds.length > 0) {
+      const { data: deckMeta } = await supabase
+        .from('decks')
+        .select('id, is_premium')
+        .in('id', deckIds)
+      const premiumDecks = new Set(
+        ((deckMeta ?? []) as { id: string; is_premium: boolean }[])
+          .filter((d) => d.is_premium)
+          .map((d) => d.id),
+      )
+      excluded = new Set(rows.filter((r) => premiumDecks.has(r.deck_id)).map((r) => r.word))
+    }
+  }
+
+  const seen = new Set<string>()
+  const results: RecentQuizWord[] = []
+  for (const r of qr) {
+    if (excluded.has(r.word)) continue
+    if (seen.has(r.word)) continue
+    seen.add(r.word)
+    results.push({
+      word: r.word,
+      wrongCount: wrongByWord.get(r.word) ?? 0,
+      latestAt: r.answered_at,
+    })
+    if (results.length >= limit) break
+  }
+  return results
+}
+
+/* =========================================
  保存フレーズ一覧取得（saved_phrase_cards + phrase_cards）
 ========================================= */
 export type SavedPhraseRow = {

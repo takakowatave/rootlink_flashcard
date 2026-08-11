@@ -6,6 +6,7 @@ import Button from '@/components/Button'
 import { colors } from '@/lib/colors'
 import { HiX } from 'react-icons/hi'
 import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelector'
+import { classifyQuizStatus } from '@/lib/quizScope'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
@@ -101,36 +102,84 @@ export default function QuizDashboard({ onStart, onBack }: { onStart: (mode: Qui
       const { data: auth } = await supabase.auth.getUser()
       if (!auth.user) return
 
-      const [{ count: wordCount }, { count: phraseCount }] = await Promise.all([
-        supabase.from('saved_words').select('*', { count: 'exact', head: true }).eq('user_id', auth.user.id),
-        supabase.from('saved_phrase_cards').select('*', { count: 'exact', head: true }).eq('user_id', auth.user.id),
+      const [
+        { data: savedWordRows },
+        { data: savedPhraseRows },
+        { data: historyRows },
+      ] = await Promise.all([
+        supabase
+          .from('saved_words')
+          .select('words(word)')
+          .eq('user_id', auth.user.id)
+          .limit(5000),
+        supabase
+          .from('saved_phrase_cards')
+          .select('phrase_cards(phrase)')
+          .eq('user_id', auth.user.id)
+          .limit(5000),
+        supabase
+          .from('quiz_results')
+          .select('word')
+          .eq('user_id', auth.user.id)
+          .order('answered_at', { ascending: false })
+          .limit(1000),
       ])
-      const count = (wordCount ?? 0) + (phraseCount ?? 0)
-      setSavedTotal(count)
 
-      const { data: mastery } = await supabase
-        .from('word_mastery')
-        .select('status, wrong_count')
+      const savedKeys = new Set<string>()
+      for (const r of (savedWordRows ?? []) as unknown as { words: { word: string } | null }[]) {
+        if (r.words?.word) savedKeys.add(r.words.word)
+      }
+      for (const r of (savedPhraseRows ?? []) as unknown as { phrase_cards: { phrase: string } | null }[]) {
+        if (r.phrase_cards?.phrase) savedKeys.add(r.phrase_cards.phrase)
+      }
+
+      // クイズ履歴のうち saved に無いもの (デッキ由来単語など) も出題母集団に含める
+      const historyKeys = new Set<string>()
+      for (const r of (historyRows ?? []) as { word: string }[]) {
+        if (r.word && !savedKeys.has(r.word)) historyKeys.add(r.word)
+      }
+
+      const allKeys = [...savedKeys, ...historyKeys]
+      setSavedTotal(allKeys.length)
+
+      if (allKeys.length === 0) {
+        setStats({ unlearned: 0, needs_review: 0, review_only: 0, mastered: 0, hard: 0, total: 0 })
+        setLoading(false)
+        return
+      }
+
+      const { data: qrRows } = await supabase
+        .from('quiz_results')
+        .select('word, correct, answered_at')
         .eq('user_id', auth.user.id)
-        .limit(5000)
+        .in('word', allKeys)
+        .order('answered_at', { ascending: false })
+        .limit(10000)
 
+      const { status, wrongCount } = classifyQuizStatus(
+        (qrRows ?? []) as { word: string; correct: boolean }[],
+        allKeys,
+      )
+
+      let unlearned = 0
       let needsReviewAll = 0
       let reviewOnly = 0
       let mastered = 0
       let hard = 0
-      for (const row of (mastery ?? []) as { status: string; wrong_count: number | null }[]) {
-        const wrong = row.wrong_count ?? 0
+      for (const k of allKeys) {
+        const s = status.get(k)
+        const wrong = wrongCount.get(k) ?? 0
         if (wrong >= 2) hard++
-        if (row.status === 'mastered') mastered++
-        else if (row.status === 'needs_review') {
+        if (s === 'mastered') mastered++
+        else if (s === 'review') {
           needsReviewAll++
           if (wrong < 2) reviewOnly++
+        } else {
+          unlearned++
         }
       }
-      const learnedTotal = needsReviewAll + mastered
-      const unlearned = Math.max(0, (count ?? 0) - learnedTotal)
 
-      setStats({ unlearned, needs_review: needsReviewAll, review_only: reviewOnly, mastered, hard, total: count ?? 0 })
+      setStats({ unlearned, needs_review: needsReviewAll, review_only: reviewOnly, mastered, hard, total: allKeys.length })
       setLoading(false)
     }
     load()
