@@ -17,6 +17,7 @@ interface FormData {
 
 export default function AuthSignup() {
   const [done, setDone] = useState(false);
+  const [sentEmail, setSentEmail] = useState("");
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [copyLabel, setCopyLabel] = useState("URLをコピー");
 
@@ -74,6 +75,7 @@ export default function AuthSignup() {
       setError("email", { message: error.message });
       return;
     }
+    setSentEmail(data.email);
     setDone(true);
   };
 
@@ -87,7 +89,9 @@ export default function AuthSignup() {
 
         {done ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <p className="text-primary font-medium">確認メールを送信しました</p>
+            <p className="text-primary font-medium break-all">
+              <span className="font-semibold">{sentEmail}</span> 宛に確認メールを送信しました
+            </p>
             <p className="text-sm text-gray-500">メールのリンクをクリックして登録を完了してください。</p>
           </div>
         ) : (
