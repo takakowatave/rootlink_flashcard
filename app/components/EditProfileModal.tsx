@@ -12,6 +12,7 @@ import EditableField from "@/components/EditableField";
 import SettingsSection from "@/components/SettingsSection";
 import SettingsRow from "@/components/SettingsRow";
 import EmailChangeModal from "@/components/EmailChangeModal";
+import PasswordResetConfirmModal from "@/components/PasswordResetConfirmModal";
 import EmailSentDialog, { type EmailSentVariant } from "@/components/EmailSentDialog";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
@@ -44,6 +45,7 @@ export default function EditProfileModal({
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
   const [email, setEmail] = useState<string>("");
   const [showEmailChange, setShowEmailChange] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [emailSent, setEmailSent] = useState<{ variant: EmailSentVariant; sentTo: string } | null>(
     null,
   );
@@ -86,21 +88,6 @@ export default function EditProfileModal({
     } finally {
       setIsPortalLoading(false);
     }
-  };
-
-  const handleResetPassword = async () => {
-    // Google 認証ユーザーはパスワードを持たない。UI からは辿れないが
-    // 将来のルート追加や古いリンク経由での誤起動に備えた二重防御
-    if (provider !== "email") return;
-    if (!email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) {
-      toast.error("送信に失敗しました");
-      return;
-    }
-    setEmailSent({ variant: "password-reset", sentTo: email });
   };
 
   const handleSaveDisplayName = async (draft: string) => {
@@ -274,10 +261,10 @@ export default function EditProfileModal({
                   </p>
                   <button
                     type="button"
-                    onClick={handleResetPassword}
+                    onClick={() => setShowPasswordReset(true)}
                     className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
                   >
-                    再設定用メールを送信
+                    変更
                   </button>
                 </SettingsRow>
               )}
@@ -354,6 +341,16 @@ export default function EditProfileModal({
         onSent={(newEmail) => {
           setShowEmailChange(false);
           setEmailSent({ variant: "email-change", sentTo: newEmail });
+        }}
+      />
+
+      <PasswordResetConfirmModal
+        open={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+        email={email}
+        onSent={() => {
+          setShowPasswordReset(false);
+          setEmailSent({ variant: "password-reset", sentTo: email });
         }}
       />
 
