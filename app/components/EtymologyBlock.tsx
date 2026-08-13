@@ -45,17 +45,25 @@ export default function EtymologyBlock({
     parts.forEach(part => {
       if (!part?.text) return
       const partText = part.text.toLowerCase()
-      supabase
+      const meaningJa = part.meaningJa?.trim() ?? null
+      const meaningEn = part.meaning?.trim() ?? null
+      // 意味が空のパーツは絞りようがないのでスペル一致のみ（従来通り）
+      let query = supabase
         .from('etymology_part_words')
-        .select('word')
+        .select('word, meaning_en, meaning_ja')
         .eq('part_text', partText)
         .neq('word', headword.toLowerCase())
-        .limit(8)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            setPartWordMap(prev => ({ ...prev, [partText]: data.map(d => d.word) }))
-          }
-        })
+        .limit(24)
+      if (meaningJa) {
+        query = query.eq('meaning_ja', meaningJa)
+      } else if (meaningEn) {
+        query = query.eq('meaning_en', meaningEn)
+      }
+      query.then(({ data }) => {
+        if (data && data.length > 0) {
+          setPartWordMap(prev => ({ ...prev, [partText]: data.map(d => d.word).slice(0, 8) }))
+        }
+      })
     })
   }, [parts, headword])
 
