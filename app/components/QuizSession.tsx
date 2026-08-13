@@ -216,7 +216,7 @@ function CardView({
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
-    const candidates = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2).sort((a, b) => b.length - a.length)
+    const candidates = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2 || /\p{Script=Han}/u.test(s)).sort((a, b) => b.length - a.length)
     const matches = candidates.filter(c => ja.includes(c))
     if (matches.length === 0) return <>{ja}</>
     const hiRegex = new RegExp(`(${matches.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
