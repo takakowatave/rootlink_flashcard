@@ -13,6 +13,7 @@ import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
+import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
@@ -422,47 +423,6 @@ function readJaLocaleSenseMap(
       ]
     })
   )
-}
-
-// locales.ja.etymology を読む
-function readLocalizedEtymologyJa(value: unknown): LocalizedEtymologyJa | null {
-  if (!isRecord(value)) return null
-
-  const locales = isRecord(value.locales) ? value.locales : null
-  const jaLocale = locales && isRecord(locales.ja) ? locales.ja : null
-  const etymology =
-    jaLocale && isRecord(jaLocale.etymology) ? jaLocale.etymology : null
-
-  if (!etymology) return null
-
-  const originLanguageLabel =
-    typeof etymology.originLanguageLabel === 'string'
-      ? etymology.originLanguageLabel
-      : undefined
-
-  const description =
-    typeof etymology.description === 'string'
-      ? etymology.description
-      : undefined
-
-  const sourceMeaning =
-    typeof etymology.sourceMeaning === 'string'
-      ? etymology.sourceMeaning
-      : undefined
-
-  const hook =
-    typeof etymology.hook === 'string' ? etymology.hook : undefined
-
-  if (!originLanguageLabel && !description && !sourceMeaning && !hook) {
-    return null
-  }
-
-  return {
-    originLanguageLabel,
-    description,
-    sourceMeaning,
-    hook,
-  }
 }
 
 // sense 1件を内部 shape に寄せる

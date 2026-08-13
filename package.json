@@ -5,12 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:native": "NEXT_PUBLIC_APP_TARGET=native next build",
     "start": "next start",
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/ios": "^7.6.8",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/typography": "^0.5.20",
@@ -30,6 +34,7 @@
     "wink-lemmatizer": "^3.0.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.8",
     "@storybook/addon-essentials": "8.6.18",
     "@storybook/addon-interactions": "8.6.18",
     "@storybook/addon-onboarding": "8.6.18",

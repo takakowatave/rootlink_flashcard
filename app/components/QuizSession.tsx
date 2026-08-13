@@ -5,11 +5,14 @@ import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import Button from '@/components/Button'
+import EtymologyBlock from '@/components/EtymologyBlock'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
+import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
+import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
 
@@ -26,6 +29,9 @@ export type QuizCard = {
   senseId?: string
   pos?: string
   phrase_card_id?: string
+  etymology?: string
+  etymologyData?: EtymologyData | null
+  localizedEtymologyJa?: LocalizedEtymologyJa | null
 }
 
 export type QuizEntry = {
@@ -101,6 +107,9 @@ export function buildQuizCards(entries: QuizEntry[]): QuizCard[] {
       exampleJa: ja.exampleTranslation ?? undefined,
       senseId,
       pos: targetPos,
+      etymology: typeof d.etymology === 'string' ? d.etymology : undefined,
+      etymologyData: d.etymologyData ?? null,
+      localizedEtymologyJa: readLocalizedEtymologyJa(d),
     })
   }
 
@@ -207,7 +216,7 @@ function CardView({
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
-    const candidates = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2).sort((a, b) => b.length - a.length)
+    const candidates = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2 || /\p{Script=Han}/u.test(s)).sort((a, b) => b.length - a.length)
     const matches = candidates.filter(c => ja.includes(c))
     if (matches.length === 0) return <>{ja}</>
     const hiRegex = new RegExp(`(${matches.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
@@ -253,6 +262,16 @@ function CardView({
         </div>
         {revealed && card.exampleJa && (
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
+        )}
+        {revealed && (
+          <EtymologyBlock
+            headword={card.word}
+            etymologyData={card.etymologyData ?? null}
+            localizedEtymologyJa={card.localizedEtymologyJa ?? null}
+            etymology={card.etymology ?? ''}
+            displayLocale="ja"
+            withTutorialAttr={false}
+          />
         )}
       </div>
     )
@@ -300,6 +319,14 @@ function CardView({
             {revealed && mode === 'word' && (
               <div className="mt-5 pt-4 border-t border-line">
                 <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
+                <EtymologyBlock
+                  headword={card.word}
+                  etymologyData={card.etymologyData ?? null}
+                  localizedEtymologyJa={card.localizedEtymologyJa ?? null}
+                  etymology={card.etymology ?? ''}
+                  displayLocale="ja"
+                  withTutorialAttr={false}
+                />
                 {card.example && (
                   <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
                     <p className="text-gray-700 leading-relaxed">{card.example}</p>

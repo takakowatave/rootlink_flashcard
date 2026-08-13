@@ -49,3 +49,4 @@ scripts/*.log
 *.swp
 *.swo
 *.swn
+out/

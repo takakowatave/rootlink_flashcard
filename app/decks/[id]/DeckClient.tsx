@@ -14,7 +14,7 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { type QuizScope } from '@/components/QuizScopeSelector'
-import { classifyQuizStatus, type WordStatus } from '@/lib/quizScope'
+import { classifyQuizStatus, classifyForDonut, type WordStatus } from '@/lib/quizScope'
 import QuizProgressPanel from '@/components/QuizProgressPanel'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import UpgradeModal from '@/components/UpgradeModal'
@@ -148,13 +148,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   )
   const unseenWords = availableEntries.filter(e => wordStatus.get(e.word) === 'unseen')
 
-  // 排他4分類（合計 = entries.length）: 苦手 → 習得済 → 要復習 → 未習得
-  const hardCount = entries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2).length
-  const reviewCount = entries.filter(
-    e => wordStatus.get(e.word) === 'review' && (wrongCounts.get(e.word) ?? 0) < 2,
-  ).length
-  const unseenCount = entries.filter(e => wordStatus.get(e.word) === 'unseen').length
-  const masteredCount = entries.length - hardCount - reviewCount - unseenCount
+  const { mastered: masteredCount, review: reviewCount, hard: hardCount, unseen: unseenCount } =
+    classifyForDonut(wordStatus, wrongCounts, entries.map(e => e.word))
 
   const scopeSource: Record<QuizScope, typeof availableEntries> = {
     all: availableEntries,
