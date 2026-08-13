@@ -263,6 +263,16 @@ function CardView({
         {revealed && card.exampleJa && (
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
+        {revealed && (
+          <EtymologyBlock
+            headword={card.word}
+            etymologyData={card.etymologyData ?? null}
+            localizedEtymologyJa={card.localizedEtymologyJa ?? null}
+            etymology={card.etymology ?? ''}
+            displayLocale="ja"
+            withTutorialAttr={false}
+          />
+        )}
       </div>
     )
   }
