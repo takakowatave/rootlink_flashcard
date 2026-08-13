@@ -898,6 +898,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
   const [enrichedEtymologyData, setEnrichedEtymologyData] = useState<EtymologyData | null>(null)
+  // derivatives は AI が実在しない形も出すため、words テーブルに存在するものだけ表示
+  const [existingDerivatives, setExistingDerivatives] = useState<string[]>([])
 
   useEffect(() => {
     if (etymologyData?.structure.type !== 'parts') {
@@ -926,6 +928,22 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         } as EtymologyData)
       })
   }, [etymologyData])
+
+  useEffect(() => {
+    if (derivatives.length === 0) {
+      setExistingDerivatives([])
+      return
+    }
+    const candidates = [...new Set(derivatives.map(d => d.toLowerCase()))]
+    supabase
+      .from('words')
+      .select('word')
+      .in('word', candidates)
+      .then(({ data }) => {
+        const found = new Set((data ?? []).map((r: { word: string }) => r.word.toLowerCase()))
+        setExistingDerivatives(derivatives.filter(d => found.has(d.toLowerCase())))
+      })
+  }, [derivatives])
 
   useEffect(() => {
     if (!initialPinnedSenseId) {
@@ -1104,7 +1122,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       lexicalUnits={lexicalUnits}
       inflections={inflections}
       synonyms={synonyms}
-      derivatives={derivatives}
+      derivatives={existingDerivatives}
       antonyms={antonyms}
       grammarTags={grammarTags}
       isBookmarked={savedWords.includes(word)}
