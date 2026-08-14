@@ -9,6 +9,7 @@ import EtymologyBlock from '@/components/EtymologyBlock'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
+import { displayPhrase } from '@/lib/phraseDisplay'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
@@ -305,7 +306,7 @@ function CardView({
                     {POS_LABEL_JA[card.pos] ?? card.pos}
                   </span>
                 )}
-                <p className="text-4xl font-bold text-gray-800 tracking-wide">{card.word}</p>
+                <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
                   {card.ipa && <span className="text-base">/{card.ipa}/</span>}
                   <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
@@ -390,7 +391,7 @@ function ResultScreen({
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
-                <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
+                <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
               </div>
@@ -403,7 +404,7 @@ function ResultScreen({
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
-                <span className="font-semibold text-gray-800 w-36 truncate">{card.word}</span>
+                <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
               </div>

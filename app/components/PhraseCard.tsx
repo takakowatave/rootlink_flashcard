@@ -8,6 +8,7 @@ import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import SenseExample from '@/components/SenseExample'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
+import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
 
 export type PhraseCardSense = {
   sense_id: string
@@ -40,10 +41,6 @@ type Props = {
   onPlayExample?: () => void
   exampleAudioLoading?: boolean
   onClick?: () => void
-}
-
-function cleanPhrase(phrase: string): string {
-  return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
 }
 
 export default function PhraseCard({
@@ -86,14 +83,14 @@ export default function PhraseCard({
     ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
-  const defaultHref = `/word/${cleanPhrase(card.phrase).replace(/\s+/g, '_')}`
+  const defaultHref = `/word/${stripPhraseParens(card.phrase).replace(/\s+/g, '_')}`
   const handleCardClick = onClickProp ?? (() => router.push(defaultHref))
 
   return (
     <CardShell onClick={handleCardClick}>
       {/* HEADER */}
       <CardHeader
-        title={cleanPhrase(card.phrase)}
+        title={displayPhrase(card.phrase)}
         audioLoading={headwordAudioLoading}
         onPlayAudio={onPlayHeadword}
         isSaved={isSaved}

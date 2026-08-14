@@ -6,12 +6,9 @@ import { supabase } from '@/lib/supabaseClient'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { useTtsAudio } from '@/lib/useTtsAudio'
+import { stripPhraseParens } from '@/lib/phraseDisplay'
 
 export type EmbeddedPhrase = PhraseCardData
-
-function cleanPhrase(phrase: string): string {
-  return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
-}
 
 export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) {
   const router = useRouter()
@@ -60,7 +57,7 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
     }
   }
 
-  const href = `/word/${cleanPhrase(phrase.phrase).replace(/\s+/g, '_')}`
+  const href = `/word/${stripPhraseParens(phrase.phrase).replace(/\s+/g, '_')}`
 
   return (
     <div className="not-prose my-6">
