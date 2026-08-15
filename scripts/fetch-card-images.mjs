@@ -35,8 +35,9 @@ const WORDS = [
 const THIN_BYTES = 30_000
 
 async function fetchCard(word) {
-  const url = `${BASE}/word/${encodeURIComponent(word)}/card.png`
-  const res = await fetch(url)
+  // Vercel エッジキャッシュに古いフォールバックが残るケースがあるため cache-buster を付ける
+  const url = `${BASE}/word/${encodeURIComponent(word)}/card.png?v=${Date.now()}`
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const buf = Buffer.from(await res.arrayBuffer())
   await writeFile(join(OUT_DIR, `${word}.png`), buf)
