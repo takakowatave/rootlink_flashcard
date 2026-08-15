@@ -10,6 +10,7 @@ import { HiSearch } from "react-icons/hi";
 import type { Profile } from "@/types/Profile";
 import EditProfileModal from "@/components/EditProfileModal";
 import Button from "@/components/Button";
+import { displayPhrase } from "@/lib/phraseDisplay";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -119,7 +120,7 @@ function SearchBox({
               onMouseDown={() => navigate(s.label)}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
             >
-              <span className="text-gray-900">{s.label}</span>
+              <span className="text-gray-900">{s.type === 'phrase' ? displayPhrase(s.label) : s.label}</span>
               {s.type === 'phrase' && (
                 <span className="text-[11px] text-muted border border-line rounded px-1.5 py-0.5 shrink-0">phrase</span>
               )}

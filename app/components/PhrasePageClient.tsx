@@ -10,6 +10,7 @@ import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phras
 import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
+import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
 
 type PhraseSense = {
   sense_id: string
@@ -36,14 +37,10 @@ type PhraseCard = {
   senses: PhraseSense[] | null
 }
 
-function cleanPhrase(phrase: string): string {
-  return phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
-}
-
-const STOP_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'is', 'be', 'or', 'and', 'not', 'so', 'but', 'one', 'all', 'out', 'up', 'off', 'had', 'got', 'get', 'do', 'from'])
+const STOP_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'is', 'be', 'or', 'and', 'not', 'so', 'but', 'one', 'all', 'out', 'up', 'off', 'had', 'got', 'get', 'do', 'from', 'sth', 'sb', "one's"])
 
 function getComponentWords(phrase: string): string[] {
-  return cleanPhrase(phrase)
+  return stripPhraseParens(phrase)
     .split(/\s+/)
     .filter(w => /^[a-zA-Z]+$/.test(w) && !STOP_WORDS.has(w.toLowerCase()))
 }
@@ -178,7 +175,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
       <CardShell>
         {/* タイトル + 再生 + ブックマーク */}
         <CardHeader
-          title={cleanPhrase(card.phrase)}
+          title={displayPhrase(card.phrase)}
           audioLoading={headwordAudioLoading}
           onPlayAudio={playHeadwordAudio}
           isSaved={isSaved}
