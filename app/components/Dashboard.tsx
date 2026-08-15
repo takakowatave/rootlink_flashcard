@@ -387,6 +387,7 @@ export default function Dashboard() {
                   <SharedDeckCard
                     key={period}
                     title={REVIEW_PERIOD_LABEL[period]}
+                    imageSrc="/dashboard/recent-words.png"
                     disabled={reviewCounts[period] === 0}
                     onClick={() => router.push(`/quiz?period=${period}`)}
                     className="shrink-0 w-[146px] sm:w-[180px]"
