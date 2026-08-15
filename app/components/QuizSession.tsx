@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
+import { useRouter } from 'next/navigation'
 import Button from '@/components/Button'
 import EtymologyBlock from '@/components/EtymologyBlock'
+import LearnedPartWords from '@/components/LearnedPartWords'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
@@ -198,7 +200,21 @@ function CardView({
   onQuit: () => void
 }) {
   const [revealed, setRevealed] = useState(false)
+  const router = useRouter()
   const isPhrase = !!card.phrase_card_id
+
+  const handleSelectRelated = async (word: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: word }),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data?.ok && typeof data.redirectTo === 'string') router.push(data.redirectTo)
+    } catch {}
+  }
   const headword = useTtsAudio(
     isPhrase
       ? { endpoint: '/audio/phrase/headword', body: { phrase_card_id: card.phrase_card_id! } }
@@ -268,14 +284,21 @@ function CardView({
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
         {revealed && (
-          <EtymologyBlock
-            headword={card.word}
-            etymologyData={card.etymologyData ?? null}
-            localizedEtymologyJa={card.localizedEtymologyJa ?? null}
-            etymology={card.etymology ?? ''}
-            displayLocale="ja"
-            withTutorialAttr={false}
-          />
+          <>
+            <EtymologyBlock
+              headword={card.word}
+              etymologyData={card.etymologyData ?? null}
+              localizedEtymologyJa={card.localizedEtymologyJa ?? null}
+              etymology={card.etymology ?? ''}
+              displayLocale="ja"
+              withTutorialAttr={false}
+            />
+            <LearnedPartWords
+              headword={card.word}
+              etymologyData={card.etymologyData ?? null}
+              onSelectWord={handleSelectRelated}
+            />
+          </>
         )}
       </div>
     )
@@ -335,6 +358,11 @@ function CardView({
                   etymology={card.etymology ?? ''}
                   displayLocale="ja"
                   withTutorialAttr={false}
+                />
+                <LearnedPartWords
+                  headword={card.word}
+                  etymologyData={card.etymologyData ?? null}
+                  onSelectWord={handleSelectRelated}
                 />
                 {card.example && (
                   <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
