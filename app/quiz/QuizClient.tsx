@@ -147,11 +147,35 @@ export default function QuizClient() {
     const inPeriod = filterByPeriod(candidates, period)
     const sorted = sortReviewCandidates(inPeriod)
     const top = sorted.slice(0, 10)
-    const entries = await fetchQuizEntriesByWords(top.map((r) => r.word))
+
+    // フレーズは phrase 情報から直接 QuizEntry を組む。単語は fetchQuizEntriesByWords で dictionary を引く。
+    const wordTargets = top.filter((c) => !c.phrase).map((c) => c.word)
+    const wordEntries = wordTargets.length > 0 ? await fetchQuizEntriesByWords(wordTargets) : []
+    const wordEntryMap = new Map(wordEntries.map((e) => [e.word, e]))
+
+    const orderedEntries: QuizEntry[] = []
+    for (const c of top) {
+      if (c.phrase) {
+        orderedEntries.push({
+          word: c.word,
+          dictionary: null,
+          phrase_card_id: c.phrase.phraseCardId,
+          phrase_meaning_ja: c.phrase.meaningJa,
+          phrase_meaning_en: c.phrase.meaningEn,
+          phrase_example_en: c.phrase.exampleEn,
+          phrase_example_ja: c.phrase.exampleJa,
+          phrase_type: c.phrase.type,
+        })
+      } else {
+        const e = wordEntryMap.get(c.word)
+        if (e) orderedEntries.push(e)
+      }
+    }
+
     // 表示順のみシャッフル (slice しない = 優先順位を維持)
-    const cards = shuffleCards(buildQuizCards(entries))
+    const cards = shuffleCards(buildQuizCards(orderedEntries))
     setSessionEntries(
-      cards.map((c) => entries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
+      cards.map((c) => orderedEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
     )
     setLoading(false)
     setShowDashboard(false)
@@ -207,7 +231,10 @@ export default function QuizClient() {
     <QuizSession
       initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, 10)}
       entries={sessionEntries}
-      onQuit={() => setShowDashboard(true)}
+      onQuit={() => {
+        if (hasPeriodParam) router.push('/')
+        else setShowDashboard(true)
+      }}
       onAnswer={handleAnswer}
     />
   )

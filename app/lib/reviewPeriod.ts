@@ -8,6 +8,14 @@ export type ReviewCandidate = {
   lastTouchedAt: string
   wrongCount: number
   source: 'saved' | 'quiz'
+  phrase?: {
+    phraseCardId: string
+    meaningJa: string | null
+    meaningEn: string | null
+    exampleEn: string | null
+    exampleJa: string | null
+    type: string | null
+  }
 }
 
 const JST = 'Asia/Tokyo'
@@ -40,10 +48,20 @@ export async function fetchReviewCandidates(
       .limit(5000),
     supabase
       .from('saved_phrase_cards')
-      .select('created_at, phrase_cards(phrase)')
+      .select('created_at, phrase_cards(id, phrase, meaning_ja, meaning_en, example_en, example_ja, type)')
       .eq('user_id', userId)
       .limit(5000),
   ])
+
+  type PhraseCardRow = {
+    id: string
+    phrase: string
+    meaning_ja: string | null
+    meaning_en: string | null
+    example_en: string | null
+    example_ja: string | null
+    type: string | null
+  }
 
   const qr = ((qrRes.data ?? []) as { word: string; correct: boolean; answered_at: string }[])
     .filter((r) => r.word)
@@ -51,13 +69,13 @@ export async function fetchReviewCandidates(
     .filter((r) => r.word)
   const sp = ((spRes.data ?? []) as unknown as {
     created_at: string
-    phrase_cards: { phrase: string } | { phrase: string }[] | null
+    phrase_cards: PhraseCardRow | PhraseCardRow[] | null
   }[])
     .map((r) => {
       const pc = Array.isArray(r.phrase_cards) ? r.phrase_cards[0] : r.phrase_cards
-      return { word: pc?.phrase ?? '', created_at: r.created_at }
+      return { pc, created_at: r.created_at }
     })
-    .filter((r) => r.word)
+    .filter((r): r is { pc: PhraseCardRow; created_at: string } => !!r.pc && !!r.pc.phrase)
 
   const map = new Map<string, ReviewCandidate>()
 
@@ -76,7 +94,7 @@ export async function fetchReviewCandidates(
     }
   }
 
-  for (const r of [...sw, ...sp]) {
+  for (const r of sw) {
     const cur = map.get(r.word)
     if (cur) {
       cur.source = 'saved'
@@ -87,6 +105,31 @@ export async function fetchReviewCandidates(
         lastTouchedAt: r.created_at,
         wrongCount: 0,
         source: 'saved',
+      })
+    }
+  }
+
+  for (const r of sp) {
+    const meta = {
+      phraseCardId: r.pc.id,
+      meaningJa: r.pc.meaning_ja,
+      meaningEn: r.pc.meaning_en,
+      exampleEn: r.pc.example_en,
+      exampleJa: r.pc.example_ja,
+      type: r.pc.type,
+    }
+    const cur = map.get(r.pc.phrase)
+    if (cur) {
+      cur.source = 'saved'
+      cur.phrase = meta
+      if (r.created_at > cur.lastTouchedAt) cur.lastTouchedAt = r.created_at
+    } else {
+      map.set(r.pc.phrase, {
+        word: r.pc.phrase,
+        lastTouchedAt: r.created_at,
+        wrongCount: 0,
+        source: 'saved',
+        phrase: meta,
       })
     }
   }
