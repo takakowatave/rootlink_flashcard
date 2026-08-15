@@ -5,14 +5,14 @@
 type PlantLevel = { level: number; minScore: number; src: string }
 
 const PLANT_LEVELS: PlantLevel[] = [
-  { level: 1, minScore: 0, src: '/plant/lv1.png' },
-  { level: 2, minScore: 30, src: '/plant/lv2.png' },
-  { level: 3, minScore: 100, src: '/plant/lv3.png' },
-  { level: 4, minScore: 300, src: '/plant/lv4.png' },
-  { level: 5, minScore: 800, src: '/plant/lv5.png' },
-  { level: 6, minScore: 2000, src: '/plant/lv5.png' },
-  { level: 7, minScore: 5000, src: '/plant/lv5.png' },
-  { level: 8, minScore: 10000, src: '/plant/lv5.png' },
+  { level: 1, minScore: 0, src: '/plant/my-wordlist.png' },
+  { level: 2, minScore: 30, src: '/plant/my-wordlist.png' },
+  { level: 3, minScore: 100, src: '/plant/my-wordlist.png' },
+  { level: 4, minScore: 300, src: '/plant/my-wordlist.png' },
+  { level: 5, minScore: 800, src: '/plant/my-wordlist.png' },
+  { level: 6, minScore: 2000, src: '/plant/my-wordlist.png' },
+  { level: 7, minScore: 5000, src: '/plant/my-wordlist.png' },
+  { level: 8, minScore: 10000, src: '/plant/my-wordlist.png' },
 ]
 
 export const LOGIN_WEIGHT = 3

@@ -18,7 +18,7 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
       onClick={onClick}
       disabled={disabled}
       aria-disabled={disabled || undefined}
-      className={`relative bg-white border border-line rounded-2xl py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
+      className={`relative bg-white border border-line rounded-2xl px-2 py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
         disabled
           ? 'opacity-40 cursor-not-allowed'
           : 'hover:border-muted active:scale-[0.98] cursor-pointer'
@@ -32,16 +32,16 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
           <img src="/premium-crown.svg" alt="" width={18} height={18} />
         </span>
       )}
-      <p className="text-[18px] font-bold text-gray-950 tracking-[-0.27px] leading-[21px] whitespace-nowrap">
+      <p className="text-[18px] font-bold text-[#020617] tracking-[-0.27px] leading-[21px] whitespace-nowrap">
         {displayTitle}
       </p>
-      <div className="w-[118px] h-[74px] overflow-hidden">
+      <div className="w-full aspect-[118.132/74.255] rounded-lg overflow-hidden">
         {imageSrc && (
-          <img src={imageSrc} alt="" className="w-full h-full object-cover" />
+          <img src={imageSrc} alt="" className="w-full h-full object-contain" />
         )}
       </div>
       {typeof wordCount === 'number' && (
-        <p className="py-1 text-[12px] leading-none text-slate-500 tracking-[-0.18px]">
+        <p className="py-1 text-[12px] leading-none text-[#62748e] tracking-[-0.18px]">
           {wordCount} 語
         </p>
       )}
