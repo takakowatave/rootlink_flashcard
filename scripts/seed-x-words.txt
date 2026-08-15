@@ -1,0 +1,26 @@
+# X投稿ストック用の不足単語（残り分・2026-08-14 07:30 時点）
+#
+# 使い方:
+#   WORD_FILE=scripts/seed-x-words.txt ./scripts/seed-words.sh
+#
+# 完了済み（再投入不要）:
+#   alcohol algebra avocado bikini cappuccino cereal chocolate
+#   clue curfew dandelion ketchup
+
+denim
+goodbye
+gorilla
+influenza
+jumbo
+lunatic
+magazine
+nice
+nightmare
+rival
+robot
+salad
+sandwich
+slave
+tulip
+tuxedo
+window
