@@ -6,6 +6,7 @@ import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import Button from '@/components/Button'
 import EtymologyBlock from '@/components/EtymologyBlock'
+import LearnedPartWords from '@/components/LearnedPartWords'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
@@ -199,6 +200,7 @@ function CardView({
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
+
   const headword = useTtsAudio(
     isPhrase
       ? { endpoint: '/audio/phrase/headword', body: { phrase_card_id: card.phrase_card_id! } }
@@ -268,14 +270,20 @@ function CardView({
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
         {revealed && (
-          <EtymologyBlock
-            headword={card.word}
-            etymologyData={card.etymologyData ?? null}
-            localizedEtymologyJa={card.localizedEtymologyJa ?? null}
-            etymology={card.etymology ?? ''}
-            displayLocale="ja"
-            withTutorialAttr={false}
-          />
+          <>
+            <EtymologyBlock
+              headword={card.word}
+              etymologyData={card.etymologyData ?? null}
+              localizedEtymologyJa={card.localizedEtymologyJa ?? null}
+              etymology={card.etymology ?? ''}
+              displayLocale="ja"
+              withTutorialAttr={false}
+            />
+            <LearnedPartWords
+              headword={card.word}
+              etymologyData={card.etymologyData ?? null}
+            />
+          </>
         )}
       </div>
     )
@@ -287,8 +295,13 @@ function CardView({
         <Button onClick={onQuit} variant="secondary" size="sm">終了</Button>
       </header>
       <div className="flex flex-col mx-auto w-full max-w-[700px] flex-1 min-h-0">
-        <div className="h-1 mx-4 mt-4 bg-gray-100 rounded-full overflow-hidden shrink-0">
-          <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(current / total) * 100}%` }} />
+        <div className="mx-4 mt-4 flex items-center gap-2 shrink-0">
+          <div className="flex-1 h-3 bg-line rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(current / total) * 100}%` }} />
+          </div>
+          <p className="text-sm text-[#90a1b9] tabular-nums whitespace-nowrap">
+            {current} / {total}
+          </p>
         </div>
         <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
           <div className="p-5">
@@ -330,6 +343,10 @@ function CardView({
                   etymology={card.etymology ?? ''}
                   displayLocale="ja"
                   withTutorialAttr={false}
+                />
+                <LearnedPartWords
+                  headword={card.word}
+                  etymologyData={card.etymologyData ?? null}
                 />
                 {card.example && (
                   <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">

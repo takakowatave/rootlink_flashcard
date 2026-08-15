@@ -11,6 +11,12 @@ import { getPlantImageSrc } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
+import {
+  fetchReviewCandidates,
+  filterByPeriod,
+  REVIEW_PERIODS,
+  type ReviewPeriod,
+} from '@/lib/reviewPeriod'
 
 type Deck = {
   id: string
@@ -125,7 +131,7 @@ type DeckItem = {
   label?: string
   title: string
   imageSrc?: string
-  imageContain?: boolean
+  wordCount?: number
   isPremium?: boolean
   href: string
 }
@@ -162,7 +168,7 @@ function DeckSection({
             label={item.label}
             title={item.title}
             imageSrc={item.imageSrc}
-            imageContain={item.imageContain}
+            wordCount={item.wordCount}
             isPremium={item.isPremium}
             onClick={() => router.push(item.href)}
             className="shrink-0 w-[146px] sm:w-[180px]"
@@ -175,6 +181,13 @@ function DeckSection({
 
 const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 
+const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
+  yesterday: '昨日',
+  week: '1週間',
+  month: '1ヶ月',
+  all: '全期間',
+}
+
 export default function Dashboard() {
   const router = useRouter()
   const [streak, setStreak] = useState(0)
@@ -186,6 +199,9 @@ export default function Dashboard() {
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
   const [showModal, setShowModal] = useState(false)
+  const [reviewCounts, setReviewCounts] = useState<Record<ReviewPeriod, number>>({
+    yesterday: 0, week: 0, month: 0, all: 0,
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -216,6 +232,15 @@ export default function Dashboard() {
       if (decksData.data) setDecks(decksData.data as Deck[])
       const userPlan = await getUserPlan()
       setPlan(userPlan)
+
+      // 復習カード用の期間別件数
+      const candidates = await fetchReviewCandidates(user.id, userPlan)
+      setReviewCounts({
+        yesterday: filterByPeriod(candidates, 'yesterday').length,
+        week: filterByPeriod(candidates, 'week').length,
+        month: filterByPeriod(candidates, 'month').length,
+        all: candidates.length,
+      })
 
       // quiz済み単語からアクティブなデッキIDを特定（最近学習した順）
       const quizWords = [...new Set((quizData.data ?? []).map(r => r.word))].slice(0, 500)
@@ -252,7 +277,7 @@ export default function Dashboard() {
     title: 'My単語帳',
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
-    imageContain: true,
+    wordCount: savedCount,
   }
   const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
@@ -264,6 +289,7 @@ export default function Dashboard() {
         label: d.label,
         title: shortName,
         imageSrc: getDeckImage(d.label, shortName),
+        wordCount: d.word_count,
         isPremium: d.is_premium && plan === 'free',
         href: `/decks/${d.id}`,
       }
@@ -278,6 +304,7 @@ export default function Dashboard() {
           label: d.label,
           title: shortName,
           imageSrc: getDeckImage(d.label, shortName),
+          wordCount: d.word_count,
           isPremium: d.is_premium && plan === 'free',
           href: `/decks/${d.id}`,
         }
@@ -342,7 +369,7 @@ export default function Dashboard() {
                   <SharedDeckCard
                     title={myDeckItem.title}
                     imageSrc={myDeckItem.imageSrc}
-                    imageContain={myDeckItem.imageContain}
+                    wordCount={myDeckItem.wordCount}
                     onClick={() => router.push(myDeckItem.href)}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
@@ -352,6 +379,24 @@ export default function Dashboard() {
                   onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
                 />
               )}
+            </section>
+
+            {/* 復習 (期間別4枚固定) */}
+            <section className="flex flex-col gap-3">
+              <h2 className="text-xl font-bold text-gray-950">復習</h2>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                {REVIEW_PERIODS.map((period) => (
+                  <SharedDeckCard
+                    key={period}
+                    title={REVIEW_PERIOD_LABEL[period]}
+                    imageSrc="/dashboard/recent-words.png"
+                    wordCount={reviewCounts[period]}
+                    disabled={reviewCounts[period] === 0}
+                    onClick={() => router.push(`/quiz?period=${period}`)}
+                    className="shrink-0 w-[146px] sm:w-[180px]"
+                  />
+                ))}
+              </div>
             </section>
 
             <DeckSection title="履歴" items={historyItems} />

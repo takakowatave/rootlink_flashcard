@@ -1,0 +1,45 @@
+name: Tweet Scheduler
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # 10分おき
+  workflow_dispatch: {} # 手動実行も可
+
+permissions:
+  contents: write # 投稿完了マーカーを posts/schedule.json に書き戻す
+
+concurrency:
+  group: tweet-scheduler
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Post due tweets
+        run: node scripts/post-scheduled.mjs
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+
+      - name: Commit updated schedule
+        run: |
+          if [[ -n "$(git status --porcelain posts/schedule.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add posts/schedule.json
+            git commit -m "chore(tweets): mark posted entries [skip ci]"
+            git push
+          fi

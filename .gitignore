@@ -45,6 +45,9 @@ scripts/*.log
 
 *storybook.log
 
+# X投稿用カード画像（fetch-card-images.mjs で本番から再取得可能）
+x-cards/
+
 # Vim swap files
 *.swp
 *.swo

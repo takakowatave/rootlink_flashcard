@@ -13,7 +13,12 @@ import type { RewrittenPayload } from '@/types/Dictionary'
 export const runtime = 'nodejs'
 
 const SIZE = { width: 1200, height: 675 }
-const CACHE_HEADER = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=86400'
+// 正しく描画できたときだけ CDN に長くキャッシュさせる。
+// フォールバック（DB fetch 失敗 or ペイロード空）は自己修復のため一切キャッシュしない。
+// 過去に一過性失敗の FallbackCard が Vercel エッジに 1 年焼き付いた実績あり。
+const CACHE_HEADER_SUCCESS =
+  'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+const CACHE_HEADER_FALLBACK = 'no-store'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -305,7 +310,7 @@ export async function GET(
   const data = extractCardData(raw, payload)
   const hasContent = Boolean(data.meaning || data.parts.length > 0)
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     hasContent ? <Card data={data} logo={logo} /> : <FallbackCard word={raw} logo={logo} />,
     {
       ...SIZE,
@@ -314,9 +319,13 @@ export async function GET(
         { name: 'NotoSansJP', data: fonts.medium, weight: 500, style: 'normal' },
         { name: 'NotoSansJP', data: fonts.bold, weight: 700, style: 'normal' },
       ],
-      headers: {
-        'Cache-Control': CACHE_HEADER,
-      },
     }
   )
+  // Vercel は .png 拡張子で `public, immutable, max-age=31536000` を自動付与する。
+  // set() で強制上書きしないと二重ヘッダになって CDN が長期キャッシュしてしまう。
+  image.headers.set(
+    'Cache-Control',
+    hasContent ? CACHE_HEADER_SUCCESS : CACHE_HEADER_FALLBACK
+  )
+  return image
 }

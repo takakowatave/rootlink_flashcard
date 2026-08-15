@@ -15,7 +15,7 @@
 set -euo pipefail
 
 API_URL="${CLOUDRUN_API_URL:-https://rootlink-server-v2-774622345521.asia-northeast1.run.app}"
-WORD_FILE="$(dirname "$0")/seed-words.txt"
+WORD_FILE="${WORD_FILE:-$(dirname "$0")/seed-words.txt}"
 LOG_FILE="$(dirname "$0")/seed-words.log"
 RATE_LIMIT_SEC="${RATE_LIMIT_SEC:-1}"   # 1単語あたり待機秒
 DRY_RUN=false

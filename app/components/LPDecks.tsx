@@ -72,6 +72,7 @@ export default function LPDecks() {
                     label={group.label}
                     title={deck.shortName}
                     imageSrc={getDeckImage(group.label, deck.shortName)}
+                    wordCount={deck.wordCount}
                     onClick={() => router.push(`/decks/${deck.id}`)}
                   />
                 ))}

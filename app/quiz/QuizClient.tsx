@@ -18,15 +18,25 @@ import QuizDashboard from './QuizDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import {
+  fetchReviewCandidates,
+  filterByPeriod,
+  sortReviewCandidates,
+  type ReviewPeriod,
+} from '@/lib/reviewPeriod'
 
 type QuizMode = QuizScope
 
 export default function QuizClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [loading, setLoading] = useState(false)
+  const hasPeriodParam = ((): boolean => {
+    const p = searchParams.get('period')
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all'
+  })()
+  const [loading, setLoading] = useState(hasPeriodParam)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const [showDashboard, setShowDashboard] = useState(true)
+  const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
 
   useEffect(() => { toast.dismiss() }, [])
@@ -127,6 +137,50 @@ export default function QuizClient() {
     setShowDashboard(false)
   }, [])
 
+  const loadPeriodQuiz = useCallback(async (period: ReviewPeriod) => {
+    setLoading(true)
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) { setShowSignupModal(true); setLoading(false); return }
+    const userId = data.user.id
+    const plan = await getUserPlan()
+    const candidates = await fetchReviewCandidates(userId, plan)
+    const inPeriod = filterByPeriod(candidates, period)
+    const sorted = sortReviewCandidates(inPeriod)
+    const top = sorted.slice(0, 10)
+
+    // フレーズは phrase 情報から直接 QuizEntry を組む。単語は fetchQuizEntriesByWords で dictionary を引く。
+    const wordTargets = top.filter((c) => !c.phrase).map((c) => c.word)
+    const wordEntries = wordTargets.length > 0 ? await fetchQuizEntriesByWords(wordTargets) : []
+    const wordEntryMap = new Map(wordEntries.map((e) => [e.word, e]))
+
+    const orderedEntries: QuizEntry[] = []
+    for (const c of top) {
+      if (c.phrase) {
+        orderedEntries.push({
+          word: c.word,
+          dictionary: null,
+          phrase_card_id: c.phrase.phraseCardId,
+          phrase_meaning_ja: c.phrase.meaningJa,
+          phrase_meaning_en: c.phrase.meaningEn,
+          phrase_example_en: c.phrase.exampleEn,
+          phrase_example_ja: c.phrase.exampleJa,
+          phrase_type: c.phrase.type,
+        })
+      } else {
+        const e = wordEntryMap.get(c.word)
+        if (e) orderedEntries.push(e)
+      }
+    }
+
+    // 表示順のみシャッフル (slice しない = 優先順位を維持)
+    const cards = shuffleCards(buildQuizCards(orderedEntries))
+    setSessionEntries(
+      cards.map((c) => orderedEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
+    )
+    setLoading(false)
+    setShowDashboard(false)
+  }, [])
+
   const handleAnswer = useCallback(async (word: string, correct: boolean) => {
     saveQuizResult(word, correct)
   }, [])
@@ -135,6 +189,17 @@ export default function QuizClient() {
     const m = searchParams.get('mode')
     return m === 'recent' || m === 'hard' || m === 'all' || m === 'unseen' || m === 'review' ? m : 'all'
   })()
+
+  const initialPeriod = ((): ReviewPeriod | null => {
+    const p = searchParams.get('period')
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : null
+  })()
+
+  useEffect(() => {
+    if (initialPeriod) loadPeriodQuiz(initialPeriod)
+    // 起動時1回のみ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (showDashboard) {
     return (
@@ -166,7 +231,10 @@ export default function QuizClient() {
     <QuizSession
       initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, 10)}
       entries={sessionEntries}
-      onQuit={() => setShowDashboard(true)}
+      onQuit={() => {
+        if (hasPeriodParam) router.push('/')
+        else setShowDashboard(true)
+      }}
       onAnswer={handleAnswer}
     />
   )
