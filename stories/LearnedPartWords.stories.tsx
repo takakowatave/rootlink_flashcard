@@ -8,7 +8,7 @@ const meta: Meta<typeof LearnedPartWordsView> = {
   title: 'Word Detail/LearnedPartWords',
   component: LearnedPartWordsView,
   parameters: { layout: 'padded' },
-  argTypes: { onSelectWord: { action: 'select-word' } },
+  argTypes: { onToggleSave: { action: 'toggle-save' } },
 }
 export default meta
 

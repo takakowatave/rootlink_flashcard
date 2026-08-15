@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
 import { supabase } from '@/lib/supabaseClient'
+import { toggleSaveStatus } from '@/lib/supabaseApi'
 import { POS_LABEL_JA } from '@/lib/pos'
 import type { EtymologyData, EtymologyPart } from '@/types/Etymology'
 import type { RewrittenPayload } from '@/types/Dictionary'
@@ -22,10 +23,9 @@ export type LearnedPartGroup = {
 type Props = {
   headword: string
   etymologyData?: EtymologyData | null
-  onSelectWord?: (word: string) => void
 }
 
-export default function LearnedPartWords({ headword, etymologyData, onSelectWord }: Props) {
+export default function LearnedPartWords({ headword, etymologyData }: Props) {
   const parts = useMemo(
     () => etymologyData?.structure.type === 'parts'
       ? etymologyData.structure.parts.filter(p => p.text)
@@ -132,33 +132,61 @@ export default function LearnedPartWords({ headword, etymologyData, onSelectWord
     return () => { cancelled = true }
   }, [parts, headword])
 
+  const handleToggleSave = async (word: string) => {
+    setGroups(prev => prev.map(g => ({
+      ...g,
+      words: g.words.map(w => w.word === word ? { ...w, isSaved: !w.isSaved } : w),
+    })))
+    const res = await toggleSaveStatus({ word })
+    if (!res.success) {
+      setGroups(prev => prev.map(g => ({
+        ...g,
+        words: g.words.map(w => w.word === word ? { ...w, isSaved: !w.isSaved } : w),
+      })))
+    }
+  }
+
   if (groups.length === 0) return null
 
-  return <LearnedPartWordsView groups={groups} onSelectWord={onSelectWord} />
+  return <LearnedPartWordsView groups={groups} onToggleSave={handleToggleSave} />
 }
 
-export function LearnedPartWordsView({ groups, onSelectWord }: { groups: LearnedPartGroup[]; onSelectWord?: (word: string) => void }) {
+export function LearnedPartWordsView({
+  groups,
+  onToggleSave,
+}: {
+  groups: LearnedPartGroup[]
+  onToggleSave?: (word: string) => void
+}) {
   if (groups.length === 0) return null
   return (
     <div className="flex flex-col gap-2 w-full mt-4">
       <p className="text-base font-medium text-gray-950 leading-6">過去に学習した同パーツを持つ単語</p>
       <div className="bg-slate-50 rounded-lg p-2 flex flex-col gap-4">
         {groups.map((g, gi) => (
-          <PartGroupTree key={`${g.part.text}-${gi}`} group={g} onSelectWord={onSelectWord} />
+          <PartGroupTree key={`${g.part.text}-${gi}`} group={g} onToggleSave={onToggleSave} />
         ))}
       </div>
     </div>
   )
 }
 
-function PartGroupTree({ group, onSelectWord }: { group: LearnedPartGroup; onSelectWord?: (word: string) => void }) {
+function PartGroupTree({
+  group,
+  onToggleSave,
+}: {
+  group: LearnedPartGroup
+  onToggleSave?: (word: string) => void
+}) {
   const { part, words } = group
   const gloss = part.meaningJa ?? part.meaning ?? ''
 
   const ITEM_H = 52
   const ITEM_GAP = 8
-  const TX = 5
+  const BADGE = 40 // size-10
+  const TRUNK_X = BADGE / 2 // 20 — trunk aligned with badge center
   const R = 10
+  const BRANCH_END = 52 // where branch meets card
   const rowStride = ITEM_H + ITEM_GAP
   const lastMidY = (words.length - 1) * rowStride + ITEM_H / 2
   const trunkEnd = lastMidY - R
@@ -166,20 +194,20 @@ function PartGroupTree({ group, onSelectWord }: { group: LearnedPartGroup; onSel
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <div className="bg-white border-2 border-primary-mid rounded-[24px] px-[12px] py-[4px]">
+        <div className="size-10 shrink-0 rounded-full border-2 border-primary-mid bg-white flex items-center justify-center">
           <span className="text-base font-medium text-primary-hover leading-4">{part.text}</span>
         </div>
         {gloss && <span className="text-sm font-medium text-primary-hover">{gloss}</span>}
       </div>
-      <div className="relative pl-[24px]">
+      <div className="relative -mt-2" style={{ paddingLeft: BRANCH_END + 4 }}>
         <svg
-          className="absolute left-2 top-0 pointer-events-none overflow-visible"
-          width={20}
+          className="absolute left-0 top-0 pointer-events-none"
+          width={BRANCH_END}
           height={words.length * rowStride}
           fill="none"
         >
           <path
-            d={`M ${TX},0 L ${TX},${trunkEnd}`}
+            d={`M ${TRUNK_X},0 L ${TRUNK_X},${trunkEnd}`}
             stroke="#009689"
             strokeWidth="2"
             strokeLinecap="round"
@@ -189,7 +217,7 @@ function PartGroupTree({ group, onSelectWord }: { group: LearnedPartGroup; onSel
             return (
               <path
                 key={wi}
-                d={`M ${TX},${midY - R} C ${TX},${midY} ${TX + R},${midY} ${TX + R + 2},${midY} L 18,${midY}`}
+                d={`M ${TRUNK_X},${midY - R} C ${TRUNK_X},${midY} ${TRUNK_X + R},${midY} ${TRUNK_X + R + 2},${midY} L ${BRANCH_END},${midY}`}
                 stroke="#009689"
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -200,11 +228,9 @@ function PartGroupTree({ group, onSelectWord }: { group: LearnedPartGroup; onSel
         </svg>
         <div className="flex flex-col" style={{ gap: ITEM_GAP }}>
           {words.map((w, wi) => (
-            <button
+            <div
               key={wi}
-              type="button"
-              onClick={() => onSelectWord?.(w.word)}
-              className="bg-white border-2 border-line rounded-lg px-2 py-2 flex items-center gap-2 w-full text-left hover:border-primary-mid transition-colors"
+              className="bg-white border-2 border-line rounded-lg px-2 py-2 flex items-center gap-2 w-full"
               style={{ height: ITEM_H }}
             >
               <span className="text-base font-medium text-gray-950 leading-6 shrink-0">{w.word}</span>
@@ -216,10 +242,17 @@ function PartGroupTree({ group, onSelectWord }: { group: LearnedPartGroup; onSel
               <span className="flex-1 min-w-0 text-sm text-muted leading-5 truncate">
                 {w.meaningJa ?? ''}
               </span>
-              {w.isSaved
-                ? <BsBookmarkFill className="size-5 text-primary-hover shrink-0" />
-                : <BsBookmark className="size-5 text-muted shrink-0" />}
-            </button>
+              <button
+                type="button"
+                aria-label={w.isSaved ? '保存を解除' : '保存する'}
+                onClick={() => onToggleSave?.(w.word)}
+                className="shrink-0 p-1 -m-1"
+              >
+                {w.isSaved
+                  ? <BsBookmarkFill className="size-5 text-primary-hover" />
+                  : <BsBookmark className="size-5 text-muted" />}
+              </button>
+            </div>
           ))}
         </div>
       </div>
