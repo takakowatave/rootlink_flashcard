@@ -116,7 +116,7 @@ export default function LearnedPartWords({ headword, etymologyData, onSelectWord
       const nextGroups: LearnedPartGroup[] = parts
         .map(part => {
           const list = wordsByPart.get(part.text.toLowerCase()) ?? []
-          const words: LearnedWord[] = list.map(w => ({
+          const words: LearnedWord[] = list.slice(0, 3).map(w => ({
             word: w,
             pos: wordMeta.get(w)?.pos,
             meaningJa: wordMeta.get(w)?.meaningJa,
