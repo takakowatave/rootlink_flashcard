@@ -72,6 +72,7 @@ export default function DecksPage() {
                             label={deck.label}
                             title={shortName}
                             imageSrc={getDeckImage(deck.label, shortName)}
+                            wordCount={deck.word_count}
                             isPremium={deck.is_premium && plan === 'free'}
                             onClick={() => router.push(`/decks/${deck.id}`)}
                           />

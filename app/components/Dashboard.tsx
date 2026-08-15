@@ -131,7 +131,7 @@ type DeckItem = {
   label?: string
   title: string
   imageSrc?: string
-  imageContain?: boolean
+  wordCount?: number
   isPremium?: boolean
   href: string
 }
@@ -168,7 +168,7 @@ function DeckSection({
             label={item.label}
             title={item.title}
             imageSrc={item.imageSrc}
-            imageContain={item.imageContain}
+            wordCount={item.wordCount}
             isPremium={item.isPremium}
             onClick={() => router.push(item.href)}
             className="shrink-0 w-[146px] sm:w-[180px]"
@@ -277,7 +277,7 @@ export default function Dashboard() {
     title: 'My単語帳',
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
-    imageContain: true,
+    wordCount: savedCount,
   }
   const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
@@ -289,6 +289,7 @@ export default function Dashboard() {
         label: d.label,
         title: shortName,
         imageSrc: getDeckImage(d.label, shortName),
+        wordCount: d.word_count,
         isPremium: d.is_premium && plan === 'free',
         href: `/decks/${d.id}`,
       }
@@ -303,6 +304,7 @@ export default function Dashboard() {
           label: d.label,
           title: shortName,
           imageSrc: getDeckImage(d.label, shortName),
+          wordCount: d.word_count,
           isPremium: d.is_premium && plan === 'free',
           href: `/decks/${d.id}`,
         }
@@ -367,7 +369,7 @@ export default function Dashboard() {
                   <SharedDeckCard
                     title={myDeckItem.title}
                     imageSrc={myDeckItem.imageSrc}
-                    imageContain={myDeckItem.imageContain}
+                    wordCount={myDeckItem.wordCount}
                     onClick={() => router.push(myDeckItem.href)}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
@@ -388,6 +390,7 @@ export default function Dashboard() {
                     key={period}
                     title={REVIEW_PERIOD_LABEL[period]}
                     imageSrc="/dashboard/recent-words.png"
+                    wordCount={reviewCounts[period]}
                     disabled={reviewCounts[period] === 0}
                     onClick={() => router.push(`/quiz?period=${period}`)}
                     className="shrink-0 w-[146px] sm:w-[180px]"
