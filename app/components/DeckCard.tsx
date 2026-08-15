@@ -35,9 +35,9 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
       <p className="text-[18px] font-bold text-[#020617] tracking-[-0.27px] leading-[21px] whitespace-nowrap">
         {displayTitle}
       </p>
-      <div className="w-full aspect-[118.132/74.255] rounded-lg overflow-hidden">
+      <div className="w-full aspect-[546/400] rounded-lg overflow-hidden">
         {imageSrc && (
-          <img src={imageSrc} alt="" className="w-full h-full object-contain" />
+          <img src={imageSrc} alt="" className="w-full h-full object-cover" />
         )}
       </div>
       {typeof wordCount === 'number' && (
