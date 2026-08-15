@@ -18,15 +18,25 @@ import QuizDashboard from './QuizDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import {
+  fetchReviewCandidates,
+  filterByPeriod,
+  sortReviewCandidates,
+  type ReviewPeriod,
+} from '@/lib/reviewPeriod'
 
 type QuizMode = QuizScope
 
 export default function QuizClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [loading, setLoading] = useState(false)
+  const hasPeriodParam = ((): boolean => {
+    const p = searchParams.get('period')
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all'
+  })()
+  const [loading, setLoading] = useState(hasPeriodParam)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const [showDashboard, setShowDashboard] = useState(true)
+  const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
 
   useEffect(() => { toast.dismiss() }, [])
@@ -127,6 +137,26 @@ export default function QuizClient() {
     setShowDashboard(false)
   }, [])
 
+  const loadPeriodQuiz = useCallback(async (period: ReviewPeriod) => {
+    setLoading(true)
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) { setShowSignupModal(true); setLoading(false); return }
+    const userId = data.user.id
+    const plan = await getUserPlan()
+    const candidates = await fetchReviewCandidates(userId, plan)
+    const inPeriod = filterByPeriod(candidates, period)
+    const sorted = sortReviewCandidates(inPeriod)
+    const top = sorted.slice(0, 10)
+    const entries = await fetchQuizEntriesByWords(top.map((r) => r.word))
+    // 表示順のみシャッフル (slice しない = 優先順位を維持)
+    const cards = shuffleCards(buildQuizCards(entries))
+    setSessionEntries(
+      cards.map((c) => entries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
+    )
+    setLoading(false)
+    setShowDashboard(false)
+  }, [])
+
   const handleAnswer = useCallback(async (word: string, correct: boolean) => {
     saveQuizResult(word, correct)
   }, [])
@@ -135,6 +165,17 @@ export default function QuizClient() {
     const m = searchParams.get('mode')
     return m === 'recent' || m === 'hard' || m === 'all' || m === 'unseen' || m === 'review' ? m : 'all'
   })()
+
+  const initialPeriod = ((): ReviewPeriod | null => {
+    const p = searchParams.get('period')
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : null
+  })()
+
+  useEffect(() => {
+    if (initialPeriod) loadPeriodQuiz(initialPeriod)
+    // 起動時1回のみ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (showDashboard) {
     return (

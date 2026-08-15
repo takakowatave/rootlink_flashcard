@@ -6,15 +6,22 @@ type Props = {
   imageSrc?: string
   imageContain?: boolean
   isPremium?: boolean
+  disabled?: boolean
   onClick: () => void
   className?: string
 }
 
-export default function DeckCard({ label, title, imageSrc, imageContain, isPremium, onClick, className }: Props) {
+export default function DeckCard({ label, title, imageSrc, imageContain, isPremium, disabled, onClick, className }: Props) {
   return (
     <button
       onClick={onClick}
-      className={`relative bg-white border border-line rounded-3xl px-6 py-4 flex flex-col items-center justify-between gap-3 hover:border-muted transition-colors active:scale-[0.98] cursor-pointer ${className ?? ''}`}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
+      className={`relative bg-white border border-line rounded-3xl px-6 py-4 flex flex-col items-center justify-between gap-3 transition-colors ${
+        disabled
+          ? 'opacity-40 cursor-not-allowed'
+          : 'hover:border-muted active:scale-[0.98] cursor-pointer'
+      } ${className ?? ''}`}
     >
       {isPremium && (
         <span
