@@ -69,3 +69,20 @@ export const Premium: Story = {
     isPremium: true,
   },
 }
+
+export const Disabled: Story = {
+  name: 'Disabled (該当なし・0件時)',
+  args: {
+    title: '昨日',
+    imageSrc: '/dashboard/recent-words.png',
+    disabled: true,
+  },
+}
+
+export const ReviewPeriod: Story = {
+  name: 'Review period card (復習セクション)',
+  args: {
+    title: '1週間',
+    imageSrc: '/dashboard/recent-words.png',
+  },
+}
