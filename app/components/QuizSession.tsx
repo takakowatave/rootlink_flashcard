@@ -304,7 +304,7 @@ function CardView({
           </p>
         </div>
         <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
-          <div className="p-5">
+          <div className="absolute inset-0 overflow-y-auto p-5 pb-20">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
