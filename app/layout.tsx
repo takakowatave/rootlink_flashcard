@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import AppShell from "@/components/AppShell";
 import DevBadge from "@/components/DevBadge";
 import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,6 +26,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  verification: {
+    google: "J6cFkOblvYUOSHnEytO-MJFGtiS6adlgipiNeVgSt5s",
+  },
 };
 
 export default function RootLayout({
@@ -41,6 +45,7 @@ export default function RootLayout({
             </AppShell>
             <DevBadge />
             <Analytics />
+            <GoogleAnalytics gaId="G-89GNQBCJSL" />
         </body>
         </html>
     );
