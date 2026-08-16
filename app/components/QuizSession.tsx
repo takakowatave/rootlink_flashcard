@@ -303,8 +303,8 @@ function CardView({
             {current} / {total}
           </p>
         </div>
-        <div className="flex-1 relative md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
-          <div className="p-5">
+        <div className="flex-1 min-h-0 relative flex flex-col md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-20">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
@@ -521,7 +521,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
                 <HiX className="size-4" />
               </button>
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
-              <h2 className="text-base font-bold text-center text-gray-900 mb-2">クイズの使い方</h2>
+              <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
                 単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>

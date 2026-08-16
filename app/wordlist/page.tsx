@@ -273,7 +273,7 @@ export default function WordListPage() {
           ]}
           selectedScope={quizScope}
           onScopeChange={setQuizScope}
-          buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'クイズを始める'}
+          buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'はじめる'}
           buttonDisabled={scopeSource[quizScope].length === 0}
           onStart={startQuiz}
         />

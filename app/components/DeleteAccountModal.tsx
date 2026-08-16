@@ -97,7 +97,7 @@ export default function DeleteAccountModal({
           <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600">
             <li>プロフィール・アイコン</li>
             <li>保存単語・保存フレーズ</li>
-            <li>クイズ成績・学習ストリーク</li>
+            <li>学習成績・学習ストリーク</li>
             <li>すべての学習履歴</li>
           </ul>
           {hasActiveSubscription && (

@@ -27,7 +27,7 @@ export const WordlistDefault: Story = {
       { key: 'hard', count: 3 },
     ],
     selectedScope: 'all',
-    buttonLabel: 'クイズを始める',
+    buttonLabel: 'はじめる',
     buttonDisabled: false,
   },
 }
@@ -52,7 +52,7 @@ export const DeckWithHeader: Story = {
       { key: 'hard', count: 0 },
     ],
     selectedScope: 'all',
-    buttonLabel: 'クイズを始める',
+    buttonLabel: 'はじめる',
     buttonDisabled: false,
   },
 }
@@ -77,7 +77,7 @@ export const PremiumLocked: Story = {
       { key: 'hard', count: 0 },
     ],
     selectedScope: 'all',
-    buttonLabel: '🔒 プレミアム登録でクイズを開始',
+    buttonLabel: '🔒 プレミアム登録ではじめる',
     buttonDisabled: false,
   },
 }
