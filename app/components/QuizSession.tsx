@@ -521,7 +521,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
                 <HiX className="size-4" />
               </button>
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
-              <h2 className="text-base font-bold text-center text-gray-900 mb-2">クイズの使い方</h2>
+              <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
                 単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>

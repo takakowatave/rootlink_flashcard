@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1 text-sm">
           <li>メールアドレス・表示名（アカウント登録時）</li>
           <li>Google / GitHubアカウント情報（ソーシャルログイン時）</li>
-          <li>学習履歴・保存単語・クイズ結果などの利用データ</li>
+          <li>学習履歴・保存単語・学習成績などの利用データ</li>
           <li>検索キーワード（辞書データ生成のためOpenAI APIに送信されます）</li>
           <li>IPアドレス・ブラウザ情報・アクセスログ（自動収集）</li>
           <li>決済情報（Stripeが管理します。カード番号等は当方では取得・保存しません）</li>
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
         <p className="text-sm mb-3">収集したデータはSupabase（AWS東京リージョン）上で管理します。HTTPS通信による暗号化およびRow Level Securityによるアクセス制御を実施しています。</p>
         <p className="text-sm mb-2">退会は、ログイン後の設定画面「アカウント削除」からいつでも行えます。退会時のデータの取り扱いは以下のとおりです。</p>
         <ul className="list-disc pl-5 space-y-1 text-sm mb-3">
-          <li>アカウント情報（メールアドレス・表示名・アイコン）、保存単語・保存フレーズ、クイズ成績・学習ストリーク等のすべての学習履歴は<strong>退会と同時に削除</strong>されます</li>
+          <li>アカウント情報（メールアドレス・表示名・アイコン）、保存単語・保存フレーズ、学習成績・学習ストリーク等のすべての学習履歴は<strong>退会と同時に削除</strong>されます</li>
           <li>Premiumプランに加入中の場合、退会と同時にサブスクリプションを自動的に解約します</li>
           <li>バックアップおよびアクセスログに含まれる残存データは、<strong>30日以内に完全に削除</strong>します</li>
           <li>Stripe上の決済履歴は、法令（税法等）に基づく保存義務のあいだ、Stripeのプライバシーポリシーに従って保管されます</li>

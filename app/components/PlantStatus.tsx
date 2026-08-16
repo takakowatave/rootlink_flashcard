@@ -19,7 +19,7 @@ export default function PlantStatus({
   const levelLabel = formatLevelLabel(current.level)
   const nextText =
     next && quizzesToNext !== null
-      ? `あとクイズ${quizzesToNext}問でLv.${String(next.level).padStart(2, '0')}`
+      ? `あと${quizzesToNext}問でLv.${String(next.level).padStart(2, '0')}`
       : null
 
   if (variant === 'compact') {

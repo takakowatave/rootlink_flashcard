@@ -59,7 +59,7 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
         <p className="text-sm text-gray-500 mb-4">
           {reason === "limit"
             ? `無料プランでは ${FREE_PLAN_LIMIT} 件まで保存できます。プレミアムにアップグレードすると無制限に保存できます。`
-            : "プレミアムプランで単語保存・クイズを無制限にご利用いただけます。"}
+            : "プレミアムプランで単語保存・復習を無制限にご利用いただけます。"}
         </p>
 
         {/* プラン選択 */}
@@ -104,7 +104,7 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
 
         <ul className="text-sm text-gray-600 space-y-1 mb-4 px-1">
           <li>✓ 単語保存 無制限</li>
-          <li>✓ クイズ 無制限</li>
+          <li>✓ 復習 無制限</li>
         </ul>
 
         <Button

@@ -76,9 +76,9 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
             <HiX className="size-4" />
           </button>
           <div className="text-3xl text-center mb-3 select-none">🃏</div>
-          <h2 className="text-base font-bold text-center text-gray-900 mb-2">クイズで定着させよう</h2>
+          <h2 className="text-base font-bold text-center text-gray-900 mb-2">定着させよう</h2>
           <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-            あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたらクイズで復習しましょう。
+            あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたら復習しましょう。
           </p>
           <button
             onClick={onClose}
@@ -215,7 +215,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
           <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
         </header>
         <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-gray-400 text-sm text-center">単語リストに単語を保存するとクイズができます</p>
+          <p className="text-gray-400 text-sm text-center">単語リストに単語を保存するとはじめられます</p>
         </div>
       </div>
     )
