@@ -9,6 +9,7 @@ import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { HiSearch } from 'react-icons/hi'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -20,7 +21,15 @@ export default function LPClient() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showStickySearch, setShowStickySearch] = useState(false)
+  const [isNative, setIsNative] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isNativePlatform()) {
+      setIsNative(true)
+      router.replace('/login')
+    }
+  }, [router])
 
   useEffect(() => {
     const el = heroRef.current
@@ -61,6 +70,8 @@ export default function LPClient() {
       setIsLoading(false)
     }
   }
+
+  if (isNative) return null
 
   return (
     <main>
