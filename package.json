@@ -21,6 +21,7 @@
     "@capacitor/splash-screen": "^7.0.5",
     "@capacitor/status-bar": "^7.0.6",
     "@next/third-parties": "^16.3.1",
+    "@revenuecat/purchases-capacitor": "^11.3.2",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/typography": "^0.5.20",

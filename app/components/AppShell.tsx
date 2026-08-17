@@ -8,6 +8,7 @@ import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
+import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
 
@@ -57,6 +58,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
     })()
     return () => { handle?.remove() }
+  }, [])
+
+  useEffect(() => {
+    if (!isNativePlatform()) return
+    let unsub: (() => void) | null = null
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      await ensureRevenueCatConfigured(session?.user?.id ?? null).catch(() => {})
+      const { data } = supabase.auth.onAuthStateChange((_event, s) => {
+        ensureRevenueCatConfigured(s?.user?.id ?? null).catch(() => {})
+      })
+      unsub = () => data.subscription.unsubscribe()
+    })()
+    return () => { unsub?.() }
   }, [])
 
   const isLP = pathname === '/' || pathname === '/about'
