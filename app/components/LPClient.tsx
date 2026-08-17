@@ -27,7 +27,7 @@ export default function LPClient() {
   useEffect(() => {
     if (isNativePlatform()) {
       setIsNative(true)
-      router.replace('/login')
+      router.replace('/onboarding')
     }
   }, [router])
 
