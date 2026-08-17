@@ -23,6 +23,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       } catch {
         // splash plugin unavailable; ignore
       }
+      try {
+        const { StatusBar, Style } = await import('@capacitor/status-bar')
+        await StatusBar.setStyle({ style: Style.Light })
+        await StatusBar.setBackgroundColor({ color: '#ffffff' })
+      } catch {
+        // status-bar plugin unavailable; ignore
+      }
     })()
   }, [])
 
