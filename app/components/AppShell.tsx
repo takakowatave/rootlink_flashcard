@@ -7,6 +7,9 @@ import Footer from './Footer'
 import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { supabase } from '@/lib/supabaseClient'
+
+type PluginListenerHandle = { remove: () => Promise<void> }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -21,6 +24,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         // splash plugin unavailable; ignore
       }
     })()
+  }, [])
+
+  useEffect(() => {
+    if (!isNativePlatform()) return
+    let handle: PluginListenerHandle | null = null
+    ;(async () => {
+      try {
+        const { App } = await import('@capacitor/app')
+        const { Browser } = await import('@capacitor/browser')
+        handle = await App.addListener('appUrlOpen', async (event: { url: string }) => {
+          if (!event.url.startsWith('com.rootlink.app://auth-callback')) return
+          await Browser.close().catch(() => {})
+          const fragment = event.url.split('#')[1] ?? ''
+          const params = new URLSearchParams(fragment)
+          const access_token = params.get('access_token')
+          const refresh_token = params.get('refresh_token')
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token })
+            window.location.href = '/callback'
+          }
+        })
+      } catch {
+        // plugins unavailable in web preview; ignore
+      }
+    })()
+    return () => { handle?.remove() }
   }, [])
 
   const isLP = pathname === '/' || pathname === '/about'
