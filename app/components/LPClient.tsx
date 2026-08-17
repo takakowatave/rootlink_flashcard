@@ -92,7 +92,7 @@ export default function LPClient() {
 
       {/* SP: ヒーローが見切れたら追従する検索バー */}
       {showStickySearch && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-line px-4 py-3">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-line px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
             className={`flex items-center h-12 bg-white border rounded-full pl-5 pr-3 gap-2 ${error ? 'border-red-400' : 'border-line'}`}

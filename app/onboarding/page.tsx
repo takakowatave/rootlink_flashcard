@@ -62,7 +62,7 @@ export default function OnboardingPage() {
   if (!ready) return null
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-white px-6 py-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-white px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-sm">
         <div className="flex justify-center gap-1.5 mb-6">
           <span className={`block h-1.5 w-6 rounded-full ${step === 'welcome' ? 'bg-primary' : 'bg-gray-200'}`} />
