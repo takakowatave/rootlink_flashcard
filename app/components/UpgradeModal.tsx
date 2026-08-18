@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { FREE_PLAN_LIMIT } from "@/lib/supabaseApi"
+import { isNativePlatform } from "@/lib/isNativePlatform"
+import { ensureRevenueCatConfigured, purchaseNativePlan } from "@/lib/revenuecat"
 import Button from "@/components/Button"
 
 const API_BASE =
@@ -23,6 +25,17 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+
+      if (isNativePlatform()) {
+        await ensureRevenueCatConfigured(session.user.id).catch(() => {})
+        const result = await purchaseNativePlan(selectedPlan === "monthly" ? "monthly" : "yearly")
+        if (result.ok) {
+          onClose()
+        } else if (!result.cancelled) {
+          console.error("NATIVE PURCHASE FAILED:", result.error)
+        }
+        return
+      }
 
       const res = await fetch(`${API_BASE}/stripe/checkout`, {
         method: "POST",

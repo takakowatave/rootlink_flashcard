@@ -29,6 +29,9 @@ interface Props {
   onUpdated: () => void;
 }
 
+const AVATAR_ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 export default function EditProfileModal({
   isOpen,
   onClose,
@@ -103,15 +106,28 @@ export default function EditProfileModal({
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file || !profile) return;
+
+    if (!AVATAR_ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast.error("対応形式は JPEG / PNG / WebP / GIF のみです");
+      input.value = "";
+      return;
+    }
+    if (file.size > AVATAR_MAX_FILE_SIZE) {
+      toast.error("ファイルサイズは 5MB 以下にしてください");
+      input.value = "";
+      return;
+    }
+
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
       const path = `${profile.id}/avatar-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const { error: updErr } = await supabase
@@ -121,10 +137,18 @@ export default function EditProfileModal({
       if (updErr) throw updErr;
       toast.success("アイコンを更新しました");
       onUpdated();
-    } catch {
-      toast.error("アップロードに失敗しました");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (/exceeded the maximum allowed size|payload too large/i.test(message)) {
+        toast.error("ファイルサイズは 5MB 以下にしてください");
+      } else if (/mime type|not allowed|invalid_mime_type/i.test(message)) {
+        toast.error("対応形式は JPEG / PNG / WebP / GIF のみです");
+      } else {
+        toast.error("アップロードに失敗しました");
+      }
     } finally {
       setUploading(false);
+      input.value = "";
     }
   };
 
@@ -204,7 +228,7 @@ export default function EditProfileModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept={AVATAR_ALLOWED_MIME_TYPES.join(",")}
                   className="hidden"
                   onChange={handleAvatarUpload}
                 />
@@ -271,12 +295,12 @@ export default function EditProfileModal({
               <SettingsRow label="現在のプラン">
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
-                    Premium
+                    {hasStripeSubscription ? "Premium" : "テスター"}
                   </span>
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" ? (
+                {plan === "premium" && hasStripeSubscription && (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -285,7 +309,8 @@ export default function EditProfileModal({
                   >
                     プランを管理
                   </button>
-                ) : (
+                )}
+                {plan === "free" && (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}

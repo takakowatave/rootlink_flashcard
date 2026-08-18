@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 import InAppBrowserNotice from "./InAppBrowserNotice";
+
+const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
 type Variant = "signup" | "login";
 
@@ -32,19 +35,23 @@ export default function GoogleAuthButton({
 
   const handleClick = async () => {
     if (inAppBrowser) return;
+    const native = isNativePlatform();
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/callback`,
+          redirectTo: native ? NATIVE_REDIRECT : `${window.location.origin}/callback`,
           skipBrowserRedirect: true,
         },
       });
-      if (error) {
+      if (error || !data?.url) {
         onError?.(ERROR_MESSAGE[variant]);
         return;
       }
-      if (data?.url) {
+      if (native) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
+      } else {
         window.location.href = data.url;
       }
     } catch {

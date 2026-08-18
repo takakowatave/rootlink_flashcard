@@ -12,6 +12,7 @@ import AuthPage from "@/components/auth/AuthPage";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 
 interface FormData {
@@ -108,10 +109,16 @@ export default function AuthSignup() {
 
             <AuthDivider />
 
-            <GoogleAuthButton
-              variant="signup"
-              onError={(message) => setError("email", { message })}
-            />
+            <div className="flex flex-col gap-2">
+              <GoogleAuthButton
+                variant="signup"
+                onError={(message) => setError("email", { message })}
+              />
+              <AppleAuthButton
+                variant="signup"
+                onError={(message) => setError("email", { message })}
+              />
+            </div>
 
             <AuthBottomLink prefix="すでにアカウントをお持ちの方は" linkText="ログイン" href="/login" />
           </>

@@ -9,6 +9,7 @@ import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { HiSearch } from 'react-icons/hi'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -20,7 +21,15 @@ export default function LPClient() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showStickySearch, setShowStickySearch] = useState(false)
+  const [isNative, setIsNative] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isNativePlatform()) {
+      setIsNative(true)
+      router.replace('/onboarding')
+    }
+  }, [router])
 
   useEffect(() => {
     const el = heroRef.current
@@ -62,6 +71,8 @@ export default function LPClient() {
     }
   }
 
+  if (isNative) return null
+
   return (
     <main>
       <div ref={heroRef}>
@@ -81,7 +92,7 @@ export default function LPClient() {
 
       {/* SP: ヒーローが見切れたら追従する検索バー */}
       {showStickySearch && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-line px-4 py-3">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-line px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
             className={`flex items-center h-12 bg-white border rounded-full pl-5 pr-3 gap-2 ${error ? 'border-red-400' : 'border-line'}`}

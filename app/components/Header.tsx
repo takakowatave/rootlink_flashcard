@@ -239,7 +239,8 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 h-14 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex items-center px-2 py-1 gap-2">
+      <header className="sticky top-0 z-40 bg-white border-b border-line shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] pt-[env(safe-area-inset-top)]">
+      <div className="h-14 flex items-center px-2 py-1 gap-2">
         <Link href="/" className="shrink-0">
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
@@ -279,11 +280,12 @@ const Header = () => {
             </>
           )}
         </div>
+      </div>
       </header>
 
       {/* SP: 検索オーバーレイ (画面全白・1発で最終形状) */}
       {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-white flex flex-col">
+        <div className="fixed inset-0 z-50 md:hidden bg-white flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="px-4 pt-3 pb-6">
             <div className="flex items-center justify-between mb-3">
               <button type="button" onClick={() => setMobileSearchOpen(false)} className="text-sm font-bold text-primary">

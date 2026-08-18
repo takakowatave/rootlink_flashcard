@@ -13,9 +13,15 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/browser": "^7.0.5",
     "@capacitor/core": "^7.6.8",
     "@capacitor/ios": "^7.6.8",
+    "@capacitor/local-notifications": "^7.0.7",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6",
     "@next/third-parties": "^16.3.1",
+    "@revenuecat/purchases-capacitor": "^11.3.2",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/typography": "^0.5.20",
@@ -35,6 +41,7 @@
     "wink-lemmatizer": "^3.0.4"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.6.8",
     "@notionhq/client": "^5.25.2",
     "@storybook/addon-essentials": "8.6.18",
