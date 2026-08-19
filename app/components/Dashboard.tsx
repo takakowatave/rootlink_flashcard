@@ -1,15 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HiChevronRight } from 'react-icons/hi'
+import { HiXMark } from 'react-icons/hi2'
+import { FaShareNodes } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak, getUserPlan } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
-import { getPlantImageSrc } from '@/lib/plantGrowth'
+import { getPlantImageSrc, resolveGrowth } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
+import ShareMenu from '@/components/ShareMenu'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -103,11 +106,19 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
   )
 }
 
-function StreakModal({ streak, onClose }: { streak: number; onClose: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000)
-    return () => clearTimeout(timer)
-  }, [onClose])
+function StreakModal({
+  streak,
+  plantLevel,
+  onClose,
+}: {
+  streak: number
+  plantLevel: number
+  onClose: () => void
+}) {
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareBtnRef = useRef<HTMLButtonElement>(null)
+
+  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
 
   return (
     <div
@@ -115,13 +126,37 @@ function StreakModal({ streak, onClose }: { streak: number; onClose: () => void 
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl px-10 py-8 flex flex-col items-center gap-3 shadow-2xl mx-4"
+        className="relative bg-white rounded-3xl px-10 py-8 flex flex-col items-center gap-3 shadow-2xl mx-4"
         onClick={e => e.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          aria-label="閉じる"
+        >
+          <HiXMark className="size-5" />
+        </button>
         <p className="text-6xl select-none">🔥</p>
         <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
         <p className="text-base font-medium text-gray-700">今日も継続中！</p>
+        <button
+          ref={shareBtnRef}
+          type="button"
+          onClick={() => setShareOpen(true)}
+          className="mt-2 inline-flex items-center gap-2 h-10 px-5 rounded-full border border-line text-sm font-bold text-gray-700 hover:bg-gray-50"
+        >
+          <FaShareNodes className="size-4" />
+          シェア
+        </button>
       </div>
+      <ShareMenu
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        shareUrl={shareUrl}
+        shareText={`RootLink で ${streak}日連続学習中！🔥 #RootLink`}
+        anchorRef={shareBtnRef}
+      />
     </div>
   )
 }
@@ -313,7 +348,13 @@ export default function Dashboard() {
 
   return (
     <>
-      {showModal && <StreakModal streak={streak} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <StreakModal
+          streak={streak}
+          plantLevel={resolveGrowth(quizAttemptCount, activityDates.length).current.level}
+          onClose={() => setShowModal(false)}
+        />
+      )}
 
       <div className="bg-surface min-h-screen">
         <div className="flex justify-center w-full">

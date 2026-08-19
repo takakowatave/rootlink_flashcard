@@ -18,7 +18,7 @@ type Props = {
 
 export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("monthly")
+  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly")
 
   const handleUpgrade = async () => {
     setIsLoading(true)
@@ -43,7 +43,7 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ plan: selectedPlan, origin: window.location.origin, locale: navigator.language.startsWith("ja") ? "ja" : "auto" }),
+        body: JSON.stringify({ plan: selectedPlan, origin: window.location.origin, locale: "ja" }),
       })
 
       const data = await res.json()
@@ -78,32 +78,16 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
         {/* プラン選択 */}
         <div className="space-y-2 mb-4">
           <button
-            className={`w-full border rounded-xl p-4 text-left transition-colors ${
-              selectedPlan === "monthly"
-                ? "border-primary bg-primary-subtle"
-                : "border-line hover:border-muted"
-            }`}
-            onClick={() => setSelectedPlan("monthly")}
-          >
-            <div className="flex items-baseline justify-between mb-1">
-              <span className="font-semibold text-gray-900 text-sm">月額プラン</span>
-              <div>
-                <span className="text-xs line-through text-gray-400 mr-1">¥800</span>
-                <span className="text-xl font-bold text-gray-900">¥500</span>
-                <span className="text-xs text-gray-500"> / 月</span>
-              </div>
-            </div>
-            <p className="text-xs text-amber-600 font-medium">早期割引 〜 2026年8月末</p>
-          </button>
-
-          <button
-            className={`w-full border rounded-xl p-4 text-left transition-colors ${
+            className={`relative w-full border rounded-xl p-4 text-left transition-colors ${
               selectedPlan === "yearly"
                 ? "border-primary bg-primary-subtle"
                 : "border-line hover:border-muted"
             }`}
             onClick={() => setSelectedPlan("yearly")}
           >
+            <span className="absolute -top-2 right-3 inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 shadow-sm">
+              おすすめ
+            </span>
             <div className="flex items-baseline justify-between mb-1">
               <span className="font-semibold text-gray-900 text-sm">年額プラン</span>
               <div>
@@ -111,13 +95,40 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
                 <span className="text-xs text-gray-500"> / 年</span>
               </div>
             </div>
-            <p className="text-xs text-green-600 font-medium">¥400/月 — 2ヶ月分お得</p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-600">月あたり¥400</span>
+              <span className="inline-flex items-center h-5 px-2 rounded-full font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm">
+                年¥1,200お得
+              </span>
+            </div>
+          </button>
+
+          <button
+            className={`w-full border rounded-xl p-4 text-left transition-colors ${
+              selectedPlan === "monthly"
+                ? "border-primary bg-primary-subtle"
+                : "border-line hover:border-muted"
+            }`}
+            onClick={() => setSelectedPlan("monthly")}
+          >
+            <div className="flex items-baseline justify-between">
+              <span className="font-semibold text-gray-900 text-sm">月額プラン</span>
+              <div>
+                <span className="text-xl font-bold text-gray-900">¥500</span>
+                <span className="text-xs text-gray-500"> / 月</span>
+              </div>
+            </div>
           </button>
         </div>
 
-        <ul className="text-sm text-gray-600 space-y-1 mb-4 px-1">
-          <li>✓ 単語保存 無制限</li>
-          <li>✓ 復習 無制限</li>
+        <ul className="text-sm text-gray-700 space-y-2 mb-4 px-1">
+          <li>
+            <span className="font-medium">✓ 有料デッキ10本(2,607語)が使い放題</span>
+            <span className="block pl-4 text-xs text-gray-500 mt-0.5">
+              TOEIC 860+ / 990+、IELTS、TOEFL、英検 準1級・1級
+            </span>
+          </li>
+          <li className="font-medium">✓ 単語保存 無制限</li>
         </ul>
 
         <Button

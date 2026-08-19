@@ -76,7 +76,7 @@ export default function EditProfileModal({
         },
         body: JSON.stringify({
           origin: window.location.origin,
-          locale: navigator.language.startsWith("ja") ? "ja" : "auto",
+          locale: "ja",
         }),
       });
       const data = await res.json();
