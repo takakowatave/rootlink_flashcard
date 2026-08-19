@@ -9,7 +9,7 @@ import { FaShareNodes } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabaseClient'
 import { recordActivity, getActivityLog, calcStreak, getUserPlan } from '@/lib/supabaseApi'
 import PlantStatus from '@/components/PlantStatus'
-import { getPlantImageSrc } from '@/lib/plantGrowth'
+import { getPlantImageSrc, resolveGrowth } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import ShareMenu from '@/components/ShareMenu'
@@ -106,9 +106,19 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
   )
 }
 
-function StreakModal({ streak, onClose }: { streak: number; onClose: () => void }) {
+function StreakModal({
+  streak,
+  plantLevel,
+  onClose,
+}: {
+  streak: number
+  plantLevel: number
+  onClose: () => void
+}) {
   const [shareOpen, setShareOpen] = useState(false)
   const shareBtnRef = useRef<HTMLButtonElement>(null)
+
+  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
 
   return (
     <div
@@ -143,7 +153,7 @@ function StreakModal({ streak, onClose }: { streak: number; onClose: () => void 
       <ShareMenu
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        shareUrl="https://www.rootlink.app"
+        shareUrl={shareUrl}
         shareText={`RootLink で ${streak}日連続学習中！🔥 #RootLink`}
         anchorRef={shareBtnRef}
       />
@@ -338,7 +348,13 @@ export default function Dashboard() {
 
   return (
     <>
-      {showModal && <StreakModal streak={streak} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <StreakModal
+          streak={streak}
+          plantLevel={resolveGrowth(quizAttemptCount, activityDates.length).current.level}
+          onClose={() => setShowModal(false)}
+        />
+      )}
 
       <div className="bg-surface min-h-screen">
         <div className="flex justify-center w-full">
