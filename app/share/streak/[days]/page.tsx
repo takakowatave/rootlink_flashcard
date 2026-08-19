@@ -31,7 +31,7 @@ export async function generateMetadata({
       title,
       description,
       url: `https://www.rootlink.app/share/streak/${days}?lv=${lv}`,
-      images: [{ url: cardUrl, width: 1200, height: 1200, alt: title }],
+      images: [{ url: cardUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',

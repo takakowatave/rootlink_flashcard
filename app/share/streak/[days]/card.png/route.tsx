@@ -1,6 +1,7 @@
 // 連続記録シェア画像 (/share/streak/[days]/card.png?lv=N)
-// SNS シェア時の OGP 画像。1200×1200 (1:1)。
+// SNS シェア時の OGP 画像。1200×630 (Twitter summary_large_image / og:image 標準)。
 // Figma: xe5UwVx38JWu5doqwXczQu / node 2538-6079
+// (Figma は portrait 594×688 だが Twitter が 1.91:1 で crop するため landscape に組み直し)
 
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
@@ -8,7 +9,7 @@ import { join } from 'node:path'
 
 export const runtime = 'nodejs'
 
-const SIZE = { width: 1200, height: 1200 }
+const SIZE = { width: 1200, height: 630 }
 const CACHE_HEADER = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
 
 type FontWeights = { medium: Buffer; bold: Buffer }
@@ -64,92 +65,103 @@ function StreakCard({
         height: '100%',
         display: 'flex',
         backgroundColor: '#00d5be',
-        padding: 32,
+        padding: 24,
       }}
     >
       <div
         style={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
           backgroundColor: '#ffffff',
           fontFamily: 'NotoSansJP',
-          padding: '60px 80px',
-          gap: 24,
+          padding: '32px 56px',
+          gap: 32,
         }}
       >
-        {/* 「N日」 — 数字は大きく、黄色いハイライトを敷く */}
+        {/* 左: 数字 + 「連続学習中」 + ロゴ */}
         <div
           style={{
+            flex: 1,
             display: 'flex',
-            alignItems: 'baseline',
+            flexDirection: 'column',
             justifyContent: 'center',
-            position: 'relative',
+            gap: 20,
           }}
         >
-          {/* 数字の下の黄色ハイライト */}
           <div
             style={{
-              position: 'absolute',
-              left: 0,
-              right: 80,
-              bottom: 8,
-              height: 32,
-              backgroundColor: '#FDE68A',
-              zIndex: 0,
+              display: 'flex',
+              alignItems: 'baseline',
+              position: 'relative',
             }}
-          />
-          <span
+          >
+            {/* 黄色ハイライト */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 100,
+                bottom: 6,
+                height: 26,
+                backgroundColor: '#FDE68A',
+                zIndex: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: 200,
+                fontWeight: 700,
+                color: '#F97316',
+                lineHeight: 1,
+                letterSpacing: '-0.04em',
+                zIndex: 1,
+              }}
+            >
+              {days}
+            </span>
+            <span
+              style={{
+                fontSize: 88,
+                fontWeight: 700,
+                color: '#F97316',
+                lineHeight: 1,
+                marginLeft: 10,
+                zIndex: 1,
+              }}
+            >
+              日
+            </span>
+          </div>
+
+          <div
             style={{
-              fontSize: 260,
+              fontSize: 72,
               fontWeight: 700,
               color: '#F97316',
               lineHeight: 1,
-              letterSpacing: '-0.04em',
-              zIndex: 1,
+              display: 'flex',
             }}
           >
-            {days}
-          </span>
-          <span
-            style={{
-              fontSize: 110,
-              fontWeight: 700,
-              color: '#F97316',
-              lineHeight: 1,
-              marginLeft: 12,
-              zIndex: 1,
-            }}
-          >
-            日
-          </span>
+            連続学習中
+          </div>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} width={200} height={28} alt="RootLink" style={{ marginTop: 16 }} />
         </div>
 
+        {/* 右: 鉢植え */}
         <div
           style={{
-            fontSize: 88,
-            fontWeight: 700,
-            color: '#F97316',
-            lineHeight: 1,
+            width: 360,
             display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          連続学習中
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={plantSrc} width={360} height={360} alt="" />
         </div>
-
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={plantSrc}
-          width={360}
-          height={360}
-          alt=""
-          style={{ marginTop: 12 }}
-        />
-
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} width={260} height={36} alt="RootLink" style={{ marginTop: 8 }} />
       </div>
     </div>
   )
