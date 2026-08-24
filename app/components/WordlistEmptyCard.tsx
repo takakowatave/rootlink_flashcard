@@ -15,7 +15,7 @@ export default function WordlistEmptyCard({ onClick }: Props) {
       <img
         src="/plant/lv1.png"
         alt=""
-        className="size-20 rounded-full object-cover shrink-0"
+        className="size-20 rounded-full object-contain shrink-0"
       />
       <div className="flex-1 min-w-0">
         <p className="text-lg font-bold text-gray-950 mb-1">My単語帳</p>

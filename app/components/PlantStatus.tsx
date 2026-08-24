@@ -29,7 +29,7 @@ export default function PlantStatus({
           <img
             src={current.src}
             alt={`鉢植え ${levelLabel}`}
-            className="size-full object-cover"
+            className="size-full object-contain"
             draggable={false}
           />
         </div>
@@ -58,7 +58,7 @@ export default function PlantStatus({
       <img
         src={current.src}
         alt={`鉢植え ${levelLabel}`}
-        className="size-12 rounded-full select-none shrink-0"
+        className="size-12 rounded-full select-none shrink-0 object-contain"
         draggable={false}
       />
       <div className="min-w-0">

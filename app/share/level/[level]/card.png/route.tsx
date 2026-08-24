@@ -1,6 +1,6 @@
-// 連続記録シェア画像 (/share/streak/[days]/card.png?lv=N)
+// レベルアップ通知シェア画像 (/share/level/[level]/card.png)
 // SNS 直接投稿用の画像 (navigator.share の files に添付)。1200×1200 square。
-// Figma: xe5UwVx38JWu5doqwXczQu / node 2538-6079
+// streak カード (Figma 2538-6079) と同一の骨格。文言のみ差し替え。
 
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
@@ -48,17 +48,15 @@ function loadPlant(level: number): Promise<string> {
   return plantPromises.get(clamped)!
 }
 
-function StreakCard({
-  days,
+function LevelUpCard({
+  level,
   plantSrc,
   logo,
 }: {
-  days: number
+  level: number
   plantSrc: string
   logo: string
 }) {
-  const digits = String(days).length
-  const daysFontSize = digits <= 3 ? 288 : digits === 4 ? 220 : 180
   return (
     <div
       style={{
@@ -100,25 +98,25 @@ function StreakCard({
           >
             <span
               style={{
-                fontSize: daysFontSize,
+                fontSize: 144,
+                fontWeight: 700,
+                color: '#ff8904',
+                lineHeight: 1,
+                marginRight: 8,
+              }}
+            >
+              Lv.
+            </span>
+            <span
+              style={{
+                fontSize: 288,
                 fontWeight: 700,
                 color: '#ff8904',
                 lineHeight: 1,
                 letterSpacing: '-0.02em',
               }}
             >
-              {days}
-            </span>
-            <span
-              style={{
-                fontSize: 144,
-                fontWeight: 700,
-                color: '#ff8904',
-                lineHeight: 1,
-                marginLeft: 14,
-              }}
-            >
-              日
+              {level}
             </span>
           </div>
 
@@ -132,7 +130,7 @@ function StreakCard({
               letterSpacing: '0.02em',
             }}
           >
-            連続学習中
+            レベルアップ！
           </div>
         </div>
 
@@ -148,20 +146,18 @@ function StreakCard({
 
 export async function GET(
   req: Request,
-  { params }: { params: { days: string } }
+  { params }: { params: { level: string } }
 ) {
-  const url = new URL(req.url)
-  const days = Math.max(0, Math.min(9999, parseInt(params.days ?? '0', 10) || 0))
-  const lv = Math.max(1, Math.min(5, parseInt(url.searchParams.get('lv') ?? '1', 10) || 1))
+  const level = Math.max(1, Math.min(8, parseInt(params.level ?? '1', 10) || 1))
 
   const [fonts, logo, plantSrc] = await Promise.all([
     loadFonts(),
     loadLogo(),
-    loadPlant(lv),
+    loadPlant(level),
   ])
 
   const image = new ImageResponse(
-    <StreakCard days={days} plantSrc={plantSrc} logo={logo} />,
+    <LevelUpCard level={level} plantSrc={plantSrc} logo={logo} />,
     {
       ...SIZE,
       fonts: [
