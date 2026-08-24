@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { HiChevronRight } from 'react-icons/hi'
 import { HiXMark } from 'react-icons/hi2'
 import { FaShareNodes } from 'react-icons/fa6'
@@ -12,7 +13,7 @@ import PlantStatus from '@/components/PlantStatus'
 import { getPlantImageSrc, resolveGrowth } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
-import ShareMenu from '@/components/ShareMenu'
+import Button from '@/components/Button'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -106,20 +107,73 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
   )
 }
 
-function StreakModal({
-  streak,
-  plantLevel,
-  onClose,
+async function shareImage({
+  cardUrl,
+  filename,
+  shareText,
 }: {
-  streak: number
-  plantLevel: number
-  onClose: () => void
+  cardUrl: string
+  filename: string
+  shareText: string
 }) {
-  const [shareOpen, setShareOpen] = useState(false)
-  const shareBtnRef = useRef<HTMLButtonElement>(null)
+  const res = await fetch(cardUrl)
+  if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+  const blob = await res.blob()
+  const file = new File([blob], filename, { type: 'image/png' })
 
-  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
+  if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], text: shareText })
+    return
+  }
 
+  let copied = false
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    copied = true
+  } catch {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  }
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+    '_blank',
+    'noopener,noreferrer'
+  )
+  toast.success(
+    copied
+      ? '画像をコピーしました。Xで⌘Vで貼り付けてください'
+      : '画像をダウンロードしました。Xに添付してください'
+  )
+}
+
+function ShareButton({ onClick, isSharing }: { onClick: () => void; isSharing: boolean }) {
+  return (
+    <Button
+      onClick={onClick}
+      disabled={isSharing}
+      variant="primary"
+      size="md"
+      radius="full"
+      className="mt-2"
+    >
+      <FaShareNodes className="size-4" />
+      {isSharing ? '準備中...' : 'SNSでシェア'}
+    </Button>
+  )
+}
+
+function CelebrationModal({
+  onClose,
+  children,
+}: {
+  onClose: () => void
+  children: React.ReactNode
+}) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -137,27 +191,94 @@ function StreakModal({
         >
           <HiXMark className="size-5" />
         </button>
-        <p className="text-6xl select-none">🔥</p>
-        <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
-        <p className="text-base font-medium text-gray-700">今日も継続中！</p>
-        <button
-          ref={shareBtnRef}
-          type="button"
-          onClick={() => setShareOpen(true)}
-          className="mt-2 inline-flex items-center gap-2 h-10 px-5 rounded-full border border-line text-sm font-bold text-gray-700 hover:bg-gray-50"
-        >
-          <FaShareNodes className="size-4" />
-          シェア
-        </button>
+        {children}
       </div>
-      <ShareMenu
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        shareUrl={shareUrl}
-        shareText={`RootLink で ${streak}日連続学習中！🔥 #RootLink`}
-        anchorRef={shareBtnRef}
-      />
     </div>
+  )
+}
+
+function StreakModal({
+  streak,
+  plantLevel,
+  onClose,
+}: {
+  streak: number
+  plantLevel: number
+  onClose: () => void
+}) {
+  const [isSharing, setIsSharing] = useState(false)
+
+  const handleShare = async () => {
+    if (isSharing) return
+    setIsSharing(true)
+    const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
+    try {
+      await shareImage({
+        cardUrl: `/share/streak/${streak}/card.png?lv=${plantLevel}`,
+        filename: `rootlink-streak-${streak}days.png`,
+        shareText,
+      })
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('SHARE FAILED:', err)
+        toast.error('シェアに失敗しました')
+      }
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  return (
+    <CelebrationModal onClose={onClose}>
+      <p className="text-6xl select-none">🔥</p>
+      <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
+      <p className="text-base font-medium text-gray-700">今日も継続中！</p>
+      <ShareButton onClick={handleShare} isSharing={isSharing} />
+    </CelebrationModal>
+  )
+}
+
+function LevelUpModal({
+  level,
+  plantSrc,
+  onClose,
+}: {
+  level: number
+  plantSrc: string
+  onClose: () => void
+}) {
+  const [isSharing, setIsSharing] = useState(false)
+
+  const handleShare = async () => {
+    if (isSharing) return
+    setIsSharing(true)
+    const shareText = `単語学習でレベル${level}に成長🌱\n\n#RootLink #英単語 #語源学習`
+    try {
+      await shareImage({
+        cardUrl: `/share/level/${level}/card.png`,
+        filename: `rootlink-level-${level}.png`,
+        shareText,
+      })
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('SHARE FAILED:', err)
+        toast.error('シェアに失敗しました')
+      }
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  return (
+    <CelebrationModal onClose={onClose}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={plantSrc} alt="" className="size-40 object-contain" />
+      <p className="text-3xl font-black text-quiz-review">レベルアップ！</p>
+      <p className="text-base font-medium text-gray-700 tabular-nums">
+        Lv.{String(level).padStart(2, '0')} に成長しました
+      </p>
+      <ShareButton onClick={handleShare} isSharing={isSharing} />
+    </CelebrationModal>
   )
 }
 
@@ -215,6 +336,7 @@ function DeckSection({
 }
 
 const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
+const LEVEL_STORAGE_KEY = 'plant_level_last_seen'
 
 const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
   yesterday: '昨日',
@@ -234,6 +356,7 @@ export default function Dashboard() {
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
   const [showModal, setShowModal] = useState(false)
+  const [levelUpTo, setLevelUpTo] = useState<number | null>(null)
   const [reviewCounts, setReviewCounts] = useState<Record<ReviewPeriod, number>>({
     yesterday: 0, week: 0, month: 0, all: 0,
   })
@@ -293,6 +416,21 @@ export default function Dashboard() {
           if (deckId && !seen.has(deckId)) { seen.add(deckId); ordered.push(deckId) }
         }
         setActiveDeckIds(ordered)
+      }
+
+      // レベルアップ検出 (streak modal より優先)
+      const currentLevel = resolveGrowth(
+        quizData.data?.length ?? 0,
+        dates.length,
+      ).current.level
+      const storedLevelRaw = localStorage.getItem(LEVEL_STORAGE_KEY)
+      const storedLevel = storedLevelRaw != null ? parseInt(storedLevelRaw, 10) : null
+      if (storedLevel == null) {
+        localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
+      } else if (currentLevel > storedLevel) {
+        setLevelUpTo(currentLevel)
+        localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
+        return
       }
 
       // 今日まだモーダルを出していなければ表示
