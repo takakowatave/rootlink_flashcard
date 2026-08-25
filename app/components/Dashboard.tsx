@@ -270,7 +270,7 @@ function LevelUpModal({
     tick()
   }, [])
 
-  const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
+  const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}&up=1`
   const filename = `rootlink-level-${level}.png`
   const shareText = `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`
   const shareUrl = 'https://www.rootlink.app'
