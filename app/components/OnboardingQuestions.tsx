@@ -187,7 +187,9 @@ export function OnboardingQuestionsView({
   const completeStep = showReminders ? 5 : 4
 
   return (
-    <div className="fixed inset-0 z-[110] bg-teal-50 flex flex-col">
+    <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
+      <div className="absolute inset-0 bg-black/40 hidden md:block" />
+      <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden">
       <ProgressHeader step={step} totalSteps={totalSteps} onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto pb-32">
@@ -375,6 +377,7 @@ export function OnboardingQuestionsView({
             {saving ? '保存中...' : 'はじめる'}
           </Button>
         )}
+      </div>
       </div>
     </div>
   )
