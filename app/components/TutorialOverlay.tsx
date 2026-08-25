@@ -82,7 +82,7 @@ export default function TutorialOverlay() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('tutorial_completed, expectation')
+        .select('tutorial_completed, acquisition_source')
         .eq('id', uid)
         .single()
       if (cancelled) return
@@ -92,7 +92,7 @@ export default function TutorialOverlay() {
       }
       // オンボーディング属性質問が未回答の間はツアーを起こさない。
       // 回答完了で ONBOARDING_COMPLETE_EVENT が飛んできて再初期化される。
-      if (!profile.expectation) return
+      if (!profile.acquisition_source) return
 
       // 「表示する」と決まった時点で即DBに完了を記録する。
       // 完了まで到達しなくても二度と再表示されないようにするため。
