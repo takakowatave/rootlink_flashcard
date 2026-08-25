@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -14,6 +14,7 @@ import { getPlantImageSrc, resolveGrowth } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import Button from '@/components/Button'
+import ShareMenu from '@/components/ShareMenu'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -107,7 +108,15 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
   )
 }
 
-async function shareImage({
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false)
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
+  return isTouch
+}
+
+async function shareViaNativeSheet({
   cardUrl,
   filename,
   shareText,
@@ -120,12 +129,23 @@ async function shareImage({
   if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
   const blob = await res.blob()
   const file = new File([blob], filename, { type: 'image/png' })
-
   if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
     await navigator.share({ files: [file], text: shareText })
-    return
   }
+}
 
+async function shareViaClipboardAndX({
+  cardUrl,
+  filename,
+  shareText,
+}: {
+  cardUrl: string
+  filename: string
+  shareText: string
+}) {
+  const res = await fetch(cardUrl)
+  if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+  const blob = await res.blob()
   let copied = false
   try {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
@@ -151,9 +171,18 @@ async function shareImage({
   )
 }
 
-function ShareButton({ onClick, isSharing }: { onClick: () => void; isSharing: boolean }) {
+function ShareButton({
+  onClick,
+  isSharing,
+  buttonRef,
+}: {
+  onClick: () => void
+  isSharing: boolean
+  buttonRef?: React.Ref<HTMLButtonElement>
+}) {
   return (
     <Button
+      ref={buttonRef}
       onClick={onClick}
       disabled={isSharing}
       variant="primary"
@@ -200,24 +229,33 @@ function CelebrationModal({
 function StreakModal({
   streak,
   plantLevel,
+  plantSrc,
   onClose,
 }: {
   streak: number
   plantLevel: number
+  plantSrc: string
   onClose: () => void
 }) {
   const [isSharing, setIsSharing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const isTouch = useIsTouchDevice()
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
+  const filename = `rootlink-streak-${streak}days.png`
+  const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
+  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
 
   const handleShare = async () => {
     if (isSharing) return
+    if (!isTouch) {
+      setMenuOpen(true)
+      return
+    }
     setIsSharing(true)
-    const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
     try {
-      await shareImage({
-        cardUrl: `/share/streak/${streak}/card.png?lv=${plantLevel}`,
-        filename: `rootlink-streak-${streak}days.png`,
-        shareText,
-      })
+      await shareViaNativeSheet({ cardUrl, filename, shareText })
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
         console.error('SHARE FAILED:', err)
@@ -228,13 +266,42 @@ function StreakModal({
     }
   }
 
+  const handleShareX = async () => {
+    setIsSharing(true)
+    try {
+      await shareViaClipboardAndX({ cardUrl, filename, shareText })
+    } catch (err) {
+      console.error('SHARE X FAILED:', err)
+      toast.error('シェアに失敗しました')
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   return (
-    <CelebrationModal onClose={onClose}>
-      <p className="text-6xl select-none">🔥</p>
-      <p className="text-5xl font-black text-quiz-review tabular-nums">{streak}日目</p>
-      <p className="text-base font-medium text-gray-700">今日も継続中！</p>
-      <ShareButton onClick={handleShare} isSharing={isSharing} />
-    </CelebrationModal>
+    <>
+      <CelebrationModal onClose={onClose}>
+        <div className="flex items-baseline gap-1 leading-none">
+          <span className="text-6xl font-black text-orange-500 tabular-nums">{streak}</span>
+          <span className="text-3xl font-black text-orange-500">日</span>
+        </div>
+        <p className="text-xl font-bold text-quiz-review">連続学習中</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={plantSrc} alt="" className="size-32 object-contain" />
+        <p className="text-sm text-gray-600 text-center leading-relaxed">
+          毎日ログインして<br />植物を育てよう
+        </p>
+        <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
+      </CelebrationModal>
+      <ShareMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        shareUrl={shareUrl}
+        shareText={shareText}
+        anchorRef={btnRef}
+        onShareX={handleShareX}
+      />
+    </>
   )
 }
 
@@ -248,17 +315,24 @@ function LevelUpModal({
   onClose: () => void
 }) {
   const [isSharing, setIsSharing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const isTouch = useIsTouchDevice()
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const cardUrl = `/share/level/${level}/card.png`
+  const filename = `rootlink-level-${level}.png`
+  const shareText = `単語学習でレベル${level}に成長🌱\n\n#RootLink #英単語 #語源学習`
+  const shareUrl = 'https://www.rootlink.app'
 
   const handleShare = async () => {
     if (isSharing) return
+    if (!isTouch) {
+      setMenuOpen(true)
+      return
+    }
     setIsSharing(true)
-    const shareText = `単語学習でレベル${level}に成長🌱\n\n#RootLink #英単語 #語源学習`
     try {
-      await shareImage({
-        cardUrl: `/share/level/${level}/card.png`,
-        filename: `rootlink-level-${level}.png`,
-        shareText,
-      })
+      await shareViaNativeSheet({ cardUrl, filename, shareText })
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
         console.error('SHARE FAILED:', err)
@@ -269,16 +343,39 @@ function LevelUpModal({
     }
   }
 
+  const handleShareX = async () => {
+    setIsSharing(true)
+    try {
+      await shareViaClipboardAndX({ cardUrl, filename, shareText })
+    } catch (err) {
+      console.error('SHARE X FAILED:', err)
+      toast.error('シェアに失敗しました')
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   return (
-    <CelebrationModal onClose={onClose}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={plantSrc} alt="" className="size-40 object-contain" />
-      <p className="text-3xl font-black text-quiz-review">レベルアップ！</p>
-      <p className="text-base font-medium text-gray-700 tabular-nums">
-        Lv.{String(level).padStart(2, '0')} に成長しました
-      </p>
-      <ShareButton onClick={handleShare} isSharing={isSharing} />
-    </CelebrationModal>
+    <>
+      <CelebrationModal onClose={onClose}>
+        <div className="flex items-baseline leading-none">
+          <span className="text-4xl font-black text-orange-500">Lv.</span>
+          <span className="text-6xl font-black text-orange-500 tabular-nums">{level}</span>
+        </div>
+        <p className="text-xl font-bold text-quiz-review">レベルアップ！</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={plantSrc} alt="" className="size-32 object-contain" />
+        <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
+      </CelebrationModal>
+      <ShareMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        shareUrl={shareUrl}
+        shareText={shareText}
+        anchorRef={btnRef}
+        onShareX={handleShareX}
+      />
+    </>
   )
 }
 
@@ -486,11 +583,22 @@ export default function Dashboard() {
 
   return (
     <>
-      {showModal && (
-        <StreakModal
-          streak={streak}
-          plantLevel={resolveGrowth(quizAttemptCount, activityDates.length).current.level}
-          onClose={() => setShowModal(false)}
+      {showModal && (() => {
+        const growth = resolveGrowth(quizAttemptCount, activityDates.length)
+        return (
+          <StreakModal
+            streak={streak}
+            plantLevel={growth.current.level}
+            plantSrc={growth.current.src}
+            onClose={() => setShowModal(false)}
+          />
+        )
+      })()}
+      {levelUpTo !== null && (
+        <LevelUpModal
+          level={levelUpTo}
+          plantSrc={resolveGrowth(quizAttemptCount, activityDates.length).current.src}
+          onClose={() => setLevelUpTo(null)}
         />
       )}
 

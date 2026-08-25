@@ -10,6 +10,8 @@ type Props = {
   shareUrl: string
   shareText: string
   anchorRef?: React.RefObject<HTMLElement | null>
+  // 指定時は X ボタンの挙動を上書き (streak/level の画像投稿フローで使用)
+  onShareX?: () => void | Promise<void>
 }
 
 type Item = {
@@ -23,7 +25,7 @@ type Item = {
 const MENU_WIDTH = 280
 const MENU_GAP = 8
 
-export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRef }: Props) {
+export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRef, onShareX }: Props) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
@@ -75,7 +77,13 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
   }
 
   // X は word ページ URL を渡して OGP プレビュー（twitter:card=summary_large_image + card.png）で画像を出す。
-  const shareToX = () => {
+  // onShareX が指定された場合はそれを優先 (streak/level は画像を直接クリップボード+compose)。
+  const shareToX = async () => {
+    if (onShareX) {
+      await onShareX()
+      onClose()
+      return
+    }
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
       '_blank',
