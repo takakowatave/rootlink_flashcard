@@ -467,6 +467,9 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
     const newResults = [...results, correct]
     setResults(newResults)
     if (currentIndex + 1 >= cards.length) {
+      // Dashboard がレベルアップモーダルを出すかどうか判定するためのフラグ。
+      // 「クイズ完了直後の遷移」のみでレベル上昇を検知させる (誤発火防止)。
+      try { sessionStorage.setItem('plant_quiz_completed', '1') } catch {}
       setDone(true)
     } else {
       setCurrentIndex(i => i + 1)

@@ -143,21 +143,33 @@ async function shareViaClipboardAndX({
   filename: string
   shareText: string
 }) {
-  const res = await fetch(cardUrl)
-  if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-  const blob = await res.blob()
+  // Safari requires clipboard.write to be dispatched synchronously within the user gesture.
+  // Passing Promise<Blob> into ClipboardItem lets the network fetch resolve after the gesture is claimed.
   let copied = false
   try {
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    const item = new ClipboardItem({
+      'image/png': fetch(cardUrl).then((res) => {
+        if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+        return res.blob()
+      }),
+    })
+    await navigator.clipboard.write([item])
     copied = true
-  } catch {
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  } catch (err) {
+    console.error('clipboard write failed:', err)
+    try {
+      const res = await fetch(cardUrl)
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    } catch (err2) {
+      console.error('download fallback failed:', err2)
+    }
   }
   window.open(
     `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
@@ -434,6 +446,8 @@ function DeckSection({
 
 const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 const LEVEL_STORAGE_KEY = 'plant_level_last_seen'
+// クイズセッションが完了した直後のみ true。Dashboard がレベル比較する際のゲート。
+const QUIZ_COMPLETED_FLAG = 'plant_quiz_completed'
 
 const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
   yesterday: '昨日',
@@ -516,19 +530,25 @@ export default function Dashboard() {
       }
 
       // レベルアップ検出 (streak modal より優先)
+      // クイズを完了した直後の Dashboard 訪問時のみ「上がったかどうか」を判定して発火。
+      // ランダムなリロードでは絶対に発火させない。
       const currentLevel = resolveGrowth(
         quizData.data?.length ?? 0,
         dates.length,
       ).current.level
       const storedLevelRaw = localStorage.getItem(LEVEL_STORAGE_KEY)
       const storedLevel = storedLevelRaw != null ? parseInt(storedLevelRaw, 10) : null
-      if (storedLevel == null) {
-        localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
-      } else if (currentLevel > storedLevel) {
-        setLevelUpTo(currentLevel)
-        localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
-        return
+      const quizJustCompleted = sessionStorage.getItem(QUIZ_COMPLETED_FLAG) === '1'
+      if (quizJustCompleted) {
+        sessionStorage.removeItem(QUIZ_COMPLETED_FLAG)
+        if (storedLevel != null && currentLevel > storedLevel) {
+          setLevelUpTo(currentLevel)
+          localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
+          return
+        }
       }
+      // フラグ無し or 変化なし: 常に現在レベルで同期しておく (次回比較の基準)
+      localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
 
       // 今日まだモーダルを出していなければ表示
       const today = new Date().toLocaleDateString('sv')
