@@ -54,6 +54,7 @@ function Interactive({
       onReminderChange={(key, patch) =>
         setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
       }
+      onOpenNotificationSettings={() => alert('OS の通知設定を開く')}
       onNext={() => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))}
       onBack={() => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))}
       onSubmit={() => alert(`保存: level=${level} source=${source} expectation=${expectation}`)}
@@ -111,6 +112,7 @@ export const Saving: Story = {
     onSourceChange: () => {},
     onExpectationChange: () => {},
     onReminderChange: () => {},
+    onOpenNotificationSettings: () => {},
     onNext: () => {},
     onBack: () => {},
     onSubmit: () => {},

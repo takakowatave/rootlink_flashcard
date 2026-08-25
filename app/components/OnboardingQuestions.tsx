@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
+import { MdAddCircle } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
@@ -13,6 +14,7 @@ import Button from './Button'
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
 //   Native: 上記 + 2609:6594 (学習時間帯) を Expectation の後に挿入 (5画面)
 // Splash と 利用規約 は /onboarding (ネイティブのみ) に分離。
+// リマインダーは OS のローカル通知のみ (DB 永続化なし)。追加ボタンは OS 通知設定を開く。
 
 export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
@@ -77,6 +79,7 @@ type ViewProps = {
   onSourceChange: (v: AcquisitionSource) => void
   onExpectationChange: (v: Expectation) => void
   onReminderChange: (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => void
+  onOpenNotificationSettings: () => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
@@ -173,6 +176,7 @@ export function OnboardingQuestionsView({
   onSourceChange,
   onExpectationChange,
   onReminderChange,
+  onOpenNotificationSettings,
   onNext,
   onBack,
   onSubmit,
@@ -292,27 +296,37 @@ export function OnboardingQuestionsView({
               学習する時間帯を決めて<br />習慣化しましょう
             </h2>
             <div className="px-4">
-              <div className="bg-white border-2 border-slate-200 rounded-3xl px-6 divide-y divide-slate-200">
-                {reminders.map((slot) => (
-                  <div key={slot.key} className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-1.5">
-                      <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
-                        <input
-                          type="time"
-                          value={slot.time}
-                          onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
-                          className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px]"
-                        />
-                      </label>
-                      <span className="text-base text-gray-950">{slot.label}</span>
+              <div className="bg-white border-2 border-slate-200 rounded-3xl px-6 pb-6">
+                <div className="divide-y divide-slate-200">
+                  {reminders.map((slot) => (
+                    <div key={slot.key} className="flex items-center justify-between py-4">
+                      <div className="flex items-center gap-1.5">
+                        <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
+                          <input
+                            type="time"
+                            value={slot.time}
+                            onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
+                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px]"
+                          />
+                        </label>
+                        <span className="text-base text-gray-950">{slot.label}</span>
+                      </div>
+                      <Toggle
+                        checked={slot.enabled}
+                        onChange={(next) => onReminderChange(slot.key, { enabled: next })}
+                        label={`${slot.label} の通知`}
+                      />
                     </div>
-                    <Toggle
-                      checked={slot.enabled}
-                      onChange={(next) => onReminderChange(slot.key, { enabled: next })}
-                      label={`${slot.label} の通知`}
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenNotificationSettings}
+                  className="mt-6 w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary"
+                >
+                  追加
+                  <MdAddCircle className="size-6" />
+                </button>
               </div>
             </div>
           </div>
@@ -371,7 +385,6 @@ async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
     const mod = await import('@capacitor/local-notifications')
     const perm = await mod.LocalNotifications.requestPermissions()
     if (perm.display !== 'granted') return
-    // 既存通知を全て消してから当日以降のスケジュールを立て直す
     const pending = await mod.LocalNotifications.getPending()
     if (pending.notifications.length > 0) {
       await mod.LocalNotifications.cancel({ notifications: pending.notifications })
@@ -393,6 +406,18 @@ async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
     await mod.LocalNotifications.schedule({ notifications })
   } catch {
     // capacitor plugin unavailable (web preview) — silently skip
+  }
+}
+
+async function openNotificationSettings(): Promise<void> {
+  try {
+    const { NativeSettings, IOSSettings, AndroidSettings } = await import('capacitor-native-settings')
+    await NativeSettings.open({
+      optionIOS: IOSSettings.App,
+      optionAndroid: AndroidSettings.AppNotification,
+    })
+  } catch {
+    // plugin unavailable in web preview — silently skip
   }
 }
 
@@ -431,9 +456,7 @@ export default function OnboardingQuestions() {
     return () => { cancelled = true; sub.subscription.unsubscribe() }
   }, [])
 
-  const goNext = () => {
-    setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
-  }
+  const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
   const patchReminder = (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => {
@@ -443,18 +466,14 @@ export default function OnboardingQuestions() {
   const submit = async () => {
     if (!userId || !level || !source || !expectation) return
     setSaving(true)
-    const payload: Record<string, unknown> = {
-      english_level: level,
-      acquisition_source: source,
-      expectation,
-    }
-    if (showReminders) {
-      for (const r of reminders) {
-        payload[`reminder_${r.key}`] = r.time
-        payload[`reminder_${r.key}_enabled`] = r.enabled
-      }
-    }
-    const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        english_level: level,
+        acquisition_source: source,
+        expectation,
+      })
+      .eq('id', userId)
     if (error) {
       setSaving(false)
       console.error('ONBOARDING SAVE FAILED:', error)
@@ -484,6 +503,7 @@ export default function OnboardingQuestions() {
       onSourceChange={setSource}
       onExpectationChange={setExpectation}
       onReminderChange={patchReminder}
+      onOpenNotificationSettings={openNotificationSettings}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}
