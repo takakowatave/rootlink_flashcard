@@ -4,21 +4,20 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
-import { FiPlus } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import Button from './Button'
 
 // Figma: xe5UwVx38JWu5doqwXczQu / 2613:6938 (onboarding)
-// 4画面フルスクリーン: Level → Source → Reminders → Complete
-// Splash + 利用規約はネイティブアプリのみで実装 (Web は対象外)
+// Web は 3画面フルスクリーン: Level → Source → Complete
+// Splash + 利用規約 + 学習時間帯(通知) はネイティブアプリのみ (Web は対象外)
 
 export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
 
 export const ONBOARDING_COMPLETE_EVENT = 'rootlink-onboarding-completed'
 
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 3
 
 type LevelOption = { value: EnglishLevel; label: string; detail: string }
 type SourceOption = { value: AcquisitionSource; label: string }
@@ -40,29 +39,15 @@ const SOURCE_OPTIONS: SourceOption[] = [
   { value: 'other', label: 'その他' },
 ]
 
-export type ReminderState = {
-  morning: { time: string; enabled: boolean }
-  lunch: { time: string; enabled: boolean }
-  night: { time: string; enabled: boolean }
-}
-
-const DEFAULT_REMINDERS: ReminderState = {
-  morning: { time: '07:00', enabled: true },
-  lunch: { time: '12:00', enabled: false },
-  night: { time: '20:00', enabled: false },
-}
-
-type Step = 1 | 2 | 3 | 4
+type Step = 1 | 2 | 3
 
 type ViewProps = {
   step: Step
   level: EnglishLevel | null
   source: AcquisitionSource | null
-  reminders: ReminderState
   saving?: boolean
   onLevelChange: (v: EnglishLevel) => void
   onSourceChange: (v: AcquisitionSource) => void
-  onReminderChange: (key: keyof ReminderState, patch: Partial<ReminderState[keyof ReminderState]>) => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
@@ -109,71 +94,13 @@ function Radio({ selected }: { selected: boolean }) {
   )
 }
 
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative w-[51px] h-[31px] rounded-full transition-colors ${
-        checked ? 'bg-primary' : 'bg-slate-300'
-      }`}
-    >
-      <span
-        className={`absolute top-[2px] size-[27px] bg-white rounded-full shadow transition-[left] duration-150 ${
-          checked ? 'left-[22px]' : 'left-[2px]'
-        }`}
-      />
-    </button>
-  )
-}
-
-function ReminderRow({
-  time,
-  label,
-  enabled,
-  divider,
-  onTimeChange,
-  onToggle,
-}: {
-  time: string
-  label: string
-  enabled: boolean
-  divider: boolean
-  onTimeChange: (v: string) => void
-  onToggle: (v: boolean) => void
-}) {
-  return (
-    <div className={`flex items-center justify-between py-4 ${divider ? 'border-b border-slate-200' : ''}`}>
-      <div className="flex items-center gap-1.5">
-        <label className="relative inline-flex items-center border border-slate-400 rounded-md px-2.5 py-1 cursor-pointer hover:bg-slate-50">
-          <span className="text-[15px] font-medium text-gray-950 tabular-nums">{time}</span>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => onTimeChange(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            aria-label={`${label}の時刻`}
-          />
-        </label>
-        <span className="text-base text-gray-950">{label}</span>
-      </div>
-      <Toggle checked={enabled} onChange={onToggle} label={label} />
-    </div>
-  )
-}
-
 export function OnboardingQuestionsView({
   step,
   level,
   source,
-  reminders,
   saving = false,
   onLevelChange,
   onSourceChange,
-  onReminderChange,
   onNext,
   onBack,
   onSubmit,
@@ -256,52 +183,6 @@ export function OnboardingQuestionsView({
         {step === 3 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
-              学習する時間帯を決めて<br />習慣化しましょう
-            </h2>
-            <div className="px-4">
-              <div className="bg-white border-2 border-slate-200 rounded-3xl px-6">
-                <ReminderRow
-                  time={reminders.morning.time}
-                  label="起床時"
-                  enabled={reminders.morning.enabled}
-                  divider
-                  onTimeChange={(v) => onReminderChange('morning', { time: v })}
-                  onToggle={(v) => onReminderChange('morning', { enabled: v })}
-                />
-                <ReminderRow
-                  time={reminders.lunch.time}
-                  label="お昼休み"
-                  enabled={reminders.lunch.enabled}
-                  divider
-                  onTimeChange={(v) => onReminderChange('lunch', { time: v })}
-                  onToggle={(v) => onReminderChange('lunch', { enabled: v })}
-                />
-                <ReminderRow
-                  time={reminders.night.time}
-                  label="寝る前"
-                  enabled={reminders.night.enabled}
-                  divider={false}
-                  onTimeChange={(v) => onReminderChange('night', { time: v })}
-                  onToggle={(v) => onReminderChange('night', { enabled: v })}
-                />
-                <div className="py-6">
-                  <button
-                    type="button"
-                    onClick={() => toast('現在は3つの時間帯のみ設定可能です')}
-                    className="w-full h-10 rounded-full border border-primary text-primary text-sm font-medium flex items-center justify-center gap-1"
-                  >
-                    追加
-                    <FiPlus className="size-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="flex flex-col gap-6 pt-6">
-            <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               毎日ログインして<br />木を育てましょう
             </h2>
             <div className="px-4">
@@ -343,17 +224,6 @@ export function OnboardingQuestionsView({
         )}
         {step === 3 && (
           <Button
-            onClick={onNext}
-            variant="primary"
-            fullWidth
-            radius="full"
-            className="h-[50px] text-base font-medium"
-          >
-            次へ
-          </Button>
-        )}
-        {step === 4 && (
-          <Button
             onClick={onSubmit}
             disabled={saving}
             variant="primary"
@@ -376,7 +246,6 @@ export default function OnboardingQuestions() {
   const [step, setStep] = useState<Step>(1)
   const [level, setLevel] = useState<EnglishLevel | null>(null)
   const [source, setSource] = useState<AcquisitionSource | null>(null)
-  const [reminders, setReminders] = useState<ReminderState>(DEFAULT_REMINDERS)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -400,10 +269,6 @@ export default function OnboardingQuestions() {
     return () => { cancelled = true; sub.subscription.unsubscribe() }
   }, [])
 
-  const updateReminder = (key: keyof ReminderState, patch: Partial<ReminderState[keyof ReminderState]>) => {
-    setReminders((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }))
-  }
-
   const goNext = () => setStep((s) => (s < TOTAL_STEPS ? ((s + 1) as Step) : s))
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
@@ -415,12 +280,6 @@ export default function OnboardingQuestions() {
       .update({
         english_level: level,
         acquisition_source: source,
-        reminder_morning: reminders.morning.enabled ? reminders.morning.time : null,
-        reminder_morning_enabled: reminders.morning.enabled,
-        reminder_lunch: reminders.lunch.enabled ? reminders.lunch.time : null,
-        reminder_lunch_enabled: reminders.lunch.enabled,
-        reminder_night: reminders.night.enabled ? reminders.night.time : null,
-        reminder_night_enabled: reminders.night.enabled,
       })
       .eq('id', userId)
     setSaving(false)
@@ -441,11 +300,9 @@ export default function OnboardingQuestions() {
       step={step}
       level={level}
       source={source}
-      reminders={reminders}
       saving={saving}
       onLevelChange={setLevel}
       onSourceChange={setSource}
-      onReminderChange={updateReminder}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}
