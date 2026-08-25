@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import Dashboard from '@/components/Dashboard'
 import LPClient from '@/components/LPClient'
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+}
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()
