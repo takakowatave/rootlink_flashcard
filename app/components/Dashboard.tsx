@@ -356,14 +356,14 @@ function StreakModal({
   plantLevel,
   plantSrc,
   progressRatio,
-  quizzesToNext,
+  pointsToNext,
   onClose,
 }: {
   streak: number
   plantLevel: number
   plantSrc: string
   progressRatio: number
-  quizzesToNext: number | null
+  pointsToNext: number | null
   onClose: () => void
 }) {
   const [isSharing, setIsSharing] = useState(false)
@@ -431,8 +431,8 @@ function StreakModal({
                 style={{ width: `${progressPct}%` }}
               />
             </div>
-            {quizzesToNext != null && (
-              <p className="text-sm text-slate-400">あと{quizzesToNext}問で次の進化</p>
+            {pointsToNext != null && (
+              <p className="text-sm text-slate-400">あと{pointsToNext}ptで次の進化</p>
             )}
           </div>
 
@@ -694,7 +694,7 @@ export default function Dashboard() {
             plantLevel={growth.current.level}
             plantSrc={growth.current.src}
             progressRatio={growth.progressRatio}
-            quizzesToNext={growth.quizzesToNext}
+            pointsToNext={growth.pointsToNext}
             onClose={() => setShowStreakModal(false)}
           />
         )
