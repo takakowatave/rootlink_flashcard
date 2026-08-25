@@ -15,11 +15,11 @@ export default function PlantStatus({
   loginDays: number
   variant?: Variant
 }) {
-  const { current, next, quizzesToNext, progressRatio } = resolveGrowth(quizCount, loginDays)
+  const { current, next, pointsToNext, progressRatio } = resolveGrowth(quizCount, loginDays)
   const levelLabel = formatLevelLabel(current.level)
   const nextText =
-    next && quizzesToNext !== null
-      ? `あと${quizzesToNext}問でLv.${String(next.level).padStart(2, '0')}`
+    next && pointsToNext !== null
+      ? `あと${pointsToNext}ptでLv.${String(next.level).padStart(2, '0')}`
       : null
 
   if (variant === 'compact') {
