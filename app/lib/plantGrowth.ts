@@ -10,6 +10,9 @@ const PLANT_LEVELS: PlantLevel[] = [
   { level: 3, minScore: 100, src: '/plant/lv3.png' },
   { level: 4, minScore: 300, src: '/plant/lv4.png' },
   { level: 5, minScore: 800, src: '/plant/lv5.png' },
+  { level: 6, minScore: 2000, src: '/plant/lv5.png' },
+  { level: 7, minScore: 5000, src: '/plant/lv5.png' },
+  { level: 8, minScore: 10000, src: '/plant/lv5.png' },
 ]
 
 export const LOGIN_WEIGHT = 3
