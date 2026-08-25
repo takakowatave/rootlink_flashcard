@@ -1,24 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 import Button from './Button'
 
-// Figma: xe5UwVx38JWu5doqwXczQu / 2613:6938 (onboarding)
-// Web は 4画面フルスクリーン: Level → Source → Expectation → Complete
-// Splash + 利用規約 + 学習時間帯(通知) はネイティブアプリのみ (Web は対象外)
+// Figma: xe5UwVx38JWu5doqwXczQu
+//   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
+//   Native: 上記 + 2609:6594 (学習時間帯) を Expectation の後に挿入 (5画面)
+// Splash と 利用規約 は /onboarding (ネイティブのみ) に分離。
 
 export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
 export type Expectation = 'dictionary' | 'exam' | 'mining' | 'etymology' | 'other'
 
-export const ONBOARDING_COMPLETE_EVENT = 'rootlink-onboarding-completed'
+export type ReminderSlot = {
+  key: 'morning' | 'lunch' | 'night'
+  label: string
+  time: string // "HH:MM"
+  enabled: boolean
+}
 
-const TOTAL_STEPS = 4
+export const ONBOARDING_COMPLETE_EVENT = 'rootlink-onboarding-completed'
 
 type LevelOption = { value: EnglishLevel; label: string; detail: string }
 type SourceOption = { value: AcquisitionSource; label: string }
@@ -49,24 +56,42 @@ const EXPECTATION_OPTIONS: ExpectationOption[] = [
   { value: 'other', label: 'その他' },
 ]
 
-type Step = 1 | 2 | 3 | 4
+const DEFAULT_REMINDERS: ReminderSlot[] = [
+  { key: 'morning', label: '起床時', time: '07:00', enabled: true },
+  { key: 'lunch', label: 'お昼休み', time: '12:00', enabled: false },
+  { key: 'night', label: '寝る前', time: '20:00', enabled: false },
+]
+
+type Step = 1 | 2 | 3 | 4 | 5
 
 type ViewProps = {
   step: Step
+  totalSteps: number
+  showReminders: boolean
   level: EnglishLevel | null
   source: AcquisitionSource | null
   expectation: Expectation | null
+  reminders: ReminderSlot[]
   saving?: boolean
   onLevelChange: (v: EnglishLevel) => void
   onSourceChange: (v: AcquisitionSource) => void
   onExpectationChange: (v: Expectation) => void
+  onReminderChange: (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
 }
 
-function ProgressHeader({ step, onBack }: { step: Step; onBack: () => void }) {
-  const pct = (step / TOTAL_STEPS) * 100
+function ProgressHeader({
+  step,
+  totalSteps,
+  onBack,
+}: {
+  step: Step
+  totalSteps: number
+  onBack: () => void
+}) {
+  const pct = (step / totalSteps) * 100
   const canBack = step > 1
   return (
     <div className="flex items-center gap-3 h-14 px-2 border-b border-line">
@@ -87,7 +112,7 @@ function ProgressHeader({ step, onBack }: { step: Step; onBack: () => void }) {
           />
         </div>
         <span className="text-sm text-gray-400 tabular-nums whitespace-nowrap">
-          {step} / {TOTAL_STEPS}
+          {step} / {totalSteps}
         </span>
       </div>
     </div>
@@ -106,15 +131,48 @@ function Radio({ selected }: { selected: boolean }) {
   )
 }
 
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-[31px] w-[51px] rounded-full transition-colors shrink-0 ${
+        checked ? 'bg-primary' : 'bg-slate-300'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 size-[27px] rounded-full bg-white shadow transition-transform ${
+          checked ? 'translate-x-[20px]' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  )
+}
+
 export function OnboardingQuestionsView({
   step,
+  totalSteps,
+  showReminders,
   level,
   source,
   expectation,
+  reminders,
   saving = false,
   onLevelChange,
   onSourceChange,
   onExpectationChange,
+  onReminderChange,
   onNext,
   onBack,
   onSubmit,
@@ -122,10 +180,11 @@ export function OnboardingQuestionsView({
   const canProceedLevel = level !== null
   const canProceedSource = source !== null
   const canProceedExpectation = expectation !== null
+  const completeStep = showReminders ? 5 : 4
 
   return (
     <div className="fixed inset-0 z-[110] bg-teal-50 flex flex-col">
-      <ProgressHeader step={step} onBack={onBack} />
+      <ProgressHeader step={step} totalSteps={totalSteps} onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto pb-32">
         {step === 1 && (
@@ -227,7 +286,39 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 4 && (
+        {step === 4 && showReminders && (
+          <div className="flex flex-col gap-6 pt-6">
+            <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
+              学習する時間帯を決めて<br />習慣化しましょう
+            </h2>
+            <div className="px-4">
+              <div className="bg-white border-2 border-slate-200 rounded-3xl px-6 divide-y divide-slate-200">
+                {reminders.map((slot) => (
+                  <div key={slot.key} className="flex items-center justify-between py-4">
+                    <div className="flex items-center gap-1.5">
+                      <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
+                        <input
+                          type="time"
+                          value={slot.time}
+                          onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
+                          className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px]"
+                        />
+                      </label>
+                      <span className="text-base text-gray-950">{slot.label}</span>
+                    </div>
+                    <Toggle
+                      checked={slot.enabled}
+                      onChange={(next) => onReminderChange(slot.key, { enabled: next })}
+                      label={`${slot.label} の通知`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === completeStep && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               毎日ログインして<br />木を育てましょう
@@ -246,56 +337,63 @@ export function OnboardingQuestionsView({
 
       <div className="absolute bottom-0 left-0 right-0 h-32 flex items-center justify-center px-6 bg-teal-50">
         {step === 1 && (
-          <Button
-            onClick={onNext}
-            disabled={!canProceedLevel}
-            variant="primary"
-            fullWidth
-            radius="full"
-            className="h-[50px] text-base font-medium"
-          >
+          <Button onClick={onNext} disabled={!canProceedLevel} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
         {step === 2 && (
-          <Button
-            onClick={onNext}
-            disabled={!canProceedSource}
-            variant="primary"
-            fullWidth
-            radius="full"
-            className="h-[50px] text-base font-medium"
-          >
+          <Button onClick={onNext} disabled={!canProceedSource} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
         {step === 3 && (
-          <Button
-            onClick={onNext}
-            disabled={!canProceedExpectation}
-            variant="primary"
-            fullWidth
-            radius="full"
-            className="h-[50px] text-base font-medium"
-          >
+          <Button onClick={onNext} disabled={!canProceedExpectation} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === 4 && (
-          <Button
-            onClick={onSubmit}
-            disabled={saving}
-            variant="primary"
-            fullWidth
-            radius="full"
-            className="h-[50px] text-base font-medium"
-          >
+        {step === 4 && showReminders && (
+          <Button onClick={onNext} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
+            次へ
+          </Button>
+        )}
+        {step === completeStep && (
+          <Button onClick={onSubmit} disabled={saving} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             {saving ? '保存中...' : 'はじめる'}
           </Button>
         )}
       </div>
     </div>
   )
+}
+
+async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
+  try {
+    const mod = await import('@capacitor/local-notifications')
+    const perm = await mod.LocalNotifications.requestPermissions()
+    if (perm.display !== 'granted') return
+    // 既存通知を全て消してから当日以降のスケジュールを立て直す
+    const pending = await mod.LocalNotifications.getPending()
+    if (pending.notifications.length > 0) {
+      await mod.LocalNotifications.cancel({ notifications: pending.notifications })
+    }
+    const enabled = reminders.filter((r) => r.enabled)
+    if (enabled.length === 0) return
+    const notifications = enabled.map((r, i) => {
+      const [h, m] = r.time.split(':').map(Number)
+      const at = new Date()
+      at.setHours(h ?? 0, m ?? 0, 0, 0)
+      if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1)
+      return {
+        id: i + 1,
+        title: 'RootLink',
+        body: '今日の1語を思い出そう',
+        schedule: { at, repeats: true, every: 'day' as const },
+      }
+    })
+    await mod.LocalNotifications.schedule({ notifications })
+  } catch {
+    // capacitor plugin unavailable (web preview) — silently skip
+  }
 }
 
 export default function OnboardingQuestions() {
@@ -306,7 +404,11 @@ export default function OnboardingQuestions() {
   const [level, setLevel] = useState<EnglishLevel | null>(null)
   const [source, setSource] = useState<AcquisitionSource | null>(null)
   const [expectation, setExpectation] = useState<Expectation | null>(null)
+  const [reminders, setReminders] = useState<ReminderSlot[]>(DEFAULT_REMINDERS)
   const [saving, setSaving] = useState(false)
+
+  const showReminders = useMemo(() => isNativePlatform(), [])
+  const totalSteps = showReminders ? 5 : 4
 
   useEffect(() => {
     let cancelled = false
@@ -329,26 +431,38 @@ export default function OnboardingQuestions() {
     return () => { cancelled = true; sub.subscription.unsubscribe() }
   }, [])
 
-  const goNext = () => setStep((s) => (s < TOTAL_STEPS ? ((s + 1) as Step) : s))
+  const goNext = () => {
+    setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
+  }
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
+
+  const patchReminder = (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => {
+    setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+  }
 
   const submit = async () => {
     if (!userId || !level || !source || !expectation) return
     setSaving(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        english_level: level,
-        acquisition_source: source,
-        expectation,
-      })
-      .eq('id', userId)
-    setSaving(false)
+    const payload: Record<string, unknown> = {
+      english_level: level,
+      acquisition_source: source,
+      expectation,
+    }
+    if (showReminders) {
+      for (const r of reminders) {
+        payload[`reminder_${r.key}`] = r.time
+        payload[`reminder_${r.key}_enabled`] = r.enabled
+      }
+    }
+    const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
     if (error) {
+      setSaving(false)
       console.error('ONBOARDING SAVE FAILED:', error)
       toast.error('保存に失敗しました')
       return
     }
+    if (showReminders) await scheduleReminders(reminders)
+    setSaving(false)
     window.dispatchEvent(new CustomEvent(ONBOARDING_COMPLETE_EVENT))
     setVisible(false)
     router.push('/')
@@ -359,13 +473,17 @@ export default function OnboardingQuestions() {
   return (
     <OnboardingQuestionsView
       step={step}
+      totalSteps={totalSteps}
+      showReminders={showReminders}
       level={level}
       source={source}
       expectation={expectation}
+      reminders={reminders}
       saving={saving}
       onLevelChange={setLevel}
       onSourceChange={setSource}
       onExpectationChange={setExpectation}
+      onReminderChange={patchReminder}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}
