@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import confetti from 'canvas-confetti'
 import { HiChevronRight } from 'react-icons/hi'
 import { HiXMark } from 'react-icons/hi2'
 import { FaShareNodes } from 'react-icons/fa6'
@@ -227,6 +228,33 @@ function LevelUpModal({
   const [menuOpen, setMenuOpen] = useState(false)
   const isTouch = useIsTouchDevice()
   const btnRef = useRef<HTMLButtonElement>(null)
+
+  // マウント時にコンフェッティを打ち上げる (レベルアップ瞬間のみ発火)
+  useEffect(() => {
+    const duration = 1500
+    const end = Date.now() + duration
+    const colors = ['#ff8904', '#00d5be', '#009689', '#fbbf24']
+    const tick = () => {
+      confetti({
+        particleCount: 4,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors,
+        disableForReducedMotion: true,
+      })
+      confetti({
+        particleCount: 4,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors,
+        disableForReducedMotion: true,
+      })
+      if (Date.now() < end) requestAnimationFrame(tick)
+    }
+    tick()
+  }, [])
 
   const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
   const filename = `rootlink-level-${level}.png`
