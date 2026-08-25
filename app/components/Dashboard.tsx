@@ -208,42 +208,16 @@ function ShareButton({
   )
 }
 
-function CelebrationModal({
-  onClose,
-  children,
-}: {
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="relative bg-white rounded-3xl px-10 py-8 flex flex-col items-center gap-3 shadow-2xl mx-4"
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-          aria-label="閉じる"
-        >
-          <HiXMark className="size-5" />
-        </button>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function StreakModal({
+// Figma: xe5UwVx38JWu5doqwXczQu / node 2604-6015
+// レベルアップした瞬間のみ表示 (日次の streak お祝いモーダルは廃止)
+function LevelUpModal({
+  level,
   streak,
   plantLevel,
   plantSrc,
   onClose,
 }: {
+  level: number
   streak: number
   plantLevel: number
   plantSrc: string
@@ -255,85 +229,8 @@ function StreakModal({
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
-  const filename = `rootlink-streak-${streak}days.png`
-  const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
-  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
-
-  const handleShare = async () => {
-    if (isSharing) return
-    if (!isTouch) {
-      setMenuOpen(true)
-      return
-    }
-    setIsSharing(true)
-    try {
-      await shareViaNativeSheet({ cardUrl, filename, shareText })
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') {
-        console.error('SHARE FAILED:', err)
-        toast.error('シェアに失敗しました')
-      }
-    } finally {
-      setIsSharing(false)
-    }
-  }
-
-  const handleShareX = async () => {
-    setIsSharing(true)
-    try {
-      await shareViaClipboardAndX({ cardUrl, filename, shareText })
-    } catch (err) {
-      console.error('SHARE X FAILED:', err)
-      toast.error('シェアに失敗しました')
-    } finally {
-      setIsSharing(false)
-    }
-  }
-
-  return (
-    <>
-      <CelebrationModal onClose={onClose}>
-        <div className="flex items-baseline gap-1 leading-none">
-          <span className="text-6xl font-black text-orange-500 tabular-nums">{streak}</span>
-          <span className="text-3xl font-black text-orange-500">日</span>
-        </div>
-        <p className="text-xl font-bold text-quiz-review">連続学習中</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={plantSrc} alt="" className="size-32 object-contain" />
-        <p className="text-sm text-gray-600 text-center leading-relaxed">
-          毎日ログインして<br />植物を育てよう
-        </p>
-        <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
-      </CelebrationModal>
-      <ShareMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        shareUrl={shareUrl}
-        shareText={shareText}
-        anchorRef={btnRef}
-        onShareX={handleShareX}
-      />
-    </>
-  )
-}
-
-function LevelUpModal({
-  level,
-  plantSrc,
-  onClose,
-}: {
-  level: number
-  plantSrc: string
-  onClose: () => void
-}) {
-  const [isSharing, setIsSharing] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const isTouch = useIsTouchDevice()
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  const cardUrl = `/share/level/${level}/card.png`
   const filename = `rootlink-level-${level}.png`
-  const shareText = `単語学習でレベル${level}に成長🌱\n\n#RootLink #英単語 #語源学習`
+  const shareText = `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`
   const shareUrl = 'https://www.rootlink.app'
 
   const handleShare = async () => {
@@ -369,16 +266,42 @@ function LevelUpModal({
 
   return (
     <>
-      <CelebrationModal onClose={onClose}>
-        <div className="flex items-baseline leading-none">
-          <span className="text-4xl font-black text-orange-500">Lv.</span>
-          <span className="text-6xl font-black text-orange-500 tabular-nums">{level}</span>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        onClick={onClose}
+      >
+        <div
+          className="relative bg-white rounded-[36px] pt-6 pb-8 px-12 flex flex-col items-center gap-4 shadow-2xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            aria-label="閉じる"
+          >
+            <HiXMark className="size-5" />
+          </button>
+
+          <p className="text-[25px] font-extrabold text-orange-400 text-center w-full leading-none">
+            レベルアップ！
+          </p>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={plantSrc} alt="" className="size-[200px] object-contain" />
+
+          <div className="flex flex-col items-center text-center">
+            <p className="text-[25px] font-bold text-orange-400 leading-8">
+              連続{streak}日学習中
+            </p>
+            <p className="text-base font-bold text-gray-950 leading-7">
+              毎日ログインして育てよう
+            </p>
+          </div>
+
+          <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
         </div>
-        <p className="text-xl font-bold text-quiz-review">レベルアップ！</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={plantSrc} alt="" className="size-32 object-contain" />
-        <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
-      </CelebrationModal>
+      </div>
       <ShareMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -444,7 +367,6 @@ function DeckSection({
   )
 }
 
-const MODAL_STORAGE_KEY = 'streak_modal_last_shown'
 const LEVEL_STORAGE_KEY = 'plant_level_last_seen'
 // クイズセッションが完了した直後のみ true。Dashboard がレベル比較する際のゲート。
 const QUIZ_COMPLETED_FLAG = 'plant_quiz_completed'
@@ -466,7 +388,6 @@ export default function Dashboard() {
   const [decks, setDecks] = useState<Deck[]>([])
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
-  const [showModal, setShowModal] = useState(false)
   const [levelUpTo, setLevelUpTo] = useState<number | null>(null)
   const [reviewCounts, setReviewCounts] = useState<Record<ReviewPeriod, number>>({
     yesterday: 0, week: 0, month: 0, all: 0,
@@ -529,9 +450,8 @@ export default function Dashboard() {
         setActiveDeckIds(ordered)
       }
 
-      // レベルアップ検出 (streak modal より優先)
-      // クイズを完了した直後の Dashboard 訪問時のみ「上がったかどうか」を判定して発火。
-      // ランダムなリロードでは絶対に発火させない。
+      // レベルアップ検出: クイズを完了した直後の Dashboard 訪問時のみ判定発火。
+      // ランダムなリロード / 日次ログインでは発火させない。
       const currentLevel = resolveGrowth(
         quizData.data?.length ?? 0,
         dates.length,
@@ -543,20 +463,10 @@ export default function Dashboard() {
         sessionStorage.removeItem(QUIZ_COMPLETED_FLAG)
         if (storedLevel != null && currentLevel > storedLevel) {
           setLevelUpTo(currentLevel)
-          localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
-          return
         }
       }
-      // フラグ無し or 変化なし: 常に現在レベルで同期しておく (次回比較の基準)
+      // フラグ有無に関わらず現在レベルで同期 (次回比較の基準)
       localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
-
-      // 今日まだモーダルを出していなければ表示
-      const today = new Date().toLocaleDateString('sv')
-      const lastShown = localStorage.getItem(MODAL_STORAGE_KEY)
-      if (currentStreak > 0 && lastShown !== today) {
-        setShowModal(true)
-        localStorage.setItem(MODAL_STORAGE_KEY, today)
-      }
     }
 
     load()
@@ -603,24 +513,18 @@ export default function Dashboard() {
 
   return (
     <>
-      {showModal && (() => {
+      {levelUpTo !== null && (() => {
         const growth = resolveGrowth(quizAttemptCount, activityDates.length)
         return (
-          <StreakModal
+          <LevelUpModal
+            level={levelUpTo}
             streak={streak}
             plantLevel={growth.current.level}
             plantSrc={growth.current.src}
-            onClose={() => setShowModal(false)}
+            onClose={() => setLevelUpTo(null)}
           />
         )
       })()}
-      {levelUpTo !== null && (
-        <LevelUpModal
-          level={levelUpTo}
-          plantSrc={resolveGrowth(quizAttemptCount, activityDates.length).current.src}
-          onClose={() => setLevelUpTo(null)}
-        />
-      )}
 
       <div className="bg-surface min-h-screen">
         <div className="flex justify-center w-full">
