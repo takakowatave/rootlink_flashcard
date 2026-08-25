@@ -209,6 +209,20 @@ function ShareButton({
   )
 }
 
+// Figma 2603:6294 準拠: 円形・モーダル枠の外側右上に浮かべる close
+function ModalCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      className="absolute -top-3 -right-3 size-10 rounded-full bg-slate-50 shadow-[0_0_8px_rgba(144,161,185,0.6)] flex items-center justify-center text-gray-700 hover:bg-white"
+      aria-label="閉じる"
+    >
+      <HiXMark className="size-5" />
+    </button>
+  )
+}
+
 // Figma: xe5UwVx38JWu5doqwXczQu / node 2604-6015
 // レベルアップした瞬間のみ表示 (日次の streak お祝いモーダルは廃止)
 function LevelUpModal({
@@ -302,14 +316,7 @@ function LevelUpModal({
           className="relative bg-white rounded-[36px] pt-6 pb-8 px-12 flex flex-col items-center gap-4 shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-            aria-label="閉じる"
-          >
-            <HiXMark className="size-5" />
-          </button>
+          <ModalCloseButton onClose={onClose} />
 
           <p className="text-[25px] font-extrabold text-orange-400 text-center w-full leading-none">
             レベルアップ！
@@ -317,6 +324,117 @@ function LevelUpModal({
 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={plantSrc} alt="" className="size-[200px] object-contain" />
+
+          <div className="flex flex-col items-center text-center">
+            <p className="text-[25px] font-bold text-orange-400 leading-8">
+              連続{streak}日学習中
+            </p>
+            <p className="text-base font-bold text-gray-950 leading-7">
+              毎日ログインして育てよう
+            </p>
+          </div>
+
+          <ShareButton onClick={handleShare} isSharing={isSharing} buttonRef={btnRef} />
+        </div>
+      </div>
+      <ShareMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        shareUrl={shareUrl}
+        shareText={shareText}
+        anchorRef={btnRef}
+        onShareX={handleShareX}
+      />
+    </>
+  )
+}
+
+// Figma: xe5UwVx38JWu5doqwXczQu / node 2603-4643
+// 普通の時 (日次ログイン時) に1日1回表示。植物の成長進捗を表示する。
+function StreakModal({
+  streak,
+  plantLevel,
+  plantSrc,
+  progressRatio,
+  quizzesToNext,
+  onClose,
+}: {
+  streak: number
+  plantLevel: number
+  plantSrc: string
+  progressRatio: number
+  quizzesToNext: number | null
+  onClose: () => void
+}) {
+  const [isSharing, setIsSharing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const isTouch = useIsTouchDevice()
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
+  const filename = `rootlink-streak-${streak}days.png`
+  const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
+  const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
+
+  const handleShare = async () => {
+    if (isSharing) return
+    if (!isTouch) {
+      setMenuOpen(true)
+      return
+    }
+    setIsSharing(true)
+    try {
+      await shareViaNativeSheet({ cardUrl, filename, shareText })
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('SHARE FAILED:', err)
+        toast.error('シェアに失敗しました')
+      }
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const handleShareX = async () => {
+    setIsSharing(true)
+    try {
+      await shareViaClipboardAndX({ cardUrl, filename, shareText })
+    } catch (err) {
+      console.error('SHARE X FAILED:', err)
+      toast.error('シェアに失敗しました')
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const progressPct = Math.max(0, Math.min(100, Math.round(progressRatio * 100)))
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        onClick={onClose}
+      >
+        <div
+          className="relative bg-white rounded-[36px] pt-6 pb-8 px-12 flex flex-col items-center gap-4 shadow-2xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <ModalCloseButton onClose={onClose} />
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={plantSrc} alt="" className="size-[200px] object-contain" />
+
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            {quizzesToNext != null && (
+              <p className="text-sm text-slate-400">あと{quizzesToNext}問で次の進化</p>
+            )}
+          </div>
 
           <div className="flex flex-col items-center text-center">
             <p className="text-[25px] font-bold text-orange-400 leading-8">
@@ -398,6 +516,8 @@ function DeckSection({
 const LEVEL_STORAGE_KEY = 'plant_level_last_seen'
 // クイズセッションが完了した直後のみ true。Dashboard がレベル比較する際のゲート。
 const QUIZ_COMPLETED_FLAG = 'plant_quiz_completed'
+// 日次 StreakModal は 1日1回のみ (最後に出した日付を保存)
+const STREAK_MODAL_KEY = 'streak_modal_last_shown'
 
 const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
   yesterday: '昨日',
@@ -417,6 +537,7 @@ export default function Dashboard() {
   const [activeDeckIds, setActiveDeckIds] = useState<string[]>([])
   const [plan, setPlan] = useState<'premium' | 'free'>('free')
   const [levelUpTo, setLevelUpTo] = useState<number | null>(null)
+  const [showStreakModal, setShowStreakModal] = useState(false)
   const [reviewCounts, setReviewCounts] = useState<Record<ReviewPeriod, number>>({
     yesterday: 0, week: 0, month: 0, all: 0,
   })
@@ -487,14 +608,26 @@ export default function Dashboard() {
       const storedLevelRaw = localStorage.getItem(LEVEL_STORAGE_KEY)
       const storedLevel = storedLevelRaw != null ? parseInt(storedLevelRaw, 10) : null
       const quizJustCompleted = sessionStorage.getItem(QUIZ_COMPLETED_FLAG) === '1'
+      let levelUpFired = false
       if (quizJustCompleted) {
         sessionStorage.removeItem(QUIZ_COMPLETED_FLAG)
         if (storedLevel != null && currentLevel > storedLevel) {
           setLevelUpTo(currentLevel)
+          levelUpFired = true
         }
       }
       // フラグ有無に関わらず現在レベルで同期 (次回比較の基準)
       localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
+
+      // 日次 StreakModal: レベルアップが発火する日は出さない (二重モーダル回避)
+      if (!levelUpFired && currentStreak > 0) {
+        const today = new Date().toLocaleDateString('sv')
+        const lastShown = localStorage.getItem(STREAK_MODAL_KEY)
+        if (lastShown !== today) {
+          setShowStreakModal(true)
+          localStorage.setItem(STREAK_MODAL_KEY, today)
+        }
+      }
     }
 
     load()
@@ -550,6 +683,19 @@ export default function Dashboard() {
             plantLevel={growth.current.level}
             plantSrc={growth.current.src}
             onClose={() => setLevelUpTo(null)}
+          />
+        )
+      })()}
+      {showStreakModal && levelUpTo === null && (() => {
+        const growth = resolveGrowth(quizAttemptCount, activityDates.length)
+        return (
+          <StreakModal
+            streak={streak}
+            plantLevel={growth.current.level}
+            plantSrc={growth.current.src}
+            progressRatio={growth.progressRatio}
+            quizzesToNext={growth.quizzesToNext}
+            onClose={() => setShowStreakModal(false)}
           />
         )
       })()}
