@@ -9,18 +9,20 @@ import { supabase } from '@/lib/supabaseClient'
 import Button from './Button'
 
 // Figma: xe5UwVx38JWu5doqwXczQu / 2613:6938 (onboarding)
-// Web は 3画面フルスクリーン: Level → Source → Complete
+// Web は 4画面フルスクリーン: Level → Source → Expectation → Complete
 // Splash + 利用規約 + 学習時間帯(通知) はネイティブアプリのみ (Web は対象外)
 
 export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
+export type Expectation = 'dictionary' | 'exam' | 'mining' | 'etymology' | 'other'
 
 export const ONBOARDING_COMPLETE_EVENT = 'rootlink-onboarding-completed'
 
-const TOTAL_STEPS = 3
+const TOTAL_STEPS = 4
 
 type LevelOption = { value: EnglishLevel; label: string; detail: string }
 type SourceOption = { value: AcquisitionSource; label: string }
+type ExpectationOption = { value: Expectation; label: string }
 
 const LEVEL_OPTIONS: LevelOption[] = [
   { value: 'a1_a2', label: '挨拶と自己紹介ができる', detail: '英検〜2級 / TOEIC 〜600' },
@@ -39,15 +41,25 @@ const SOURCE_OPTIONS: SourceOption[] = [
   { value: 'other', label: 'その他' },
 ]
 
-type Step = 1 | 2 | 3
+const EXPECTATION_OPTIONS: ExpectationOption[] = [
+  { value: 'dictionary', label: '辞書として意味や語源をすぐ調べたい' },
+  { value: 'exam', label: '試験対策の単語帳として使いたい' },
+  { value: 'mining', label: '洋書や記事から拾った表現をためたい' },
+  { value: 'etymology', label: '語源そのものを楽しみたい' },
+  { value: 'other', label: 'その他' },
+]
+
+type Step = 1 | 2 | 3 | 4
 
 type ViewProps = {
   step: Step
   level: EnglishLevel | null
   source: AcquisitionSource | null
+  expectation: Expectation | null
   saving?: boolean
   onLevelChange: (v: EnglishLevel) => void
   onSourceChange: (v: AcquisitionSource) => void
+  onExpectationChange: (v: Expectation) => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
@@ -98,15 +110,18 @@ export function OnboardingQuestionsView({
   step,
   level,
   source,
+  expectation,
   saving = false,
   onLevelChange,
   onSourceChange,
+  onExpectationChange,
   onNext,
   onBack,
   onSubmit,
 }: ViewProps) {
   const canProceedLevel = level !== null
   const canProceedSource = source !== null
+  const canProceedExpectation = expectation !== null
 
   return (
     <div className="fixed inset-0 z-[110] bg-teal-50 flex flex-col">
@@ -183,6 +198,38 @@ export function OnboardingQuestionsView({
         {step === 3 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
+              RootLink に<br />何を期待していますか
+            </h2>
+            <div className="flex flex-col gap-2 px-4">
+              {EXPECTATION_OPTIONS.map((opt) => {
+                const selected = expectation === opt.value
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 h-16 bg-white border-2 rounded-md pl-4 pr-2 cursor-pointer transition-colors ${
+                      selected ? 'border-primary' : 'border-slate-200'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="expectation"
+                      value={opt.value}
+                      checked={selected}
+                      onChange={() => onExpectationChange(opt.value)}
+                      className="sr-only"
+                    />
+                    <Radio selected={selected} />
+                    <span className="text-base font-medium text-gray-950 leading-6">{opt.label}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="flex flex-col gap-6 pt-6">
+            <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               毎日ログインして<br />木を育てましょう
             </h2>
             <div className="px-4">
@@ -224,6 +271,18 @@ export function OnboardingQuestionsView({
         )}
         {step === 3 && (
           <Button
+            onClick={onNext}
+            disabled={!canProceedExpectation}
+            variant="primary"
+            fullWidth
+            radius="full"
+            className="h-[50px] text-base font-medium"
+          >
+            次へ
+          </Button>
+        )}
+        {step === 4 && (
+          <Button
             onClick={onSubmit}
             disabled={saving}
             variant="primary"
@@ -246,6 +305,7 @@ export default function OnboardingQuestions() {
   const [step, setStep] = useState<Step>(1)
   const [level, setLevel] = useState<EnglishLevel | null>(null)
   const [source, setSource] = useState<AcquisitionSource | null>(null)
+  const [expectation, setExpectation] = useState<Expectation | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -273,13 +333,14 @@ export default function OnboardingQuestions() {
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
   const submit = async () => {
-    if (!userId || !level || !source) return
+    if (!userId || !level || !source || !expectation) return
     setSaving(true)
     const { error } = await supabase
       .from('profiles')
       .update({
         english_level: level,
         acquisition_source: source,
+        expectation,
       })
       .eq('id', userId)
     setSaving(false)
@@ -300,9 +361,11 @@ export default function OnboardingQuestions() {
       step={step}
       level={level}
       source={source}
+      expectation={expectation}
       saving={saving}
       onLevelChange={setLevel}
       onSourceChange={setSource}
+      onExpectationChange={setExpectation}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}
