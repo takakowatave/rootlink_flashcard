@@ -44,6 +44,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         handle = await App.addListener('appUrlOpen', async (event: { url: string }) => {
           if (!event.url.startsWith('com.rootlink.app://auth-callback')) return
           await Browser.close().catch(() => {})
+
+          const queryMatch = event.url.match(/[?&]code=([^&]+)/)
+          const code = queryMatch ? decodeURIComponent(queryMatch[1]) : null
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code)
+            if (!error) window.location.href = '/callback'
+            return
+          }
+
           const fragment = event.url.split('#')[1] ?? ''
           const params = new URLSearchParams(fragment)
           const access_token = params.get('access_token')
