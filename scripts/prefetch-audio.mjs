@@ -34,6 +34,8 @@ const deckName = get('--deck')
 const limit = parseInt(get('--limit') ?? '500', 10)
 const delayMs = parseInt(get('--delay') ?? '800', 10)
 const dryRun = args.includes('--dry-run')
+const ackCost = args.includes('--i-know-the-cost')
+const HARD_CAP_WITHOUT_ACK = 100
 
 async function fetchWordsWithoutAudio() {
   // 対象デッキのIDを取得
@@ -104,6 +106,13 @@ async function main() {
     console.log('--- dry-run ---')
     words.forEach((w, i) => console.log(`  ${i + 1}. ${w}`))
     return
+  }
+
+  // Oxford / OpenAI TTS 従量課金ガード
+  console.log(`⚠️  最大 ${words.length} 語で Oxford audio + TTS を叩きます`)
+  if (!ackCost && words.length > HARD_CAP_WITHOUT_ACK) {
+    console.error(`❌ ${HARD_CAP_WITHOUT_ACK} 語超は --i-know-the-cost を明示すること。中止。`)
+    process.exit(1)
   }
 
   let ok = 0, ng = 0
