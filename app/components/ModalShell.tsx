@@ -39,7 +39,7 @@ export default function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-stretch justify-center md:items-center md:p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-6 md:pb-6"
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-black/40 hidden md:block" />
