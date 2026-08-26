@@ -45,19 +45,14 @@ export default function OnboardingPage() {
       </div>
       <p className="mt-4 text-[32px] font-bold text-gray-950 leading-none">英単語・辞書アプリ</p>
 
-      <div className="relative mt-10 size-[327px] flex items-end justify-center">
-        <span
-          aria-hidden
-          className="absolute inset-0 rounded-full bg-primary/30"
-          style={{ background: 'radial-gradient(circle at 50% 50%, rgba(0,150,137,0.35), rgba(0,150,137,0.15))' }}
-        />
+      <div className="relative mt-10 size-[327px]">
         <Image
           src="/onboarding/splash-mock.png"
           alt=""
-          width={234}
-          height={266}
+          width={327}
+          height={327}
           priority
-          className="relative object-contain"
+          className="object-contain"
         />
       </div>
 
