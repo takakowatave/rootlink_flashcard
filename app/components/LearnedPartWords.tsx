@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
 import { supabase } from '@/lib/supabaseClient'
 import { toggleSaveStatus } from '@/lib/supabaseApi'
-import { POS_LABEL_JA } from '@/lib/pos'
+import EtymologyPartBadge from '@/components/EtymologyPartBadge'
+import SavedWordRow from '@/components/SavedWordRow'
 import type { EtymologyData, EtymologyPart } from '@/types/Etymology'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
@@ -183,22 +183,16 @@ function PartGroupTree({
 
   const ITEM_H = 52
   const ITEM_GAP = 8
-  const BADGE = 40 // size-10
-  const TRUNK_X = BADGE / 2 // 20 — trunk aligned with badge center
+  const TRUNK_X = 20
   const R = 10
-  const BRANCH_END = 52 // where branch meets card
+  const BRANCH_END = 52
   const rowStride = ITEM_H + ITEM_GAP
   const lastMidY = (words.length - 1) * rowStride + ITEM_H / 2
   const trunkEnd = lastMidY - R
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <div className="size-10 shrink-0 rounded-full border-2 border-primary-mid bg-white flex items-center justify-center">
-          <span className="text-base font-medium text-primary-hover leading-4">{part.text}</span>
-        </div>
-        {gloss && <span className="text-sm font-medium text-primary-hover">{gloss}</span>}
-      </div>
+      <EtymologyPartBadge partText={part.text} gloss={gloss || undefined} />
       <div className="relative -mt-2" style={{ paddingLeft: BRANCH_END + 4 }}>
         <svg
           className="absolute left-0 top-0 pointer-events-none"
@@ -228,31 +222,14 @@ function PartGroupTree({
         </svg>
         <div className="flex flex-col" style={{ gap: ITEM_GAP }}>
           {words.map((w, wi) => (
-            <div
+            <SavedWordRow
               key={wi}
-              className="bg-white border-2 border-line rounded-lg px-2 py-2 flex items-center gap-2 w-full"
-              style={{ height: ITEM_H }}
-            >
-              <span className="text-base font-medium text-gray-950 leading-6 shrink-0">{w.word}</span>
-              {w.pos && (
-                <span className="border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted shrink-0">
-                  {POS_LABEL_JA[w.pos] ?? w.pos}
-                </span>
-              )}
-              <span className="flex-1 min-w-0 text-sm text-muted leading-5 truncate">
-                {w.meaningJa ?? ''}
-              </span>
-              <button
-                type="button"
-                aria-label={w.isSaved ? '保存を解除' : '保存する'}
-                onClick={() => onToggleSave?.(w.word)}
-                className="shrink-0 p-1 -m-1"
-              >
-                {w.isSaved
-                  ? <BsBookmarkFill className="size-5 text-primary-hover" />
-                  : <BsBookmark className="size-5 text-muted" />}
-              </button>
-            </div>
+              word={w.word}
+              pos={w.pos}
+              meaningJa={w.meaningJa}
+              isSaved={w.isSaved}
+              onToggleSave={onToggleSave}
+            />
           ))}
         </div>
       </div>

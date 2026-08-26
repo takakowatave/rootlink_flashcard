@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
+import EtymologyPartPill from '@/components/EtymologyPartPill'
 
 interface Props {
   partText: string
@@ -45,9 +46,7 @@ export default function EtymologyPartNode({ partText, meaning, headword }: Props
           <div className="h-6 w-6 shrink-0" />
         )}
 
-        <span className="rounded-xl border-2 border-green-500 bg-white px-4 py-1 text-sm leading-none text-green-600">
-          {partText}
-        </span>
+        <EtymologyPartPill partText={partText} />
         <span className="text-sm text-green-700">{meaning}</span>
       </div>
 
