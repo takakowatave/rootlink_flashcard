@@ -11,7 +11,7 @@ export default function EtymologyPartBadge({ partText, gloss }: Props) {
   return (
     <div className="flex items-center gap-2">
       <EtymologyPartPill partText={partText} />
-      {gloss && <span className="text-sm font-medium text-green-700">{gloss}</span>}
+      {gloss && <span className="text-sm font-medium text-primary">{gloss}</span>}
     </div>
   )
 }

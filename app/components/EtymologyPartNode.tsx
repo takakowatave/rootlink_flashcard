@@ -33,12 +33,12 @@ export default function EtymologyPartNode({ partText, meaning, headword }: Props
 
   return (
     <div className="flex flex-col">
-      <div className="flex min-w-[220px] items-center gap-3 rounded-xl bg-green-100 px-4 py-3">
+      <div className="flex min-w-[220px] items-center gap-3 rounded-xl bg-primary-light px-4 py-3">
         {hasRelated ? (
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white"
           >
             {expanded ? '−' : '+'}
           </button>
@@ -47,16 +47,16 @@ export default function EtymologyPartNode({ partText, meaning, headword }: Props
         )}
 
         <EtymologyPartPill partText={partText} />
-        <span className="text-sm text-green-700">{meaning}</span>
+        <span className="text-sm text-primary">{meaning}</span>
       </div>
 
       {expanded && (
-        <div className="ml-6 mt-1 flex flex-col gap-1 border-l-2 border-teal-200 pl-4">
+        <div className="ml-6 mt-1 flex flex-col gap-1 border-l-2 border-primary-mid pl-4">
           {relatedWords.map((word) => (
             <Link
               key={word}
               href={`/word/${word}`}
-              className="rounded-full border border-teal-200 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+              className="rounded-full border border-primary-mid bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-primary-subtle"
             >
               {word}
             </Link>

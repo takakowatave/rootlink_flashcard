@@ -6,7 +6,7 @@ type Props = {
 
 export default function EtymologyPartPill({ partText }: Props) {
   return (
-    <span className="rounded-xl border-2 border-green-500 bg-white px-4 py-1 text-sm leading-none text-green-600">
+    <span className="inline-flex items-center rounded-full border-2 border-primary bg-white px-3 py-1 text-sm font-medium leading-none text-primary">
       {partText}
     </span>
   )
