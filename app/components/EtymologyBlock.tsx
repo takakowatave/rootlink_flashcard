@@ -97,7 +97,7 @@ export default function EtymologyBlock({
           return (
             <div
               key={idx}
-              className={`bg-primary-light rounded-lg min-w-0 flex flex-col gap-2 basis-[calc(50%-4px)] max-w-[calc(50%-4px)] ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
+              className={`bg-primary-light rounded-lg min-w-0 flex flex-col gap-2 basis-full max-w-full md:basis-[calc(50%-4px)] md:max-w-[calc(50%-4px)] ${filteredWords.length > 0 ? 'p-2' : 'px-3.5 py-2'}`}
             >
               {/* Badge + gloss */}
               <div className="flex items-start gap-2">
