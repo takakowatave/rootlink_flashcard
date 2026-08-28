@@ -9,7 +9,7 @@ import type { QuizEntry } from "@/components/QuizSession"
 import { type QuizScope } from "@/components/QuizScopeSelector"
 import { classifyQuizStatus, type WordStatus } from "@/lib/quizScope"
 import QuizProgressPanel from "@/components/QuizProgressPanel"
-import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, updateStreak, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
+import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
 import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
@@ -118,7 +118,6 @@ export default function WordListPage() {
     const [words, phrases] = await Promise.all([
       fetchWordlists(data.user.id),
       fetchSavedPhrases(data.user.id),
-      updateStreak(data.user.id),
     ])
     setWordList(words)
     setPhraseList(phrases)
