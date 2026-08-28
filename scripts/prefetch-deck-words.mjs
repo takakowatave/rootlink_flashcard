@@ -10,7 +10,15 @@
  *   --label   対象ラベル (TOEIC / IELTS / TOEFL / 英検)
  *   --limit   1回の実行で処理する上限語数 (デフォルト: 100)
  *   --dry-run 実際には叩かず、対象単語リストだけ表示
+ *   --i-know-the-cost  Oxford 従量課金の合意確認。ないと 100 語超では実行拒否
+ *
+ * コスト前提:
+ *   1 cache miss = 最大 2 Oxford API call (entries + inflections)
+ *   Oxford Lite = 5,000 call / 月 (£50)、超過 £0.05/call
+ *   2026-08 に £436 超過事故を起こしたため強制ガードあり
  */
+
+const HARD_CAP_WITHOUT_ACK = 100
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -31,6 +39,7 @@ const get = (flag) => { const i = args.indexOf(flag); return i !== -1 ? args[i +
 const label = get('--label')
 const limit = parseInt(get('--limit') ?? '100', 10)
 const dryRun = args.includes('--dry-run')
+const ackCost = args.includes('--i-know-the-cost')
 
 async function fetchUncachedWords() {
   let query = supabase
@@ -94,6 +103,13 @@ async function main() {
     console.log('--- dry-run: 以下の単語をフェッチ予定 ---')
     words.forEach((w, i) => console.log(`  ${i + 1}. ${w}`))
     return
+  }
+
+  const maxOxfordCalls = words.length * 2
+  console.log(`⚠️  Oxford API 最大 ${maxOxfordCalls} call 発生の可能性 (${words.length} 語 × 2)`)
+  if (!ackCost && words.length > HARD_CAP_WITHOUT_ACK) {
+    console.error(`❌ ${HARD_CAP_WITHOUT_ACK} 語超は --i-know-the-cost を明示すること。中止。`)
+    process.exit(1)
   }
 
   let ok = 0

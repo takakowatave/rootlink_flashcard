@@ -41,7 +41,14 @@ async function resolveWord(word) {
 }
 
 async function main() {
+  const HARD_CAP_WITHOUT_ACK = 100
+  const ackCost = process.argv.includes('--i-know-the-cost')
   console.log(`Target: ${WORDS.length} words`)
+  console.log(`⚠️  最大 ${WORDS.length * 2} Oxford API call 発生の可能性`)
+  if (!ackCost && WORDS.length > HARD_CAP_WITHOUT_ACK) {
+    console.error(`❌ ${HARD_CAP_WITHOUT_ACK} 語超は --i-know-the-cost を明示すること。中止。`)
+    process.exit(1)
+  }
   let ok = 0
   let fail = 0
   for (let i = 0; i < WORDS.length; i++) {

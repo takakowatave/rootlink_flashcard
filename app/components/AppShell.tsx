@@ -44,6 +44,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         handle = await App.addListener('appUrlOpen', async (event: { url: string }) => {
           if (!event.url.startsWith('com.rootlink.app://auth-callback')) return
           await Browser.close().catch(() => {})
+
+          const queryMatch = event.url.match(/[?&]code=([^&]+)/)
+          const code = queryMatch ? decodeURIComponent(queryMatch[1]) : null
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code)
+            if (!error) window.location.href = '/callback'
+            return
+          }
+
           const fragment = event.url.split('#')[1] ?? ''
           const params = new URLSearchParams(fragment)
           const access_token = params.get('access_token')
@@ -78,18 +87,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isAuth = pathname === '/login' || pathname === '/signup'
   const isQuiz = pathname === '/quiz'
   const isWordDetail = pathname?.startsWith('/word/') ?? false
+  const isOnboarding = pathname === '/onboarding'
+  const hideChrome = isAuth || isQuiz || isOnboarding
 
   return (
-    <div className={isLP || isAuth || isQuiz ? '' : 'min-h-screen bg-[#f8fafc]'}>
-      {!isQuiz && !isAuth && (
+    <div className={isLP || hideChrome ? '' : 'min-h-screen bg-[#f8fafc]'}>
+      {!hideChrome && (
         <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
           <Header />
         </div>
       )}
-      {!isAuth && !isQuiz && <OnboardingQuestions />}
-      {!isAuth && !isQuiz && <TutorialOverlay />}
+      {!hideChrome && <OnboardingQuestions />}
+      {!hideChrome && <TutorialOverlay />}
       {children}
-      {!isLP && !isAuth && !isQuiz && (
+      {!isLP && !hideChrome && (
         <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
           <Footer />
         </div>

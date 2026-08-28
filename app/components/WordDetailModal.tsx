@@ -7,6 +7,7 @@ import ModalShell from '@/components/ModalShell'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
+import { shareViaClipboardAndX } from '@/lib/shareToX'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -86,6 +87,11 @@ export default function WordDetailModal({
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
         shareText={buildShareText(word, dictionary, initialPinnedSenseId ?? null)}
         anchorRef={shareBtnRef}
+        onShareX={() => shareViaClipboardAndX({
+          cardUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`,
+          filename: `rootlink-${word}.png`,
+          shareText: buildShareText(word, dictionary, initialPinnedSenseId ?? null),
+        })}
       />
     </>
   )

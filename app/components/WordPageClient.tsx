@@ -12,6 +12,7 @@ import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
+import { shareViaClipboardAndX } from '@/lib/shareToX'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { supabase } from '@/lib/supabaseClient'
@@ -1093,6 +1094,11 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         shareUrl={`https://www.rootlink.app/word/${encodeURIComponent(word)}`}
         shareText={buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId)}
         anchorRef={shareBtnRef}
+        onShareX={() => shareViaClipboardAndX({
+          cardUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`,
+          filename: `rootlink-${word}.png`,
+          shareText: buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId),
+        })}
       />
     )}
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}

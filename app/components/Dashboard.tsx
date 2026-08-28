@@ -16,6 +16,7 @@ import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import Button from '@/components/Button'
 import ShareMenu from '@/components/ShareMenu'
+import { shareViaClipboardAndX } from '@/lib/shareToX'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -133,55 +134,6 @@ async function shareViaNativeSheet({
   if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
     await navigator.share({ files: [file], text: shareText })
   }
-}
-
-async function shareViaClipboardAndX({
-  cardUrl,
-  filename,
-  shareText,
-}: {
-  cardUrl: string
-  filename: string
-  shareText: string
-}) {
-  // Safari requires clipboard.write to be dispatched synchronously within the user gesture.
-  // Passing Promise<Blob> into ClipboardItem lets the network fetch resolve after the gesture is claimed.
-  let copied = false
-  try {
-    const item = new ClipboardItem({
-      'image/png': fetch(cardUrl).then((res) => {
-        if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-        return res.blob()
-      }),
-    })
-    await navigator.clipboard.write([item])
-    copied = true
-  } catch (err) {
-    console.error('clipboard write failed:', err)
-    try {
-      const res = await fetch(cardUrl)
-      const blob = await res.blob()
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-    } catch (err2) {
-      console.error('download fallback failed:', err2)
-    }
-  }
-  window.open(
-    `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
-    '_blank',
-    'noopener,noreferrer'
-  )
-  toast.success(
-    copied
-      ? '画像をコピーしました。Xで⌘Vで貼り付けてください'
-      : '画像をダウンロードしました。Xに添付してください'
-  )
 }
 
 function ShareButton({
