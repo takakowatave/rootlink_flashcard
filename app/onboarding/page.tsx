@@ -33,7 +33,7 @@ export default function OnboardingPage() {
   if (!ready) return null
 
   return (
-    <div className="fixed inset-0 bg-teal-50 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="fixed inset-0 bg-teal-50 flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center gap-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
@@ -58,10 +58,7 @@ export default function OnboardingPage() {
         />
       </div>
 
-      <div
-        className="w-full bg-white flex flex-col items-center gap-6 px-6 pt-8"
-        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
-      >
+      <div className="w-full bg-white flex flex-col items-center gap-6 px-6 py-8">
         <p className="text-sm leading-5 text-gray-950 text-center">
           サービスを始める前に{' '}
           <Link href="/terms" className="text-primary underline">利用規約</Link>

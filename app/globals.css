@@ -5,12 +5,10 @@
 body {
   overflow-x: hidden;
   max-width: 100vw;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* fixed inset-0 な全画面オーバーレイ (modal / quiz / onboarding など) は
-   viewport 相対で body の padding を受け取れないので、個別に safe-area を挟む */
+   viewport 相対で個別に safe-area を挟む */
 .fixed.inset-0 {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
