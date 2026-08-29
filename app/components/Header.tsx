@@ -143,6 +143,7 @@ const Header = () => {
   const [searchError, setSearchError] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+  const desktopInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const match = pathname.match(/^\/word\/(.+)$/)
@@ -199,6 +200,12 @@ const Header = () => {
   }, []);
 
   const openMobileSearch = () => {
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+    if (isDesktop) {
+      desktopInputRef.current?.focus()
+      desktopInputRef.current?.scrollIntoView({ block: 'nearest' })
+      return
+    }
     setSearchValue('');
     setSearchError(false);
     setMobileSearchOpen(true);
@@ -253,6 +260,7 @@ const Header = () => {
             onSubmit={handleSearch}
             isSearching={isSearching}
             searchError={searchError}
+            inputRef={desktopInputRef}
             wrapperClassName="w-full max-w-[400px]"
           />
         </div>
