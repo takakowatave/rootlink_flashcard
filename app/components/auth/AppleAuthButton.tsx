@@ -8,6 +8,10 @@ import InAppBrowserNotice from "./InAppBrowserNotice";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
+// Apple Developer Program 課金反映待ちで Supabase Providers → Apple を
+// 有効化できないため、iOS/Web ともにボタンを一時 disable する。
+const APPLE_DISABLED = true;
+
 type Variant = "signup" | "login";
 
 const LABEL: Record<Variant, string> = {
@@ -34,7 +38,7 @@ export default function AppleAuthButton({
   }, []);
 
   const handleClick = async () => {
-    if (inAppBrowser) return;
+    if (APPLE_DISABLED || inAppBrowser) return;
     const native = isNativePlatform();
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -64,12 +68,12 @@ export default function AppleAuthButton({
       {inAppBrowser && <InAppBrowserNotice variant={variant} />}
       <button
         onClick={handleClick}
-        disabled={inAppBrowser}
+        disabled={APPLE_DISABLED || inAppBrowser}
         className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
-        {LABEL[variant]}
+        {APPLE_DISABLED ? `${LABEL[variant]}（テスト中につき不可）` : LABEL[variant]}
       </button>
     </>
   );

@@ -684,7 +684,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <WordlistEmptyCard
-                  onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+                  onClick={() => router.push('/wordlist')}
                 />
               )}
             </section>

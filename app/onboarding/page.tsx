@@ -3,16 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
+import { HiX } from 'react-icons/hi'
 import Button from '@/components/Button'
+import ModalShell from '@/components/ModalShell'
+import TermsContent from '@/components/TermsContent'
+import PrivacyContent from '@/components/PrivacyContent'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 
 // Figma: xe5UwVx38JWu5doqwXczQu / 2609:6530 (native only splash)
 // 通知許可はサインアップ後の OnboardingQuestions 側で聞く。
 
+type LegalDoc = 'terms' | 'privacy' | null
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
+  const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
 
   useEffect(() => {
     if (!isNativePlatform()) {
@@ -67,8 +73,9 @@ export default function OnboardingPage() {
         style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
       >
         <p className="text-sm leading-5 text-gray-950 text-center">
-          サービスを始める前に{' '}
-          <Link href="/terms" className="text-primary underline">利用規約</Link>
+          <button type="button" onClick={() => setOpenDoc('terms')} className="text-primary underline">利用規約</button>
+          {' '}と{' '}
+          <button type="button" onClick={() => setOpenDoc('privacy')} className="text-primary underline">プライバシーポリシー</button>
           {' '}に同意ください。
         </p>
         <Button
@@ -81,6 +88,26 @@ export default function OnboardingPage() {
           同意してはじめる
         </Button>
       </div>
+
+      <ModalShell
+        open={openDoc !== null}
+        onClose={() => setOpenDoc(null)}
+        headerRight={
+          <button
+            type="button"
+            onClick={() => setOpenDoc(null)}
+            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
+            aria-label="閉じる"
+          >
+            <HiX className="size-5" />
+          </button>
+        }
+      >
+        <div className="px-6 py-8">
+          {openDoc === 'terms' && <TermsContent />}
+          {openDoc === 'privacy' && <PrivacyContent />}
+        </div>
+      </ModalShell>
     </div>
   )
 }

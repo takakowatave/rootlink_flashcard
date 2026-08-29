@@ -98,11 +98,9 @@ export default function TutorialOverlay() {
       // 回答完了で ONBOARDING_COMPLETE_EVENT が飛んできて再初期化される。
       if (!profile.acquisition_source) return
 
-      // 「表示する」と決まった時点で即DBに完了を記録する。
-      // 完了まで到達しなくても二度と再表示されないようにするため。
+      // 同一セッション内の二重 init だけ防ぐ。DB 完了フラグは最終 step で書く。
+      // 途中で init が再走してもチュートリアルが表示された状態は維持される。
       _initializedUsers.add(uid)
-      _completedUsers.add(uid)
-      void markTutorialCompleted(uid)
 
       setUserId(uid)
       setStep(0)
