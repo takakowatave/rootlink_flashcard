@@ -16,7 +16,8 @@ import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import Button from '@/components/Button'
 import ShareMenu from '@/components/ShareMenu'
-import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
+import { shareViaClipboardAndX } from '@/lib/shareToX'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -110,32 +111,6 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
   )
 }
 
-function useIsTouchDevice() {
-  const [isTouch, setIsTouch] = useState(false)
-  useEffect(() => {
-    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
-  }, [])
-  return isTouch
-}
-
-async function shareViaNativeSheet({
-  cardUrl,
-  filename,
-  shareText,
-}: {
-  cardUrl: string
-  filename: string
-  shareText: string
-}) {
-  const res = await fetch(cardUrl)
-  if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-  const blob = await res.blob()
-  const file = new File([blob], filename, { type: 'image/png' })
-  if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], text: shareText })
-  }
-}
-
 function ShareButton({
   onClick,
   isSharing,
@@ -192,7 +167,6 @@ function LevelUpModal({
 }) {
   const [isSharing, setIsSharing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const isTouch = useIsTouchDevice()
   const btnRef = useRef<HTMLButtonElement>(null)
 
   // マウント時にコンフェッティを打ち上げる (レベルアップ瞬間のみ発火)
@@ -229,28 +203,26 @@ function LevelUpModal({
 
   const handleShare = async () => {
     if (isSharing) return
-    if (!isTouch) {
-      prefetchShareImage(cardUrl)
-      setMenuOpen(true)
-      return
-    }
-    setIsSharing(true)
-    try {
-      await shareViaNativeSheet({ cardUrl, filename, shareText })
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') {
+    // Native app は @capacitor/share で直接画像添付。Web は全部 ShareMenu 経由 (OGP)
+    if (isNativePlatform()) {
+      setIsSharing(true)
+      try {
+        await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
+      } catch (err) {
         console.error('SHARE FAILED:', err)
         toast.error('シェアに失敗しました')
+      } finally {
+        setIsSharing(false)
       }
-    } finally {
-      setIsSharing(false)
+      return
     }
+    setMenuOpen(true)
   }
 
   const handleShareX = async () => {
     setIsSharing(true)
     try {
-      await shareViaClipboardAndX({ cardUrl, filename, shareText })
+      await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
     } catch (err) {
       console.error('SHARE X FAILED:', err)
       toast.error('シェアに失敗しました')
@@ -321,7 +293,6 @@ function StreakModal({
 }) {
   const [isSharing, setIsSharing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const isTouch = useIsTouchDevice()
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
@@ -331,28 +302,26 @@ function StreakModal({
 
   const handleShare = async () => {
     if (isSharing) return
-    if (!isTouch) {
-      prefetchShareImage(cardUrl)
-      setMenuOpen(true)
-      return
-    }
-    setIsSharing(true)
-    try {
-      await shareViaNativeSheet({ cardUrl, filename, shareText })
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') {
+    // Native app は @capacitor/share で直接画像添付。Web は全部 ShareMenu 経由 (OGP)
+    if (isNativePlatform()) {
+      setIsSharing(true)
+      try {
+        await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
+      } catch (err) {
         console.error('SHARE FAILED:', err)
         toast.error('シェアに失敗しました')
+      } finally {
+        setIsSharing(false)
       }
-    } finally {
-      setIsSharing(false)
+      return
     }
+    setMenuOpen(true)
   }
 
   const handleShareX = async () => {
     setIsSharing(true)
     try {
-      await shareViaClipboardAndX({ cardUrl, filename, shareText })
+      await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
     } catch (err) {
       console.error('SHARE X FAILED:', err)
       toast.error('シェアに失敗しました')
