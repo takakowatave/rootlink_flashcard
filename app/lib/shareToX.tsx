@@ -63,17 +63,14 @@ export async function shareViaClipboardAndX({ cardUrl, filename, shareText }: Pa
     return
   }
 
-  let copied = false
+  // X compose の paste は環境依存で不安定。常にダウンロードして画像ファイルを渡す。
+  // クリップボードにも入れておく (X がpaste受け付ける環境ではそちらで貼付可能)
   try {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-    copied = true
   } catch (err) {
     console.error('clipboard write failed:', err)
   }
-
-  if (!copied) {
-    downloadNow(blob, filename)
-  }
+  downloadNow(blob, filename)
 
   toast.dismiss(loadingId)
 
@@ -81,7 +78,7 @@ export async function shareViaClipboardAndX({ cardUrl, filename, shareText }: Pa
     (t) => (
       <div className="flex items-center gap-3">
         <span className="text-sm text-gray-950 whitespace-nowrap">
-          {copied ? '画像をコピーしました' : '画像を保存しました'}
+          画像を保存しました。Xで添付してください
         </span>
         <a
           href={composeUrl}
