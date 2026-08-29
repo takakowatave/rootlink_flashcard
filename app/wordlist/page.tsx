@@ -258,25 +258,29 @@ export default function WordListPage() {
       />
 
       {/* ── 進捗＋クイズ ── */}
-      {totalItems > 0 && (
-        <QuizProgressPanel
-          mastered={masteredCount}
-          review={reviewCount}
-          hard={hardCount}
-          unseen={unseenCount}
-          scopeItems={[
-            { key: 'all', count: availableCount },
-            { key: 'unseen', count: unseenEntries.length },
-            { key: 'review', count: reviewEntries.length },
-            { key: 'hard', count: hardEntries.length },
-          ]}
-          selectedScope={quizScope}
-          onScopeChange={setQuizScope}
-          buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'はじめる'}
-          buttonDisabled={scopeSource[quizScope].length === 0}
-          onStart={startQuiz}
-        />
-      )}
+      <QuizProgressPanel
+        header={
+          <>
+            <h2 className="text-lg font-bold text-gray-950">オリジナル単語帳</h2>
+            <p className="text-sm text-gray-600 mt-1">辞書から単語を検索してオリジナルの単語帳をつくれます。</p>
+          </>
+        }
+        mastered={masteredCount}
+        review={reviewCount}
+        hard={hardCount}
+        unseen={unseenCount}
+        scopeItems={[
+          { key: 'all', count: availableCount },
+          { key: 'unseen', count: unseenEntries.length },
+          { key: 'review', count: reviewEntries.length },
+          { key: 'hard', count: hardEntries.length },
+        ]}
+        selectedScope={quizScope}
+        onScopeChange={setQuizScope}
+        buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'はじめる'}
+        buttonDisabled={scopeSource[quizScope].length === 0}
+        onStart={startQuiz}
+      />
 
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
