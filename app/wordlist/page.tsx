@@ -281,7 +281,23 @@ export default function WordListPage() {
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
         {totalItems === 0 ? (
-          <p className="px-4 text-sm text-muted">単語を検索して保存してみましょう</p>
+          <div className="mx-4 bg-white rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col items-center gap-4 py-6 px-4">
+            <p className="font-bold text-base text-center text-default">
+              辞書から単語を検索してオリジナルの単語帳をつくろう
+            </p>
+            <img
+              src="/wordlist/empty-search.png"
+              alt=""
+              className="w-[134px] h-[134px]"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+            >
+              単語を検索
+            </Button>
+          </div>
         ) : (
           <>
             <div className="flex flex-col gap-3 px-4">
