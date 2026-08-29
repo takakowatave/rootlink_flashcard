@@ -33,19 +33,21 @@ export default function OnboardingPage() {
   if (!ready) return null
 
   return (
-    <div className="fixed inset-0 bg-teal-50 flex flex-col items-center justify-center pt-[env(safe-area-inset-top)] pb-[220px]">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
+    <div className="fixed inset-0 bg-teal-50 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="flex-1 flex flex-col items-center justify-center gap-10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
 
-      <div className="mt-10 flex items-baseline gap-2">
-        <span className="inline-flex items-center rounded-[10px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] border-solid border-[#ffb86a] px-2 pt-1.5 pb-2.5 leading-none">
-          <span className="text-[42px] font-bold text-[#ff8904] leading-none">語源</span>
-        </span>
-        <span className="text-[34px] font-bold text-gray-950 leading-none">で覚える</span>
-      </div>
-      <p className="mt-4 text-[32px] font-bold text-gray-950 leading-none">英単語・辞書アプリ</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-baseline gap-2">
+            <span className="inline-flex items-center rounded-[10px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] border-solid border-[#ffb86a] px-2 pt-1.5 pb-2.5 leading-none">
+              <span className="text-[42px] font-bold text-[#ff8904] leading-none">語源</span>
+            </span>
+            <span className="text-[34px] font-bold text-gray-950 leading-none">で覚える</span>
+          </div>
+          <p className="text-[32px] font-bold text-gray-950 leading-none">英単語・辞書アプリ</p>
+        </div>
 
-      <div className="relative mt-10 size-[327px]">
         <Image
           src="/onboarding/splash-mock.png"
           alt=""
@@ -56,7 +58,10 @@ export default function OnboardingPage() {
         />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-white flex flex-col items-center gap-6 px-6 pt-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div
+        className="w-full bg-white flex flex-col items-center gap-6 px-6 pt-8"
+        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
+      >
         <p className="text-sm leading-5 text-gray-950 text-center">
           サービスを始める前に{' '}
           <Link href="/terms" className="text-primary underline">利用規約</Link>
