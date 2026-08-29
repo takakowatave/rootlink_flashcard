@@ -18,6 +18,7 @@ import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import PageHeader from "@/components/PageHeader"
+import CardShell from "@/components/CardShell"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
@@ -253,7 +254,7 @@ export default function WordListPage() {
       <PageHeader
         items={[
           { label: 'ホーム', href: '/' },
-          { label: 'My単語帳' },
+          { label: 'オリジナル単語帳' },
         ]}
       />
 
@@ -277,7 +278,7 @@ export default function WordListPage() {
         ]}
         selectedScope={quizScope}
         onScopeChange={setQuizScope}
-        buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'はじめる'}
+        buttonLabel="はじめる"
         buttonDisabled={scopeSource[quizScope].length === 0}
         onStart={startQuiz}
       />
@@ -285,23 +286,29 @@ export default function WordListPage() {
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
         {totalItems === 0 ? (
-          <div className="mx-4 bg-white rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col items-center gap-4 py-6 px-4">
-            <p className="font-bold text-base text-center text-default">
-              辞書から単語を検索してオリジナルの単語帳をつくろう
-            </p>
-            <img
-              src="/wordlist/empty-search.png"
-              alt=""
-              className="w-[134px] h-[134px]"
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-            >
-              単語を検索
-            </Button>
-          </div>
+          <CardShell>
+            <div className="flex flex-col items-center gap-4 py-6 px-4">
+              <p className="font-bold text-base text-center text-default">
+                辞書から単語を検索してオリジナルの単語帳をつくろう
+              </p>
+              <img
+                src="/wordlist/empty-search.png"
+                alt=""
+                className="w-[134px] h-[134px]"
+              />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+                className="w-full max-w-[420px] h-12 flex items-center gap-2 bg-white border border-line rounded-full pl-5 pr-4 text-left hover:border-muted transition-colors"
+                aria-label="検索を開く"
+              >
+                <span className="flex-1 text-sm text-gray-400">検索</span>
+                <svg className="size-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </div>
+          </CardShell>
         ) : (
           <>
             <div className="flex flex-col gap-3 px-4">

@@ -21,7 +21,7 @@ export const Default: Story = {
 export const InSection: Story = {
   render: () => (
     <div className="max-w-[812px] p-4 bg-surface flex flex-col gap-3">
-      <h2 className="text-xl font-bold text-gray-950">My単語帳</h2>
+      <h2 className="text-xl font-bold text-gray-950">オリジナル単語帳</h2>
       <WordlistEmptyCard onClick={() => alert('open search modal')} />
     </div>
   ),

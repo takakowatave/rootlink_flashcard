@@ -33,8 +33,7 @@ export default function QuizProgressPanel({
   buttonDisabled,
   onStart,
 }: Props) {
-  const hasScope =
-    scopeItems && selectedScope && onScopeChange && scopeItems.some(i => i.count > 0)
+  const hasScope = scopeItems && selectedScope && onScopeChange
 
   return (
     <>

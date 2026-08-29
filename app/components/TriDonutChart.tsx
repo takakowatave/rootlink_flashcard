@@ -9,17 +9,16 @@ type Props = {
 
 export default function TriDonutChart({ mastered, review, hard, unseen }: Props) {
   const total = mastered + review + hard + unseen
-  if (total === 0) return null
   const size = 180
   const stroke = 16
   const r = (size - stroke) / 2
   const cx = size / 2
   const cy = size / 2
   const circ = 2 * Math.PI * r
-  const mFrac = mastered / total
-  const rFrac = review / total
-  const hFrac = hard / total
-  const pct = Math.round(mFrac * 100)
+  const mFrac = total === 0 ? 0 : mastered / total
+  const rFrac = total === 0 ? 0 : review / total
+  const hFrac = total === 0 ? 0 : hard / total
+  const pct = total === 0 ? 0 : Math.round(mFrac * 100)
 
   const seg = (start: number, len: number) => ({
     strokeDasharray: `${len * circ} ${(1 - len) * circ}`,
