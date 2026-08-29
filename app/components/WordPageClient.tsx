@@ -12,7 +12,7 @@ import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
-import { shareViaClipboardAndX } from '@/lib/shareToX'
+import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { supabase } from '@/lib/supabaseClient'
@@ -1079,7 +1079,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-end border-b border-line h-14 px-4`}>
         <button
           type="button"
-          onClick={() => setShowShareMenu(true)}
+          onClick={() => {
+            prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+            setShowShareMenu(true)
+          }}
           className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
           aria-label="共有"
         >
@@ -1133,7 +1136,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       grammarTags={grammarTags}
       isBookmarked={savedWords.includes(word)}
       onSave={handleSave}
-      onShare={dictionary && !noCard ? () => setShowShareMenu(true) : undefined}
+      onShare={dictionary && !noCard ? () => {
+        prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+        setShowShareMenu(true)
+      } : undefined}
       shareBtnRef={shareBtnRef}
       pinnedSenseId={pinnedSenseId}
       onTogglePin={handleTogglePin}

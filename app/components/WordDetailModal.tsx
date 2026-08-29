@@ -7,7 +7,7 @@ import ModalShell from '@/components/ModalShell'
 import WordPageClient from '@/components/WordPageClient'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
-import { shareViaClipboardAndX } from '@/lib/shareToX'
+import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
@@ -55,7 +55,10 @@ export default function WordDetailModal({
             <button
               ref={shareBtnRef}
               type="button"
-              onClick={() => setShowShareMenu(true)}
+              onClick={() => {
+                prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+                setShowShareMenu(true)
+              }}
               className="p-2 rounded-full hover:bg-gray-100 text-muted"
               aria-label="共有"
             >

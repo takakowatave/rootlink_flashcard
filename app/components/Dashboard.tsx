@@ -16,7 +16,7 @@ import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import Button from '@/components/Button'
 import ShareMenu from '@/components/ShareMenu'
-import { shareViaClipboardAndX } from '@/lib/shareToX'
+import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
@@ -230,6 +230,7 @@ function LevelUpModal({
   const handleShare = async () => {
     if (isSharing) return
     if (!isTouch) {
+      prefetchShareImage(cardUrl)
       setMenuOpen(true)
       return
     }
@@ -331,6 +332,7 @@ function StreakModal({
   const handleShare = async () => {
     if (isSharing) return
     if (!isTouch) {
+      prefetchShareImage(cardUrl)
       setMenuOpen(true)
       return
     }
