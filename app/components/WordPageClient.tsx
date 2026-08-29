@@ -1080,7 +1080,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <button
           type="button"
           onClick={() => {
-            prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+            prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
             setShowShareMenu(true)
           }}
           className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
@@ -1098,7 +1098,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         shareText={buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId)}
         anchorRef={shareBtnRef}
         onShareX={() => shareViaClipboardAndX({
-          cardUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`,
+          cardUrl: `/word/${encodeURIComponent(word)}/card.png`,
           filename: `rootlink-${word}.png`,
           shareText: buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId),
         })}
