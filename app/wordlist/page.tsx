@@ -254,7 +254,7 @@ export default function WordListPage() {
       <PageHeader
         items={[
           { label: 'ホーム', href: '/' },
-          { label: 'My単語帳' },
+          { label: 'オリジナル単語帳' },
         ]}
       />
 
@@ -296,13 +296,17 @@ export default function WordListPage() {
                 alt=""
                 className="w-[134px] h-[134px]"
               />
-              <Button
-                variant="primary"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+                className="w-full max-w-[420px] h-12 flex items-center gap-2 bg-white border border-line rounded-full pl-5 pr-4 text-left hover:border-muted transition-colors"
+                aria-label="検索を開く"
               >
-                単語を検索
-              </Button>
+                <span className="flex-1 text-sm text-gray-400">検索</span>
+                <svg className="size-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
             </div>
           </CardShell>
         ) : (

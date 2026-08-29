@@ -47,7 +47,7 @@ export const TwoLevels: Story = {
   args: {
     items: [
       { label: 'ホーム', href: '/' },
-      { label: 'My単語帳' },
+      { label: 'オリジナル単語帳' },
     ],
   },
 }

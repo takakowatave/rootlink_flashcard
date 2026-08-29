@@ -66,9 +66,9 @@ export const NoImage: Story = {
 }
 
 export const NoWordCount: Story = {
-  name: 'No word count (My単語帳など件数非表示)',
+  name: 'No word count (オリジナル単語帳など件数非表示)',
   args: {
-    title: 'My単語帳',
+    title: 'オリジナル単語帳',
     imageSrc: '/plant/lv3.png',
   },
 }
