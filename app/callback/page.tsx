@@ -13,7 +13,6 @@ export default function AuthCallback() {
     const run = async () => {
       try {
         const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
         const urlError =
           url.searchParams.get("error_description") ||
           url.searchParams.get("error");
@@ -23,28 +22,38 @@ export default function AuthCallback() {
           return;
         }
 
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            setState("error");
-            return;
-          }
-        } else {
-          const fragment = window.location.hash.startsWith("#")
-            ? window.location.hash.slice(1)
-            : "";
-          if (fragment) {
-            const params = new URLSearchParams(fragment);
-            const access_token = params.get("access_token");
-            const refresh_token = params.get("refresh_token");
-            if (access_token && refresh_token) {
-              const { error } = await supabase.auth.setSession({
-                access_token,
-                refresh_token,
-              });
-              if (error) {
-                setState("error");
-                return;
+        // @supabase/ssr の createBrowserClient は detectSessionInUrl が
+        // デフォルト有効で、client 初期化時に URL の ?code= を自動 exchange する。
+        // そのため既に session が張られている可能性があるので、まず確認する。
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+
+        if (!existingSession) {
+          const code = url.searchParams.get("code");
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+              setState("error");
+              return;
+            }
+          } else {
+            const fragment = window.location.hash.startsWith("#")
+              ? window.location.hash.slice(1)
+              : "";
+            if (fragment) {
+              const params = new URLSearchParams(fragment);
+              const access_token = params.get("access_token");
+              const refresh_token = params.get("refresh_token");
+              if (access_token && refresh_token) {
+                const { error } = await supabase.auth.setSession({
+                  access_token,
+                  refresh_token,
+                });
+                if (error) {
+                  setState("error");
+                  return;
+                }
               }
             }
           }
@@ -124,16 +133,21 @@ export default function AuthCallback() {
     return (
       <div className="max-w-md mx-auto px-6 py-16 text-center">
         <h1 className="text-xl font-semibold text-gray-900 mb-3">
-          ログインに失敗しました
+          認証に失敗しました
         </h1>
         <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-          確認リンクの有効期限が切れているか、無効になっている可能性があります。
+          リンクの有効期限が切れているか、無効になっている可能性があります。
           <br />
-          もう一度ログインをお試しください。
+          もう一度お試しください。
         </p>
-        <Link href="/login" className="text-primary underline">
-          ログイン画面へ
-        </Link>
+        <div className="flex items-center justify-center gap-6 text-sm">
+          <Link href="/login" className="text-primary underline">
+            ログイン
+          </Link>
+          <Link href="/signup" className="text-primary underline">
+            新規登録
+          </Link>
+        </div>
       </div>
     );
   }
