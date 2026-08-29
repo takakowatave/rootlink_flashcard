@@ -189,10 +189,10 @@ export function OnboardingQuestionsView({
   return (
     <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
       <div className="absolute inset-0 bg-black/40 hidden md:block" />
-      <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden">
+      <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
       <ProgressHeader step={step} totalSteps={totalSteps} onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-32 flex flex-col justify-center">
         {step === 1 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
@@ -351,7 +351,7 @@ export function OnboardingQuestionsView({
         )}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-32 flex items-center justify-center px-6 bg-teal-50">
+      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center px-6 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] bg-teal-50">
         {step === 1 && (
           <Button onClick={onNext} disabled={!canProceedLevel} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ

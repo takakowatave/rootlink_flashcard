@@ -33,7 +33,7 @@ export default function OnboardingPage() {
   if (!ready) return null
 
   return (
-    <div className="fixed inset-0 bg-teal-50 flex flex-col items-center pt-[max(6rem,env(safe-area-inset-top))]">
+    <div className="fixed inset-0 bg-teal-50 flex flex-col items-center justify-center pt-[env(safe-area-inset-top)] pb-[220px]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
 
