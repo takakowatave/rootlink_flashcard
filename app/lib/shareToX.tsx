@@ -83,16 +83,15 @@ export async function shareViaClipboardAndX({ cardUrl, filename, shareText }: Pa
         <span className="text-sm text-gray-950 whitespace-nowrap">
           {copied ? '画像をコピーしました' : '画像を保存しました'}
         </span>
-        <button
-          type="button"
-          onClick={() => {
-            window.open(composeUrl, '_blank', 'noopener,noreferrer')
-            toast.dismiss(t.id)
-          }}
-          className="px-3 py-1.5 rounded-full bg-primary-hover text-white text-sm font-medium whitespace-nowrap"
+        <a
+          href={composeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => toast.dismiss(t.id)}
+          className="px-3 py-1.5 rounded-full bg-primary-hover text-white text-sm font-medium whitespace-nowrap no-underline"
         >
           Xを開く
-        </button>
+        </a>
       </div>
     ),
     { duration: 15000 }
