@@ -1,6 +1,20 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { HiOutlineArrowLeft } from 'react-icons/hi2'
+
 export default function TermsPage() {
+  const router = useRouter()
   return (
     <div className="max-w-2xl mx-auto px-4 py-12 text-gray-700">
+      <button
+        onClick={() => router.back()}
+        aria-label="戻る"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-primary"
+      >
+        <HiOutlineArrowLeft className="size-5" />
+        戻る
+      </button>
       <h1 className="text-2xl font-bold mb-2">利用規約</h1>
       <p className="text-sm text-gray-400 mb-10">制定日：2026年6月　最終更新：2026年6月</p>
 
