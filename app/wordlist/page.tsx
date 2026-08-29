@@ -18,6 +18,7 @@ import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import PageHeader from "@/components/PageHeader"
+import CardShell from "@/components/CardShell"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 
@@ -277,7 +278,7 @@ export default function WordListPage() {
         ]}
         selectedScope={quizScope}
         onScopeChange={setQuizScope}
-        buttonLabel={availableCount === 0 ? '単語データがまだありません' : 'はじめる'}
+        buttonLabel="はじめる"
         buttonDisabled={scopeSource[quizScope].length === 0}
         onStart={startQuiz}
       />
@@ -285,23 +286,25 @@ export default function WordListPage() {
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
         {totalItems === 0 ? (
-          <div className="mx-4 bg-white rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col items-center gap-4 py-6 px-4">
-            <p className="font-bold text-base text-center text-default">
-              辞書から単語を検索してオリジナルの単語帳をつくろう
-            </p>
-            <img
-              src="/wordlist/empty-search.png"
-              alt=""
-              className="w-[134px] h-[134px]"
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-            >
-              単語を検索
-            </Button>
-          </div>
+          <CardShell>
+            <div className="flex flex-col items-center gap-4 py-6 px-4">
+              <p className="font-bold text-base text-center text-default">
+                辞書から単語を検索してオリジナルの単語帳をつくろう
+              </p>
+              <img
+                src="/wordlist/empty-search.png"
+                alt=""
+                className="w-[134px] h-[134px]"
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+              >
+                単語を検索
+              </Button>
+            </div>
+          </CardShell>
         ) : (
           <>
             <div className="flex flex-col gap-3 px-4">
