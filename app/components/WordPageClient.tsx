@@ -1116,6 +1116,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           cardUrl: `/word/${encodeURIComponent(word)}/card.png`,
           filename: `rootlink-${word}.png`,
           shareText: buildShareText(word, dictionary as SavedWordDictionary, pinnedSenseId),
+          shareUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}`,
         })}
       />
     )}

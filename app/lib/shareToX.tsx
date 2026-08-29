@@ -1,110 +1,85 @@
 'use client'
 
 import toast from 'react-hot-toast'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 
 type Params = {
   cardUrl: string
   filename: string
   shareText: string
+  shareUrl: string
 }
 
-// ShareMenu が開いた瞬間 (share icon click) に parent が呼ぶ。
-// blob を先に fetch しておくことで、X click 時のクリップボード書き込みが即完了する。
-let cachedUrl: string | null = null
-let cachedBlob: Blob | null = null
-let cachedPromise: Promise<Blob> | null = null
+// Web (Desktop + Mobile browser) は OGP プレビュー方式で統一。
+// Native app (Capacitor) のみ card.png を一旦ローカル保存 → OS 共有シート経由で X アプリに画像添付。
+// 詳細: Notion「単語カードの画像生成ルート」/ memory feedback_x_share_image_clipboard.md
 
-export function prefetchShareImage(cardUrl: string) {
-  if (cachedUrl === cardUrl && (cachedBlob || cachedPromise)) return
-  cachedUrl = cardUrl
-  cachedBlob = null
-  cachedPromise = fetch(cardUrl)
-    .then((res) => {
-      if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-      return res.blob()
-    })
-    .then((blob) => {
-      if (cachedUrl === cardUrl) cachedBlob = blob
-      return blob
-    })
-    .catch((err) => {
-      console.error('prefetch share image failed:', err)
-      cachedPromise = null
-      throw err
-    })
+// 後方互換: 呼び出し側の prefetchShareImage は残すが no-op 化
+export function prefetchShareImage(_cardUrl: string) {
+  // no-op (旧 clipboard 方式の名残り。Web 経路では blob 事前取得は不要になった)
 }
 
-async function resolveBlob(cardUrl: string): Promise<Blob> {
-  if (cachedBlob && cachedUrl === cardUrl) return cachedBlob
-  if (cachedPromise && cachedUrl === cardUrl) return cachedPromise
-  const res = await fetch(cardUrl)
-  if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-  return res.blob()
-}
-
-/**
- * X 投稿用: 画像を用意 → clipboard に write(orダウンロード) → 「Xを開く」ボタンをトーストで提示。
- * 2段階にすることで:
- *   1) 「画像が準備できてからXへ」の順序が保証される
- *   2) window.open が popup blocker で潰れない (ユーザーの新しいクリック gesture で開く)
- */
-export async function shareViaClipboardAndX({ cardUrl, filename, shareText }: Params) {
-  const composeUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
-
-  const loadingId = toast.loading('画像を準備中…')
-
-  let blob: Blob
-  try {
-    blob = await resolveBlob(cardUrl)
-  } catch (err) {
-    console.error('fetch failed:', err)
-    toast.dismiss(loadingId)
-    toast.error('画像の準備に失敗しました')
-    return
-  }
-
-  // X compose の paste は環境依存で不安定。常にダウンロードして画像ファイルを渡す。
-  // クリップボードにも入れておく (X がpaste受け付ける環境ではそちらで貼付可能)
-  try {
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-  } catch (err) {
-    console.error('clipboard write failed:', err)
-  }
-  downloadNow(blob, filename)
-
-  toast.dismiss(loadingId)
-
-  toast(
-    (t) => (
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-950 whitespace-nowrap">
-          画像を保存しました。Xで添付してください
-        </span>
-        <a
-          href={composeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => toast.dismiss(t.id)}
-          className="px-3 py-1.5 rounded-full bg-primary-hover text-white text-sm font-medium whitespace-nowrap no-underline"
-        >
-          Xを開く
-        </a>
-      </div>
-    ),
-    { duration: 15000 }
+function openXCompose(text: string) {
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+    '_blank',
+    'noopener,noreferrer'
   )
 }
 
-function downloadNow(blob: Blob, filename: string) {
-  try {
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-  } catch (err) {
-    console.error('download failed:', err)
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1] ?? '')
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function shareOnNative({ cardUrl, filename, shareText }: Params) {
+  const [{ Share }, { Filesystem, Directory }] = await Promise.all([
+    import('@capacitor/share'),
+    import('@capacitor/filesystem'),
+  ])
+
+  const res = await fetch(cardUrl)
+  if (!res.ok) throw new Error(`card fetch failed: ${res.status}`)
+  const blob = await res.blob()
+  const base64 = await blobToBase64(blob)
+
+  const { uri } = await Filesystem.writeFile({
+    path: filename,
+    data: base64,
+    directory: Directory.Cache,
+  })
+
+  await Share.share({
+    files: [uri],
+    text: shareText,
+  })
+}
+
+export async function shareViaClipboardAndX(params: Params) {
+  if (isNativePlatform()) {
+    const loadingId = toast.loading('画像を準備中…')
+    try {
+      await shareOnNative(params)
+      toast.dismiss(loadingId)
+    } catch (err) {
+      console.error('native share failed:', err)
+      toast.dismiss(loadingId)
+      const msg = (err as { message?: string })?.message ?? ''
+      // ユーザーが共有シートで cancel した場合は toast しない
+      if (!/cancel|abort/i.test(msg)) {
+        toast.error('共有に失敗しました')
+      }
+    }
+    return
   }
+
+  // Web (Desktop + Mobile browser 全部) = OGP プレビュー方式
+  openXCompose(`${params.shareText} ${params.shareUrl}`)
 }

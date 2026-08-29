@@ -94,6 +94,7 @@ export default function WordDetailModal({
           cardUrl: `/word/${encodeURIComponent(word)}/card.png`,
           filename: `rootlink-${word}.png`,
           shareText: buildShareText(word, dictionary, initialPinnedSenseId ?? null),
+          shareUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}`,
         })}
       />
     </>
