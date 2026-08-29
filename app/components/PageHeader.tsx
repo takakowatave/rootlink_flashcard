@@ -9,7 +9,7 @@ export default function PageHeader({ items }: { items: BreadcrumbItem[] }) {
   return (
     <>
       {/* SP: 戻るヘッダー */}
-      <div className="md:hidden sticky top-0 z-30 bg-white border-b border-line h-14 flex items-center px-4">
+      <div className="md:hidden sticky top-0 z-30 bg-white border-b border-line pt-[env(safe-area-inset-top)] h-[calc(3.5rem+env(safe-area-inset-top))] flex items-center px-4">
         <button
           type="button"
           onClick={() => router.back()}

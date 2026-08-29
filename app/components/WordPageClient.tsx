@@ -1076,7 +1076,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     </button>
     {/* SP top bar — 戻る + 共有 */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-between border-b border-line h-14 px-4`}>
+      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-between border-b border-line pt-[env(safe-area-inset-top)] h-[calc(3.5rem+env(safe-area-inset-top))] px-4`}>
         <button
           type="button"
           onClick={() => {
