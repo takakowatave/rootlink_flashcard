@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { ONBOARDING_COMPLETE_EVENT } from './OnboardingQuestions'
+import { PROFILE_CREATED_EVENT } from './AppShell'
 
 // チュートリアル完了フラグはDB（profiles.tutorial_completed）で管理。
 // 途中ステップだけページ遷移をまたぐためユーザーIDごとに localStorage に保持する。
@@ -84,9 +85,12 @@ export default function TutorialOverlay() {
         .from('profiles')
         .select('tutorial_completed, acquisition_source')
         .eq('id', uid)
-        .single()
+        .maybeSingle()
       if (cancelled) return
-      if (!profile || profile.tutorial_completed) {
+      // profile 行がまだ無いケース (AppShell の自己修復待ち) はキャッシュせず終了。
+      // PROFILE_CREATED_EVENT で再度 init が呼ばれる。
+      if (!profile) return
+      if (profile.tutorial_completed) {
         _completedUsers.add(uid)
         return
       }
@@ -114,12 +118,17 @@ export default function TutorialOverlay() {
     const onOnboardingComplete = () => {
       supabase.auth.getSession().then(({ data }) => init(data.session?.user?.id))
     }
+    const onProfileCreated = () => {
+      supabase.auth.getSession().then(({ data }) => init(data.session?.user?.id))
+    }
     window.addEventListener(ONBOARDING_COMPLETE_EVENT, onOnboardingComplete)
+    window.addEventListener(PROFILE_CREATED_EVENT, onProfileCreated)
 
     return () => {
       cancelled = true
       subscription.unsubscribe()
       window.removeEventListener(ONBOARDING_COMPLETE_EVENT, onOnboardingComplete)
+      window.removeEventListener(PROFILE_CREATED_EVENT, onProfileCreated)
     }
   }, [])
 

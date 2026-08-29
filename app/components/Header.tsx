@@ -11,6 +11,7 @@ import type { Profile } from "@/types/Profile";
 import EditProfileModal from "@/components/EditProfileModal";
 import Button from "@/components/Button";
 import { displayPhrase } from "@/lib/phraseDisplay";
+import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -135,6 +136,7 @@ function SearchBox({
 const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -221,8 +223,9 @@ const Header = () => {
     };
     const loadProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+      setAuthed(!!user);
+      if (!user) { setProfile(null); return; }
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle<Profile>();
       if (data) setProfile(data);
     };
     loadProfile();
@@ -231,9 +234,11 @@ const Header = () => {
     const onVisible = () => { if (document.visibilityState === 'visible') loadStreak(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('streak-updated', loadStreak);
+    window.addEventListener(PROFILE_CREATED_EVENT, loadProfile);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('streak-updated', loadStreak);
+      window.removeEventListener(PROFILE_CREATED_EVENT, loadProfile);
     };
   }, [pathname]);
 
@@ -258,13 +263,13 @@ const Header = () => {
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
-          {!profile && (
+          {authed === false && (
             <>
               <Link href="/signup"><Button variant="primary" size="sm">新規登録</Button></Link>
               <Link href="/login"><Button variant="secondary" size="sm">ログイン</Button></Link>
             </>
           )}
-          {profile && (
+          {authed === true && (
             <>
               {currentStreak > 0 && (
                 <span className="flex items-center gap-0.5 text-sm font-bold text-quiz-review tabular-nums select-none">
@@ -272,7 +277,7 @@ const Header = () => {
                 </span>
               )}
               <button onClick={() => setIsModalOpen(true)}>
-                {profile.avatar_url
+                {profile?.avatar_url
                   ? <img src={profile.avatar_url} className="size-8 rounded-full object-cover" alt="avatar" />
                   : <FaUserCircle className="size-8 text-muted" />
                 }
