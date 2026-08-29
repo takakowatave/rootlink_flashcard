@@ -14,6 +14,7 @@ import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 
 interface FormData {
   email: string;
@@ -33,10 +34,13 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
+    const emailRedirectTo = isNativePlatform()
+      ? "com.rootlink.app://auth-callback"
+      : `${window.location.origin}/callback`;
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { emailRedirectTo: `${window.location.origin}/callback` },
+      options: { emailRedirectTo },
     });
     if (error) {
       setError("email", { message: error.message });
