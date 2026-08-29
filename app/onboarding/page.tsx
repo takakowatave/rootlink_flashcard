@@ -33,19 +33,23 @@ export default function OnboardingPage() {
   if (!ready) return null
 
   return (
-    <div className="fixed inset-0 bg-teal-50 flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center gap-10">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
-
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-baseline gap-2">
-            <span className="inline-flex items-center rounded-[10px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] border-solid border-[#ffb86a] px-2 pt-1.5 pb-2.5 leading-none">
-              <span className="text-[42px] font-bold text-[#ff8904] leading-none">語源</span>
-            </span>
-            <span className="text-[34px] font-bold text-gray-950 leading-none">で覚える</span>
+    <div
+      className="fixed inset-0 bg-teal-50 flex flex-col"
+      style={{ paddingBottom: 0 }}
+    >
+      <div className="flex-1 flex flex-col items-center justify-between pt-8 pb-6">
+        <div className="flex flex-col items-center gap-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-baseline gap-2">
+              <span className="inline-flex items-center rounded-[10px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] border-solid border-[#ffb86a] px-2 pt-1.5 pb-2.5 leading-none">
+                <span className="text-[42px] font-bold text-[#ff8904] leading-none">語源</span>
+              </span>
+              <span className="text-[34px] font-bold text-gray-950 leading-none">で覚える</span>
+            </div>
+            <p className="text-[32px] font-bold text-gray-950 leading-none">英単語・辞書アプリ</p>
           </div>
-          <p className="text-[32px] font-bold text-gray-950 leading-none">英単語・辞書アプリ</p>
         </div>
 
         <Image
@@ -58,7 +62,10 @@ export default function OnboardingPage() {
         />
       </div>
 
-      <div className="w-full bg-white flex flex-col items-center gap-6 px-6 py-8">
+      <div
+        className="w-full bg-white flex flex-col items-center gap-6 px-6 pt-8"
+        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
+      >
         <p className="text-sm leading-5 text-gray-950 text-center">
           サービスを始める前に{' '}
           <Link href="/terms" className="text-primary underline">利用規約</Link>
