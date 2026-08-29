@@ -8,6 +8,7 @@ import { MdAddCircle } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
@@ -446,7 +447,7 @@ export default function OnboardingQuestions() {
         .from('profiles')
         .select('acquisition_source')
         .eq('id', uid)
-        .single()
+        .maybeSingle()
       if (cancelled) return
       if (!data || data.acquisition_source) return
       setUserId(uid)
@@ -456,7 +457,15 @@ export default function OnboardingQuestions() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       check(session?.user?.id)
     })
-    return () => { cancelled = true; sub.subscription.unsubscribe() }
+    const onProfileCreated = () => {
+      supabase.auth.getSession().then(({ data }) => check(data.session?.user?.id))
+    }
+    window.addEventListener(PROFILE_CREATED_EVENT, onProfileCreated)
+    return () => {
+      cancelled = true
+      sub.subscription.unsubscribe()
+      window.removeEventListener(PROFILE_CREATED_EVENT, onProfileCreated)
+    }
   }, [])
 
   const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))

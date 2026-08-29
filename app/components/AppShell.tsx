@@ -12,8 +12,48 @@ import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
 
+// profile 自己修復完了を Header / OnboardingQuestions / TutorialOverlay に通知する
+// 過去の壊れた /callback で auth ユーザーだけ作られて profiles 行が無いユーザーを救う
+export const PROFILE_CREATED_EVENT = 'rootlink-profile-created'
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+
+  useEffect(() => {
+    let cancelled = false
+    const ensureProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (existing || cancelled) return
+      const username =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split('@')[0] ||
+        ''
+      const avatar_url =
+        user.user_metadata?.avatar_url || user.user_metadata?.picture || null
+      const { error } = await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email,
+        username,
+        avatar_url,
+      })
+      if (!error && !cancelled) {
+        window.dispatchEvent(new CustomEvent(PROFILE_CREATED_EVENT))
+      }
+    }
+    ensureProfile()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!isNativePlatform()) return
