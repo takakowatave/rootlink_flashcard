@@ -1,3 +1,5 @@
+'use client'
+
 import toast from 'react-hot-toast'
 
 type Params = {
@@ -7,7 +9,7 @@ type Params = {
 }
 
 // ShareMenu が開いた瞬間 (share icon click) に parent が呼ぶ。
-// blob を先に fetch しておくことで、X click 時に clipboard.write が高速で完了する。
+// blob を先に fetch しておくことで、X click 時のクリップボード書き込みが即完了する。
 let cachedUrl: string | null = null
 let cachedBlob: Blob | null = null
 let cachedPromise: Promise<Blob> | null = null
@@ -41,51 +43,63 @@ async function resolveBlob(cardUrl: string): Promise<Blob> {
 }
 
 /**
- * X 投稿用: 画像を用意 → clipboard に write → X compose を開く。
- * 準備が終わってから開く。順序を逆にすると focus 遷移で clipboard write が silent fail する。
- * popup blocker で開けない場合は、リンク付きトーストで手動で開いてもらう。
+ * X 投稿用: 画像を用意 → clipboard に write(orダウンロード) → 「Xを開く」ボタンをトーストで提示。
+ * 2段階にすることで:
+ *   1) 「画像が準備できてからXへ」の順序が保証される
+ *   2) window.open が popup blocker で潰れない (ユーザーの新しいクリック gesture で開く)
  */
 export async function shareViaClipboardAndX({ cardUrl, filename, shareText }: Params) {
   const composeUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+
+  const loadingId = toast.loading('画像を準備中…')
 
   let blob: Blob
   try {
     blob = await resolveBlob(cardUrl)
   } catch (err) {
     console.error('fetch failed:', err)
+    toast.dismiss(loadingId)
     toast.error('画像の準備に失敗しました')
     return
   }
 
   let copied = false
   try {
-    const item = new ClipboardItem({ 'image/png': blob })
-    await navigator.clipboard.write([item])
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
     copied = true
   } catch (err) {
     console.error('clipboard write failed:', err)
   }
 
-  const popup = window.open(composeUrl, '_blank', 'noopener,noreferrer')
-
-  if (!popup) {
-    toast.error(
-      copied
-        ? '画像はコピー済みです。ポップアップが開けなかったので手動でXを開いてください'
-        : 'ポップアップが開けませんでした'
-    )
-    if (!copied) await downloadFallback(blob, filename)
-    return
+  if (!copied) {
+    downloadNow(blob, filename)
   }
 
-  if (copied) {
-    toast.success('画像をコピーしました。Xで⌘Vで貼り付けてください')
-  } else {
-    await downloadFallback(blob, filename)
-  }
+  toast.dismiss(loadingId)
+
+  toast(
+    (t) => (
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-950 whitespace-nowrap">
+          {copied ? '画像をコピーしました' : '画像を保存しました'}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            window.open(composeUrl, '_blank', 'noopener,noreferrer')
+            toast.dismiss(t.id)
+          }}
+          className="px-3 py-1.5 rounded-full bg-primary-hover text-white text-sm font-medium whitespace-nowrap"
+        >
+          Xを開く
+        </button>
+      </div>
+    ),
+    { duration: 15000 }
+  )
 }
 
-async function downloadFallback(blob: Blob, filename: string) {
+function downloadNow(blob: Blob, filename: string) {
   try {
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -94,9 +108,7 @@ async function downloadFallback(blob: Blob, filename: string) {
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-    toast.success('画像をダウンロードしました。Xに添付してください')
   } catch (err) {
-    console.error('download fallback failed:', err)
-    toast.error('画像の準備に失敗しました')
+    console.error('download failed:', err)
   }
 }

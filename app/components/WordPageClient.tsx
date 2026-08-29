@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { MdIosShare } from 'react-icons/md'
+import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
@@ -1074,10 +1074,25 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </button>
-    {/* SP top bar — 共有のみ (戻るはスタンドアローンには不要。モーダル起動時はモーダル chrome の戻る/閉じるを使う) */}
+    {/* SP top bar — 戻る + 共有 */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-end border-b border-line h-14 px-4`}>
+      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-between border-b border-line h-14 px-4`}>
         <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back()
+            } else {
+              router.push('/dashboard')
+            }
+          }}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
+          aria-label="戻る"
+        >
+          <MdArrowBackIosNew className="size-6" />
+        </button>
+        <button
+          ref={shareBtnRef}
           type="button"
           onClick={() => {
             prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
@@ -1137,7 +1152,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       isBookmarked={savedWords.includes(word)}
       onSave={handleSave}
       onShare={dictionary && !noCard ? () => {
-        prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+        prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
         setShowShareMenu(true)
       } : undefined}
       shareBtnRef={shareBtnRef}
