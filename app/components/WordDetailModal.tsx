@@ -56,7 +56,7 @@ export default function WordDetailModal({
               ref={shareBtnRef}
               type="button"
               onClick={() => {
-                prefetchShareImage(`https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`)
+                prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
                 setShowShareMenu(true)
               }}
               className="p-2 rounded-full hover:bg-gray-100 text-muted"
@@ -91,7 +91,7 @@ export default function WordDetailModal({
         shareText={buildShareText(word, dictionary, initialPinnedSenseId ?? null)}
         anchorRef={shareBtnRef}
         onShareX={() => shareViaClipboardAndX({
-          cardUrl: `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`,
+          cardUrl: `/word/${encodeURIComponent(word)}/card.png`,
           filename: `rootlink-${word}.png`,
           shareText: buildShareText(word, dictionary, initialPinnedSenseId ?? null),
         })}

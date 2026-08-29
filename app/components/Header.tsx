@@ -143,7 +143,6 @@ const Header = () => {
   const [searchError, setSearchError] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
-  const desktopInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const match = pathname.match(/^\/word\/(.+)$/)
@@ -200,12 +199,6 @@ const Header = () => {
   }, []);
 
   const openMobileSearch = () => {
-    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-    if (isDesktop) {
-      desktopInputRef.current?.focus()
-      desktopInputRef.current?.scrollIntoView({ block: 'nearest' })
-      return
-    }
     setSearchValue('');
     setSearchError(false);
     setMobileSearchOpen(true);
@@ -260,7 +253,6 @@ const Header = () => {
             onSubmit={handleSearch}
             isSearching={isSearching}
             searchError={searchError}
-            inputRef={desktopInputRef}
             wrapperClassName="w-full max-w-[400px]"
           />
         </div>
@@ -291,30 +283,42 @@ const Header = () => {
       </div>
       </header>
 
-      {/* SP: 検索オーバーレイ (画面全白・1発で最終形状) */}
+      {/* 検索オーバーレイ: SPは全画面白 / PCは中央ダイアログ */}
       {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-white flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-          <div className="px-4 pt-3 pb-6">
-            <div className="flex items-center justify-between mb-3">
-              <button type="button" onClick={() => setMobileSearchOpen(false)} className="text-sm font-bold text-primary">
-                閉じる
-              </button>
+        <>
+          {/* SPは白背景 / PCは半透明バックドロップ */}
+          <div
+            className="fixed inset-0 z-50 bg-white md:bg-black/40"
+            onClick={() => setMobileSearchOpen(false)}
+            aria-label="閉じる"
+          />
+          <div
+            className="fixed z-50 inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] md:max-w-[90vw] md:h-auto md:rounded-2xl md:shadow-xl md:bg-white flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 pt-3 pb-6 md:p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-base font-bold text-gray-950 hidden md:block">単語を検索</p>
+                <button type="button" onClick={() => setMobileSearchOpen(false)} className="text-sm font-bold text-primary md:ml-auto">
+                  閉じる
+                </button>
+              </div>
+              <SearchBox
+                value={searchValue}
+                onChange={v => { setSearchValue(v); setSearchError(false); }}
+                onSubmit={handleSearch}
+                isSearching={isSearching}
+                searchError={searchError}
+                inputRef={mobileInputRef}
+                inputClassName="text-base text-black"
+                wrapperClassName="h-12"
+              />
+              {searchError && (
+                <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>
+              )}
             </div>
-            <SearchBox
-              value={searchValue}
-              onChange={v => { setSearchValue(v); setSearchError(false); }}
-              onSubmit={handleSearch}
-              isSearching={isSearching}
-              searchError={searchError}
-              inputRef={mobileInputRef}
-              inputClassName="text-base text-black"
-              wrapperClassName="h-12"
-            />
-            {searchError && (
-              <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>
-            )}
           </div>
-        </div>
+        </>
       )}
 
       <EditProfileModal
