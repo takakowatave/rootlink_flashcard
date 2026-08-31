@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { BsArrowUpRightSquare, BsX } from 'react-icons/bs'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BsArrowUpRightSquare } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
+import { MdArrowBackIosNew } from 'react-icons/md'
 import Button from '@/components/Button'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import LearnedPartWords from '@/components/LearnedPartWords'
@@ -13,6 +14,7 @@ import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { displayPhrase } from '@/lib/phraseDisplay'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
+import { WordDetailStackContext, type WordDetailStackEntry } from '@/lib/wordDetailStack'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 
@@ -161,26 +163,51 @@ function Sparkles({ show }: { show: boolean }) {
   )
 }
 
-function WordDetailModal({ entry, onClose }: { entry: QuizEntry; onClose: () => void }) {
+// クイズ中/結果画面から呼ばれる半モーダル。stack index が 0 の一番下は quiz が透けて見える構図。
+// 上に stack されたモーダルは back で 1つずつ pop → 最終的に quiz へ戻る。
+function StackModal({
+  entry,
+  onBack,
+  zIndex,
+}: {
+  entry: WordDetailStackEntry
+  onBack: () => void
+  zIndex: number
+}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 flex items-end sm:items-center justify-center"
+      style={{ zIndex }}
+      onClick={onBack}
+    >
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col shadow-xl overflow-x-hidden"
+        className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[calc(100dvh-40px)] sm:max-h-[85dvh] mt-10 sm:mt-0 flex flex-col shadow-xl overflow-x-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end px-5 py-3 border-b border-line flex-shrink-0">
-          <div className="flex items-center gap-1">
-            <a href={`/word/${entry.word}`} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-              <BsArrowUpRightSquare size={24} />
-            </a>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
-              <BsX size={24} />
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-2 py-2 border-b border-line flex-shrink-0">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+          >
+            <MdArrowBackIosNew size={18} />
+            <span className="text-sm">戻る</span>
+          </button>
+          <a
+            href={`/word/${entry.word}`}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
+          >
+            <BsArrowUpRightSquare size={22} />
+          </a>
         </div>
         <div className="overflow-y-auto flex-1">
-          <WordPageClient word={entry.word} dictionary={entry.dictionary} savedId={undefined} initialPinnedSenseId={entry.pinned_sense_id ?? null} noCard />
+          <WordPageClient
+            word={entry.word}
+            dictionary={entry.dictionary}
+            savedId={undefined}
+            initialPinnedSenseId={entry.pinned_sense_id ?? null}
+            noCard
+          />
         </div>
       </div>
     </div>
@@ -372,13 +399,14 @@ function CardView({
 }
 
 function ResultScreen({
-  cards, results, entries, onRetryWrong, onBack,
+  cards, results, entries, onRetryWrong, onBack, onOpenEntry,
 }: {
   cards: QuizCard[]
   results: boolean[]
   entries: QuizEntry[]
   onRetryWrong: () => void
   onBack: () => void
+  onOpenEntry: (entry: QuizEntry) => void
 }) {
   const correct = results.filter(Boolean).length
   const total = cards.length
@@ -387,9 +415,12 @@ function ResultScreen({
   const pct = total > 0 ? correct / total : 0
   const showSparkles = pct >= 0.8
   const message = pct === 1 ? 'Perfect!' : pct >= 0.8 ? 'Fantastic!' : pct >= 0.6 ? 'Great!' : 'Keep going!'
-  const [selectedEntry, setSelectedEntry] = useState<QuizEntry | null>(null)
 
   const findEntry = (word: string) => entries.find(e => e.word === word) ?? null
+  const openByWord = (word: string) => {
+    const entry = findEntry(word)
+    if (entry) onOpenEntry(entry)
+  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -409,7 +440,7 @@ function ResultScreen({
               <Button onClick={onRetryWrong} variant="secondary" size="sm"><span>↺</span> {wrongCards.length}問を復習</Button>
             </div>
             {wrongCards.map((card, i) => (
-              <div key={`wrong-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
+              <div key={`wrong-${card.word}-${i}`} onClick={() => openByWord(card.word)}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
@@ -422,7 +453,7 @@ function ResultScreen({
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
-              <div key={`correct-${card.word}-${i}`} onClick={() => setSelectedEntry(findEntry(card.word))}
+              <div key={`correct-${card.word}-${i}`} onClick={() => openByWord(card.word)}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
@@ -431,7 +462,6 @@ function ResultScreen({
             ))}
           </div>
         )}
-        {selectedEntry && <WordDetailModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />}
       </div>
     </div>
   )
@@ -453,6 +483,22 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
   const [tutorialVisible, setTutorialVisible] = useState(false)
+  const [detailStack, setDetailStack] = useState<WordDetailStackEntry[]>([])
+
+  const stackValue = useMemo(
+    () => ({
+      push: (entry: WordDetailStackEntry) => setDetailStack(prev => [...prev, entry]),
+    }),
+    [],
+  )
+  const popDetail = useCallback(() => setDetailStack(prev => prev.slice(0, -1)), [])
+  const openEntry = useCallback((entry: QuizEntry) => {
+    setDetailStack([{
+      word: entry.word,
+      dictionary: entry.dictionary,
+      pinned_sense_id: entry.pinned_sense_id ?? null,
+    }])
+  }, [])
 
   useEffect(() => {
     if (!localStorage.getItem(QUIZ_CARD_TUTORIAL_KEY)) {
@@ -491,20 +537,33 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
     setTutorialVisible(false)
   }
 
+  const stackModals = detailStack.map((entry, i) => (
+    <StackModal
+      key={`${i}-${entry.word}`}
+      entry={entry}
+      onBack={popDetail}
+      zIndex={60 + i}
+    />
+  ))
+
   if (done) {
     return (
-      <ResultScreen
-        cards={cards}
-        results={results}
-        entries={entries}
-        onRetryWrong={handleRetryWrong}
-        onBack={onQuit}
-      />
+      <WordDetailStackContext.Provider value={stackValue}>
+        <ResultScreen
+          cards={cards}
+          results={results}
+          entries={entries}
+          onRetryWrong={handleRetryWrong}
+          onBack={onQuit}
+          onOpenEntry={openEntry}
+        />
+        {stackModals}
+      </WordDetailStackContext.Provider>
     )
   }
 
   return (
-    <>
+    <WordDetailStackContext.Provider value={stackValue}>
       <CardView
         key={`${currentIndex}-${cards[currentIndex]?.word}`}
         card={cards[currentIndex]}
@@ -515,6 +574,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
         onModeChange={handleModeChange}
         onQuit={onQuit}
       />
+      {stackModals}
       {tutorialVisible && (
         <div className="fixed inset-0 z-[100] pointer-events-none">
           <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
@@ -536,6 +596,6 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
           </div>
         </div>
       )}
-    </>
+    </WordDetailStackContext.Provider>
   )
 }
