@@ -9,6 +9,7 @@ import OnboardingQuestions from './OnboardingQuestions'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
+import { recordActivity } from '@/lib/supabaseApi'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
 
@@ -54,6 +55,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      await recordActivity(user.id)
+      window.dispatchEvent(new Event('streak-updated'))
+    }
+    tick()
+    const onVisible = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!isNativePlatform()) return
