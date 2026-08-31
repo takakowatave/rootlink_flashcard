@@ -8,6 +8,7 @@ import { readLocalizedEtymologyJa, isRedundantEtymologyDescription } from '@/lib
 import { useWordDetailStack } from '@/lib/wordDetailStack'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import type { RewrittenPayload } from '@/types/Dictionary'
 
 export { readLocalizedEtymologyJa }
 
@@ -41,6 +42,7 @@ export default function EtymologyBlock({
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
+  const [wordMeaningJa, setWordMeaningJa] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (parts.length === 0) return
@@ -68,6 +70,47 @@ export default function EtymologyBlock({
       })
     })
   }, [parts, headword])
+
+  // 関連語チップ横に出す日本語訳を dictionary_cache から取得
+  useEffect(() => {
+    const allWords = new Set<string>()
+    Object.values(partWordMap).forEach(list => list.forEach(w => allWords.add(w)))
+    const missing = Array.from(allWords).filter(w => !(w in wordMeaningJa))
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const { data: wordRows } = await supabase
+        .from('words')
+        .select('id, word')
+        .in('word', missing)
+        .limit(missing.length)
+      const rows = (wordRows ?? []) as { id: string; word: string }[]
+      if (rows.length === 0) return
+      const idToWord = new Map(rows.map(r => [r.id, r.word.toLowerCase()]))
+      const ids = rows.map(r => r.id)
+      const { data: cacheRows } = await supabase
+        .from('dictionary_cache')
+        .select('word_id, payload')
+        .in('word_id', ids)
+        .limit(ids.length)
+      const next: Record<string, string> = {}
+      for (const c of (cacheRows ?? []) as { word_id: string; payload: RewrittenPayload }[]) {
+        const w = idToWord.get(c.word_id)
+        if (!w) continue
+        const firstGroup = c.payload?.senseGroups?.[0]
+        const senseId = firstGroup?.senses?.[0]?.senseId ?? ''
+        const meaning =
+          c.payload?.locales?.ja?.senses?.[senseId]?.meaning?.trim() ||
+          firstGroup?.senses?.[0]?.definition?.trim() ||
+          ''
+        if (meaning) next[w] = meaning
+      }
+      if (!cancelled && Object.keys(next).length > 0) {
+        setWordMeaningJa(prev => ({ ...prev, ...next }))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [partWordMap, wordMeaningJa])
 
   const hasParts = parts.length > 0
 
@@ -168,56 +211,64 @@ export default function EtymologyBlock({
                         )
                       })}
                     </svg>
-                    {filteredWords.map((rw, wi) => (
-                      <div key={wi} className="flex items-center gap-[2px]" style={{ height: ITEM_H }}>
-                        <div className="group/chip relative shrink-0">
-                          <button
-                            type="button"
-                            disabled={navigatingWord !== null}
-                            onClick={async () => {
-                              setNavigatingWord(rw)
-                              try {
-                                const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ query: rw }),
-                                })
-                                if (!res.ok) return
-                                const data = await res.json()
-                                if (!data?.ok) return
-                                if (detailStack) {
-                                  detailStack.push({
-                                    word: typeof data.resolved === 'string' ? data.resolved : rw,
-                                    dictionary: data.dictionary ?? data.raw ?? null,
-                                    pinned_sense_id: null,
+                    {filteredWords.map((rw, wi) => {
+                      const meaning =
+                        wordMeaningJa[rw.toLowerCase()] ||
+                        part.relatedWordMeanings?.[rw] ||
+                        ''
+                      return (
+                        <div key={wi} className="flex items-center gap-2 min-w-0" style={{ height: ITEM_H }}>
+                          <div className="group/chip relative shrink-0">
+                            <button
+                              type="button"
+                              disabled={navigatingWord !== null}
+                              onClick={async () => {
+                                setNavigatingWord(rw)
+                                try {
+                                  const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ query: rw }),
                                   })
-                                } else if (typeof data.redirectTo === 'string') {
-                                  router.push(data.redirectTo)
+                                  if (!res.ok) return
+                                  const data = await res.json()
+                                  if (!data?.ok) return
+                                  if (detailStack) {
+                                    detailStack.push({
+                                      word: typeof data.resolved === 'string' ? data.resolved : rw,
+                                      dictionary: data.dictionary ?? data.raw ?? null,
+                                      pinned_sense_id: null,
+                                    })
+                                  } else if (typeof data.redirectTo === 'string') {
+                                    router.push(data.redirectTo)
+                                  }
+                                } finally {
+                                  setNavigatingWord(null)
                                 }
-                              } finally {
-                                setNavigatingWord(null)
-                              }
-                            }}
-                            className="bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
-                          >
-                            {navigatingWord === rw ? (
-                              <svg className="size-4 animate-spin text-primary-hover" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                              </svg>
-                            ) : (
-                              <span className="text-[14px] font-medium text-primary-hover leading-4">{rw}</span>
-                            )}
-                          </button>
-                          <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
-                            {displayLocale === 'ja' ? 'この単語を検索' : 'Search this word'}
-                          </span>
+                              }}
+                              className="bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
+                            >
+                              {navigatingWord === rw ? (
+                                <svg className="size-4 animate-spin text-primary-hover" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                </svg>
+                              ) : (
+                                <span className="text-[14px] font-medium text-primary-hover leading-4">{rw}</span>
+                              )}
+                            </button>
+                            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
+                              {displayLocale === 'ja' ? 'この単語を検索' : 'Search this word'}
+                            </span>
+                          </div>
+                          {meaning && (
+                            <span className="text-[12px] font-medium text-primary-hover leading-4 truncate min-w-0">
+                              {meaning}
+                            </span>
+                          )}
                         </div>
-                        {part.relatedWordMeanings?.[rw] && (
-                          <span className="text-[12px] font-medium text-primary-hover w-[33px]">{part.relatedWordMeanings[rw]}</span>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )
               })()}
