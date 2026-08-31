@@ -13,7 +13,7 @@ import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { displayPhrase } from '@/lib/phraseDisplay'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
-import { WordDetailStackContext, type WordDetailStackEntry } from '@/lib/wordDetailStack'
+import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 
@@ -162,21 +162,19 @@ function Sparkles({ show }: { show: boolean }) {
   )
 }
 
-// クイズ中/結果画面から呼ばれる半モーダル。stack index が 0 の一番下は quiz が透けて見える構図。
-// 上に stack されたモーダルは back で 1つずつ pop → 最終的に quiz へ戻る。
-function StackModal({
+// クイズ中/結果画面から呼ばれる半モーダル。
+// モーダルは単一 slot。関連語チップから遷移するときは stack せず内容を replace する
+// (無限 stack は破綻するため)。戻るは常にクイズに 1手で復帰する。
+function DetailModal({
   entry,
   onBack,
-  zIndex,
 }: {
-  entry: WordDetailStackEntry
+  entry: WordDetailEntry
   onBack: () => void
-  zIndex: number
 }) {
   return (
     <div
-      className="fixed inset-0 flex items-end sm:items-center justify-center"
-      style={{ zIndex }}
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
       onClick={onBack}
     >
       <div className="absolute inset-0 bg-black/40" />
@@ -193,7 +191,7 @@ function StackModal({
             <span className="text-sm">戻る</span>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1">
+        <div key={entry.word} className="overflow-y-auto flex-1">
           <WordPageClient
             word={entry.word}
             dictionary={entry.dictionary}
@@ -476,21 +474,21 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
   const [done, setDone] = useState(false)
   const [mode, setMode] = useState<QuizMode>('example')
   const [tutorialVisible, setTutorialVisible] = useState(false)
-  const [detailStack, setDetailStack] = useState<WordDetailStackEntry[]>([])
+  const [detailEntry, setDetailEntry] = useState<WordDetailEntry | null>(null)
 
-  const stackValue = useMemo(
+  const detailContextValue = useMemo(
     () => ({
-      push: (entry: WordDetailStackEntry) => setDetailStack(prev => [...prev, entry]),
+      open: (entry: WordDetailEntry) => setDetailEntry(entry),
     }),
     [],
   )
-  const popDetail = useCallback(() => setDetailStack(prev => prev.slice(0, -1)), [])
+  const closeDetail = useCallback(() => setDetailEntry(null), [])
   const openEntry = useCallback((entry: QuizEntry) => {
-    setDetailStack([{
+    setDetailEntry({
       word: entry.word,
       dictionary: entry.dictionary,
       pinned_sense_id: entry.pinned_sense_id ?? null,
-    }])
+    })
   }, [])
 
   useEffect(() => {
@@ -530,18 +528,13 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
     setTutorialVisible(false)
   }
 
-  const stackModals = detailStack.map((entry, i) => (
-    <StackModal
-      key={`${i}-${entry.word}`}
-      entry={entry}
-      onBack={popDetail}
-      zIndex={60 + i}
-    />
-  ))
+  const detailModal = detailEntry
+    ? <DetailModal entry={detailEntry} onBack={closeDetail} />
+    : null
 
   if (done) {
     return (
-      <WordDetailStackContext.Provider value={stackValue}>
+      <WordDetailContext.Provider value={detailContextValue}>
         <ResultScreen
           cards={cards}
           results={results}
@@ -550,13 +543,13 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
           onBack={onQuit}
           onOpenEntry={openEntry}
         />
-        {stackModals}
-      </WordDetailStackContext.Provider>
+        {detailModal}
+      </WordDetailContext.Provider>
     )
   }
 
   return (
-    <WordDetailStackContext.Provider value={stackValue}>
+    <WordDetailContext.Provider value={detailContextValue}>
       <CardView
         key={`${currentIndex}-${cards[currentIndex]?.word}`}
         card={cards[currentIndex]}
@@ -567,7 +560,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
         onModeChange={handleModeChange}
         onQuit={onQuit}
       />
-      {stackModals}
+      {detailModal}
       {tutorialVisible && (
         <div className="fixed inset-0 z-[100] pointer-events-none">
           <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
@@ -589,6 +582,6 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
           </div>
         </div>
       )}
-    </WordDetailStackContext.Provider>
+    </WordDetailContext.Provider>
   )
 }

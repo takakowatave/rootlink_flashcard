@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { supabase } from '@/lib/supabaseClient'
 import { readLocalizedEtymologyJa, isRedundantEtymologyDescription } from '@/lib/etymologyDisplay'
-import { useWordDetailStack } from '@/lib/wordDetailStack'
+import { useWordDetail } from '@/lib/wordDetailStack'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import type { RewrittenPayload } from '@/types/Dictionary'
@@ -38,7 +38,7 @@ export default function EtymologyBlock({
   )
 
   const router = useRouter()
-  const detailStack = useWordDetailStack()
+  const wordDetail = useWordDetail()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
   const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
@@ -233,8 +233,8 @@ export default function EtymologyBlock({
                                   if (!res.ok) return
                                   const data = await res.json()
                                   if (!data?.ok) return
-                                  if (detailStack) {
-                                    detailStack.push({
+                                  if (wordDetail) {
+                                    wordDetail.open({
                                       word: typeof data.resolved === 'string' ? data.resolved : rw,
                                       dictionary: data.dictionary ?? data.raw ?? null,
                                       pinned_sense_id: null,
