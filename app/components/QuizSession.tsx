@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BsArrowUpRightSquare } from 'react-icons/bs'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import { MdArrowBackIosNew } from 'react-icons/md'
@@ -185,7 +184,7 @@ function StackModal({
         className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[calc(100dvh-40px)] sm:max-h-[85dvh] mt-10 sm:mt-0 flex flex-col shadow-xl overflow-x-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-2 py-2 border-b border-line flex-shrink-0">
+        <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
           <button
             onClick={onBack}
             className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
@@ -193,12 +192,6 @@ function StackModal({
             <MdArrowBackIosNew size={18} />
             <span className="text-sm">戻る</span>
           </button>
-          <a
-            href={`/word/${entry.word}`}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
-          >
-            <BsArrowUpRightSquare size={22} />
-          </a>
         </div>
         <div className="overflow-y-auto flex-1">
           <WordPageClient
