@@ -6,7 +6,7 @@ import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { supabase } from '@/lib/supabaseClient'
 import { readLocalizedEtymologyJa, isRedundantEtymologyDescription } from '@/lib/etymologyDisplay'
 import { useWordDetail } from '@/lib/wordDetailStack'
-import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
+import type { EtymologyData, EtymologyPart, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
@@ -30,7 +30,7 @@ export default function EtymologyBlock({
   displayLocale = 'en',
   withTutorialAttr = true,
 }: Props) {
-  const parts = useMemo(
+  const ownParts = useMemo(
     () => etymologyData?.structure.type === 'parts'
       ? etymologyData.structure.parts.filter(p => p.text || p.meaning)
       : [],
@@ -40,9 +40,58 @@ export default function EtymologyBlock({
   const router = useRouter()
   const wordDetail = useWordDetail()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [expandedParts, setExpandedParts] = useState<boolean[]>(() => parts.map(() => false))
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
   const [wordMeaningJa, setWordMeaningJa] = useState<Record<string, string>>({})
+  const [inheritedParts, setInheritedParts] = useState<EtymologyPart[]>([])
+  const [expandedParts, setExpandedParts] = useState<boolean[]>([])
+
+  // type: 'origin' の単語は wordFamily の他語から parts を継承する。
+  // 継承元は「parts に同族語が含まれていないもの」に限定する
+  // (継承元の分解が同族語を部品として含んでいると根本まで辿れないため)。
+  useEffect(() => {
+    if (etymologyData?.structure.type !== 'origin') { setInheritedParts([]); return }
+    const family = (etymologyData.wordFamily ?? [])
+      .map(w => w.toLowerCase())
+      .filter(w => w && w !== headword.toLowerCase())
+    if (family.length === 0) { setInheritedParts([]); return }
+    const familySet = new Set(family)
+    let cancelled = false
+    ;(async () => {
+      const { data: wordRows } = await supabase
+        .from('words')
+        .select('id, word')
+        .in('word', family)
+        .limit(family.length)
+      const rows = (wordRows ?? []) as { id: string; word: string }[]
+      if (rows.length === 0) return
+      const idToWord = new Map(rows.map(r => [r.id, r.word.toLowerCase()]))
+      const ids = rows.map(r => r.id)
+      const { data: cacheRows } = await supabase
+        .from('dictionary_cache')
+        .select('word_id, payload')
+        .in('word_id', ids)
+        .limit(ids.length)
+      const candidates: { word: string; parts: EtymologyPart[] }[] = []
+      for (const c of (cacheRows ?? []) as { word_id: string; payload: RewrittenPayload }[]) {
+        const w = idToWord.get(c.word_id)
+        if (!w) continue
+        const structure = c.payload?.etymologyData?.structure
+        if (!structure || structure.type !== 'parts') continue
+        const parts = structure.parts.filter(p => p.text || p.meaning)
+        if (parts.length === 0) continue
+        const containsFamilyMember = parts.some(p => familySet.has(p.text.toLowerCase()))
+        if (containsFamilyMember) continue
+        candidates.push({ word: w, parts })
+      }
+      if (cancelled || candidates.length === 0) return
+      const preferred = family.map(f => candidates.find(c => c.word === f)).find(Boolean)
+      setInheritedParts((preferred ?? candidates[0])!.parts)
+    })()
+    return () => { cancelled = true }
+  }, [etymologyData, headword])
+
+  const parts = ownParts.length > 0 ? ownParts : inheritedParts
+  useEffect(() => { setExpandedParts(parts.map(() => false)) }, [parts])
 
   useEffect(() => {
     if (parts.length === 0) return
