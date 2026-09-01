@@ -12,6 +12,23 @@ import type { RewrittenPayload } from '@/types/Dictionary'
 
 export { readLocalizedEtymologyJa }
 
+// 「from amazing」「amazing から来ています」等、実質意味のないテンプレ文を弾く。
+// 家族の非壊れ description で置き換えたいケースを判定する。
+function isBrokenDescription(desc: string | undefined | null, word: string): boolean {
+  if (!desc) return true
+  const trimmed = desc.trim()
+  if (!trimmed) return true
+  if (isRedundantEtymologyDescription(trimmed)) return true
+  const lower = trimmed.toLowerCase()
+  const w = word.toLowerCase()
+  // 英語テンプレ: "from amazing" / "from amazing." のみで終わる
+  if (/^from\s+\S+[.!?]?$/i.test(trimmed)) return true
+  // 単語名で始まり短い日本語 (「X に由来」「X が語源」等)
+  if (lower.startsWith(w) && trimmed.length < 40) return true
+  if (trimmed.length < 20) return true
+  return false
+}
+
 type Props = {
   headword: string
   etymologyData?: EtymologyData | null
@@ -43,17 +60,26 @@ export default function EtymologyBlock({
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
   const [wordMeaningJa, setWordMeaningJa] = useState<Record<string, string>>({})
   const [inheritedParts, setInheritedParts] = useState<EtymologyPart[]>([])
+  const [inheritedDescription, setInheritedDescription] = useState<{ en: string; ja: string } | null>(null)
   const [expandedParts, setExpandedParts] = useState<boolean[]>([])
 
   // type: 'origin' の単語は wordFamily の他語から parts を継承する。
   // 継承元は「parts に同族語が含まれていないもの」に限定する
   // (継承元の分解が同族語を部品として含んでいると根本まで辿れないため)。
   useEffect(() => {
-    if (etymologyData?.structure.type !== 'origin') { setInheritedParts([]); return }
+    if (etymologyData?.structure.type !== 'origin') {
+      setInheritedParts([])
+      setInheritedDescription(null)
+      return
+    }
     const family = (etymologyData.wordFamily ?? [])
       .map(w => w.toLowerCase())
       .filter(w => w && w !== headword.toLowerCase())
-    if (family.length === 0) { setInheritedParts([]); return }
+    if (family.length === 0) {
+      setInheritedParts([])
+      setInheritedDescription(null)
+      return
+    }
     const familySet = new Set(family)
     let cancelled = false
     ;(async () => {
@@ -71,21 +97,35 @@ export default function EtymologyBlock({
         .select('word_id, payload')
         .in('word_id', ids)
         .limit(ids.length)
-      const candidates: { word: string; parts: EtymologyPart[] }[] = []
+      const partsCandidates: { word: string; parts: EtymologyPart[] }[] = []
+      const descCandidates: { word: string; en: string; ja: string }[] = []
       for (const c of (cacheRows ?? []) as { word_id: string; payload: RewrittenPayload }[]) {
         const w = idToWord.get(c.word_id)
         if (!w) continue
         const structure = c.payload?.etymologyData?.structure
-        if (!structure || structure.type !== 'parts') continue
-        const parts = structure.parts.filter(p => p.text || p.meaning)
-        if (parts.length === 0) continue
-        const containsFamilyMember = parts.some(p => familySet.has(p.text.toLowerCase()))
-        if (containsFamilyMember) continue
-        candidates.push({ word: w, parts })
+        if (structure && structure.type === 'parts') {
+          const parts = structure.parts.filter(p => p.text || p.meaning)
+          if (parts.length > 0) {
+            const containsFamilyMember = parts.some(p => familySet.has(p.text.toLowerCase()))
+            if (!containsFamilyMember) partsCandidates.push({ word: w, parts })
+          }
+        }
+        const enRaw = c.payload?.etymology?.trim() ?? ''
+        const jaRaw = c.payload?.locales?.ja?.etymology?.description?.trim() ?? ''
+        const enOk = enRaw && !isBrokenDescription(enRaw, w) ? enRaw : ''
+        const jaOk = jaRaw && !isBrokenDescription(jaRaw, w) ? jaRaw : ''
+        if (enOk || jaOk) descCandidates.push({ word: w, en: enOk, ja: jaOk })
       }
-      if (cancelled || candidates.length === 0) return
-      const preferred = family.map(f => candidates.find(c => c.word === f)).find(Boolean)
-      setInheritedParts((preferred ?? candidates[0])!.parts)
+      if (cancelled) return
+      if (partsCandidates.length > 0) {
+        const preferred = family.map(f => partsCandidates.find(c => c.word === f)).find(Boolean)
+        setInheritedParts((preferred ?? partsCandidates[0])!.parts)
+      }
+      if (descCandidates.length > 0) {
+        const preferred = family.map(f => descCandidates.find(c => c.word === f)).find(Boolean)
+        const chosen = preferred ?? descCandidates[0]
+        setInheritedDescription({ en: chosen.en, ja: chosen.ja })
+      }
     })()
     return () => { cancelled = true }
   }, [etymologyData, headword])
@@ -163,9 +203,18 @@ export default function EtymologyBlock({
 
   const hasParts = parts.length > 0
 
-  const displayedEtymologyDescription = displayLocale === 'ja'
+  const ownEtymologyDescription = displayLocale === 'ja'
     ? localizedEtymologyJa?.description ?? etymology
     : etymology
+
+  const inheritedForLocale = displayLocale === 'ja'
+    ? inheritedDescription?.ja ?? ''
+    : inheritedDescription?.en ?? ''
+
+  const displayedEtymologyDescription =
+    isBrokenDescription(ownEtymologyDescription, headword) && inheritedForLocale
+      ? inheritedForLocale
+      : ownEtymologyDescription
 
   const hasEtymologyText = Boolean(
     displayedEtymologyDescription?.trim() &&
