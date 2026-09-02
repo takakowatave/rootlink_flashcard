@@ -45,6 +45,9 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
+  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
+  const [quizCount, setQuizCount] = useState(10)
+  const [quizAutoAudio, setQuizAutoAudio] = useState(false)
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
@@ -161,16 +164,23 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
   const isLocked = deck.is_premium && plan === 'free'
 
+  // scope 変更で対象数が減ったら count を max に丸める
+  useEffect(() => {
+    const max = Math.min(100, scopeSource[quizScope].length)
+    if (max > 0 && quizCount > max) setQuizCount(max)
+  }, [quizScope, scopeSource, quizCount])
+
   const startQuiz = useCallback(() => {
     if (!isAuthed) { setShowSignupModal(true); return }
     if (isLocked) { setShowUpgradeModal(true); return }
     const sourceEntries = scopeSource[quizScope]
-    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
+    const take = Math.min(quizCount, sourceEntries.length)
+    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [isAuthed, isLocked, quizScope, scopeSource])
+  }, [isAuthed, isLocked, quizScope, scopeSource, quizCount])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct, deck.id)
@@ -181,10 +191,12 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   if (quizEntries !== null) {
     return (
       <QuizSession
-        initialCards={shuffleCards(buildQuizCards(quizEntries)).slice(0, 10)}
+        initialCards={buildQuizCards(quizEntries)}
         entries={quizEntries}
         onQuit={() => setQuizEntries(null)}
         onAnswer={handleQuizAnswer}
+        initialMode={quizDefaultMode}
+        autoPlayExampleAudio={quizAutoAudio}
       />
     )
   }
@@ -229,10 +241,20 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               ? '🔒 プレミアム登録ではじめる'
               : availableCount === 0
                 ? '単語データがまだありません'
-                : 'はじめる'
+                : 'クイズを始める'
         }
         buttonDisabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
         onStart={startQuiz}
+        settings={!isLocked && !loading ? {
+          defaultMode: quizDefaultMode,
+          onDefaultModeChange: setQuizDefaultMode,
+          questionCount: quizCount,
+          onQuestionCountChange: setQuizCount,
+          questionCountMax: Math.max(1, Math.min(100, scopeSource[quizScope].length)),
+          questionCountMin: 1,
+          autoPlayAudio: quizAutoAudio,
+          onAutoPlayAudioChange: setQuizAutoAudio,
+        } : undefined}
       />
 
       {/* ── 単語一覧プレビュー ── */}

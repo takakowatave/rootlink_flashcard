@@ -206,7 +206,7 @@ function DetailModal({
 }
 
 function CardView({
-  card, onAnswer, current, total, mode, onModeChange, onQuit,
+  card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -215,6 +215,7 @@ function CardView({
   mode: QuizMode
   onModeChange: (m: QuizMode) => void
   onQuit: () => void
+  autoPlayExampleAudio?: boolean
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
@@ -234,6 +235,16 @@ function CardView({
     setRevealed(false)
     if (!card.example) onModeChange('word')
   }, [current, card.example, onModeChange])
+
+  // 例文モードで自動再生 ON のとき、カード切替のたびに例文音声を再生する。
+  useEffect(() => {
+    if (!autoPlayExampleAudio) return
+    if (mode !== 'example') return
+    if (!card.example) return
+    example.play().catch(() => {})
+    // example は identity が毎レンダー変わるため依存に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, mode, card.example, autoPlayExampleAudio])
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
@@ -465,14 +476,18 @@ type Props = {
   entries: QuizEntry[]
   onQuit: () => void
   onAnswer?: (word: string, correct: boolean) => void
+  initialMode?: QuizMode
+  autoPlayExampleAudio?: boolean
 }
 
-export default function QuizSession({ initialCards, entries, onQuit, onAnswer }: Props) {
+export default function QuizSession({
+  initialCards, entries, onQuit, onAnswer, initialMode = 'example', autoPlayExampleAudio = false,
+}: Props) {
   const [cards, setCards] = useState<QuizCard[]>(initialCards)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
   const [done, setDone] = useState(false)
-  const [mode, setMode] = useState<QuizMode>('example')
+  const [mode, setMode] = useState<QuizMode>(initialMode)
   const [tutorialVisible, setTutorialVisible] = useState(false)
   const [detailEntry, setDetailEntry] = useState<WordDetailEntry | null>(null)
 
@@ -559,6 +574,7 @@ export default function QuizSession({ initialCards, entries, onQuit, onAnswer }:
         mode={mode}
         onModeChange={handleModeChange}
         onQuit={onQuit}
+        autoPlayExampleAudio={autoPlayExampleAudio}
       />
       {detailModal}
       {tutorialVisible && (

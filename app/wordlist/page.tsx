@@ -89,6 +89,9 @@ export default function WordListPage() {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
+  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
+  const [quizCount, setQuizCount] = useState(10)
+  const [quizAutoAudio, setQuizAutoAudio] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
@@ -199,9 +202,16 @@ export default function WordListPage() {
     recent: allEntries,
   }
 
+  // scope 変更で対象数が減ったら count を max に丸める
+  useEffect(() => {
+    const max = Math.min(100, scopeSource[quizScope].length)
+    if (max > 0 && quizCount > max) setQuizCount(max)
+  }, [quizScope, scopeSource, quizCount])
+
   const startQuiz = () => {
     const sourceEntries = scopeSource[quizScope]
-    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
+    const take = Math.min(quizCount, sourceEntries.length)
+    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)
     const sessionEntries: QuizEntry[] = cards.map(
       (c) => sourceEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
@@ -226,10 +236,12 @@ export default function WordListPage() {
   if (quizEntries !== null) {
     return (
       <QuizSession
-        initialCards={shuffleCards(buildQuizCards(quizEntries)).slice(0, 10)}
+        initialCards={buildQuizCards(quizEntries)}
         entries={quizEntries}
         onQuit={() => setQuizEntries(null)}
         onAnswer={handleQuizAnswer}
+        initialMode={quizDefaultMode}
+        autoPlayExampleAudio={quizAutoAudio}
       />
     )
   }
@@ -242,7 +254,7 @@ export default function WordListPage() {
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-        className="md:hidden fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-primary-hover flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
+        className="md:hidden fixed bottom-[92px] right-3 z-40 size-[60px] rounded-full bg-primary-hover flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]"
         aria-label="Search"
       >
         <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,9 +290,19 @@ export default function WordListPage() {
         ]}
         selectedScope={quizScope}
         onScopeChange={setQuizScope}
-        buttonLabel="はじめる"
+        buttonLabel="クイズを始める"
         buttonDisabled={scopeSource[quizScope].length === 0}
         onStart={startQuiz}
+        settings={{
+          defaultMode: quizDefaultMode,
+          onDefaultModeChange: setQuizDefaultMode,
+          questionCount: quizCount,
+          onQuestionCountChange: setQuizCount,
+          questionCountMax: Math.max(1, Math.min(100, scopeSource[quizScope].length)),
+          questionCountMin: 1,
+          autoPlayAudio: quizAutoAudio,
+          onAutoPlayAudioChange: setQuizAutoAudio,
+        }}
       />
 
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
