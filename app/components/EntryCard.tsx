@@ -11,6 +11,7 @@ import SenseRow from '@/components/SenseRow'
 import SenseExample from '@/components/SenseExample'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
+import { useWordDetail } from '@/lib/wordDetailStack'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -92,8 +93,35 @@ export default function EntryCard({
     initialUrl: pronunciation.audioFile ?? null,
   })
 
+  const wordDetail = useWordDetail()
+  const [navigatingDerivative, setNavigatingDerivative] = useState<string | null>(null)
+
   const [exampleAudioUrls, setExampleAudioUrls] = useState<Record<string, string>>({})
   const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
+
+  const handleDerivativeClick = async (d: string, e: React.MouseEvent) => {
+    if (!wordDetail) return
+    e.preventDefault()
+    if (navigatingDerivative) return
+    setNavigatingDerivative(d)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: d }),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (!data?.ok) return
+      wordDetail.open({
+        word: typeof data.resolved === 'string' ? data.resolved : d,
+        dictionary: data.dictionary ?? data.raw ?? null,
+        pinned_sense_id: null,
+      })
+    } finally {
+      setNavigatingDerivative(null)
+    }
+  }
 
   const playAudio = async () => {
     await headwordAudio.play()
@@ -244,7 +272,14 @@ export default function EntryCard({
             )}
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {orderedDerivatives.map(d => (
-                <a key={d} href={`/word/${encodeURIComponent(d)}`} className="text-sm text-primary underline underline-offset-2 hover:text-primary-hover">{d}</a>
+                <a
+                  key={d}
+                  href={`/word/${encodeURIComponent(d)}`}
+                  onClick={e => handleDerivativeClick(d, e)}
+                  className={`text-sm text-primary underline underline-offset-2 hover:text-primary-hover ${navigatingDerivative === d ? 'opacity-50' : ''}`}
+                >
+                  {d}
+                </a>
               ))}
             </div>
           </div>
