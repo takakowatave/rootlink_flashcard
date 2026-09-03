@@ -48,6 +48,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
   const [quizCount, setQuizCount] = useState(10)
   const [quizAutoAudio, setQuizAutoAudio] = useState(false)
+  const [quizAutoHeadword, setQuizAutoHeadword] = useState(false)
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
@@ -197,6 +198,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         onAnswer={handleQuizAnswer}
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
+        autoPlayHeadwordAudio={quizAutoHeadword}
       />
     )
   }
@@ -254,6 +256,8 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           questionCountMin: 1,
           autoPlayAudio: quizAutoAudio,
           onAutoPlayAudioChange: setQuizAutoAudio,
+          autoPlayHeadword: quizAutoHeadword,
+          onAutoPlayHeadwordChange: setQuizAutoHeadword,
         } : undefined}
       />
 

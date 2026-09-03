@@ -92,6 +92,7 @@ export default function WordListPage() {
   const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
   const [quizCount, setQuizCount] = useState(10)
   const [quizAutoAudio, setQuizAutoAudio] = useState(false)
+  const [quizAutoHeadword, setQuizAutoHeadword] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
@@ -242,6 +243,7 @@ export default function WordListPage() {
         onAnswer={handleQuizAnswer}
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
+        autoPlayHeadwordAudio={quizAutoHeadword}
       />
     )
   }
@@ -302,6 +304,8 @@ export default function WordListPage() {
           questionCountMin: 1,
           autoPlayAudio: quizAutoAudio,
           onAutoPlayAudioChange: setQuizAutoAudio,
+          autoPlayHeadword: quizAutoHeadword,
+          onAutoPlayHeadwordChange: setQuizAutoHeadword,
         }}
       />
 

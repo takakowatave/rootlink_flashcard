@@ -30,6 +30,8 @@ type Props = {
     questionCountMin?: number
     autoPlayAudio: boolean
     onAutoPlayAudioChange: (v: boolean) => void
+    autoPlayHeadword: boolean
+    onAutoPlayHeadwordChange: (v: boolean) => void
   }
 }
 
@@ -214,6 +216,18 @@ export default function QuizProgressPanel({
                   checked={settings.autoPlayAudio}
                   onChange={settings.onAutoPlayAudioChange}
                   label="例文音声の自動再生"
+                />
+              }
+            />
+          </CardShell>
+          <CardShell>
+            <SettingRow
+              label="見出し語音声の自動再生"
+              control={
+                <ToggleSwitch
+                  checked={settings.autoPlayHeadword}
+                  onChange={settings.onAutoPlayHeadwordChange}
+                  label="見出し語音声の自動再生"
                 />
               }
             />

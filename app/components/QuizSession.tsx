@@ -206,7 +206,7 @@ function DetailModal({
 }
 
 function CardView({
-  card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio,
+  card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio, autoPlayHeadwordAudio,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -216,6 +216,7 @@ function CardView({
   onModeChange: (m: QuizMode) => void
   onQuit: () => void
   autoPlayExampleAudio?: boolean
+  autoPlayHeadwordAudio?: boolean
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
@@ -245,6 +246,14 @@ function CardView({
     // example は identity が毎レンダー変わるため依存に含めない
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, mode, card.example, autoPlayExampleAudio])
+
+  // 単語モードで自動再生 ON のとき、カード切替のたびに見出し語音声を再生する。
+  useEffect(() => {
+    if (!autoPlayHeadwordAudio) return
+    if (mode !== 'word') return
+    headword.play().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, mode, autoPlayHeadwordAudio])
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
@@ -478,10 +487,12 @@ type Props = {
   onAnswer?: (word: string, correct: boolean) => void
   initialMode?: QuizMode
   autoPlayExampleAudio?: boolean
+  autoPlayHeadwordAudio?: boolean
 }
 
 export default function QuizSession({
-  initialCards, entries, onQuit, onAnswer, initialMode = 'example', autoPlayExampleAudio = false,
+  initialCards, entries, onQuit, onAnswer,
+  initialMode = 'example', autoPlayExampleAudio = false, autoPlayHeadwordAudio = false,
 }: Props) {
   const [cards, setCards] = useState<QuizCard[]>(initialCards)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -575,6 +586,7 @@ export default function QuizSession({
         onModeChange={handleModeChange}
         onQuit={onQuit}
         autoPlayExampleAudio={autoPlayExampleAudio}
+        autoPlayHeadwordAudio={autoPlayHeadwordAudio}
       />
       {detailModal}
       {tutorialVisible && (

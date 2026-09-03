@@ -117,6 +117,8 @@ export const WithSettings: Story = {
       questionCountMin: 1,
       autoPlayAudio: false,
       onAutoPlayAudioChange: () => {},
+      autoPlayHeadword: false,
+      onAutoPlayHeadwordChange: () => {},
     },
   },
 }
