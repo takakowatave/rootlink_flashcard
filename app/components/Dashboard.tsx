@@ -402,7 +402,6 @@ function DeckSection({
   items: DeckItem[]
   moreHref?: string
 }) {
-  const router = useRouter()
   if (items.length === 0) return null
   return (
     <section className="flex flex-col gap-3">
@@ -427,7 +426,7 @@ function DeckSection({
             imageSrc={item.imageSrc}
             wordCount={item.wordCount}
             isPremium={item.isPremium}
-            onClick={() => router.push(item.href)}
+            href={item.href}
             className="shrink-0 w-[146px] sm:w-[180px]"
           />
         ))}
@@ -678,7 +677,7 @@ export default function Dashboard() {
                     title={myDeckItem.title}
                     imageSrc={myDeckItem.imageSrc}
                     wordCount={myDeckItem.wordCount}
-                    onClick={() => router.push(myDeckItem.href)}
+                    href={myDeckItem.href}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
                 </div>
@@ -700,7 +699,7 @@ export default function Dashboard() {
                     imageSrc="/dashboard/recent-words.png"
                     wordCount={reviewCounts[period]}
                     disabled={reviewCounts[period] === 0}
-                    onClick={() => router.push(`/quiz?period=${period}`)}
+                    href={`/quiz?period=${period}`}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
                 ))}
