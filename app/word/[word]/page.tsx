@@ -41,12 +41,6 @@ const resolvePhrase = cache(async (raw: string) => {
   }
 })
 
-type EtymologyPart = {
-  text?: string
-  meaningJa?: string
-  order?: number
-}
-
 type MetaDictionary = {
   senseGroups?: Array<{
     senses?: Array<{ senseId?: string }>
@@ -56,21 +50,6 @@ type MetaDictionary = {
       senses?: Record<string, { meaning?: string }>
     }
   }
-  etymologyData?: {
-    structure?: {
-      parts?: EtymologyPart[]
-    }
-  }
-}
-
-function getFirstTwoParts(dictionary: MetaDictionary | null): EtymologyPart[] {
-  const parts = dictionary?.etymologyData?.structure?.parts
-  if (!parts || parts.length === 0) return []
-  return parts
-    .slice()
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .filter(p => typeof p.text === 'string' && p.text.length > 0)
-    .slice(0, 2)
 }
 
 function getFirstJaMeaning(dictionary: MetaDictionary | null): string | null {
@@ -82,27 +61,15 @@ function getFirstJaMeaning(dictionary: MetaDictionary | null): string | null {
   return meaning || null
 }
 
-function buildTitle(word: string, dictionary: MetaDictionary | null): string {
-  const parts = getFirstTwoParts(dictionary)
-  if (parts.length >= 2) {
-    return `${word} の語源と意味｜${parts.map(p => p.text).join(' + ')} で覚える`
-  }
+function buildTitle(word: string): string {
   return `${word} の語源と意味｜語根から覚える英単語`
 }
 
 function buildDescription(word: string, dictionary: MetaDictionary | null): string {
-  const parts = getFirstTwoParts(dictionary)
   const jaMeaning = getFirstJaMeaning(dictionary)
-
-  if (parts.length >= 2 && parts.every(p => p.meaningJa) && jaMeaning) {
-    const partsStr = parts.map(p => `${p.text}（${p.meaningJa}）`).join(' + ')
-    return `${word} の語源は ${partsStr}。「${jaMeaning}」という意味の成り立ちを語根から解説します。`
-  }
-
   if (jaMeaning) {
     return `${word} の意味は「${jaMeaning}」。語根と語源から英単語の成り立ちを解説します。`
   }
-
   return `${word} の語源と意味を語根から解説します。RootLink で英単語を語源から理解しよう。`
 }
 
@@ -111,7 +78,7 @@ export async function generateMetadata({ params }: { params: { word: string } })
   const data = await resolveWord(raw)
   const word = data?.resolved ?? raw
   const dictionary = (data?.dictionary ?? null) as MetaDictionary | null
-  const title = buildTitle(word, dictionary)
+  const title = buildTitle(word)
   const description = buildDescription(word, dictionary)
   const cardUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`
   return {
