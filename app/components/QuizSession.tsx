@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import { MdArrowBackIosNew } from 'react-icons/md'
@@ -11,7 +11,7 @@ import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { displayPhrase } from '@/lib/phraseDisplay'
-import { useTtsAudio } from '@/lib/useTtsAudio'
+import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
@@ -207,6 +207,7 @@ function DetailModal({
 
 function CardView({
   card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio, autoPlayHeadwordAudio,
+  prefetchedHeadwordUrl, prefetchedExampleUrl,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -217,19 +218,21 @@ function CardView({
   onQuit: () => void
   autoPlayExampleAudio?: boolean
   autoPlayHeadwordAudio?: boolean
+  prefetchedHeadwordUrl?: string | null
+  prefetchedExampleUrl?: string | null
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
 
   const headword = useTtsAudio(
     isPhrase
-      ? { endpoint: '/audio/phrase/headword', body: { phrase_card_id: card.phrase_card_id! } }
-      : { endpoint: '/audio', body: { word: card.word }, initialUrl: card.audioPath ?? null }
+      ? { endpoint: '/audio/phrase/headword', body: { phrase_card_id: card.phrase_card_id! }, initialUrl: prefetchedHeadwordUrl ?? null }
+      : { endpoint: '/audio', body: { word: card.word }, initialUrl: card.audioPath ?? prefetchedHeadwordUrl ?? null }
   )
   const example = useTtsAudio(
     isPhrase
-      ? { endpoint: '/audio/phrase', body: { phrase_card_id: card.phrase_card_id! }, playbackRate: 1.2 }
-      : { endpoint: '/audio/word/example', body: { word: card.word, sense_id: card.senseId ?? '' }, playbackRate: 1.2 }
+      ? { endpoint: '/audio/phrase', body: { phrase_card_id: card.phrase_card_id! }, playbackRate: 1.2, initialUrl: prefetchedExampleUrl ?? null }
+      : { endpoint: '/audio/word/example', body: { word: card.word, sense_id: card.senseId ?? '' }, playbackRate: 1.2, initialUrl: prefetchedExampleUrl ?? null }
   )
 
   useEffect(() => {
@@ -501,6 +504,53 @@ export default function QuizSession({
   const [mode, setMode] = useState<QuizMode>(initialMode)
   const [tutorialVisible, setTutorialVisible] = useState(false)
   const [detailEntry, setDetailEntry] = useState<WordDetailEntry | null>(null)
+  const [prefetchedAudio, setPrefetchedAudio] = useState<Map<string, { headwordUrl?: string; exampleUrl?: string }>>(new Map())
+  const prefetchStartedRef = useRef<Set<string>>(new Set())
+
+  // 全カードの音声URLを並列で先読み。取得次第 Map に反映し、CardView に initialUrl として渡す。
+  // 見出し語は card.audioPath (Oxford 静的) があれば skip。例文は endpoint 呼び出しで生成/URL 取得する。
+  useEffect(() => {
+    cards.forEach((card) => {
+      const isPhrase = !!card.phrase_card_id
+      const key = `${card.word}::${card.senseId ?? ''}::${card.phrase_card_id ?? ''}`
+      if (prefetchStartedRef.current.has(key)) return
+      prefetchStartedRef.current.add(key)
+
+      if (!card.audioPath) {
+        const endpoint = isPhrase ? '/audio/phrase/headword' : '/audio'
+        const body = isPhrase ? { phrase_card_id: card.phrase_card_id! } : { word: card.word }
+        fetchTtsAudioUrl(endpoint, body).then((url) => {
+          if (!url) return
+          setPrefetchedAudio((prev) => {
+            const next = new Map(prev)
+            next.set(key, { ...(next.get(key) ?? {}), headwordUrl: url })
+            return next
+          })
+        })
+      }
+
+      if (card.example) {
+        const endpoint = isPhrase ? '/audio/phrase' : '/audio/word/example'
+        const body = isPhrase
+          ? { phrase_card_id: card.phrase_card_id! }
+          : { word: card.word, sense_id: card.senseId ?? '' }
+        fetchTtsAudioUrl(endpoint, body).then((url) => {
+          if (!url) return
+          setPrefetchedAudio((prev) => {
+            const next = new Map(prev)
+            next.set(key, { ...(next.get(key) ?? {}), exampleUrl: url })
+            return next
+          })
+        })
+      }
+    })
+  }, [cards])
+
+  const currentCard = cards[currentIndex]
+  const currentKey = currentCard
+    ? `${currentCard.word}::${currentCard.senseId ?? ''}::${currentCard.phrase_card_id ?? ''}`
+    : ''
+  const currentPrefetched = prefetchedAudio.get(currentKey) ?? {}
 
   const detailContextValue = useMemo(
     () => ({
@@ -587,6 +637,8 @@ export default function QuizSession({
         onQuit={onQuit}
         autoPlayExampleAudio={autoPlayExampleAudio}
         autoPlayHeadwordAudio={autoPlayHeadwordAudio}
+        prefetchedHeadwordUrl={currentPrefetched.headwordUrl}
+        prefetchedExampleUrl={currentPrefetched.exampleUrl}
       />
       {detailModal}
       {tutorialVisible && (
