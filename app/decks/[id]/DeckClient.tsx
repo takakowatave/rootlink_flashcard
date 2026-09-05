@@ -251,7 +251,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               ? '🔒 プレミアム登録ではじめる'
               : availableCount === 0
                 ? '単語データがまだありません'
-                : 'クイズを始める'
+                : 'はじめる'
         }
         buttonDisabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
         onStart={startQuiz}

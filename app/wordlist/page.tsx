@@ -298,7 +298,7 @@ export default function WordListPage() {
         ]}
         selectedScope={quizScope}
         onScopeChange={setQuizScope}
-        buttonLabel="クイズを始める"
+        buttonLabel="はじめる"
         buttonDisabled={scopeSource[quizScope].length === 0}
         onStart={startQuiz}
         settings={{
