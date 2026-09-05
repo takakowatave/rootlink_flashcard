@@ -50,7 +50,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [quizCount, setQuizCount] = useState(QUIZ_SETTINGS_DEFAULTS.questionCount)
   const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
   const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
-  const [quizShowJapanese, setQuizShowJapanese] = useState(QUIZ_SETTINGS_DEFAULTS.showJapanese)
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -130,7 +129,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       setQuizCount(settings.questionCount)
       setQuizAutoAudio(settings.autoPlayAudio)
       setQuizAutoHeadword(settings.autoPlayHeadword)
-      setQuizShowJapanese(settings.showJapanese)
     } else {
       setPlan('free')
     }
@@ -209,7 +207,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
         autoPlayHeadwordAudio={quizAutoHeadword}
-        showJapanese={quizShowJapanese}
       />
     )
   }
@@ -269,8 +266,6 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
           onAutoPlayAudioChange: (v) => { setQuizAutoAudio(v); if (userId) saveQuizSettings(userId, { autoPlayAudio: v }) },
           autoPlayHeadword: quizAutoHeadword,
           onAutoPlayHeadwordChange: (v) => { setQuizAutoHeadword(v); if (userId) saveQuizSettings(userId, { autoPlayHeadword: v }) },
-          showJapanese: quizShowJapanese,
-          onShowJapaneseChange: (v) => { setQuizShowJapanese(v); if (userId) saveQuizSettings(userId, { showJapanese: v }) },
         } : undefined}
       />
 

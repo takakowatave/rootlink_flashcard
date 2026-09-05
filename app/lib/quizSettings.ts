@@ -7,7 +7,6 @@ export type QuizSettings = {
   questionCount: number
   autoPlayAudio: boolean
   autoPlayHeadword: boolean
-  showJapanese: boolean
 }
 
 export const QUIZ_SETTINGS_DEFAULTS: QuizSettings = {
@@ -15,13 +14,12 @@ export const QUIZ_SETTINGS_DEFAULTS: QuizSettings = {
   questionCount: 10,
   autoPlayAudio: false,
   autoPlayHeadword: false,
-  showJapanese: true,
 }
 
 export async function fetchQuizSettings(userId: string): Promise<QuizSettings> {
   const { data } = await supabase
     .from('profiles')
-    .select('quiz_default_mode, quiz_question_count, quiz_auto_play_audio, quiz_auto_play_headword, quiz_show_japanese')
+    .select('quiz_default_mode, quiz_question_count, quiz_auto_play_audio, quiz_auto_play_headword')
     .eq('id', userId)
     .maybeSingle()
   if (!data) return QUIZ_SETTINGS_DEFAULTS
@@ -30,7 +28,6 @@ export async function fetchQuizSettings(userId: string): Promise<QuizSettings> {
     questionCount: data.quiz_question_count ?? QUIZ_SETTINGS_DEFAULTS.questionCount,
     autoPlayAudio: data.quiz_auto_play_audio ?? QUIZ_SETTINGS_DEFAULTS.autoPlayAudio,
     autoPlayHeadword: data.quiz_auto_play_headword ?? QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword,
-    showJapanese: data.quiz_show_japanese ?? QUIZ_SETTINGS_DEFAULTS.showJapanese,
   }
 }
 
@@ -40,7 +37,6 @@ export async function saveQuizSettings(userId: string, patch: Partial<QuizSettin
   if (patch.questionCount !== undefined) dbPatch.quiz_question_count = patch.questionCount
   if (patch.autoPlayAudio !== undefined) dbPatch.quiz_auto_play_audio = patch.autoPlayAudio
   if (patch.autoPlayHeadword !== undefined) dbPatch.quiz_auto_play_headword = patch.autoPlayHeadword
-  if (patch.showJapanese !== undefined) dbPatch.quiz_show_japanese = patch.showJapanese
   if (Object.keys(dbPatch).length === 0) return
   await supabase.from('profiles').update(dbPatch).eq('id', userId)
 }

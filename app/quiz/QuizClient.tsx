@@ -248,7 +248,6 @@ export default function QuizClient() {
       initialMode={settings.defaultMode}
       autoPlayExampleAudio={settings.autoPlayAudio}
       autoPlayHeadwordAudio={settings.autoPlayHeadword}
-      showJapanese={settings.showJapanese}
     />
   )
 }

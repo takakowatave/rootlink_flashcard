@@ -94,7 +94,6 @@ export default function WordListPage() {
   const [quizCount, setQuizCount] = useState(QUIZ_SETTINGS_DEFAULTS.questionCount)
   const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
   const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
-  const [quizShowJapanese, setQuizShowJapanese] = useState(QUIZ_SETTINGS_DEFAULTS.showJapanese)
   const [userId, setUserId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
@@ -135,7 +134,6 @@ export default function WordListPage() {
     setQuizCount(settings.questionCount)
     setQuizAutoAudio(settings.autoPlayAudio)
     setQuizAutoHeadword(settings.autoPlayHeadword)
-    setQuizShowJapanese(settings.showJapanese)
     const allKeys = [...words.map((w) => w.word), ...phrases.map((p) => p.phrase)]
     if (allKeys.length > 0) await loadStatus(allKeys, data.user.id)
   }
@@ -252,7 +250,6 @@ export default function WordListPage() {
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
         autoPlayHeadwordAudio={quizAutoHeadword}
-        showJapanese={quizShowJapanese}
       />
     )
   }
@@ -315,8 +312,6 @@ export default function WordListPage() {
           onAutoPlayAudioChange: (v) => { setQuizAutoAudio(v); if (userId) saveQuizSettings(userId, { autoPlayAudio: v }) },
           autoPlayHeadword: quizAutoHeadword,
           onAutoPlayHeadwordChange: (v) => { setQuizAutoHeadword(v); if (userId) saveQuizSettings(userId, { autoPlayHeadword: v }) },
-          showJapanese: quizShowJapanese,
-          onShowJapaneseChange: (v) => { setQuizShowJapanese(v); if (userId) saveQuizSettings(userId, { showJapanese: v }) },
         }}
       />
 

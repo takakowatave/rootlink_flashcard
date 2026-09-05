@@ -119,8 +119,6 @@ export const WithSettings: Story = {
       onAutoPlayAudioChange: () => {},
       autoPlayHeadword: false,
       onAutoPlayHeadwordChange: () => {},
-      showJapanese: true,
-      onShowJapaneseChange: () => {},
     },
   },
 }
