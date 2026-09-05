@@ -110,6 +110,20 @@ APIキーは**Cloud Runの環境変数**に集約。Next.jsフロントエンド
 
 ---
 
+## アーキテクチャ前提（全設計判断に適用）
+
+RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 codebase。Capacitor `server.url` 経由で本番 Web を WebView 表示する構成（`project_capacitor.md` / `feedback_native_scan.md` 参照）。**全ての設計判断で iOS/Android/Web の 3 面すべてで整合するかを最初に確認すること**。
+
+**選択肢から除外するもの:**
+- **永続化**: `localStorage` / `sessionStorage` / `IndexedDB` / `Cookie` を端末横断ストレージとして扱う（silo が iOS WebView / Android WebView / Web ブラウザで別、機種変・アプリ再インストールで消える、複数デバイス同期不可）。ユーザーの状態は必ず Supabase (DB) に保存する
+- **認証**: Web だけの Cookie セッション（native から動かない）
+- **ルーティング**: `window.location` 決め打ち、Web だけの URL 前提。`capacitor://` origin を含めて動くか要確認
+- **ネイティブ API**: File API / Camera / Push 等を Web API 直接呼び。`@capacitor/*` プラグイン経由で統一
+
+**提案するときのルール:** 永続化・認証・ルーティング・OS 連携に関する提案は、先頭に「前提: iOS ✓ / Android ✓ / Web ✓ （3 面すべてで動く根拠）」を明記する。根拠を書けない設計は提案しない。
+
+---
+
 ## 設計方針・決定事項
 
 - **オンボーディング完了判定**: localStorageではなくDB（`profiles.tutorial_completed`）で管理。ブラウザ単位だとアカウント削除・再作成しても発火しないため。新規アカウントは必ず発火する。途中ステップのみユーザーIDごとのlocalStorageキーで保持
