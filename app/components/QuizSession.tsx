@@ -206,7 +206,7 @@ function DetailModal({
 }
 
 function CardView({
-  card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio, autoPlayHeadwordAudio,
+  card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio, autoPlayHeadwordAudio, showJapanese,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -217,6 +217,7 @@ function CardView({
   onQuit: () => void
   autoPlayExampleAudio?: boolean
   autoPlayHeadwordAudio?: boolean
+  showJapanese?: boolean
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
@@ -304,7 +305,7 @@ function CardView({
               : <HiSpeakerWave className="size-5" />}
           </button>
         </div>
-        {revealed && card.exampleJa && (
+        {revealed && showJapanese && card.exampleJa && (
           <p className="text-gray-600 text-base mt-2 leading-relaxed">{renderJaHighlighted(card.exampleJa)}</p>
         )}
         {revealed && (
@@ -373,7 +374,9 @@ function CardView({
             )}
             {revealed && mode === 'word' && (
               <div className="mt-5 pt-4 border-t border-line">
-                <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
+                <p className="text-xl font-semibold text-gray-800">
+                  {showJapanese ? card.meaning : (card.meaningEn || card.meaning)}
+                </p>
                 <EtymologyBlock
                   headword={card.word}
                   etymologyData={card.etymologyData ?? null}
@@ -389,7 +392,7 @@ function CardView({
                 {card.example && (
                   <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
                     <p className="text-gray-700 leading-relaxed">{card.example}</p>
-                    {card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
+                    {showJapanese && card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
                   </div>
                 )}
               </div>
@@ -488,11 +491,13 @@ type Props = {
   initialMode?: QuizMode
   autoPlayExampleAudio?: boolean
   autoPlayHeadwordAudio?: boolean
+  showJapanese?: boolean
 }
 
 export default function QuizSession({
   initialCards, entries, onQuit, onAnswer,
   initialMode = 'example', autoPlayExampleAudio = false, autoPlayHeadwordAudio = false,
+  showJapanese = true,
 }: Props) {
   const [cards, setCards] = useState<QuizCard[]>(initialCards)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -587,6 +592,7 @@ export default function QuizSession({
         onQuit={onQuit}
         autoPlayExampleAudio={autoPlayExampleAudio}
         autoPlayHeadwordAudio={autoPlayHeadwordAudio}
+        showJapanese={showJapanese}
       />
       {detailModal}
       {tutorialVisible && (

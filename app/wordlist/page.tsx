@@ -10,6 +10,7 @@ import { type QuizScope } from "@/components/QuizScopeSelector"
 import { classifyQuizStatus, type WordStatus } from "@/lib/quizScope"
 import QuizProgressPanel from "@/components/QuizProgressPanel"
 import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
+import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from "@/lib/quizSettings"
 import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
@@ -89,10 +90,11 @@ export default function WordListPage() {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
-  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
-  const [quizCount, setQuizCount] = useState(10)
-  const [quizAutoAudio, setQuizAutoAudio] = useState(false)
-  const [quizAutoHeadword, setQuizAutoHeadword] = useState(false)
+  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>(QUIZ_SETTINGS_DEFAULTS.defaultMode)
+  const [quizCount, setQuizCount] = useState(QUIZ_SETTINGS_DEFAULTS.questionCount)
+  const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
+  const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
+  const [quizShowJapanese, setQuizShowJapanese] = useState(QUIZ_SETTINGS_DEFAULTS.showJapanese)
   const [userId, setUserId] = useState<string | null>(null)
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
     if (typeof window === 'undefined') return 'ja'
@@ -120,14 +122,20 @@ export default function WordListPage() {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); return }
     setUserId(data.user.id)
-    const [words, phrases] = await Promise.all([
+    const [words, phrases, settings] = await Promise.all([
       fetchWordlists(data.user.id),
       fetchSavedPhrases(data.user.id),
+      fetchQuizSettings(data.user.id),
     ])
     setWordList(words)
     setPhraseList(phrases)
     setSavedWords(words.map((w) => w.word))
     setSavedPhraseIds(new Set(phrases.map((p) => p.phrase_card_id)))
+    setQuizDefaultMode(settings.defaultMode)
+    setQuizCount(settings.questionCount)
+    setQuizAutoAudio(settings.autoPlayAudio)
+    setQuizAutoHeadword(settings.autoPlayHeadword)
+    setQuizShowJapanese(settings.showJapanese)
     const allKeys = [...words.map((w) => w.word), ...phrases.map((p) => p.phrase)]
     if (allKeys.length > 0) await loadStatus(allKeys, data.user.id)
   }
@@ -244,6 +252,7 @@ export default function WordListPage() {
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
         autoPlayHeadwordAudio={quizAutoHeadword}
+        showJapanese={quizShowJapanese}
       />
     )
   }
@@ -297,15 +306,17 @@ export default function WordListPage() {
         onStart={startQuiz}
         settings={{
           defaultMode: quizDefaultMode,
-          onDefaultModeChange: setQuizDefaultMode,
+          onDefaultModeChange: (v) => { setQuizDefaultMode(v); if (userId) saveQuizSettings(userId, { defaultMode: v }) },
           questionCount: quizCount,
-          onQuestionCountChange: setQuizCount,
+          onQuestionCountChange: (v) => { setQuizCount(v); if (userId) saveQuizSettings(userId, { questionCount: v }) },
           questionCountMax: Math.max(1, Math.min(100, scopeSource[quizScope].length)),
           questionCountMin: 1,
           autoPlayAudio: quizAutoAudio,
-          onAutoPlayAudioChange: setQuizAutoAudio,
+          onAutoPlayAudioChange: (v) => { setQuizAutoAudio(v); if (userId) saveQuizSettings(userId, { autoPlayAudio: v }) },
           autoPlayHeadword: quizAutoHeadword,
-          onAutoPlayHeadwordChange: setQuizAutoHeadword,
+          onAutoPlayHeadwordChange: (v) => { setQuizAutoHeadword(v); if (userId) saveQuizSettings(userId, { autoPlayHeadword: v }) },
+          showJapanese: quizShowJapanese,
+          onShowJapaneseChange: (v) => { setQuizShowJapanese(v); if (userId) saveQuizSettings(userId, { showJapanese: v }) },
         }}
       />
 

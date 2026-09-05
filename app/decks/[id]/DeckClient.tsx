@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
+import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from '@/lib/quizSettings'
 import Button from '@/components/Button'
 import PageHeader from '@/components/PageHeader'
 import EntryCard from '@/components/EntryCard'
@@ -45,10 +46,12 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
-  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>('word')
-  const [quizCount, setQuizCount] = useState(10)
-  const [quizAutoAudio, setQuizAutoAudio] = useState(false)
-  const [quizAutoHeadword, setQuizAutoHeadword] = useState(false)
+  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>(QUIZ_SETTINGS_DEFAULTS.defaultMode)
+  const [quizCount, setQuizCount] = useState(QUIZ_SETTINGS_DEFAULTS.questionCount)
+  const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
+  const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
+  const [quizShowJapanese, setQuizShowJapanese] = useState(QUIZ_SETTINGS_DEFAULTS.showJapanese)
+  const [userId, setUserId] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
@@ -118,9 +121,16 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     setEntries(data)
     setIsAuthed(!!authData.user)
     if (authData.user) {
+      setUserId(authData.user.id)
       if (data.length > 0) await loadStatus(data, authData.user.id)
       await loadSavedWords(authData.user.id, data.map(e => e.word))
       setPlan(await getUserPlan())
+      const settings = await fetchQuizSettings(authData.user.id)
+      setQuizDefaultMode(settings.defaultMode)
+      setQuizCount(settings.questionCount)
+      setQuizAutoAudio(settings.autoPlayAudio)
+      setQuizAutoHeadword(settings.autoPlayHeadword)
+      setQuizShowJapanese(settings.showJapanese)
     } else {
       setPlan('free')
     }
@@ -199,6 +209,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
         autoPlayHeadwordAudio={quizAutoHeadword}
+        showJapanese={quizShowJapanese}
       />
     )
   }
@@ -249,15 +260,17 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
         onStart={startQuiz}
         settings={!isLocked && !loading ? {
           defaultMode: quizDefaultMode,
-          onDefaultModeChange: setQuizDefaultMode,
+          onDefaultModeChange: (v) => { setQuizDefaultMode(v); if (userId) saveQuizSettings(userId, { defaultMode: v }) },
           questionCount: quizCount,
-          onQuestionCountChange: setQuizCount,
+          onQuestionCountChange: (v) => { setQuizCount(v); if (userId) saveQuizSettings(userId, { questionCount: v }) },
           questionCountMax: Math.max(1, Math.min(100, scopeSource[quizScope].length)),
           questionCountMin: 1,
           autoPlayAudio: quizAutoAudio,
-          onAutoPlayAudioChange: setQuizAutoAudio,
+          onAutoPlayAudioChange: (v) => { setQuizAutoAudio(v); if (userId) saveQuizSettings(userId, { autoPlayAudio: v }) },
           autoPlayHeadword: quizAutoHeadword,
-          onAutoPlayHeadwordChange: setQuizAutoHeadword,
+          onAutoPlayHeadwordChange: (v) => { setQuizAutoHeadword(v); if (userId) saveQuizSettings(userId, { autoPlayHeadword: v }) },
+          showJapanese: quizShowJapanese,
+          onShowJapaneseChange: (v) => { setQuizShowJapanese(v); if (userId) saveQuizSettings(userId, { showJapanese: v }) },
         } : undefined}
       />
 

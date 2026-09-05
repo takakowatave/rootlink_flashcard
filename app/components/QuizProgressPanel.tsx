@@ -32,6 +32,8 @@ type Props = {
     onAutoPlayAudioChange: (v: boolean) => void
     autoPlayHeadword: boolean
     onAutoPlayHeadwordChange: (v: boolean) => void
+    showJapanese: boolean
+    onShowJapaneseChange: (v: boolean) => void
   }
 }
 
@@ -228,6 +230,18 @@ export default function QuizProgressPanel({
                   checked={settings.autoPlayHeadword}
                   onChange={settings.onAutoPlayHeadwordChange}
                   label="見出し語音声の自動再生"
+                />
+              }
+            />
+          </CardShell>
+          <CardShell>
+            <SettingRow
+              label="日本語訳の表示"
+              control={
+                <ToggleSwitch
+                  checked={settings.showJapanese}
+                  onChange={settings.onShowJapaneseChange}
+                  label="日本語訳の表示"
                 />
               }
             />
