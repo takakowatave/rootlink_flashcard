@@ -1,6 +1,3 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
 import { getDeckImage } from '@/lib/deckDisplay'
@@ -46,8 +43,6 @@ const DECK_GROUPS: DeckGroup[] = [
 ]
 
 export default function LPDecks() {
-  const router = useRouter()
-
   return (
     <section className="py-20 px-6 bg-white">
       <div className="max-w-[860px] mx-auto">
@@ -73,7 +68,7 @@ export default function LPDecks() {
                     title={deck.shortName}
                     imageSrc={getDeckImage(group.label, deck.shortName)}
                     wordCount={deck.wordCount}
-                    onClick={() => router.push(`/decks/${deck.id}`)}
+                    href={`/decks/${deck.id}`}
                   />
                 ))}
               </div>

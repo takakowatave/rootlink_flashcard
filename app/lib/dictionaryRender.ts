@@ -44,7 +44,7 @@ export function buildSenses(
   for (const group of senseGroups) {
     const pos = String(group.partOfSpeech ?? '').toLowerCase()
     if (!pos) continue
-    const senses: DisplaySense[] = (group.senses ?? [])
+    const rawSenses: DisplaySense[] = (group.senses ?? [])
       .map((sense) => {
         const senseId = String(sense.senseId ?? '')
         const ja = jaLocales[senseId]
@@ -54,6 +54,14 @@ export function buildSenses(
         return { senseId, meaning, example: sense.example ?? undefined, exampleTranslation: ja?.exampleTranslation ?? undefined }
       })
       .filter((s) => s.senseId && s.meaning)
+    const seenMeaning = new Set<string>()
+    const senses: DisplaySense[] = []
+    for (const s of rawSenses) {
+      const key = s.meaning.trim()
+      if (seenMeaning.has(key)) continue
+      seenMeaning.add(key)
+      senses.push(s)
+    }
     if (senses.length > 0) result[pos] = senses
   }
   return result

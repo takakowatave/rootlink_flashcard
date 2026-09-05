@@ -7,7 +7,6 @@ Disallow: /Profile
 Disallow: /profile
 Disallow: /wordlist
 Disallow: /quiz
-Disallow: /decks
 Disallow: /phrases
 Disallow: /callback
 Disallow: /premium

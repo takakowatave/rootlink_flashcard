@@ -1,39 +1,57 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
-import { getUserPlan } from '@/lib/supabaseApi'
+import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
 import PageHeader from '@/components/PageHeader'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
-type Deck = { id: string; name: string; label: string; word_count: number; is_premium: boolean }
+type Deck = {
+  id: string
+  name: string
+  label: string
+  word_count: number
+  is_premium: boolean
+}
 
-export default function DecksPage() {
-  const router = useRouter()
-  const [decks, setDecks] = useState<Deck[]>([])
-  const [plan, setPlan] = useState<'premium' | 'free'>('free')
-  const [loading, setLoading] = useState(true)
+async function getPlanServer(): Promise<'premium' | 'free'> {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 'free'
 
-  useEffect(() => {
-    const load = async () => {
-      const [{ data }, userPlan] = await Promise.all([
-        supabase
-          .from('decks')
-          .select('id, name, label, word_count, is_premium')
-          .order('label')
-          .order('name')
-          .limit(100),
-        getUserPlan(),
-      ])
-      setDecks((data ?? []) as Deck[])
-      setPlan(userPlan)
-      setLoading(false)
-    }
-    load()
-  }, [])
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_tester')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (profile?.is_tester) return 'premium'
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (sub?.status === 'active' || sub?.status === 'trialing') return 'premium'
+
+  return 'free'
+}
+
+export default async function DecksPage() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const [{ data: decksData }, plan] = await Promise.all([
+    supabase
+      .from('decks')
+      .select('id, name, label, word_count, is_premium')
+      .eq('is_official', true)
+      .order('label')
+      .order('name')
+      .limit(100),
+    getPlanServer(),
+  ])
+  const decks = (decksData ?? []) as Deck[]
 
   return (
     <div className="bg-surface min-h-screen">
@@ -48,42 +66,31 @@ export default function DecksPage() {
 
           <h1 className="text-xl font-bold text-gray-950">教材一覧</h1>
 
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <svg className="size-6 animate-spin text-muted" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-            </div>
-          ) : (
-            <>
-              {LABEL_ORDER.map(label => {
-                const group = sortDecksByDifficulty(decks.filter(d => d.label === label))
-                if (group.length === 0) return null
-                return (
-                  <section key={label}>
-                    <DeckLabelBadge label={label} />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      {group.map(deck => {
-                        const shortName = toShortName(deck.name, deck.label)
-                        return (
-                          <DeckCard
-                            key={deck.id}
-                            label={deck.label}
-                            title={shortName}
-                            imageSrc={getDeckImage(deck.label, shortName)}
-                            wordCount={deck.word_count}
-                            isPremium={deck.is_premium && plan === 'free'}
-                            onClick={() => router.push(`/decks/${deck.id}`)}
-                          />
-                        )
-                      })}
-                    </div>
-                  </section>
-                )
-              })}
-            </>
-          )}
+          {LABEL_ORDER.map(label => {
+            const group = sortDecksByDifficulty(decks.filter(d => d.label === label))
+            if (group.length === 0) return null
+            return (
+              <section key={label}>
+                <DeckLabelBadge label={label} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {group.map(deck => {
+                    const shortName = toShortName(deck.name, deck.label)
+                    return (
+                      <DeckCard
+                        key={deck.id}
+                        label={deck.label}
+                        title={shortName}
+                        imageSrc={getDeckImage(deck.label, shortName)}
+                        wordCount={deck.word_count}
+                        isPremium={deck.is_premium && plan === 'free'}
+                        href={`/decks/${deck.id}`}
+                      />
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 type Props = {
   label?: string
   title: string
@@ -7,23 +9,21 @@ type Props = {
   imageSrc?: string
   isPremium?: boolean
   disabled?: boolean
-  onClick: () => void
+  href?: string
+  onClick?: () => void
   className?: string
 }
 
-export default function DeckCard({ label, title, wordCount, imageSrc, isPremium, disabled, onClick, className }: Props) {
+export default function DeckCard({ label, title, wordCount, imageSrc, isPremium, disabled, href, onClick, className }: Props) {
   const displayTitle = label ? `${label} ${title}` : title
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-disabled={disabled || undefined}
-      className={`relative bg-white border border-line rounded-2xl px-2 py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
-        disabled
-          ? 'opacity-40 cursor-not-allowed'
-          : 'hover:border-muted active:scale-[0.98] cursor-pointer'
-      } ${className ?? ''}`}
-    >
+  const baseClass = `relative bg-white border border-line rounded-2xl px-2 py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
+    disabled
+      ? 'opacity-40 cursor-not-allowed'
+      : 'hover:border-muted active:scale-[0.98] cursor-pointer'
+  } ${className ?? ''}`
+
+  const inner = (
+    <>
       {isPremium && (
         <span
           aria-label="プレミアム限定"
@@ -45,6 +45,26 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
           {wordCount} 語
         </p>
       )}
+    </>
+  )
+
+  if (!disabled && href) {
+    return (
+      <Link href={href} className={baseClass}>
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
+      className={baseClass}
+    >
+      {inner}
     </button>
   )
 }

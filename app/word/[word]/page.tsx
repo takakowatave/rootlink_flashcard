@@ -30,7 +30,7 @@ const resolveWord = cache(async (raw: string) => {
 const resolvePhrase = cache(async (raw: string) => {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/phrase_cards?phrase=ilike.${encodeURIComponent(raw)}*&limit=1`,
+      `${SUPABASE_URL}/rest/v1/phrase_cards?phrase=ilike.${encodeURIComponent(raw)}*&meaning_ja=not.is.null&skip_reason=is.null&limit=1`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }, next: { revalidate: 60 * 60 } }
     )
     if (!res.ok) return null
@@ -66,6 +66,9 @@ export async function generateMetadata({ params }: { params: { word: string } })
   return {
     title: word,
     description,
+    alternates: {
+      canonical: `/word/${encodeURIComponent(word)}`,
+    },
     openGraph: {
       title: `${word} | RootLink`,
       description,

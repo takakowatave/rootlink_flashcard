@@ -106,7 +106,7 @@ export const WithSettings: Story = {
       { key: 'hard', count: 2 },
     ],
     selectedScope: 'all',
-    buttonLabel: 'クイズを始める',
+    buttonLabel: 'はじめる',
     buttonDisabled: false,
     settings: {
       defaultMode: 'word',
