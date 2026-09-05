@@ -4,8 +4,9 @@ import type { Post } from '@/lib/blog'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Blog',
+  title: '英単語を語源で覚えるブログ',
   description: '語源とUK Englishで、暗記に頼らない英語学習を。RootLink のブログ。',
+  alternates: { canonical: '/blog' },
 }
 
 export const revalidate = 60
