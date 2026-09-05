@@ -738,7 +738,16 @@ export default function WordPageClient({
 
         if (validItems.length === 0) return
 
-        senses[pos] = validItems
+        const seenJa = new Set<string>()
+        const dedupedItems: ParsedLocalizedSenseItem[] = []
+        for (const item of validItems) {
+          const jaKey = (item.meaning.ja ?? '').trim()
+          if (jaKey && seenJa.has(jaKey)) continue
+          if (jaKey) seenJa.add(jaKey)
+          dedupedItems.push(item)
+        }
+
+        senses[pos] = dedupedItems
       })
 
       return {
