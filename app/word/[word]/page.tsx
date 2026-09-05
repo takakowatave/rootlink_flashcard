@@ -41,30 +41,81 @@ const resolvePhrase = cache(async (raw: string) => {
   }
 })
 
-function extractDescription(dictionary: Record<string, unknown> | null, word: string): string {
-  if (!dictionary) return `Explore the etymology and meaning of "${word}" on RootLink.`
-  const senses = (dictionary as { senses?: { definition?: string }[] }).senses
-  if (senses?.[0]?.definition) {
-    const def = senses[0].definition.slice(0, 155)
-    return `${word}: ${def}${def.length >= 155 ? "…" : ""}`
+type EtymologyPart = {
+  text?: string
+  meaningJa?: string
+  order?: number
+}
+
+type MetaDictionary = {
+  senseGroups?: Array<{
+    senses?: Array<{ senseId?: string }>
+  }>
+  locales?: {
+    ja?: {
+      senses?: Record<string, { meaning?: string }>
+    }
   }
-  const entries = (dictionary as { entries?: { senses?: { definitions?: string[] }[] }[] }).entries
-  const def = entries?.[0]?.senses?.[0]?.definitions?.[0]
-  if (def) {
-    const trimmed = def.slice(0, 155)
-    return `${word}: ${trimmed}${trimmed.length >= 155 ? "…" : ""}`
+  etymologyData?: {
+    structure?: {
+      parts?: EtymologyPart[]
+    }
   }
-  return `Explore the etymology and meaning of "${word}" on RootLink.`
+}
+
+function getFirstTwoParts(dictionary: MetaDictionary | null): EtymologyPart[] {
+  const parts = dictionary?.etymologyData?.structure?.parts
+  if (!parts || parts.length === 0) return []
+  return parts
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .filter(p => typeof p.text === 'string' && p.text.length > 0)
+    .slice(0, 2)
+}
+
+function getFirstJaMeaning(dictionary: MetaDictionary | null): string | null {
+  const jaSenses = dictionary?.locales?.ja?.senses
+  if (!jaSenses) return null
+  const firstSenseId = dictionary?.senseGroups?.[0]?.senses?.[0]?.senseId
+  if (!firstSenseId) return null
+  const meaning = jaSenses[firstSenseId]?.meaning?.trim()
+  return meaning || null
+}
+
+function buildTitle(word: string, dictionary: MetaDictionary | null): string {
+  const parts = getFirstTwoParts(dictionary)
+  if (parts.length >= 2) {
+    return `${word} の語源と意味｜${parts.map(p => p.text).join(' + ')} で覚える`
+  }
+  return `${word} の語源と意味｜語根から覚える英単語`
+}
+
+function buildDescription(word: string, dictionary: MetaDictionary | null): string {
+  const parts = getFirstTwoParts(dictionary)
+  const jaMeaning = getFirstJaMeaning(dictionary)
+
+  if (parts.length >= 2 && parts.every(p => p.meaningJa) && jaMeaning) {
+    const partsStr = parts.map(p => `${p.text}（${p.meaningJa}）`).join(' + ')
+    return `${word} の語源は ${partsStr}。「${jaMeaning}」という意味の成り立ちを語根から解説します。`
+  }
+
+  if (jaMeaning) {
+    return `${word} の意味は「${jaMeaning}」。語根と語源から英単語の成り立ちを解説します。`
+  }
+
+  return `${word} の語源と意味を語根から解説します。RootLink で英単語を語源から理解しよう。`
 }
 
 export async function generateMetadata({ params }: { params: { word: string } }): Promise<Metadata> {
   const raw = decodeURIComponent(params.word).trim().toLowerCase()
   const data = await resolveWord(raw)
   const word = data?.resolved ?? raw
-  const description = extractDescription(data?.dictionary ?? data?.raw ?? null, word)
+  const dictionary = (data?.dictionary ?? null) as MetaDictionary | null
+  const title = buildTitle(word, dictionary)
+  const description = buildDescription(word, dictionary)
   const cardUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`
   return {
-    title: word,
+    title,
     description,
     alternates: {
       canonical: `/word/${encodeURIComponent(word)}`,
