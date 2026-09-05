@@ -17,6 +17,7 @@ import toast from 'react-hot-toast'
 import QuizDashboard from './QuizDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
+import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import {
   fetchReviewCandidates,
@@ -38,6 +39,14 @@ export default function QuizClient() {
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
+  const [settings, setSettings] = useState<QuizSettings>(QUIZ_SETTINGS_DEFAULTS)
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser()
+      if (data.user) setSettings(await fetchQuizSettings(data.user.id))
+    })()
+  }, [])
 
   useEffect(() => { toast.dismiss() }, [])
 
@@ -56,7 +65,7 @@ export default function QuizClient() {
         if (b.wrongCount !== a.wrongCount) return b.wrongCount - a.wrongCount
         return a.latestAt < b.latestAt ? 1 : -1
       })
-      const top = recent.slice(0, 10)
+      const top = recent.slice(0, settings.questionCount)
       const entries = await fetchQuizEntriesByWords(top.map((r) => r.word))
       // 表示順のみシャッフル (slice しない)
       const cards = shuffleCards(buildQuizCards(entries))
@@ -129,7 +138,7 @@ export default function QuizClient() {
       entries = entries.filter((e) => target.has(e.word))
     }
 
-    const cards = shuffleCards(buildQuizCards(entries)).slice(0, 10)
+    const cards = shuffleCards(buildQuizCards(entries)).slice(0, settings.questionCount)
     setSessionEntries(
       cards.map((c) => entries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
     )
@@ -146,7 +155,7 @@ export default function QuizClient() {
     const candidates = await fetchReviewCandidates(userId, plan)
     const inPeriod = filterByPeriod(candidates, period)
     const sorted = sortReviewCandidates(inPeriod)
-    const top = sorted.slice(0, 10)
+    const top = sorted.slice(0, settings.questionCount)
 
     // フレーズは phrase 情報から直接 QuizEntry を組む。単語は fetchQuizEntriesByWords で dictionary を引く。
     const wordTargets = top.filter((c) => !c.phrase).map((c) => c.word)
@@ -229,13 +238,16 @@ export default function QuizClient() {
 
   return (
     <QuizSession
-      initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, 10)}
+      initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, settings.questionCount)}
       entries={sessionEntries}
       onQuit={() => {
         if (hasPeriodParam) router.push('/')
         else setShowDashboard(true)
       }}
       onAnswer={handleAnswer}
+      initialMode={settings.defaultMode}
+      autoPlayExampleAudio={settings.autoPlayAudio}
+      autoPlayHeadwordAudio={settings.autoPlayHeadword}
     />
   )
 }

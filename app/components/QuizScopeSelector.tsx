@@ -13,7 +13,7 @@ export type QuizScopeItem = {
 const META: Record<QuizScope, { label: string; icon: ReactNode }> = {
   all:    { label: 'ランダム', icon: <HiSparkles className="size-5" /> },
   recent: { label: 'まとめて', icon: <HiClock className="size-5" /> },
-  unseen: { label: '未学習',   icon: <HiBookOpen className="size-5" /> },
+  unseen: { label: '未習得',   icon: <HiBookOpen className="size-5" /> },
   review: { label: '要復習',   icon: <HiArrowPath className="size-5" /> },
   hard:   { label: '苦手',     icon: <HiFire className="size-5" /> },
 }

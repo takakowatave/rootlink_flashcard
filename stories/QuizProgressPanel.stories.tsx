@@ -92,3 +92,33 @@ export const NoData: Story = {
     buttonDisabled: true,
   },
 }
+
+export const WithSettings: Story = {
+  args: {
+    mastered: 8,
+    review: 3,
+    hard: 2,
+    unseen: 67,
+    scopeItems: [
+      { key: 'all', count: 80 },
+      { key: 'unseen', count: 67 },
+      { key: 'review', count: 3 },
+      { key: 'hard', count: 2 },
+    ],
+    selectedScope: 'all',
+    buttonLabel: 'クイズを始める',
+    buttonDisabled: false,
+    settings: {
+      defaultMode: 'word',
+      onDefaultModeChange: () => {},
+      questionCount: 10,
+      onQuestionCountChange: () => {},
+      questionCountMax: 80,
+      questionCountMin: 1,
+      autoPlayAudio: false,
+      onAutoPlayAudioChange: () => {},
+      autoPlayHeadword: false,
+      onAutoPlayHeadwordChange: () => {},
+    },
+  },
+}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus } from '@/lib/supabaseApi'
+import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from '@/lib/quizSettings'
 import Button from '@/components/Button'
 import PageHeader from '@/components/PageHeader'
 import EntryCard from '@/components/EntryCard'
@@ -45,6 +46,11 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
   const [quizScope, setQuizScope] = useState<QuizScope>('all')
+  const [quizDefaultMode, setQuizDefaultMode] = useState<'example' | 'word'>(QUIZ_SETTINGS_DEFAULTS.defaultMode)
+  const [quizCount, setQuizCount] = useState(QUIZ_SETTINGS_DEFAULTS.questionCount)
+  const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
+  const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
+  const [userId, setUserId] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
@@ -114,9 +120,15 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     setEntries(data)
     setIsAuthed(!!authData.user)
     if (authData.user) {
+      setUserId(authData.user.id)
       if (data.length > 0) await loadStatus(data, authData.user.id)
       await loadSavedWords(authData.user.id, data.map(e => e.word))
       setPlan(await getUserPlan())
+      const settings = await fetchQuizSettings(authData.user.id)
+      setQuizDefaultMode(settings.defaultMode)
+      setQuizCount(settings.questionCount)
+      setQuizAutoAudio(settings.autoPlayAudio)
+      setQuizAutoHeadword(settings.autoPlayHeadword)
     } else {
       setPlan('free')
     }
@@ -161,16 +173,23 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
   const isLocked = deck.is_premium && plan === 'free'
 
+  // scope 変更で対象数が減ったら count を max に丸める
+  useEffect(() => {
+    const max = Math.min(100, scopeSource[quizScope].length)
+    if (max > 0 && quizCount > max) setQuizCount(max)
+  }, [quizScope, scopeSource, quizCount])
+
   const startQuiz = useCallback(() => {
     if (!isAuthed) { setShowSignupModal(true); return }
     if (isLocked) { setShowUpgradeModal(true); return }
     const sourceEntries = scopeSource[quizScope]
-    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, 10)
+    const take = Math.min(quizCount, sourceEntries.length)
+    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)
     const sessionEntries: QuizEntry[] = cards.map(c =>
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [isAuthed, isLocked, quizScope, scopeSource])
+  }, [isAuthed, isLocked, quizScope, scopeSource, quizCount])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct, deck.id)
@@ -181,10 +200,13 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   if (quizEntries !== null) {
     return (
       <QuizSession
-        initialCards={shuffleCards(buildQuizCards(quizEntries)).slice(0, 10)}
+        initialCards={buildQuizCards(quizEntries)}
         entries={quizEntries}
         onQuit={() => setQuizEntries(null)}
         onAnswer={handleQuizAnswer}
+        initialMode={quizDefaultMode}
+        autoPlayExampleAudio={quizAutoAudio}
+        autoPlayHeadwordAudio={quizAutoHeadword}
       />
     )
   }
@@ -229,10 +251,22 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               ? '🔒 プレミアム登録ではじめる'
               : availableCount === 0
                 ? '単語データがまだありません'
-                : 'はじめる'
+                : 'クイズを始める'
         }
         buttonDisabled={loading || (!isLocked && scopeSource[quizScope].length === 0)}
         onStart={startQuiz}
+        settings={!isLocked && !loading ? {
+          defaultMode: quizDefaultMode,
+          onDefaultModeChange: (v) => { setQuizDefaultMode(v); if (userId) saveQuizSettings(userId, { defaultMode: v }) },
+          questionCount: quizCount,
+          onQuestionCountChange: (v) => { setQuizCount(v); if (userId) saveQuizSettings(userId, { questionCount: v }) },
+          questionCountMax: Math.max(1, Math.min(100, scopeSource[quizScope].length)),
+          questionCountMin: 1,
+          autoPlayAudio: quizAutoAudio,
+          onAutoPlayAudioChange: (v) => { setQuizAutoAudio(v); if (userId) saveQuizSettings(userId, { autoPlayAudio: v }) },
+          autoPlayHeadword: quizAutoHeadword,
+          onAutoPlayHeadwordChange: (v) => { setQuizAutoHeadword(v); if (userId) saveQuizSettings(userId, { autoPlayHeadword: v }) },
+        } : undefined}
       />
 
       {/* ── 単語一覧プレビュー ── */}
