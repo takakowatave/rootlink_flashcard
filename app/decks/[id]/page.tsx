@@ -40,7 +40,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
   const shortName = toShortName(deck.name, deck.label)
   const head = buildTitleHead(deck.label, shortName)
-  const title = `${head}の英単語${deck.word_count}語｜語源で覚えるRootLink`
+  const title = `${head}の英単語${deck.word_count}語｜語源で覚える`
+  const shareTitle = `${title} | RootLink`
   const description =
     deck.description ??
     `${head}レベルの重要英単語${deck.word_count}語を、語源から理解して定着させる単語帳。`
@@ -48,8 +49,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const meta: Metadata = {
     title,
     description,
-    openGraph: { title, description, type: 'website' },
-    twitter: { card: 'summary', title, description },
+    alternates: { canonical: `/decks/${deck.id}` },
+    openGraph: { title: shareTitle, description, type: 'website' },
+    twitter: { card: 'summary', title: shareTitle, description },
   }
   if (!deck.is_official) {
     meta.robots = { index: false, follow: true }
