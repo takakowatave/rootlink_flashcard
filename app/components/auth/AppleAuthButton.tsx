@@ -8,9 +8,8 @@ import InAppBrowserNotice from "./InAppBrowserNotice";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
-// Apple Developer Program 課金反映待ちで Supabase Providers → Apple を
-// 有効化できないため、iOS/Web ともにボタンを一時 disable する。
-const APPLE_DISABLED = true;
+// Supabase Providers → Apple 設定完了 (2026-09-05)。有効化。
+const APPLE_DISABLED = false;
 
 type Variant = "signup" | "login";
 
