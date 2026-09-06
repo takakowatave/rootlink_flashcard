@@ -7,6 +7,7 @@ export type Post = {
   published_at: string | null
   created_at: string
   hero_image_url: string | null
+  meta_description: string | null
 }
 
 export type Heading = { id: string; level: number; text: string }

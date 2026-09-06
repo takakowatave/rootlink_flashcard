@@ -14,21 +14,28 @@ type Params = { params: { slug: string } }
 async function fetchPost(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
     .eq('slug', slug)
     .not('published_at', 'is', null)
     .maybeSingle()
   return (data as Post | null) ?? null
 }
 
+function buildDescription(post: Post): string {
+  const manual = post.meta_description?.trim()
+  if (manual) return manual
+  return post.content.replace(/[#>*`_\[\]()]/g, '').slice(0, 120)
+}
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost(params.slug)
   if (!post) return { title: 'Not Found' }
-  const description = post.content.replace(/[#>*`_\[\]()]/g, '').slice(0, 120)
+  const description = buildDescription(post)
   const images = post.hero_image_url ? [{ url: post.hero_image_url }] : undefined
   return {
     title: post.title,
     description,
+    alternates: { canonical: `/blog/${post.slug}` },
     openGraph: { title: post.title, description, type: 'article', images },
     twitter: { card: images ? 'summary_large_image' : 'summary', title: post.title, description, images },
   }
