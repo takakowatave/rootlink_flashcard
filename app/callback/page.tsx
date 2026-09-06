@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
+import { sendEvent } from "@/lib/ga";
+
+const SIGNUP_TRIGGER_KEY = "signup_trigger";
 
 type State = "loading" | "error";
 
@@ -92,6 +95,15 @@ export default function AuthCallback() {
             username: googleName,
             avatar_url: googleAvatar,
           });
+
+          let trigger: string | null = null;
+          try {
+            trigger = window.sessionStorage.getItem(SIGNUP_TRIGGER_KEY);
+            window.sessionStorage.removeItem(SIGNUP_TRIGGER_KEY);
+          } catch {
+            // ignore
+          }
+          sendEvent("sign_up_complete", { trigger: trigger ?? "direct" });
         } else {
           const googleName =
             user.user_metadata?.full_name ||

@@ -1,14 +1,31 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect } from 'react'
 import Button from '@/components/Button'
 import { BsX } from 'react-icons/bs'
+import { sendEvent } from '@/lib/ga'
 
 type Props = {
   onClose: () => void
+  /** どこから開いたかの識別子。GA4 と /signup 完了時の相関に使う */
+  trigger?: string
 }
 
-export default function SignupRequiredModal({ onClose }: Props) {
+const SIGNUP_TRIGGER_KEY = 'signup_trigger'
+
+export default function SignupRequiredModal({ onClose, trigger }: Props) {
+  useEffect(() => {
+    sendEvent('signup_modal_shown', { trigger: trigger ?? 'unknown' })
+    if (trigger && typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.setItem(SIGNUP_TRIGGER_KEY, trigger)
+      } catch {
+        // ignore
+      }
+    }
+  }, [trigger])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"

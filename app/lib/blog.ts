@@ -38,3 +38,34 @@ export function extractPhraseCardIds(markdown: string): string[] {
   }
   return Array.from(ids)
 }
+
+export type WordCardEntry = { word: string; senseIndex?: number }
+
+// 本文中の `<word-card word="historic" sense="2" />` を抜き出す。
+// sense 属性は 1-based の序数。省略時は先頭 sense にフォールバック。
+export function extractWordCardEntries(markdown: string): WordCardEntry[] {
+  const re = /<word-card\s+([^/>]+?)\s*\/?>/gi
+  const out: WordCardEntry[] = []
+  const seen = new Set<string>()
+  let m: RegExpExecArray | null
+  while ((m = re.exec(markdown)) !== null) {
+    const attrs = m[1]
+    const wordMatch = /word=["']([^"']+)["']/i.exec(attrs)
+    if (!wordMatch) continue
+    const word = wordMatch[1].trim().toLowerCase()
+    if (!word) continue
+    const senseMatch = /sense=["']([^"']+)["']/i.exec(attrs)
+    const senseIndex = senseMatch ? Number.parseInt(senseMatch[1], 10) : undefined
+    const senseFinal = senseIndex && Number.isFinite(senseIndex) && senseIndex >= 1 ? senseIndex : undefined
+    const key = `${word}::${senseFinal ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({ word, senseIndex: senseFinal })
+  }
+  return out
+}
+
+// unique な word だけを取り出す（DB fetch 用）
+export function extractWordCardWords(markdown: string): string[] {
+  return Array.from(new Set(extractWordCardEntries(markdown).map((e) => e.word)))
+}
