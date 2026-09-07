@@ -84,7 +84,7 @@ async function buildWordsSitemap(
   const cached = await fetchAllCachedWords(supabase)
   const now = new Date()
   return cached
-    .filter(({ word }) => word.length > 2 && /^[a-z]+$/.test(word))
+    .filter(({ word }) => word.length > 2 && /^[a-z-]+$/.test(word))
     .map(({ word, fetched_at }) => ({
       url: `${BASE_URL}/word/${encodeURIComponent(word)}`,
       lastModified: fetched_at ? new Date(fetched_at) : now,
