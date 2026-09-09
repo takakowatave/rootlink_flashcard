@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
-import { extractHeadings, extractPhraseCardIds, type Post } from '@/lib/blog'
+import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
 import BlogContent from '../BlogContent'
 import Button from '@/components/Button'
 import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
+import type { SavedWordDictionary } from '@/types/Dictionary'
 
 export const revalidate = 60
 
@@ -14,21 +15,28 @@ type Params = { params: { slug: string } }
 async function fetchPost(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
     .eq('slug', slug)
     .not('published_at', 'is', null)
     .maybeSingle()
   return (data as Post | null) ?? null
 }
 
+function buildDescription(post: Post): string {
+  const manual = post.meta_description?.trim()
+  if (manual) return manual
+  return post.content.replace(/[#>*`_\[\]()]/g, '').slice(0, 120)
+}
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost(params.slug)
   if (!post) return { title: 'Not Found' }
-  const description = post.content.replace(/[#>*`_\[\]()]/g, '').slice(0, 120)
+  const description = buildDescription(post)
   const images = post.hero_image_url ? [{ url: post.hero_image_url }] : undefined
   return {
     title: post.title,
     description,
+    alternates: { canonical: `/blog/${post.slug}` },
     openGraph: { title: post.title, description, type: 'article', images },
     twitter: { card: images ? 'summary_large_image' : 'summary', title: post.title, description, images },
   }
@@ -51,6 +59,28 @@ export default async function BlogPostPage({ params }: Params) {
     if (phrases) {
       phraseMap = Object.fromEntries(
         (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
+      )
+    }
+  }
+
+  // <word-card word="..." /> の全単語を dictionary_cache から一括取得。
+  // SSR で HTML に焼き込むことで Googlebot が本文として認識できる。
+  const wordCardWords = extractWordCardWords(post.content)
+  let wordCardMap: Record<string, SavedWordDictionary | null> = {}
+  if (wordCardWords.length > 0) {
+    const { data: cachedRows } = await supabase
+      .from('words')
+      .select('word, dictionary_cache!inner(payload)')
+      .in('word', wordCardWords)
+    if (cachedRows) {
+      wordCardMap = Object.fromEntries(
+        (cachedRows as Array<{
+          word: string
+          dictionary_cache: { payload: SavedWordDictionary | null } | { payload: SavedWordDictionary | null }[] | null
+        }>).map((row) => {
+          const cache = Array.isArray(row.dictionary_cache) ? row.dictionary_cache[0] : row.dictionary_cache
+          return [row.word, (cache?.payload ?? null) as SavedWordDictionary | null]
+        })
       )
     }
   }
@@ -143,7 +173,7 @@ export default async function BlogPostPage({ params }: Params) {
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
               prose-hr:border-line
             ">
-              <BlogContent content={post.content} phraseMap={phraseMap} />
+              <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
             </div>
           </div>
         </div>

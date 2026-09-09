@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
-import { extractHeadings, extractPhraseCardIds, type Post } from '@/lib/blog'
+import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
 import BlogContent from '../../BlogContent'
 import Button from '@/components/Button'
 import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
+import type { SavedWordDictionary } from '@/types/Dictionary'
 
 // プレビュー: 下書き含めて slug で1件取得。SSR キャッシュしない
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ type Params = { params: { slug: string } }
 async function fetchPostAnyStatus(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
     .eq('slug', slug)
     .maybeSingle()
   return (data as Post | null) ?? null
@@ -45,6 +46,26 @@ export default async function BlogPreviewPage({ params }: Params) {
     if (phrases) {
       phraseMap = Object.fromEntries(
         (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
+      )
+    }
+  }
+
+  const wordCardWords = extractWordCardWords(post.content)
+  let wordCardMap: Record<string, SavedWordDictionary | null> = {}
+  if (wordCardWords.length > 0) {
+    const { data: cachedRows } = await supabase
+      .from('words')
+      .select('word, dictionary_cache!inner(payload)')
+      .in('word', wordCardWords)
+    if (cachedRows) {
+      wordCardMap = Object.fromEntries(
+        (cachedRows as Array<{
+          word: string
+          dictionary_cache: { payload: SavedWordDictionary | null } | { payload: SavedWordDictionary | null }[] | null
+        }>).map((row) => {
+          const cache = Array.isArray(row.dictionary_cache) ? row.dictionary_cache[0] : row.dictionary_cache
+          return [row.word, (cache?.payload ?? null) as SavedWordDictionary | null]
+        })
       )
     }
   }
@@ -132,7 +153,7 @@ export default async function BlogPreviewPage({ params }: Params) {
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
               prose-hr:border-line
             ">
-              <BlogContent content={post.content} phraseMap={phraseMap} />
+              <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
             </div>
           </div>
         </div>
