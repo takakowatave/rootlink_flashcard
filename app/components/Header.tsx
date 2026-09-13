@@ -262,13 +262,7 @@ const Header = () => {
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <Link
-            href="/blog"
-            className="text-sm font-medium text-gray-700 hover:text-gray-950 transition-colors"
-          >
-            ブログ
-          </Link>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           {authed === false && (
             <>
               <Link href="/signup"><Button variant="primary" size="sm">新規登録</Button></Link>
