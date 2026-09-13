@@ -1,5 +1,7 @@
 import { cache } from 'react'
-import { supabase } from './supabaseClient'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export type Post = {
   id: string
@@ -76,13 +78,18 @@ export function extractWordCardWords(markdown: string): string[] {
 export type RelatedPost = Pick<Post, 'title' | 'slug'>
 
 // 公開済み記事の本文をまとめて取得。同一リクエスト内で dedupe される。
+// supabase-js 内部 fetch は Next.js 14 の force-cache 既定で Data Cache に固定されるため、
+// REST を直叩きして revalidate を明示する（発行から最大5分で反映）。
 const fetchPublishedPostsWithContent = cache(async (): Promise<Array<Pick<Post, 'title' | 'slug' | 'content'>>> => {
-  const { data } = await supabase
-    .from('posts')
-    .select('title, slug, content')
-    .not('published_at', 'is', null)
-    .order('published_at', { ascending: false })
-  return (data ?? []) as Array<Pick<Post, 'title' | 'slug' | 'content'>>
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/posts?select=title,slug,content&published_at=not.is.null&order=published_at.desc`,
+    {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      next: { revalidate: 300 },
+    }
+  )
+  if (!res.ok) return []
+  return (await res.json()) as Array<Pick<Post, 'title' | 'slug' | 'content'>>
 })
 
 // 単語ページ用の逆引き。<word-card word="X" /> で当該単語を扱う公開記事を返す。
