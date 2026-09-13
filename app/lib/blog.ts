@@ -1,3 +1,6 @@
+import { cache } from 'react'
+import { supabase } from './supabaseClient'
+
 export type Post = {
   id: string
   title: string
@@ -68,4 +71,26 @@ export function extractWordCardEntries(markdown: string): WordCardEntry[] {
 // unique な word だけを取り出す（DB fetch 用）
 export function extractWordCardWords(markdown: string): string[] {
   return Array.from(new Set(extractWordCardEntries(markdown).map((e) => e.word)))
+}
+
+export type RelatedPost = Pick<Post, 'title' | 'slug'>
+
+// 公開済み記事の本文をまとめて取得。同一リクエスト内で dedupe される。
+const fetchPublishedPostsWithContent = cache(async (): Promise<Array<Pick<Post, 'title' | 'slug' | 'content'>>> => {
+  const { data } = await supabase
+    .from('posts')
+    .select('title, slug, content')
+    .not('published_at', 'is', null)
+    .order('published_at', { ascending: false })
+  return (data ?? []) as Array<Pick<Post, 'title' | 'slug' | 'content'>>
+})
+
+// 単語ページ用の逆引き。<word-card word="X" /> で当該単語を扱う公開記事を返す。
+export async function getPostsReferencingWord(word: string): Promise<RelatedPost[]> {
+  const target = word.trim().toLowerCase()
+  if (!target) return []
+  const posts = await fetchPublishedPostsWithContent()
+  return posts
+    .filter((p) => extractWordCardWords(p.content ?? '').includes(target))
+    .map(({ title, slug }) => ({ title, slug }))
 }
