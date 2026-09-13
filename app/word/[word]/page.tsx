@@ -2,6 +2,7 @@ import { cache } from 'react'
 import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
+import { getPostsReferencingWord } from '@/lib/blog'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -125,6 +126,7 @@ export default async function Page({
     const resolvedWord = data.resolved
     const dictionary = data.dictionary ?? data.raw ?? null
     const correctedFrom = typeof data.correctedFrom === "string" ? data.correctedFrom : undefined
+    const relatedPosts = await getPostsReferencingWord(resolvedWord)
     return (
       <WordPageClient
         key={resolvedWord}
@@ -132,6 +134,7 @@ export default async function Page({
         dictionary={dictionary}
         correctedFrom={correctedFrom}
         initialPinnedSenseId={pin}
+        relatedPosts={relatedPosts}
       />
     )
   }

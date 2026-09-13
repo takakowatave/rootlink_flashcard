@@ -4,6 +4,7 @@
 // Oxford / rewritten / normalized の辞書データを画面表示用 shape にそろえて EntryCard に渡す
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
@@ -644,6 +645,7 @@ export default function WordPageClient({
   correctedFrom,
   initialDisplayLocale,
   noCard,
+  relatedPosts,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -652,6 +654,7 @@ export default function WordPageClient({
   correctedFrom?: string
   initialDisplayLocale?: DisplayLocale
   noCard?: boolean
+  relatedPosts?: Array<{ title: string; slug: string }>
 }) {
   const router = useRouter()
 
@@ -1171,6 +1174,23 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       displayLocale={displayLocale}
       noCard={noCard}
     />
+    {relatedPosts && relatedPosts.length > 0 && (
+      <section className="w-full mx-auto max-w-[600px] px-4 mt-3 mb-6">
+        <h2 className="text-sm font-semibold text-muted mb-2">この単語を扱った記事</h2>
+        <ul className="space-y-2">
+          {relatedPosts.map((post) => (
+            <li key={post.slug}>
+              <Link
+                href={`/blog/${post.slug}`}
+                className="block rounded-2xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-950 transition-colors hover:border-muted"
+              >
+                {post.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     </div>
   )
