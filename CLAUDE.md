@@ -131,7 +131,11 @@ RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 c
 - **辞書キャッシュ**: `RewrittenPayload` 形式で `dictionary_cache` に保存。first-write-wins
 - **型安全**: `any` 型は禁止。共有型は `/app/types/` に集約（Dictionary.ts / Etymology.ts / DisplayLocale.ts など）
 - **LP言語**: グローバル設計。ブラウザ言語設定に応じてEN/JA自動切り替え
-- **課金**: Stripe、月500円プランを予定
+- **課金**: Web は Stripe（月額¥500 / 年額¥4,800）。native (iOS/Android) は RevenueCat 経由の Play Billing / StoreKit を採用予定（未実装、`app/lib/revenuecat.ts` に土台あり）。**2026-09-13 決定: 初回リリース（クローズドテスト含む）では native の課金導線を一切出さない**。`server.url` 方式のため Web の課金導線がそのまま native にも表示されてしまい、Google Play / App Store 双方のポリシー違反になるため。
+  - 実装: `UpgradeModal.tsx` が `isNativePlatform()` で native なら `null` を返す（呼び出し元3箇所を個別に直さず、ここ1点で止める）。`DeckClient.tsx` / `WordPageClient.tsx` はロック自体は残しつつ native ではモーダルの代わりにトーストで案内。`EditProfileModal.tsx` の「アップグレード」「プランを管理」ボタンも native では非表示
+  - **native で契約済みの導線を復活させてよいのは RevenueCat 実装が完了してから。審査を通すためだけに隠して通ったら戻す運用は絶対禁止**（cloaking＝規約違反、アカウント停止リスク）
+  - 日本の外部決済プログラム（スマホ新法）は検討したが不採用。手数料差が1〜2%しかない一方、日本限定・24時間ルール・取引レポート義務を背負うため
+  - 詳細: Notion「課金仕様」3-2 https://app.notion.com/p/340d9703217a812c9ce2ccf8804f1b85 、Issue Tracker「native では課金導線を非表示にする」https://app.notion.com/p/3dad9703217a8103a72ad593b0eb87e6
 - **本番直送**: 現段階はmainブランチ → Vercel本番で運用。ユーザーが増えたらdev/prodブランチ分離を検討。開発中の確認は `develop` ブランチで行う
 - **鉢植えの成長基準**: `score = quizCount + loginDays × 3` の単調増加スコアで8段階Lv。ロジックは `app/lib/plantGrowth.ts` に一元集約（PC/SP どちらも `PlantStatus` 経由で呼ぶこと。Dashboard等でハードコード禁止）。しきい値: Lv1=0 / Lv2=30 / Lv3=100 / Lv4=300 / Lv5=800 / Lv6=2000 / Lv7=5000 / Lv8=10000。アセットは `public/plant/lv1〜5.png`（**lv6/7/8.png は未作成・Lv5画像を暫定流用中**）。UIの残pt表記は「あとNpt」で統一（「N問」は嘘、ログインでも増える）。仕様書は Notion「鉢植え成長ロジック」ページ https://app.notion.com/p/3acd9703217a81da9584dad6f8faf08a に同期
 - **UI統一方針**: オリジナル単語帳（saved_words）とデッキ（deck_words）はクイズ・進捗表示・一覧レンダリングで同じ骨格を共有。両方とも `EntryCard`（compact）＋詳細モーダル（`WordDetailModal`）で表示。大量語対策として初期30件 + 「もっと見る」で追加ロードするパターンを採用。辞書ペイロード→UI変換は `app/lib/dictionaryRender.ts` に集約（`buildPronunciation` / `buildSenses`）
