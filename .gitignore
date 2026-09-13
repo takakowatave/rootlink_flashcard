@@ -53,3 +53,8 @@ x-cards/
 *.swo
 *.swn
 out/
+
+# android signing keys (絶対にコミットしない)
+*.jks
+*.keystore
+keystore.properties
