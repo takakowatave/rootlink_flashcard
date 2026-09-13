@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -300,7 +301,7 @@ export default function EditProfileModal({
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" && hasStripeSubscription && (
+                {plan === "premium" && hasStripeSubscription && !isNativePlatform() && (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -310,7 +311,7 @@ export default function EditProfileModal({
                     プランを管理
                   </button>
                 )}
-                {plan === "free" && (
+                {plan === "free" && !isNativePlatform() && (
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}

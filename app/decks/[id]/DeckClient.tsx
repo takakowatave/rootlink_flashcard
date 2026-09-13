@@ -19,6 +19,7 @@ import { classifyQuizStatus, classifyForDonut, type WordStatus } from '@/lib/qui
 import QuizProgressPanel from '@/components/QuizProgressPanel'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import UpgradeModal from '@/components/UpgradeModal'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -181,7 +182,14 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
 
   const startQuiz = useCallback(() => {
     if (!isAuthed) { setShowSignupModal(true); return }
-    if (isLocked) { setShowUpgradeModal(true); return }
+    if (isLocked) {
+      if (isNativePlatform()) {
+        toast('Web版からご登録いただけます', { icon: '🔒' })
+      } else {
+        setShowUpgradeModal(true)
+      }
+      return
+    }
     const sourceEntries = scopeSource[quizScope]
     const take = Math.min(quizCount, sourceEntries.length)
     const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
+import { isNativePlatform } from '@/lib/isNativePlatform'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
@@ -1022,7 +1023,13 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       setSavedWords((prev) =>
         isSaved ? [...prev, word] : prev.filter((w) => w !== word)
       )
-      if (result.limitReached) setShowUpgradeModal(true)
+      if (result.limitReached) {
+        if (isNativePlatform()) {
+          toast('Web版からご登録いただけます', { icon: '🔒' })
+        } else {
+          setShowUpgradeModal(true)
+        }
+      }
     }
   }
 

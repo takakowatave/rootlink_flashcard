@@ -20,6 +20,9 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly")
 
+  // native では課金導線を一切出さない (2026-09-13 決定。詳細: Notion「課金仕様」3-2)
+  if (isNativePlatform()) return null
+
   const handleUpgrade = async () => {
     setIsLoading(true)
     try {
