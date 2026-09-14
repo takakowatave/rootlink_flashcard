@@ -1,3 +1,4 @@
+# 検索エンジンは歓迎する（SEO の本体）
 User-agent: *
 Allow: /
 Allow: /word/
@@ -12,5 +13,52 @@ Disallow: /callback
 Disallow: /premium
 Disallow: /blog/preview
 Disallow: /api/
+
+# ---------------------------------------------------------------
+# SEO 解析ツールのクローラーは全面的に拒否する。
+#
+# 理由: /word/[word] は未キャッシュ語だと Oxford Dictionaries API
+# （従量課金）を叩く。これらのボットは機械生成した語形を大量に
+# 列挙するため、1ページのクロールが1コールの課金に直結する。
+# 2026-09 に AhrefsBot が 20 秒に 1 件のペースで列挙し、
+# 1日あたり約 790 コールを消費していることを Vercel のログで確認した。
+#
+# 検索流入をもたらさないクローラーなので、拒否しても失うものはない。
+# ---------------------------------------------------------------
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Barkrowler
+Disallow: /
+
+User-agent: SeekportBot
+Disallow: /
+
+User-agent: serpstatbot
+Disallow: /
+
+User-agent: ZoominfoBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
 
 Sitemap: https://www.rootlink.app/sitemap.xml
