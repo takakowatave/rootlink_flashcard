@@ -78,3 +78,26 @@ export async function restoreNativePurchases(): Promise<{ ok: boolean; error?: s
     return { ok: false, error: e?.message ?? 'restore_failed' }
   }
 }
+
+export async function openNativeManageSubscriptions(): Promise<{ ok: boolean; error?: string }> {
+  if (!isNativePlatform()) return { ok: false, error: 'not_native' }
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    const { customerInfo } = await Purchases.getCustomerInfo()
+    // managementURL があれば正確な deep-link (Play Store は package/sku 込み)。
+    // 無ければストア共通の subscriptions URL にフォールバック。
+    const fallback =
+      getNativePlatform() === 'ios'
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions'
+    // Browser.open (SafariViewController / Chrome Custom Tabs) で開く。
+    // Universal Link / Play Store intent が発火してストア native アプリのサブスク管理に転送される。
+    // Capacitor 7 では @capacitor/app に openUrl がないため、既存 auth flow と同じ Browser を使う。
+    const { Browser } = await import('@capacitor/browser')
+    await Browser.open({ url: customerInfo?.managementURL ?? fallback })
+    return { ok: true }
+  } catch (err) {
+    const e = err as { message?: string }
+    return { ok: false, error: e?.message ?? 'open_failed' }
+  }
+}

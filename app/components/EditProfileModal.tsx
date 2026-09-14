@@ -20,6 +20,7 @@ import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { openNativeManageSubscriptions } from "@/lib/revenuecat";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -41,7 +42,9 @@ export default function EditProfileModal({
 }: Props) {
   const provider = useAuthProvider();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
-  const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
+  const [subscriptionStore, setSubscriptionStore] = useState<
+    "stripe" | "app_store" | "play_store" | null
+  >(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
@@ -67,6 +70,12 @@ export default function EditProfileModal({
   const handleManagePlan = async () => {
     setIsPortalLoading(true);
     try {
+      if (subscriptionStore === "app_store" || subscriptionStore === "play_store") {
+        const result = await openNativeManageSubscriptions();
+        if (!result.ok) toast.error("管理画面を開けませんでした");
+        return;
+      }
+      // subscriptionStore === "stripe" (or フォールバックで null は表示ガードで来ない)
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch(`${API_BASE}/stripe/portal`, {
@@ -161,10 +170,17 @@ export default function EditProfileModal({
       setEmail(user.email ?? "");
       supabase
         .from("subscriptions")
-        .select("stripe_customer_id")
+        .select("store")
         .eq("user_id", user.id)
         .maybeSingle()
-        .then(({ data }) => setHasStripeSubscription(!!data?.stripe_customer_id));
+        .then(({ data }) => {
+          const store = data?.store;
+          setSubscriptionStore(
+            store === "stripe" || store === "app_store" || store === "play_store"
+              ? store
+              : null,
+          );
+        });
     });
     const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
     if (saved === "en" || saved === "ja") setDisplayLocale(saved);
@@ -296,12 +312,12 @@ export default function EditProfileModal({
               <SettingsRow label="現在のプラン">
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
-                    {hasStripeSubscription ? "Premium" : "テスター"}
+                    {subscriptionStore !== null ? "Premium" : "テスター"}
                   </span>
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
                 )}
-                {plan === "premium" && hasStripeSubscription && !isNativePlatform() && (
+                {plan === "premium" && subscriptionStore !== null && (
                   <button
                     type="button"
                     onClick={handleManagePlan}
@@ -381,7 +397,7 @@ export default function EditProfileModal({
       <DeleteAccountModal
         open={showDeleteAccount}
         onClose={() => setShowDeleteAccount(false)}
-        hasActiveSubscription={hasStripeSubscription && plan === "premium"}
+        hasActiveSubscription={subscriptionStore !== null && plan === "premium"}
         onDeleted={() => {
           setShowDeleteAccount(false);
           window.location.href = "/goodbye";
