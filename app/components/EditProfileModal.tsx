@@ -19,8 +19,10 @@ import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
+import NativePaywall from "@/components/NativePaywall";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { openNativeManageSubscriptions } from "@/lib/revenuecat";
+import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 
@@ -47,6 +49,7 @@ export default function EditProfileModal({
   >(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [paywallVariant, setPaywallVariant] = useState<Exclude<PaywallVariant, "none"> | null>(null);
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
   const [email, setEmail] = useState<string>("");
   const [showEmailChange, setShowEmailChange] = useState(false);
@@ -100,6 +103,17 @@ export default function EditProfileModal({
     } finally {
       setIsPortalLoading(false);
     }
+  };
+
+  const handleUpgrade = async () => {
+    if (isNativePlatform()) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const variant = await decidePaywallVariant(user.id);
+      if (variant !== "none") setPaywallVariant(variant);
+      return;
+    }
+    setShowUpgradeModal(true);
   };
 
   const handleSaveDisplayName = async (draft: string) => {
@@ -327,10 +341,10 @@ export default function EditProfileModal({
                     プランを管理
                   </button>
                 )}
-                {plan === "free" && !isNativePlatform() && (
+                {plan === "free" && (
                   <button
                     type="button"
-                    onClick={() => setShowUpgradeModal(true)}
+                    onClick={handleUpgrade}
                     className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
                   >
                     アップグレード
@@ -415,6 +429,9 @@ export default function EditProfileModal({
 
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />
+      )}
+      {paywallVariant && (
+        <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />
       )}
     </>
   );
