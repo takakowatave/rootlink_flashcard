@@ -165,6 +165,36 @@ RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 c
 
 ---
 
+## 秘密情報の扱い
+
+過去に Stripe の本番キーが `.claude/settings.local.json` の許可リストに平文で残り続けたことがある。「漏れる構造」を作らないこと。`.gitignore` は git に入れない仕組みであって、秘密を守る仕組みではない。ここを取り違えない。
+
+### 絶対ルール
+
+- **APIキー・トークンをコマンドラインに直接書かない**。必ず環境変数か `.env.local` 経由にする
+  - 悪い例: `curl -u sk_live_xxxxxxxxxxx: https://api.stripe.com/...`
+  - 良い例: `curl -u "$STRIPE_SECRET_KEY": https://api.stripe.com/...`
+  - 理由: 許可リスト・シェル履歴・ログに平文で残り続けるため
+- **署名鍵・証明書・SSH秘密鍵はリポジトリ内に置かない**。`~/keys/` 以下に置き、パスだけ参照する
+  - 例: Android 署名鍵は `~/keys/rootlink/rootlink-release-key.jks`
+- **`.gitignore` に足したことを「対処完了」と報告しない**。`.gitignore` は「git に入れない」だけで、既にローカルに残っているファイルや、シェル履歴・許可リスト・ログには効かない
+- **秘密情報の露出を見つけたら、その場で直さず必ず kiko に報告する**。何を優先するかは kiko が決める
+
+### 仕組みで守る（多層）
+
+1. `.claude/hooks/block-secrets.sh` — PreToolUse フック。鍵ファイル・APIキーを含む tool 呼び出しを exit 2 でブロック
+2. `.git/hooks/pre-commit` — 禁止ファイル名 (`*.jks` / `*.env*` / `settings.local.json` 等) と内容パターン (`sk_live_` / `AKIA...` / `-----BEGIN...PRIVATE KEY-----` 等) を commit 時にブロック
+3. `.claude/settings.json` の `permissions.deny` — 鍵ファイル・`.env*` への Read/Edit/Write と `git push *` を deny
+4. `scripts/scan-secrets.sh` — SessionStart フックで毎回走る。設定ファイル内のキー実値・置き忘れの鍵ファイル・gitignore されていない `.env*` を検出
+
+### やってはいけないこと
+
+- フックを回避する抜け道（base64 で包む・変数展開で分割する・`.jks` を `.j${X}s` にする 等）
+- 鍵ファイル・APIキーの中身を表示・コピー・送信する
+- 履歴書き換え (`git filter-branch` / BFG) を独断で走らせる。混入していないなら不要。混入していても kiko の承認前に触らない
+
+---
+
 ## センテンスマイニング → phrase_cards 追加フロー
 
 エッセイ等から抽出した英語表現を `phrase_cards` に追加するときは、以下を必ず守る。
