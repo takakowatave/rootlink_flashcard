@@ -19,7 +19,9 @@ import { classifyQuizStatus, classifyForDonut, type WordStatus } from '@/lib/qui
 import QuizProgressPanel from '@/components/QuizProgressPanel'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import UpgradeModal from '@/components/UpgradeModal'
+import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -55,6 +57,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const [isAuthed, setIsAuthed] = useState<boolean>(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [paywallVariant, setPaywallVariant] = useState<Exclude<PaywallVariant, 'none'> | null>(null)
   const [plan, setPlan] = useState<'premium' | 'free' | null>(null)
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set())
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
@@ -180,11 +183,13 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     if (max > 0 && quizCount > max) setQuizCount(max)
   }, [quizScope, scopeSource, quizCount])
 
-  const startQuiz = useCallback(() => {
+  const startQuiz = useCallback(async () => {
     if (!isAuthed) { setShowSignupModal(true); return }
     if (isLocked) {
       if (isNativePlatform()) {
-        toast('Web版からご登録いただけます', { icon: '🔒' })
+        if (!userId) return
+        const variant = await decidePaywallVariant(userId)
+        if (variant !== 'none') setPaywallVariant(variant)
       } else {
         setShowUpgradeModal(true)
       }
@@ -197,7 +202,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
       sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
-  }, [isAuthed, isLocked, quizScope, scopeSource, quizCount])
+  }, [isAuthed, isLocked, userId, quizScope, scopeSource, quizCount])
 
   const handleQuizAnswer = useCallback(async (word: string, correct: boolean) => {
     await saveQuizResult(word, correct, deck.id)
@@ -223,6 +228,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
     <>
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
+      {paywallVariant && <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />}
 
       <PageHeader
         items={[

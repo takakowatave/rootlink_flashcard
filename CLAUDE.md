@@ -131,11 +131,7 @@ RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 c
 - **辞書キャッシュ**: `RewrittenPayload` 形式で `dictionary_cache` に保存。first-write-wins
 - **型安全**: `any` 型は禁止。共有型は `/app/types/` に集約（Dictionary.ts / Etymology.ts / DisplayLocale.ts など）
 - **LP言語**: グローバル設計。ブラウザ言語設定に応じてEN/JA自動切り替え
-- **課金**: Web は Stripe（月額¥500 / 年額¥4,800）。native (iOS/Android) は RevenueCat 経由の Play Billing / StoreKit を採用予定（未実装、`app/lib/revenuecat.ts` に土台あり）。**2026-09-13 決定: 初回リリース（クローズドテスト含む）では native の課金導線を一切出さない**。`server.url` 方式のため Web の課金導線がそのまま native にも表示されてしまい、Google Play / App Store 双方のポリシー違反になるため。
-  - 実装: `UpgradeModal.tsx` が `isNativePlatform()` で native なら `null` を返す（呼び出し元3箇所を個別に直さず、ここ1点で止める）。`DeckClient.tsx` / `WordPageClient.tsx` はロック自体は残しつつ native ではモーダルの代わりにトーストで案内。`EditProfileModal.tsx` の「アップグレード」「プランを管理」ボタンも native では非表示
-  - **native で契約済みの導線を復活させてよいのは RevenueCat 実装が完了してから。審査を通すためだけに隠して通ったら戻す運用は絶対禁止**（cloaking＝規約違反、アカウント停止リスク）
-  - 日本の外部決済プログラム（スマホ新法）は検討したが不採用。手数料差が1〜2%しかない一方、日本限定・24時間ルール・取引レポート義務を背負うため
-  - 詳細: Notion「課金仕様」3-2 https://app.notion.com/p/340d9703217a812c9ce2ccf8804f1b85 、Issue Tracker「native では課金導線を非表示にする」https://app.notion.com/p/3dad9703217a8103a72ad593b0eb87e6
+- **課金**: **2026-09-14 決定: 初回リリース（クローズドテスト含む）から課金を全実装する**。native は RevenueCat 経由の Play Billing / StoreKit で Paywall→14日間トライアル→（解約しなければ）15日目に自動課金までを含める。Web は Stripe（月額¥500 / 年額¥4,800）でトライアルなし・即課金。プレミアム判定は `subscriptions` を Web / native 共通で参照（`getUserPlan` は `status IN ('active','trialing')` を premium とする既存実装のまま両対応）。日本の外部決済プログラム（スマホ新法）は不採用（手数料差1〜2%に対して日本限定・24時間ルール・取引レポート義務が割に合わない）。詳細は Notion「課金仕様」§3 / §3-2 https://app.notion.com/p/340d9703217a812c9ce2ccf8804f1b85 参照
 - **本番直送**: 現段階はmainブランチ → Vercel本番で運用。ユーザーが増えたらdev/prodブランチ分離を検討。開発中の確認は `develop` ブランチで行う
 - **鉢植えの成長基準**: `score = quizCount + loginDays × 3` の単調増加スコアで8段階Lv。ロジックは `app/lib/plantGrowth.ts` に一元集約（PC/SP どちらも `PlantStatus` 経由で呼ぶこと。Dashboard等でハードコード禁止）。しきい値: Lv1=0 / Lv2=30 / Lv3=100 / Lv4=300 / Lv5=800 / Lv6=2000 / Lv7=5000 / Lv8=10000。アセットは `public/plant/lv1〜5.png`（**lv6/7/8.png は未作成・Lv5画像を暫定流用中**）。UIの残pt表記は「あとNpt」で統一（「N問」は嘘、ログインでも増える）。仕様書は Notion「鉢植え成長ロジック」ページ https://app.notion.com/p/3acd9703217a81da9584dad6f8faf08a に同期
 - **UI統一方針**: オリジナル単語帳（saved_words）とデッキ（deck_words）はクイズ・進捗表示・一覧レンダリングで同じ骨格を共有。両方とも `EntryCard`（compact）＋詳細モーダル（`WordDetailModal`）で表示。大量語対策として初期30件 + 「もっと見る」で追加ロードするパターンを採用。辞書ペイロード→UI変換は `app/lib/dictionaryRender.ts` に集約（`buildPronunciation` / `buildSenses`）
@@ -166,6 +162,36 @@ RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 c
 ### データ取得の設計
 - 同じAPIを複数コンポーネントが個別に叩いていないか
   - 原則：**親で取得して props で渡す**。子が独立してフェッチするのは避ける
+
+---
+
+## 秘密情報の扱い
+
+過去に Stripe の本番キーが `.claude/settings.local.json` の許可リストに平文で残り続けたことがある。「漏れる構造」を作らないこと。`.gitignore` は git に入れない仕組みであって、秘密を守る仕組みではない。ここを取り違えない。
+
+### 絶対ルール
+
+- **APIキー・トークンをコマンドラインに直接書かない**。必ず環境変数か `.env.local` 経由にする
+  - 悪い例: `curl -u sk_live_xxxxxxxxxxx: https://api.stripe.com/...`
+  - 良い例: `curl -u "$STRIPE_SECRET_KEY": https://api.stripe.com/...`
+  - 理由: 許可リスト・シェル履歴・ログに平文で残り続けるため
+- **署名鍵・証明書・SSH秘密鍵はリポジトリ内に置かない**。`~/keys/` 以下に置き、パスだけ参照する
+  - 例: Android 署名鍵は `~/keys/rootlink/rootlink-release-key.jks`
+- **`.gitignore` に足したことを「対処完了」と報告しない**。`.gitignore` は「git に入れない」だけで、既にローカルに残っているファイルや、シェル履歴・許可リスト・ログには効かない
+- **秘密情報の露出を見つけたら、その場で直さず必ず kiko に報告する**。何を優先するかは kiko が決める
+
+### 仕組みで守る（多層）
+
+1. `.claude/hooks/block-secrets.sh` — PreToolUse フック。鍵ファイル・APIキーを含む tool 呼び出しを exit 2 でブロック
+2. `.git/hooks/pre-commit` — 禁止ファイル名 (`*.jks` / `*.env*` / `settings.local.json` 等) と内容パターン (`sk_live_` / `AKIA...` / `-----BEGIN...PRIVATE KEY-----` 等) を commit 時にブロック
+3. `.claude/settings.json` の `permissions.deny` — 鍵ファイル・`.env*` への Read/Edit/Write と `git push *` を deny
+4. `scripts/scan-secrets.sh` — SessionStart フックで毎回走る。設定ファイル内のキー実値・置き忘れの鍵ファイル・gitignore されていない `.env*` を検出
+
+### やってはいけないこと
+
+- フックを回避する抜け道（base64 で包む・変数展開で分割する・`.jks` を `.j${X}s` にする 等）
+- 鍵ファイル・APIキーの中身を表示・コピー・送信する
+- 履歴書き換え (`git filter-branch` / BFG) を独断で走らせる。混入していないなら不要。混入していても kiko の承認前に触らない
 
 ---
 

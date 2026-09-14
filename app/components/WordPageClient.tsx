@@ -10,7 +10,9 @@ import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
+import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
@@ -905,6 +907,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     initialPinnedSenseId ?? null
   )
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [paywallVariant, setPaywallVariant] = useState<Exclude<PaywallVariant, 'none'> | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const shareBtnRef = useRef<HTMLButtonElement>(null)
@@ -1025,7 +1028,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       )
       if (result.limitReached) {
         if (isNativePlatform()) {
-          toast('Web版からご登録いただけます', { icon: '🔒' })
+          const variant = await decidePaywallVariant(data.user.id)
+          if (variant !== 'none') setPaywallVariant(variant)
         } else {
           setShowUpgradeModal(true)
         }
@@ -1140,6 +1144,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       />
     )}
     {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+    {paywallVariant && <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />}
     {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
     {showCorrectionBanner && correctedFrom && (
       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-0 mx-4 mt-3">

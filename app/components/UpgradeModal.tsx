@@ -4,7 +4,6 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { FREE_PLAN_LIMIT } from "@/lib/supabaseApi"
 import { isNativePlatform } from "@/lib/isNativePlatform"
-import { ensureRevenueCatConfigured, purchaseNativePlan } from "@/lib/revenuecat"
 import Button from "@/components/Button"
 
 const API_BASE =
@@ -20,7 +19,12 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly")
 
-  // native では課金導線を一切出さない (2026-09-13 決定。詳細: Notion「課金仕様」3-2)
+  // UpgradeModal は Web (Stripe) 専用。native では NativePaywall に振り分ける設計 (2026-09-14 方針)。
+  // 呼び出し元 (DeckClient / WordPageClient / EditProfileModal) は既に native 判定して
+  // NativePaywall に流しているが、ここの return null は最終防波堤として保持する。
+  // 削除すると呼び出し漏れ・将来の refactor で native から Stripe Checkout に到達する
+  // cloaking 事故が起きうる (Apple/Google 審査 NG)。コスト 1 行対 リスク大なので残す。
+  // 詳細: Notion「課金仕様」§3-2 の鉄則
   if (isNativePlatform()) return null
 
   const handleUpgrade = async () => {
@@ -28,17 +32,6 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-
-      if (isNativePlatform()) {
-        await ensureRevenueCatConfigured(session.user.id).catch(() => {})
-        const result = await purchaseNativePlan(selectedPlan === "monthly" ? "monthly" : "yearly")
-        if (result.ok) {
-          onClose()
-        } else if (!result.cancelled) {
-          console.error("NATIVE PURCHASE FAILED:", result.error)
-        }
-        return
-      }
 
       const res = await fetch(`${API_BASE}/stripe/checkout`, {
         method: "POST",
