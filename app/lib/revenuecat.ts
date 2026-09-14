@@ -66,3 +66,15 @@ export async function purchaseNativePlan(plan: NativePlanKey): Promise<{ ok: boo
     return { ok: false, error: e?.message ?? 'purchase_failed' }
   }
 }
+
+export async function restoreNativePurchases(): Promise<{ ok: boolean; error?: string }> {
+  if (!isNativePlatform()) return { ok: false, error: 'not_native' }
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    await Purchases.restorePurchases()
+    return { ok: true }
+  } catch (err) {
+    const e = err as { message?: string }
+    return { ok: false, error: e?.message ?? 'restore_failed' }
+  }
+}
