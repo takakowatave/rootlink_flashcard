@@ -1,4 +1,5 @@
 import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
@@ -11,14 +12,14 @@ const API_BASE =
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// GET で叩く。POST だと Next.js の Data Cache に載らず、
+// ページ表示のたびに Cloud Run まで飛んでしまう（revalidate が無視される）。
 const resolveWord = cache(async (raw: string) => {
   try {
-    const res = await fetch(`${API_BASE}/resolve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: raw }),
-      next: { revalidate: 60 * 60 * 24 },
-    })
+    const res = await fetch(
+      `${API_BASE}/resolve?query=${encodeURIComponent(raw)}`,
+      { next: { revalidate: 60 * 60 * 24 } }
+    )
     if (!res.ok) return null
     const data = await res.json()
     if (!data.ok) return null
@@ -145,6 +146,8 @@ export default async function Page({
     return <PhrasePageClient card={phraseCard} />
   }
 
-  // どちらでもなければ WordPageClient に委譲（not found 表示）
-  return <WordPageClient key={raw} word={raw} dictionary={null} />
+  // 単語でもフレーズでもなければ 404。
+  // 200 を返すとクローラーが正常ページとして index し、再訪のたびに
+  // Oxford の従量課金が積まれる。
+  notFound()
 }
