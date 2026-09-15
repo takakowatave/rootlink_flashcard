@@ -292,6 +292,21 @@ export default function DeckClient({
         } : undefined}
       />
 
+      {/* ── SSR-only internal links for crawlers (visible list is paginated) ── */}
+      {availableEntries.length > 0 && (
+        <nav aria-hidden="true" className="sr-only">
+          <ul>
+            {availableEntries.map((entry) => (
+              <li key={`ssr-${entry.word}`}>
+                <a href={`/word/${encodeURIComponent(entry.word)}`} tabIndex={-1}>
+                  {entry.word}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
       {/* ── 単語一覧プレビュー ── */}
       {!loading && availableEntries.length > 0 && (
         <section>
