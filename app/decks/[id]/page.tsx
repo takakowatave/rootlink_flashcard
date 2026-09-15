@@ -1,13 +1,14 @@
 import { cache } from 'react'
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import DeckClient from './DeckClient'
 import { toShortName } from '@/lib/deckDisplay'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 type DeckRow = {
   id: string
+  slug: string | null
   name: string
   label: string
   description: string | null
@@ -31,16 +32,19 @@ const SUPABASE_HEADERS = {
 }
 const DAY = 60 * 60 * 24
 
-const getDeck = cache(async (id: string): Promise<DeckRow | null> => {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const getDeck = cache(async (idOrSlug: string): Promise<DeckRow | null> => {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+  const column = UUID_RE.test(idOrSlug) ? 'id' : 'slug'
   const { data } = await supabase
     .from('decks')
-    .select('id, name, label, description, is_premium, word_count, is_official')
-    .eq('id', id)
-    .single()
+    .select('id, slug, name, label, description, is_premium, word_count, is_official')
+    .eq(column, idOrSlug)
+    .maybeSingle()
   return (data as DeckRow | null) ?? null
 })
 
@@ -97,6 +101,10 @@ function buildTitleHead(label: string, shortName: string): string {
   return `${label} ${shortName}`
 }
 
+function canonicalPath(deck: DeckRow): string {
+  return `/decks/${deck.slug ?? deck.id}`
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const deck = await getDeck(params.id)
   if (!deck) return { title: 'RootLink' }
@@ -112,7 +120,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const meta: Metadata = {
     title,
     description,
-    alternates: { canonical: `/decks/${deck.id}` },
+    alternates: { canonical: canonicalPath(deck) },
     openGraph: { title: shareTitle, description, type: 'website' },
     twitter: { card: 'summary', title: shareTitle, description },
   }
@@ -125,6 +133,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 export default async function DeckPage({ params }: { params: { id: string } }) {
   const deck = await getDeck(params.id)
   if (!deck) notFound()
+
+  // 旧 /decks/{uuid} は /decks/{slug} へ 308 リダイレクト
+  if (UUID_RE.test(params.id) && deck.slug) {
+    permanentRedirect(`/decks/${deck.slug}`)
+  }
 
   const initialEntries = await getDeckWordsSSR(deck.id)
 

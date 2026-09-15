@@ -28,6 +28,7 @@ import {
 
 type Deck = {
   id: string
+  slug: string | null
   name: string
   label: string
   word_count: number
@@ -476,7 +477,7 @@ export default function Dashboard() {
       const [savedData, quizData, decksData, dates] = await Promise.all([
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('quiz_results').select('word, correct, answered_at').eq('user_id', user.id).gte('answered_at', oneYearAgo).order('answered_at', { ascending: false }).limit(5000),
-        supabase.from('decks').select('id, name, label, word_count, is_premium').order('label').order('name').limit(100),
+        supabase.from('decks').select('id, slug, name, label, word_count, is_premium').order('label').order('name').limit(100),
         getActivityLog(user.id),
       ])
 
@@ -574,7 +575,7 @@ export default function Dashboard() {
         imageSrc: getDeckImage(d.label, shortName),
         wordCount: d.word_count,
         isPremium: d.is_premium && plan === 'free',
-        href: `/decks/${d.id}`,
+        href: `/decks/${d.slug ?? d.id}`,
       }
     })
   const historyItems = activeDeckItems.slice(0, 5)
@@ -589,7 +590,7 @@ export default function Dashboard() {
           imageSrc: getDeckImage(d.label, shortName),
           wordCount: d.word_count,
           isPremium: d.is_premium && plan === 'free',
-          href: `/decks/${d.id}`,
+          href: `/decks/${d.slug ?? d.id}`,
         }
       })
   )

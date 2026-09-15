@@ -28,19 +28,19 @@ async function buildMainSitemap(
 
   const { data: decks } = await supabase
     .from("decks")
-    .select("id, created_at")
+    .select("id, slug, created_at")
     .eq("is_official", true)
     .order("created_at", { ascending: false })
 
   const deckEntries: MetadataRoute.Sitemap =
     (decks ?? [])
       .map((d) => {
-        const id = (d as { id: string | null }).id
-        if (!id) return null
-        const created = (d as { created_at: string | null }).created_at
+        const row = d as { id: string | null; slug: string | null; created_at: string | null }
+        const path = row.slug ?? row.id
+        if (!path) return null
         return {
-          url: `${BASE_URL}/decks/${id}`,
-          lastModified: created ? new Date(created) : now,
+          url: `${BASE_URL}/decks/${path}`,
+          lastModified: row.created_at ? new Date(row.created_at) : now,
           changeFrequency: "monthly" as const,
           priority: 0.8,
         }

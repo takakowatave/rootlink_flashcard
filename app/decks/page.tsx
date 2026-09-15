@@ -7,6 +7,7 @@ import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@
 
 type Deck = {
   id: string
+  slug: string | null
   name: string
   label: string
   word_count: number
@@ -44,7 +45,7 @@ export default async function DecksPage() {
   const [{ data: decksData }, plan] = await Promise.all([
     supabase
       .from('decks')
-      .select('id, name, label, word_count, is_premium')
+      .select('id, slug, name, label, word_count, is_premium')
       .eq('is_official', true)
       .order('label')
       .order('name')
@@ -83,7 +84,7 @@ export default async function DecksPage() {
                         imageSrc={getDeckImage(deck.label, shortName)}
                         wordCount={deck.word_count}
                         isPremium={deck.is_premium && plan === 'free'}
-                        href={`/decks/${deck.id}`}
+                        href={`/decks/${deck.slug ?? deck.id}`}
                       />
                     )
                   })}
