@@ -4,46 +4,73 @@ import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord } from '@/lib/blog'
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
-  "https://rootlink-server-v2-774622345521.asia-northeast1.run.app"
+import type { RewrittenPayload } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// GET を優先する。POST だと Next.js の Data Cache に載らず、
-// ページ表示のたびに Cloud Run まで飛んでしまう（revalidate が無視される）。
-// GET 未対応のサーバーが動いている間は POST に落とす。
-// これによりフロントとサーバーのデプロイ順を問わない。
-const resolveWord = cache(async (raw: string) => {
-  try {
-    const res = await fetch(
-      `${API_BASE}/resolve?query=${encodeURIComponent(raw)}`,
-      { next: { revalidate: 60 * 60 * 24 } }
-    )
+/**
+ * SSR は dictionary_cache だけを読む。Cloud Run も Oxford も呼ばない。
+ *
+ * この関数に Oxford へ到達する経路が存在しないことが、コスト保護の本体。
+ * 未知の語を何万件踏まれても Supabase の空振りで終わる。
+ * 認証判定やボット判定に依存しないので、条件が変わっても破れない。
+ *
+ * 新規語は、ユーザーが検索窓から引いた時点でクライアントの POST /resolve が
+ * dictionary_cache に入れるため、その後はここで拾える。
+ *
+ * 埋め込み結合ではなく素の等価フィルタ2回にしているのは、
+ * 挙動が確実で、失敗したときに全単語ページが 404 になる事故を避けるため。
+ * どちらのクエリも Data Cache に載るので実コストはほぼゼロ。
+ *
+ * 2026-09 に AhrefsBot が /word/[存在しない語] を列挙し、SSR 経由で
+ * Oxford の従量課金が積まれた。詳細は Notion「インシデント 2026-08 Oxford API」参照。
+ */
+const SUPABASE_HEADERS = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+}
 
-    if (res.ok) {
-      const data = await res.json()
-      return data.ok ? data : null
+const DAY = 60 * 60 * 24
+
+const resolveWord = cache(
+  async (raw: string): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> => {
+    try {
+      const wordRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/words?select=id,word&word=eq.${encodeURIComponent(raw)}&limit=1`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      )
+      if (!wordRes.ok) return null
+
+      const wordRows: unknown = await wordRes.json()
+      const wordRow = Array.isArray(wordRows) ? wordRows[0] : null
+      const wordId = (wordRow as { id?: unknown } | null)?.id
+      if (wordId === undefined || wordId === null) return null
+
+      const resolved =
+        typeof (wordRow as { word?: unknown }).word === "string"
+          ? (wordRow as { word: string }).word
+          : raw
+
+      const cacheRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/dictionary_cache?select=payload&word_id=eq.${encodeURIComponent(
+          String(wordId)
+        )}&limit=1`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      )
+      if (!cacheRes.ok) return null
+
+      const cacheRows: unknown = await cacheRes.json()
+      const cacheRow = Array.isArray(cacheRows) ? cacheRows[0] : null
+      const payload = (cacheRow as { payload?: unknown } | null)?.payload
+      if (!payload) return null
+
+      return { resolved, dictionary: payload as RewrittenPayload }
+    } catch {
+      return null
     }
-
-    // 404 / 405 は「GET 未対応の旧サーバー」を意味する。それ以外は諦める。
-    if (res.status !== 404 && res.status !== 405) return null
-
-    const fallback = await fetch(`${API_BASE}/resolve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: raw }),
-      cache: "no-store",
-    })
-    if (!fallback.ok) return null
-    const data = await fallback.json()
-    return data.ok ? data : null
-  } catch {
-    return null
   }
-})
+)
 
 const resolvePhrase = cache(async (raw: string) => {
   try {
@@ -141,15 +168,12 @@ export default async function Page({
   const data = await resolveWord(raw)
   if (data) {
     const resolvedWord = data.resolved
-    const dictionary = data.dictionary ?? data.raw ?? null
-    const correctedFrom = typeof data.correctedFrom === "string" ? data.correctedFrom : undefined
     const relatedPosts = await getPostsReferencingWord(resolvedWord)
     return (
       <WordPageClient
         key={resolvedWord}
         word={resolvedWord}
-        dictionary={dictionary}
-        correctedFrom={correctedFrom}
+        dictionary={data.dictionary}
         initialPinnedSenseId={pin}
         relatedPosts={relatedPosts}
       />
@@ -162,8 +186,7 @@ export default async function Page({
     return <PhrasePageClient card={phraseCard} />
   }
 
-  // 単語でもフレーズでもなければ 404。
-  // 200 を返すとクローラーが正常ページとして index し、再訪のたびに
-  // Oxford の従量課金が積まれる。
+  // キャッシュに無い語は 404。ここで Oxford を叩きに行かない。
+  // 200 を返すとクローラーが正常ページとして index し、再訪し続ける。
   notFound()
 }
