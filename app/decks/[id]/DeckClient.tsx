@@ -42,9 +42,15 @@ type DeckWordEntry = {
 const INITIAL_VISIBLE = 30
 const LOAD_MORE_STEP = 30
 
-export default function DeckClient({ deck }: { deck: DeckInfo }) {
-  const [entries, setEntries] = useState<DeckWordEntry[]>([])
-  const [loading, setLoading] = useState(true)
+export default function DeckClient({
+  deck,
+  initialEntries = [],
+}: {
+  deck: DeckInfo
+  initialEntries?: DeckWordEntry[]
+}) {
+  const [entries, setEntries] = useState<DeckWordEntry[]>(initialEntries)
+  const [loading, setLoading] = useState(initialEntries.length === 0)
   const [wordStatus, setWordStatus] = useState<Map<string, WordStatus>>(new Map())
   const [wrongCounts, setWrongCounts] = useState<Map<string, number>>(new Map())
   const [quizEntries, setQuizEntries] = useState<QuizEntry[] | null>(null)
@@ -66,18 +72,21 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
   const openWord = useCallback((entry: DeckWordEntry) => {
     setSelectedEntry(entry)
   }, [])
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  // SSR で initial entries を出せるようになったので、
+  // 初期値は server と client で必ず一致させる（hydration mismatch 回避）。
+  // localStorage の値は mount 後に反映する。
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
 
   useEffect(() => {
+    const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+    if (saved && saved !== displayLocale) setDisplayLocale(saved)
     const handler = () => {
-      const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
-      if (saved) setDisplayLocale(saved)
+      const s = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+      if (s) setDisplayLocale(s)
     }
     window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
     return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
@@ -296,10 +305,18 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
               const firstSenseId = allSenses[0]?.senseId ?? null
               const pinnedSenseId = entry.pinned_sense_id ?? firstSenseId
               return (
-                <div
+                <a
                   key={entry.word}
-                  onClick={() => openWord(entry)}
-                  className="cursor-pointer"
+                  href={`/word/${encodeURIComponent(entry.word)}`}
+                  onClick={(e) => {
+                    // 通常クリックはモーダル表示に横取り（挙動を変えない）。
+                    // middle-click / cmd/ctrl-click / 右クリックはブラウザに任せて /word/ を開く。
+                    if (e.defaultPrevented) return
+                    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                    e.preventDefault()
+                    openWord(entry)
+                  }}
+                  className="cursor-pointer block no-underline text-inherit"
                 >
                   <EntryCard
                     headword={entry.word}
@@ -314,7 +331,7 @@ export default function DeckClient({ deck }: { deck: DeckInfo }) {
                     displayLocale={displayLocale}
                     compact
                   />
-                </div>
+                </a>
               )
             })}
           </div>

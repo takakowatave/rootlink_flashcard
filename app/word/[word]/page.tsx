@@ -72,6 +72,30 @@ const resolveWord = cache(
   }
 )
 
+const filterExistingWords = cache(async (candidates: string[]): Promise<string[]> => {
+  const unique = [...new Set(candidates.map((c) => c.toLowerCase()).filter(Boolean))]
+  if (unique.length === 0) return []
+  try {
+    const inList = unique.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/words?select=word&word=in.(${encodeURIComponent(inList)})&limit=2000`,
+      { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+    )
+    if (!res.ok) return []
+    const rows = (await res.json()) as Array<{ word: string }>
+    const found = new Set(rows.map((r) => r.word.toLowerCase()))
+    return candidates.filter((d) => found.has(d.toLowerCase()))
+  } catch {
+    return []
+  }
+})
+
+function readDerivativesFromDictionary(dictionary: RewrittenPayload | null): string[] {
+  const raw = (dictionary as unknown as { derivatives?: unknown } | null)?.derivatives
+  if (!Array.isArray(raw)) return []
+  return raw.filter((v): v is string => typeof v === 'string' && v.length > 0)
+}
+
 const resolvePhrase = cache(async (raw: string) => {
   try {
     const res = await fetch(
@@ -168,7 +192,11 @@ export default async function Page({
   const data = await resolveWord(raw)
   if (data) {
     const resolvedWord = data.resolved
-    const relatedPosts = await getPostsReferencingWord(resolvedWord)
+    const rawDerivatives = readDerivativesFromDictionary(data.dictionary)
+    const [relatedPosts, initialExistingDerivatives] = await Promise.all([
+      getPostsReferencingWord(resolvedWord),
+      filterExistingWords(rawDerivatives),
+    ])
     return (
       <WordPageClient
         key={resolvedWord}
@@ -176,6 +204,7 @@ export default async function Page({
         dictionary={data.dictionary}
         initialPinnedSenseId={pin}
         relatedPosts={relatedPosts}
+        initialExistingDerivatives={initialExistingDerivatives}
       />
     )
   }
