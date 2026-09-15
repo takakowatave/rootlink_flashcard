@@ -4,40 +4,40 @@ import { getDeckImage } from '@/lib/deckDisplay'
 
 type DeckGroup = {
   label: string
-  decks: { name: string; shortName: string; wordCount: number; id: string }[]
+  decks: { name: string; shortName: string; wordCount: number; slug: string }[]
 }
 
 const DECK_GROUPS: DeckGroup[] = [
   {
     label: 'TOEIC',
     decks: [
-      { id: '987c37d0-6053-490f-8949-b3f1f6cb121d', name: 'TOEIC 600+', shortName: '600', wordCount: 480 },
-      { id: 'bd189d85-4a9b-48e8-9c5a-0bfdcdcfef19', name: 'TOEIC 730+', shortName: '730', wordCount: 379 },
-      { id: '3c432bc7-766e-4882-88a9-55ddcbb7b308', name: 'TOEIC 860+', shortName: '860', wordCount: 292 },
-      { id: 'd64d8a2f-ea22-422a-838f-19bb4a55850d', name: 'TOEIC 990+', shortName: '990', wordCount: 191 },
+      { slug: 'toeic-600', name: 'TOEIC 600+', shortName: '600', wordCount: 480 },
+      { slug: 'toeic-730', name: 'TOEIC 730+', shortName: '730', wordCount: 379 },
+      { slug: 'toeic-860', name: 'TOEIC 860+', shortName: '860', wordCount: 292 },
+      { slug: 'toeic-990', name: 'TOEIC 990+', shortName: '990', wordCount: 191 },
     ],
   },
   {
     label: 'IELTS',
     decks: [
-      { id: '69524dec-d44b-45bd-8807-de0a1b5755bd', name: 'IELTS 5.5', shortName: '5.5', wordCount: 269 },
-      { id: 'a5eebca9-e2ad-4e7e-b4a2-9db20dfb17fe', name: 'IELTS 6.5', shortName: '6.5', wordCount: 342 },
-      { id: 'b8d7ee35-d4dd-400b-989b-85946c53212a', name: 'IELTS 7.5', shortName: '7.5', wordCount: 167 },
+      { slug: 'ielts-5-5', name: 'IELTS 5.5', shortName: '5.5', wordCount: 269 },
+      { slug: 'ielts-6-5', name: 'IELTS 6.5', shortName: '6.5', wordCount: 342 },
+      { slug: 'ielts-7-5', name: 'IELTS 7.5', shortName: '7.5', wordCount: 167 },
     ],
   },
   {
     label: 'TOEFL',
     decks: [
-      { id: '0cdb13ba-9060-4e84-8d01-b64a8a906e67', name: 'TOEFL 60', shortName: 'iBT 60', wordCount: 200 },
-      { id: '21086a87-e458-452f-a105-57fc4bf6971c', name: 'TOEFL 80', shortName: 'iBT 80', wordCount: 200 },
-      { id: 'd57aef47-1190-4bd9-9ce6-23eb495eeb43', name: 'TOEFL 100', shortName: 'iBT 100', wordCount: 200 },
+      { slug: 'toefl-60', name: 'TOEFL 60', shortName: 'iBT 60', wordCount: 200 },
+      { slug: 'toefl-80', name: 'TOEFL 80', shortName: 'iBT 80', wordCount: 200 },
+      { slug: 'toefl-100', name: 'TOEFL 100', shortName: 'iBT 100', wordCount: 200 },
     ],
   },
   {
     label: '英検',
     decks: [
-      { id: 'ba7d9ef3-6b98-4011-8e62-2aa35779336a', name: '英検 準1級', shortName: '準1級', wordCount: 363 },
-      { id: 'fd534c6c-13d2-4d01-a819-0120ec1c5b1b', name: '英検 1級', shortName: '1級', wordCount: 383 },
+      { slug: 'eiken-grade-pre-1', name: '英検 準1級', shortName: '準1級', wordCount: 363 },
+      { slug: 'eiken-grade-1', name: '英検 1級', shortName: '1級', wordCount: 383 },
     ],
   },
 ]
@@ -63,12 +63,12 @@ export default function LPDecks() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {group.decks.map(deck => (
                   <DeckCard
-                    key={deck.id}
+                    key={deck.slug}
                     label={group.label}
                     title={deck.shortName}
                     imageSrc={getDeckImage(group.label, deck.shortName)}
                     wordCount={deck.wordCount}
-                    href={`/decks/${deck.id}`}
+                    href={`/decks/${deck.slug}`}
                   />
                 ))}
               </div>
