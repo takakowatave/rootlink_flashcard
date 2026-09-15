@@ -2,7 +2,7 @@ export default function PrivacyContent() {
   return (
     <div className="text-gray-700">
       <h1 className="text-2xl font-bold mb-2">プライバシーポリシー</h1>
-      <p className="text-sm text-gray-400 mb-10">制定日：2026年4月　最終更新：2026年8月</p>
+      <p className="text-sm text-gray-400 mb-10">制定日：2026年4月　最終更新：2026年9月</p>
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">1. 事業者情報</h2>
@@ -18,7 +18,8 @@ export default function PrivacyContent() {
           <li>学習履歴・保存単語・学習成績などの利用データ</li>
           <li>検索キーワード（辞書データ生成のためOpenAI APIに送信されます）</li>
           <li>IPアドレス・ブラウザ情報・アクセスログ（自動収集）</li>
-          <li>決済情報（Stripeが管理します。カード番号等は当方では取得・保存しません）</li>
+          <li>決済情報（Web版はStripe、アプリ版はApp Store / Google Playが管理します。カード番号等は当方では取得・保存しません）</li>
+          <li>購入・サブスクリプションの状態（アプリ内課金の管理のためRevenueCatに送信されます）</li>
         </ul>
       </section>
 
@@ -50,7 +51,10 @@ export default function PrivacyContent() {
               {[
                 ['Supabase', '認証・データベース'],
                 ['OpenAI', '辞書データ・翻訳生成'],
-                ['Stripe', '決済処理'],
+                ['Stripe', 'Web版の決済処理'],
+                ['RevenueCat', 'アプリ内課金の管理・購入状態の同期'],
+                ['Apple（App Store）', 'iOSアプリ内課金の決済処理'],
+                ['Google（Google Play）', 'Androidアプリ内課金の決済処理'],
                 ['Google', 'ソーシャルログイン'],
                 ['GitHub', 'ソーシャルログイン'],
                 ['Vercel', 'Webホスティング'],
@@ -79,7 +83,7 @@ export default function PrivacyContent() {
           <li>アカウント情報（メールアドレス・表示名・アイコン）、保存単語・保存フレーズ、学習成績・学習ストリーク等のすべての学習履歴は<strong>退会と同時に削除</strong>されます</li>
           <li>Premiumプランに加入中の場合、退会と同時にサブスクリプションを自動的に解約します</li>
           <li>バックアップおよびアクセスログに含まれる残存データは、<strong>30日以内に完全に削除</strong>します</li>
-          <li>Stripe上の決済履歴は、法令（税法等）に基づく保存義務のあいだ、Stripeのプライバシーポリシーに従って保管されます</li>
+          <li>Stripe およびアプリ内課金（App Store / Google Play）上の決済履歴は、法令（税法等）に基づく保存義務のあいだ、各社のプライバシーポリシーに従って保管されます</li>
         </ul>
       </section>
 
