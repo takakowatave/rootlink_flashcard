@@ -649,6 +649,7 @@ export default function WordPageClient({
   initialDisplayLocale,
   noCard,
   relatedPosts,
+  initialExistingDerivatives,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -658,6 +659,7 @@ export default function WordPageClient({
   initialDisplayLocale?: DisplayLocale
   noCard?: boolean
   relatedPosts?: Array<{ title: string; slug: string }>
+  initialExistingDerivatives?: string[]
 }) {
   const router = useRouter()
 
@@ -916,7 +918,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   // etymology parts ごとにDBから同一ルートを持つ単語を取得して relatedWords を補完
   const [enrichedEtymologyData, setEnrichedEtymologyData] = useState<EtymologyData | null>(null)
   // derivatives は AI が実在しない形も出すため、words テーブルに存在するものだけ表示
-  const [existingDerivatives, setExistingDerivatives] = useState<string[]>([])
+  // 初期値はサーバー側で filter 済み。SSR HTML に派生語リンクを出すために必要。
+  const [existingDerivatives, setExistingDerivatives] = useState<string[]>(
+    initialExistingDerivatives ?? []
+  )
 
   useEffect(() => {
     if (etymologyData?.structure.type !== 'parts') {
