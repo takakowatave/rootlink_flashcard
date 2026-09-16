@@ -138,10 +138,13 @@ export default function AuthCallback() {
         }
 
         // 新規ユーザー判定: 未オンボーディング (acquisition_source が null)
-        // かつ auth.users.created_at が直近 NEW_USER_WINDOW_MS 以内。
-        // 既存ユーザーの再ログインで sign_up_complete が二重送信されないようにする。
-        const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
-        const isRecent = createdAt > 0 && Date.now() - createdAt < NEW_USER_WINDOW_MS;
+        // かつ auth.users.email_confirmed_at が直近 NEW_USER_WINDOW_MS 以内。
+        // created_at は signUp() 呼び出し時点で、メール認証まで数時間空くケースがあり
+        // 「新規なのに計測されない」問題があるため email_confirmed_at を採用。
+        const confirmedAtRaw = (user as { email_confirmed_at?: string | null })
+          .email_confirmed_at;
+        const confirmedAt = confirmedAtRaw ? new Date(confirmedAtRaw).getTime() : 0;
+        const isRecent = confirmedAt > 0 && Date.now() - confirmedAt < NEW_USER_WINDOW_MS;
         const acquisitionSource = profile?.acquisition_source ?? null;
         const isNewUser = isRecent && !acquisitionSource;
 
