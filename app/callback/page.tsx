@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Button from "@/components/Button";
 import { supabase } from "../lib/supabaseClient";
 import { sendEvent } from "@/lib/ga";
 
 const SIGNUP_TRIGGER_KEY = "signup_trigger";
+// 「新規ユーザー」とみなす signup 直後の窓
+const NEW_USER_WINDOW_MS = 10 * 60 * 1000;
 
-type State = "loading" | "error";
+type State = "loading" | "error" | "confirmed";
 
 export default function AuthCallback() {
   const [state, setState] = useState<State>("loading");
+  const [fromApp, setFromApp] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -25,6 +29,10 @@ export default function AuthCallback() {
           return;
         }
 
+        // メール確認リンクを別ブラウザで開いた場合の応急処置用フラグ
+        // 交換失敗時は fromApp を見て confirmed 画面を出し分ける
+        const fromAppFlag = url.searchParams.get("from") === "app";
+
         // @supabase/ssr の createBrowserClient は detectSessionInUrl が
         // デフォルト有効で、client 初期化時に URL の ?code= を自動 exchange する。
         // そのため既に session が張られている可能性があるので、まず確認する。
@@ -37,7 +45,11 @@ export default function AuthCallback() {
           if (code) {
             const { error } = await supabase.auth.exchangeCodeForSession(code);
             if (error) {
-              setState("error");
+              // PKCE の code_verifier が別ブラウザに無いケース。
+              // Supabase 側では email_confirmed_at が入っているので
+              // 認証完了として扱い、ログイン導線に誘導する。
+              setFromApp(fromAppFlag);
+              setState("confirmed");
               return;
             }
           } else {
@@ -75,8 +87,10 @@ export default function AuthCallback() {
           .from("profiles")
           .select("*")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
+        // profiles 行はトリガーで自動作成される（handle_new_user）。
+        // 落ちてしまった過去ユーザー用に保険で insert も残す。
         if (!profile) {
           const googleName =
             user.user_metadata?.full_name ||
@@ -95,15 +109,6 @@ export default function AuthCallback() {
             username: googleName,
             avatar_url: googleAvatar,
           });
-
-          let trigger: string | null = null;
-          try {
-            trigger = window.sessionStorage.getItem(SIGNUP_TRIGGER_KEY);
-            window.sessionStorage.removeItem(SIGNUP_TRIGGER_KEY);
-          } catch {
-            // ignore
-          }
-          sendEvent("sign_up_complete", { trigger: trigger ?? "direct" });
         } else {
           const googleName =
             user.user_metadata?.full_name ||
@@ -129,6 +134,32 @@ export default function AuthCallback() {
               .from("profiles")
               .update(updates)
               .eq("id", user.id);
+          }
+        }
+
+        // 新規ユーザー判定: 未オンボーディング (acquisition_source が null)
+        // かつ auth.users.created_at が直近 NEW_USER_WINDOW_MS 以内。
+        // 既存ユーザーの再ログインで sign_up_complete が二重送信されないようにする。
+        const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+        const isRecent = createdAt > 0 && Date.now() - createdAt < NEW_USER_WINDOW_MS;
+        const acquisitionSource = profile?.acquisition_source ?? null;
+        const isNewUser = isRecent && !acquisitionSource;
+
+        if (isNewUser) {
+          let trigger: string | null = null;
+          try {
+            trigger = window.sessionStorage.getItem(SIGNUP_TRIGGER_KEY);
+            window.sessionStorage.removeItem(SIGNUP_TRIGGER_KEY);
+          } catch {
+            // ignore
+          }
+          sendEvent("sign_up_complete", { trigger: trigger ?? "direct" });
+        } else {
+          // 新規ではないので trigger だけ掃除（残しておく理由が無い）
+          try {
+            window.sessionStorage.removeItem(SIGNUP_TRIGGER_KEY);
+          } catch {
+            // ignore
           }
         }
 
@@ -160,6 +191,39 @@ export default function AuthCallback() {
             新規登録
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (state === "confirmed") {
+    return (
+      <div className="max-w-md mx-auto px-6 py-16 text-center">
+        <h1 className="text-xl font-semibold text-gray-900 mb-3">
+          メール認証が完了しました
+        </h1>
+        {fromApp ? (
+          <>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              RootLink アプリに戻ってログインしてください。
+            </p>
+            <div className="flex items-center justify-center text-xs">
+              <Link href="/login" className="text-gray-500 underline">
+                このブラウザでログイン
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              ログインしてご利用ください。
+            </p>
+            <div className="flex items-center justify-center">
+              <Link href="/login">
+                <Button variant="primary">ログイン</Button>
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     );
   }

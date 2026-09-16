@@ -14,6 +14,7 @@ import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 
 interface FormData {
   email: string;
@@ -33,7 +34,11 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
-    const emailRedirectTo = `${window.location.origin}/callback`;
+    // アプリで signup → 確認メールを Chrome で開くと戻り先がわからない
+    // native では ?from=app を付けて /callback で「アプリに戻ってログイン」導線を出す
+    const emailRedirectTo = `${window.location.origin}/callback${
+      isNativePlatform() ? "?from=app" : ""
+    }`;
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
