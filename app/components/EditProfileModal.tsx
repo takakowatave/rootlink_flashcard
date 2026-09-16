@@ -200,6 +200,43 @@ export default function EditProfileModal({
     if (saved === "en" || saved === "ja") setDisplayLocale(saved);
   }, [isOpen]);
 
+  // profile 行が無い状態でモーダルが開いたら、その場で自己修復を試みる
+  // AppShell のトリガーが効かなかった過去ユーザーの保険
+  useEffect(() => {
+    if (!isOpen || profile) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (existing || cancelled) {
+        onUpdated();
+        return;
+      }
+      const username =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "";
+      const avatar_url =
+        user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+      const { error } = await supabase.from("profiles").insert({
+        id: user.id,
+        email: user.email,
+        username,
+        avatar_url,
+      });
+      if (!error && !cancelled) onUpdated();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, profile, onUpdated]);
+
   const handleLocaleChange = (locale: DisplayLocale) => {
     setDisplayLocale(locale);
     localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
@@ -207,7 +244,7 @@ export default function EditProfileModal({
     toast.success(locale === "ja" ? "和英モードに切り替えました" : "英英モードに切り替えました");
   };
 
-  if (!isOpen || !profile) return null;
+  if (!isOpen) return null;
 
   return (
     <>
@@ -236,45 +273,49 @@ export default function EditProfileModal({
         }
       >
         <div className="px-5 md:px-6 pt-4 pb-8 flex flex-col gap-8">
-            {/* アバター */}
-            <div className="flex justify-center pt-2">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
-                  {profile.avatar_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
-                  ) : (
-                    <FaUserCircle className="w-full h-full text-gray-400" />
-                  )}
+            {profile && (
+              <>
+                {/* アバター */}
+                <div className="flex justify-center pt-2">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
+                      {profile.avatar_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <FaUserCircle className="w-full h-full text-gray-400" />
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      aria-label="アイコン変更"
+                    >
+                      <BsPencil size={14} />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={AVATAR_ALLOWED_MIME_TYPES.join(",")}
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  aria-label="アイコン変更"
-                >
-                  <BsPencil size={14} />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={AVATAR_ALLOWED_MIME_TYPES.join(",")}
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
-              </div>
-            </div>
 
-            <SettingsSection title="プロフィール">
-              <EditableField
-                label="表示名"
-                value={profile.username ?? ""}
-                placeholder="表示名を入力"
-                emptyLabel="未設定"
-                onSave={handleSaveDisplayName}
-              />
-            </SettingsSection>
+                <SettingsSection title="プロフィール">
+                  <EditableField
+                    label="表示名"
+                    value={profile.username ?? ""}
+                    placeholder="表示名を入力"
+                    emptyLabel="未設定"
+                    onSave={handleSaveDisplayName}
+                  />
+                </SettingsSection>
+              </>
+            )}
 
             <SettingsSection title="アカウント">
               <SettingsRow
