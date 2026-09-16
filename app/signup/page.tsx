@@ -34,11 +34,11 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
-    // アプリで signup → 確認メールを Chrome で開くと戻り先がわからない
-    // native では ?from=app を付けて /callback で「アプリに戻ってログイン」導線を出す
-    const emailRedirectTo = `${window.location.origin}/callback${
-      isNativePlatform() ? "?from=app" : ""
-    }`;
+    // native はアプリ deeplink に戻す (AndroidManifest / Supabase 許可リスト登録済み)。
+    // AppShell の appUrlOpen ハンドラが ?code= を受け取って exchangeCodeForSession → /callback へ遷移する。
+    const emailRedirectTo = isNativePlatform()
+      ? "com.rootlink.app://auth-callback"
+      : `${window.location.origin}/callback`;
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,

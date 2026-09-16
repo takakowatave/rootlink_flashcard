@@ -14,7 +14,6 @@ type State = "loading" | "error" | "confirmed";
 
 export default function AuthCallback() {
   const [state, setState] = useState<State>("loading");
-  const [fromApp, setFromApp] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -29,10 +28,6 @@ export default function AuthCallback() {
           return;
         }
 
-        // メール確認リンクを別ブラウザで開いた場合の応急処置用フラグ
-        // 交換失敗時は fromApp を見て confirmed 画面を出し分ける
-        const fromAppFlag = url.searchParams.get("from") === "app";
-
         // @supabase/ssr の createBrowserClient は detectSessionInUrl が
         // デフォルト有効で、client 初期化時に URL の ?code= を自動 exchange する。
         // そのため既に session が張られている可能性があるので、まず確認する。
@@ -45,10 +40,11 @@ export default function AuthCallback() {
           if (code) {
             const { error } = await supabase.auth.exchangeCodeForSession(code);
             if (error) {
-              // PKCE の code_verifier が別ブラウザに無いケース。
-              // Supabase 側では email_confirmed_at が入っているので
-              // 認証完了として扱い、ログイン導線に誘導する。
-              setFromApp(fromAppFlag);
+              // PKCE の code_verifier が別ブラウザに無いケース (Web で signup した
+              // ユーザーが確認メールを別ブラウザで開いた等)。Supabase 側では
+              // email_confirmed_at が入っているので認証完了として扱い、
+              // ログイン導線に誘導する。native はアプリ deeplink で戻る経路のため
+              // このパスには入らない。
               setState("confirmed");
               return;
             }
@@ -204,29 +200,14 @@ export default function AuthCallback() {
         <h1 className="text-xl font-semibold text-gray-900 mb-3">
           メール認証が完了しました
         </h1>
-        {fromApp ? (
-          <>
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              RootLink アプリに戻ってログインしてください。
-            </p>
-            <div className="flex items-center justify-center text-xs">
-              <Link href="/login" className="text-gray-500 underline">
-                このブラウザでログイン
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              ログインしてご利用ください。
-            </p>
-            <div className="flex items-center justify-center">
-              <Link href="/login">
-                <Button variant="primary">ログイン</Button>
-              </Link>
-            </div>
-          </>
-        )}
+        <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+          ログインしてご利用ください。
+        </p>
+        <div className="flex items-center justify-center">
+          <Link href="/login">
+            <Button variant="primary">ログイン</Button>
+          </Link>
+        </div>
       </div>
     );
   }
