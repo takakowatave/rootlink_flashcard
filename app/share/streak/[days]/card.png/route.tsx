@@ -66,7 +66,11 @@ function StreakCard({
   // next/og の flex-end は box bottom を揃えるが、NotoSansJP の descent
   // (font-size の約 12%) と Latin 数字の視覚下端が食い違うため、数字側を
   // 差分ぶん下げて視覚上の下端を揃える。
-  const numDropPx = Math.round((numFontSize - sideFontSize) * 0.12)
+  // 1 桁は数字周囲の CJK 側の視覚バランスが崩れがちなので係数を強め、
+  // 足りない分は translateY で微調整する。
+  const coefficient = digits === 1 ? 0.14 : 0.12
+  const numDropPx = Math.round((numFontSize - sideFontSize) * coefficient)
+  const numExtraTranslateY = digits === 1 ? 6 : 0
 
   return (
     <div
@@ -108,6 +112,7 @@ function StreakCard({
               fontSize: numFontSize,
               letterSpacing: '-0.02em',
               margin: `0 4px -${numDropPx}px 4px`,
+              transform: numExtraTranslateY ? `translateY(${numExtraTranslateY}px)` : undefined,
             }}
           >
             {days}
