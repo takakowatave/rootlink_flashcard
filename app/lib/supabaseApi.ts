@@ -186,6 +186,7 @@ export const fetchWordsByEtymologyPart = async (
     .from('etymology_parts')
     .select('word_id')
     .ilike('text', partText)
+    .limit(50)
 
   if (error || !partRows || partRows.length === 0) return []
 
@@ -210,6 +211,7 @@ export const fetchWordsByEtymologyPart = async (
     .from('dictionary_cache')
     .select('word_id, payload')
     .in('word_id', ids)
+    .limit(ids.length)
 
   type CacheRow = { word_id: string; payload: { senseGroups?: { senses?: { definition?: string }[] }[] } }
   const meaningMap = new Map<string, string>()
@@ -249,6 +251,7 @@ export const fetchWordlists = async (userId: string) => {
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
+    .limit(5000)
 
   if (savedErr) {
     console.error("fetchWordlists saved_words error:", savedErr)
@@ -275,6 +278,7 @@ export const fetchWordlists = async (userId: string) => {
     .from("dictionary_cache")
     .select("word_id, payload")
     .in("word_id", wordIds)
+    .limit(wordIds.length)
 
   if (rawErr) {
     console.error("fetchWordlists dictionary_cache error:", rawErr)
@@ -390,6 +394,7 @@ export const fetchRecentQuizWords = async (
         .from('deck_words')
         .select('deck_id, word')
         .in('word', uniqueWords.slice(i, i + 200))
+        .limit(2000)
       if (data) rows.push(...(data as { deck_id: string; word: string }[]))
     }
     const deckIds = [...new Set(rows.map((r) => r.deck_id))]
@@ -398,6 +403,7 @@ export const fetchRecentQuizWords = async (
         .from('decks')
         .select('id, is_premium')
         .in('id', deckIds)
+        .limit(deckIds.length)
       const premiumDecks = new Set(
         ((deckMeta ?? []) as { id: string; is_premium: boolean }[])
           .filter((d) => d.is_premium)
@@ -457,6 +463,7 @@ export const fetchHardQuizWords = async (
         .from('deck_words')
         .select('deck_id, word')
         .in('word', hardWords.slice(i, i + 200))
+        .limit(2000)
       if (data) rows.push(...(data as { deck_id: string; word: string }[]))
     }
     const deckIds = [...new Set(rows.map((r) => r.deck_id))]

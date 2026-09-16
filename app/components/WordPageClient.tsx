@@ -962,6 +962,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       .from('words')
       .select('word')
       .in('word', candidates)
+      .limit(candidates.length)
       .then(({ data }) => {
         const found = new Set((data ?? []).map((r: { word: string }) => r.word.toLowerCase()))
         setExistingDerivatives(derivatives.filter(d => found.has(d.toLowerCase())))

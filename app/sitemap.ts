@@ -31,6 +31,7 @@ async function buildMainSitemap(
     .select("id, slug, created_at")
     .eq("is_official", true)
     .order("created_at", { ascending: false })
+    .limit(100)
 
   const deckEntries: MetadataRoute.Sitemap =
     (decks ?? [])

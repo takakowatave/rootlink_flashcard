@@ -509,7 +509,7 @@ export default function Dashboard() {
       if (quizWords.length > 0) {
         const deckWordRows: { deck_id: string; word: string }[] = []
         for (let i = 0; i < quizWords.length; i += 200) {
-          const { data } = await supabase.from('deck_words').select('deck_id, word').in('word', quizWords.slice(i, i + 200))
+          const { data } = await supabase.from('deck_words').select('deck_id, word').in('word', quizWords.slice(i, i + 200)).limit(2000)
           if (data) deckWordRows.push(...data)
         }
         const deckIdByWord = new Map(deckWordRows.map(r => [r.word, r.deck_id]))

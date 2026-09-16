@@ -17,6 +17,7 @@ export default async function BlogListPage() {
     .select('id, title, slug, tags, published_at, created_at')
     .not('published_at', 'is', null)
     .order('published_at', { ascending: false })
+    .limit(5000)
 
   if (error) {
     return (

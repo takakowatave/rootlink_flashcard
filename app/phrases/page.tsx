@@ -80,7 +80,7 @@ function PhrasesPageInner() {
           .order('created_at', { ascending: false })
           .limit(200),
         user
-          ? supabase.from('saved_phrase_cards').select('phrase_card_id').eq('user_id', user.id)
+          ? supabase.from('saved_phrase_cards').select('phrase_card_id').eq('user_id', user.id).limit(5000)
           : Promise.resolve({ data: [] }),
       ])
       setCards((cardsRes.data ?? []) as PhraseCardRow[])

@@ -145,6 +145,7 @@ export async function fetchReviewCandidates(
           .from('deck_words')
           .select('deck_id, word')
           .in('word', quizOnlyWords.slice(i, i + 200))
+          .limit(2000)
         if (data) rows.push(...(data as { deck_id: string; word: string }[]))
       }
       const deckIds = [...new Set(rows.map((r) => r.deck_id))]
@@ -153,6 +154,7 @@ export async function fetchReviewCandidates(
           .from('decks')
           .select('id, is_premium')
           .in('id', deckIds)
+          .limit(deckIds.length)
         const premiumDecks = new Set(
           ((deckMeta ?? []) as { id: string; is_premium: boolean }[])
             .filter((d) => d.is_premium)
