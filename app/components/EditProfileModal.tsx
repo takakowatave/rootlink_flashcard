@@ -21,7 +21,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
 import NativePaywall from "@/components/NativePaywall";
 import { isNativePlatform } from "@/lib/isNativePlatform";
-import { openNativeManageSubscriptions } from "@/lib/revenuecat";
+import { openNativeManageSubscriptions, signOutRevenueCat } from "@/lib/revenuecat";
 import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
@@ -128,6 +128,9 @@ export default function EditProfileModal({
     // 予約済みのローカル通知と保存済み設定は logout 時に必ず片付ける。
     // 別アカウントで再ログインしたときに前ユーザーの reminder が発火するのを防ぐ。
     await clearReminders();
+    // RevenueCat の紐付けもリセット。別アカウントに前ユーザーの購入状態が
+    // 引き継がれるのを防ぐ。
+    await signOutRevenueCat();
     await supabase.auth.signOut();
     window.location.href = "/";
   };
