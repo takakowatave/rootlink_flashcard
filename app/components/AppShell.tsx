@@ -22,11 +22,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    const ensureProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user || cancelled) return
+
+    const ensureProfile = async (userId: string) => {
+      if (cancelled) return
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || user.id !== userId || cancelled) return
       const { data: existing } = await supabase
         .from('profiles')
         .select('id')
@@ -50,9 +50,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         window.dispatchEvent(new CustomEvent(PROFILE_CREATED_EVENT))
       }
     }
-    ensureProfile()
+
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) await ensureProfile(session.user.id)
+    })()
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        ensureProfile(session.user.id)
+      }
+    })
+
     return () => {
       cancelled = true
+      authSub.subscription.unsubscribe()
     }
   }, [])
 
