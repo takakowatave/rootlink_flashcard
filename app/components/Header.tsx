@@ -333,7 +333,7 @@ const Header = () => {
         onUpdated={async () => {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) return;
-          const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single<Profile>();
+          const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle<Profile>();
           if (data) setProfile(data);
         }}
       />

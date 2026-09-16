@@ -22,6 +22,7 @@ import PageHeader from "@/components/PageHeader"
 import CardShell from "@/components/CardShell"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
+import { useAuthReload } from "@/lib/useAuthReload"
 
 export type SavedWordRow = {
   word_id: string
@@ -138,9 +139,26 @@ export default function WordListPage() {
     if (allKeys.length > 0) await loadStatus(allKeys, data.user.id)
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  // マウント時と、後からログイン・ログアウトしたときに再実行する。
+  // 未ログインなら load() が SignupModal を出し、SIGNED_OUT で state を空に戻す。
+  useAuthReload((userId, event) => {
+    if (event === 'SIGNED_OUT') {
+      setUserId(null)
+      setWordList([])
+      setPhraseList([])
+      setSavedWords([])
+      setSavedPhraseIds(new Set())
+      setWordStatus(new Map())
+      setWrongCounts(new Map())
+      return
+    }
+    if (userId) {
+      void load()
+    } else {
+      // mount 時に未ログイン
+      setShowSignupModal(true)
+    }
+  })
 
   useEffect(() => {
     const handler = () => {

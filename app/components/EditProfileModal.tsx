@@ -21,10 +21,65 @@ import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
 import NativePaywall from "@/components/NativePaywall";
 import { isNativePlatform } from "@/lib/isNativePlatform";
-import { openNativeManageSubscriptions } from "@/lib/revenuecat";
+import { openNativeManageSubscriptions, signOutRevenueCat } from "@/lib/revenuecat";
 import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
+import Toggle from "@/components/Toggle";
+import InfoBanner from "@/components/InfoBanner";
+import Button from "@/components/Button";
+import {
+  clearReminders,
+  DEFAULT_REMINDER_SETTINGS,
+  loadReminderSettings,
+  persistAndApplyReminders,
+  type ReminderSettings,
+  type ReminderSlotKey,
+} from "@/lib/reminders";
+
+// 'granted' | 'denied' | 'prompt' 等を返す。'prompt' 系は request で聞ける状態、
+// 'denied' 以降は OS 設定でしか復帰しない。plugin が無い / エラー時は 'unknown'
+// にしてセクション自体は現状維持（グレーアウトも InfoBanner も出さない）。
+type NotifPermission = "granted" | "prompt" | "denied" | "unknown";
+
+async function openNotificationSettings(): Promise<void> {
+  try {
+    const { NativeSettings, IOSSettings, AndroidSettings } = await import(
+      "capacitor-native-settings"
+    );
+    await NativeSettings.open({
+      optionIOS: IOSSettings.App,
+      optionAndroid: AndroidSettings.AppNotification,
+    });
+  } catch {
+    // plugin unavailable in web preview — silently skip
+  }
+}
+
+async function checkNotificationPermission(): Promise<NotifPermission> {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const state = (await mod.LocalNotifications.checkPermissions()).display;
+    if (state === "granted") return "granted";
+    if (state === "denied") return "denied";
+    // prompt / prompt-with-rationale / undetermined 等はまとめて 'prompt'
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function requestNotificationPermission(): Promise<NotifPermission> {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const state = (await mod.LocalNotifications.requestPermissions()).display;
+    if (state === "granted") return "granted";
+    if (state === "denied") return "denied";
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}
 
 interface Props {
   isOpen: boolean;
@@ -60,12 +115,22 @@ export default function EditProfileModal({
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>(
+    DEFAULT_REMINDER_SETTINGS,
+  );
+  const [notifPermission, setNotifPermission] = useState<NotifPermission>("unknown");
 
   const API_BASE =
     process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
     "https://rootlink-server-v2-774622345521.asia-northeast1.run.app";
 
   const handleLogout = async () => {
+    // 予約済みのローカル通知と保存済み設定は logout 時に必ず片付ける。
+    // 別アカウントで再ログインしたときに前ユーザーの reminder が発火するのを防ぐ。
+    await clearReminders();
+    // RevenueCat の紐付けもリセット。別アカウントに前ユーザーの購入状態が
+    // 引き継がれるのを防ぐ。
+    await signOutRevenueCat();
     await supabase.auth.signOut();
     window.location.href = "/";
   };
@@ -198,7 +263,65 @@ export default function EditProfileModal({
     });
     const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
     if (saved === "en" || saved === "ja") setDisplayLocale(saved);
+    if (isNativePlatform()) {
+      setReminderSettings(loadReminderSettings());
+      checkNotificationPermission().then(setNotifPermission);
+    }
   }, [isOpen]);
+
+  // モーダル表示中にアプリが復帰したら permission を取り直す
+  // （端末の設定でトグルを変えて戻ってきた等）
+  useEffect(() => {
+    if (!isOpen || !isNativePlatform()) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        checkNotificationPermission().then(setNotifPermission);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isOpen]);
+
+  const handleAllowNotifications = async () => {
+    if (notifPermission === "denied") {
+      // 拒否済みは request しても即 denied が返るので、端末の設定に飛ばす
+      await openNotificationSettings();
+      return;
+    }
+    const next = await requestNotificationPermission();
+    setNotifPermission(next);
+    if (next === "granted") {
+      // 許可が取れたのでその場で予約を反映する
+      await persistAndApplyReminders(reminderSettings);
+    }
+  };
+
+  const updateReminderSettings = (patch: (prev: ReminderSettings) => ReminderSettings) => {
+    setReminderSettings((prev) => {
+      const next = patch(prev);
+      // 保存＋通知の予約反映は非同期で走らせる。UI は即時反映で良い。
+      void persistAndApplyReminders(next);
+      return next;
+    });
+  };
+
+  const handleMasterToggle = (next: boolean) => {
+    updateReminderSettings((prev) => ({ ...prev, masterEnabled: next }));
+  };
+
+  const handleSlotTimeChange = (key: ReminderSlotKey, time: string) => {
+    updateReminderSettings((prev) => ({
+      ...prev,
+      slots: prev.slots.map((s) => (s.key === key ? { ...s, time } : s)),
+    }));
+  };
+
+  const handleSlotToggle = (key: ReminderSlotKey, enabled: boolean) => {
+    updateReminderSettings((prev) => ({
+      ...prev,
+      slots: prev.slots.map((s) => (s.key === key ? { ...s, enabled } : s)),
+    }));
+  };
 
   // profile 行が無い状態でモーダルが開いたら、その場で自己修復を試みる
   // AppShell のトリガーが効かなかった過去ユーザーの保険
@@ -400,6 +523,84 @@ export default function EditProfileModal({
                 <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
               </SettingsRow>
             </SettingsSection>
+
+            {isNativePlatform() && (
+              <SettingsSection title="通知">
+                {(notifPermission === "denied" || notifPermission === "prompt") && (
+                  <div className="pt-4 pb-2 flex flex-col gap-3">
+                    <InfoBanner
+                      title="通知がオフになっています"
+                      body="リマインダーを受け取るには、端末の設定で通知を許可してください。"
+                    />
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      radius="full"
+                      onClick={handleAllowNotifications}
+                    >
+                      通知を許可する
+                    </Button>
+                  </div>
+                )}
+                <SettingsRow label="学習リマインダー">
+                  <Toggle
+                    checked={reminderSettings.masterEnabled}
+                    onChange={handleMasterToggle}
+                    label="学習リマインダー"
+                    disabled={notifPermission !== "granted" && notifPermission !== "unknown"}
+                  />
+                </SettingsRow>
+                {reminderSettings.slots.map((slot) => {
+                  const notGranted =
+                    notifPermission !== "granted" && notifPermission !== "unknown";
+                  const disabled = !reminderSettings.masterEnabled || notGranted;
+                  return (
+                    <div
+                      key={slot.key}
+                      className="flex items-center justify-between py-4 border-b border-line last:border-b-0"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          className={`inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer ${
+                            disabled ? "opacity-40 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          <input
+                            type="time"
+                            value={slot.time}
+                            disabled={disabled}
+                            onChange={(e) => handleSlotTimeChange(slot.key, e.target.value)}
+                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px] disabled:cursor-not-allowed"
+                          />
+                        </label>
+                        <span
+                          className={`text-base text-gray-950 ${
+                            disabled ? "opacity-40" : ""
+                          }`}
+                        >
+                          {slot.label}
+                        </span>
+                      </div>
+                      <Toggle
+                        checked={slot.enabled}
+                        onChange={(next) => handleSlotToggle(slot.key, next)}
+                        label={`${slot.label} の通知`}
+                        disabled={disabled}
+                      />
+                    </div>
+                  );
+                })}
+                <SettingsRow label="通知の詳細設定">
+                  <button
+                    type="button"
+                    onClick={openNotificationSettings}
+                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+                  >
+                    端末の設定を開く
+                  </button>
+                </SettingsRow>
+              </SettingsSection>
+            )}
 
             <SettingsSection title="アカウント削除">
               <SettingsRow

@@ -39,6 +39,21 @@ export async function ensureRevenueCatConfigured(appUserID: string | null): Prom
   return true
 }
 
+// ログアウト・退会時に呼ぶ。native のときだけ Purchases.logOut() を叩く。
+// 匿名 appUserID の状態で logOut するとエラー（"already anonymous"）になるので
+// 握りつぶす。configuredAppUserID もリセットして、次の SIGNED_IN で
+// ensureRevenueCatConfigured が新しい appUserID で configure し直せるようにする。
+export async function signOutRevenueCat(): Promise<void> {
+  if (!isNativePlatform()) return
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    await Purchases.logOut()
+  } catch {
+    // 匿名 user だったとき等はエラー扱いで無視
+  }
+  configuredAppUserID = undefined
+}
+
 export async function getCurrentOffering() {
   if (!isNativePlatform()) return null
   const { Purchases } = await import('@revenuecat/purchases-capacitor')

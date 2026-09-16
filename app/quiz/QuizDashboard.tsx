@@ -9,6 +9,7 @@ import QuizScopeSelector, { type QuizScope } from '@/components/QuizScopeSelecto
 import QuizStatusHelp from '@/components/QuizStatusHelp'
 import { classifyQuizStatus, classifyForDonut } from '@/lib/quizScope'
 import { fetchRecentQuizWords, getUserPlan } from '@/lib/supabaseApi'
+import { useAuthReload } from '@/lib/useAuthReload'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
@@ -100,87 +101,90 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
   const [selectedMode, setSelectedMode] = useState<QuizMode>(initialMode)
   const [tutorialVisible, setTutorialVisible] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: auth } = await supabase.auth.getUser()
-      if (!auth.user) return
-
-      const plan = await getUserPlan()
-      const [
-        { data: savedWordRows },
-        { data: savedPhraseRows },
-        { data: historyRows },
-        recent,
-      ] = await Promise.all([
-        supabase
-          .from('saved_words')
-          .select('words(word)')
-          .eq('user_id', auth.user.id)
-          .limit(5000),
-        supabase
-          .from('saved_phrase_cards')
-          .select('phrase_cards(phrase)')
-          .eq('user_id', auth.user.id)
-          .limit(5000),
-        supabase
-          .from('quiz_results')
-          .select('word')
-          .eq('user_id', auth.user.id)
-          .order('answered_at', { ascending: false })
-          .limit(1000),
-        fetchRecentQuizWords(auth.user.id, plan, 20),
-      ])
-      setRecentCount(recent.length)
-
-      const savedKeys = new Set<string>()
-      for (const r of (savedWordRows ?? []) as unknown as { words: { word: string } | null }[]) {
-        if (r.words?.word) savedKeys.add(r.words.word)
-      }
-      for (const r of (savedPhraseRows ?? []) as unknown as { phrase_cards: { phrase: string } | null }[]) {
-        if (r.phrase_cards?.phrase) savedKeys.add(r.phrase_cards.phrase)
-      }
-
-      // クイズ履歴のうち saved に無いもの (デッキ由来単語など) も出題母集団に含める
-      const historyKeys = new Set<string>()
-      for (const r of (historyRows ?? []) as { word: string }[]) {
-        if (r.word && !savedKeys.has(r.word)) historyKeys.add(r.word)
-      }
-
-      const allKeys = [...savedKeys, ...historyKeys]
-      setSavedTotal(allKeys.length)
-
-      if (allKeys.length === 0) {
-        setStats({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
-        setLoading(false)
-        return
-      }
-
-      const { data: qrRows } = await supabase
-        .from('quiz_results')
-        .select('word, correct, answered_at')
-        .eq('user_id', auth.user.id)
-        .in('word', allKeys)
-        .order('answered_at', { ascending: false })
-        .limit(10000)
-
-      const { status, wrongCount } = classifyQuizStatus(
-        (qrRows ?? []) as { word: string; correct: boolean }[],
-        allKeys,
-      )
-      const buckets = classifyForDonut(status, wrongCount, allKeys)
-
-      setStats({
-        unlearned: buckets.unseen,
-        review: buckets.review,
-        mastered: buckets.mastered,
-        hard: buckets.hard,
-        review_scope: buckets.review,
-        total: allKeys.length,
-      })
+  // マウント時＋SIGNED_IN で load、SIGNED_OUT で stats をリセット。
+  useAuthReload(async (userId, event) => {
+    if (event === 'SIGNED_OUT' || !userId) {
+      setStats({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
+      setSavedTotal(0)
+      setRecentCount(0)
       setLoading(false)
+      return
     }
-    load()
-  }, [])
+
+    const plan = await getUserPlan()
+    const [
+      { data: savedWordRows },
+      { data: savedPhraseRows },
+      { data: historyRows },
+      recent,
+    ] = await Promise.all([
+      supabase
+        .from('saved_words')
+        .select('words(word)')
+        .eq('user_id', userId)
+        .limit(5000),
+      supabase
+        .from('saved_phrase_cards')
+        .select('phrase_cards(phrase)')
+        .eq('user_id', userId)
+        .limit(5000),
+      supabase
+        .from('quiz_results')
+        .select('word')
+        .eq('user_id', userId)
+        .order('answered_at', { ascending: false })
+        .limit(1000),
+      fetchRecentQuizWords(userId, plan, 20),
+    ])
+    setRecentCount(recent.length)
+
+    const savedKeys = new Set<string>()
+    for (const r of (savedWordRows ?? []) as unknown as { words: { word: string } | null }[]) {
+      if (r.words?.word) savedKeys.add(r.words.word)
+    }
+    for (const r of (savedPhraseRows ?? []) as unknown as { phrase_cards: { phrase: string } | null }[]) {
+      if (r.phrase_cards?.phrase) savedKeys.add(r.phrase_cards.phrase)
+    }
+
+    // クイズ履歴のうち saved に無いもの (デッキ由来単語など) も出題母集団に含める
+    const historyKeys = new Set<string>()
+    for (const r of (historyRows ?? []) as { word: string }[]) {
+      if (r.word && !savedKeys.has(r.word)) historyKeys.add(r.word)
+    }
+
+    const allKeys = [...savedKeys, ...historyKeys]
+    setSavedTotal(allKeys.length)
+
+    if (allKeys.length === 0) {
+      setStats({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
+      setLoading(false)
+      return
+    }
+
+    const { data: qrRows } = await supabase
+      .from('quiz_results')
+      .select('word, correct, answered_at')
+      .eq('user_id', userId)
+      .in('word', allKeys)
+      .order('answered_at', { ascending: false })
+      .limit(10000)
+
+    const { status, wrongCount } = classifyQuizStatus(
+      (qrRows ?? []) as { word: string; correct: boolean }[],
+      allKeys,
+    )
+    const buckets = classifyForDonut(status, wrongCount, allKeys)
+
+    setStats({
+      unlearned: buckets.unseen,
+      review: buckets.review,
+      mastered: buckets.mastered,
+      hard: buckets.hard,
+      review_scope: buckets.review,
+      total: allKeys.length,
+    })
+    setLoading(false)
+  })
 
   // クイズページ初回訪問時にチュートリアルを表示
   useEffect(() => {

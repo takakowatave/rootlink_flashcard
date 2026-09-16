@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabaseClient";
+import { isNativePlatform } from "@/lib/isNativePlatform";
+import { setPendingAuthFlow } from "@/lib/pendingAuthFlow";
 import { TextInput } from "./TextInput";
 import Button from "./Button";
+
+// アプリで開始した場合の deeplink 戻り先。signup / recovery と同じ auth-callback を使う。
+const NATIVE_REDIRECT_URL = "com.rootlink.app://auth-callback";
 
 interface FormData {
   email: string;
@@ -28,9 +33,12 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
   const [redirect, setRedirect] = useState<string>("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setRedirect(`${window.location.origin}/callback`);
-    }
+    if (typeof window === "undefined") return;
+    // アプリで始めた場合は deeplink で戻して AppShell 側で /callback に飛ばす。
+    // Web は今までどおり origin の /callback を直接開かせる。
+    setRedirect(
+      isNativePlatform() ? NATIVE_REDIRECT_URL : `${window.location.origin}/callback`,
+    );
   }, []);
 
   useEffect(() => {
@@ -54,6 +62,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
       setError("email", { message: "現在のメールアドレスと同じです" });
       return;
     }
+    if (isNativePlatform()) setPendingAuthFlow("email_change");
     const { error } = await supabase.auth.updateUser(
       { email },
       { emailRedirectTo: redirect || undefined },

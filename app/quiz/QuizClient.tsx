@@ -18,6 +18,7 @@ import QuizDashboard from './QuizDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
+import { useAuthReload } from '@/lib/useAuthReload'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import {
   fetchReviewCandidates,
@@ -41,12 +42,14 @@ export default function QuizClient() {
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
   const [settings, setSettings] = useState<QuizSettings>(QUIZ_SETTINGS_DEFAULTS)
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser()
-      if (data.user) setSettings(await fetchQuizSettings(data.user.id))
-    })()
-  }, [])
+  // ログイン後に settings を反映するため、SIGNED_IN でも再取得する。
+  useAuthReload(async (userId, event) => {
+    if (event === 'SIGNED_OUT' || !userId) {
+      setSettings(QUIZ_SETTINGS_DEFAULTS)
+      return
+    }
+    setSettings(await fetchQuizSettings(userId))
+  })
 
   useEffect(() => { toast.dismiss() }, [])
 

@@ -10,6 +10,7 @@ import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 import { recordActivity } from '@/lib/supabaseApi'
+import { consumePendingAuthFlow } from '@/lib/pendingAuthFlow'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
 
@@ -119,7 +120,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const code = queryMatch ? decodeURIComponent(queryMatch[1]) : null
           if (code) {
             const { error } = await supabase.auth.exchangeCodeForSession(code)
-            if (!error) window.location.href = '/callback'
+            if (!error) {
+              // アプリで始めた「パスワード再設定」なら reset-password 画面に。
+              // それ以外（signup / email 変更 / なし）は今どおり /callback。
+              const flow = consumePendingAuthFlow()
+              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+            }
             return
           }
 
@@ -129,7 +135,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const refresh_token = params.get('refresh_token')
           if (access_token && refresh_token) {
             await supabase.auth.setSession({ access_token, refresh_token })
-            window.location.href = '/callback'
+            const flow = consumePendingAuthFlow()
+            window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
           }
         })
       } catch {

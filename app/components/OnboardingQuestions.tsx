@@ -8,8 +8,14 @@ import { MdAddCircle } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import {
+  DEFAULT_REMINDER_SLOTS,
+  persistAndApplyReminders,
+  type ReminderSlot as StoredReminderSlot,
+} from '@/lib/reminders'
 import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
+import Toggle from './Toggle'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
@@ -21,12 +27,7 @@ export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
 export type Expectation = 'dictionary' | 'exam' | 'mining' | 'etymology' | 'other'
 
-export type ReminderSlot = {
-  key: 'morning' | 'lunch' | 'night'
-  label: string
-  time: string // "HH:MM"
-  enabled: boolean
-}
+export type ReminderSlot = StoredReminderSlot
 
 export const ONBOARDING_COMPLETE_EVENT = 'rootlink-onboarding-completed'
 
@@ -59,11 +60,7 @@ const EXPECTATION_OPTIONS: ExpectationOption[] = [
   { value: 'other', label: 'その他' },
 ]
 
-const DEFAULT_REMINDERS: ReminderSlot[] = [
-  { key: 'morning', label: '起床時', time: '07:00', enabled: true },
-  { key: 'lunch', label: 'お昼休み', time: '12:00', enabled: false },
-  { key: 'night', label: '寝る前', time: '20:00', enabled: false },
-]
+const DEFAULT_REMINDERS: ReminderSlot[] = DEFAULT_REMINDER_SLOTS
 
 type Step = 1 | 2 | 3 | 4 | 5
 
@@ -132,35 +129,6 @@ function Radio({ selected }: { selected: boolean }) {
     >
       {selected && <span className="size-2 rounded-full bg-primary" />}
     </span>
-  )
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean
-  onChange: (next: boolean) => void
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative h-[31px] w-[51px] rounded-full transition-colors shrink-0 ${
-        checked ? 'bg-primary' : 'bg-slate-300'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 size-[27px] rounded-full bg-white shadow transition-transform ${
-          checked ? 'translate-x-[20px]' : 'translate-x-0'
-        }`}
-      />
-    </button>
   )
 }
 
@@ -385,32 +353,19 @@ export function OnboardingQuestionsView({
 }
 
 async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
+  // onboarding では初回なので permission を明示要求してから予約する。
+  // 保存と予約反映は app/lib/reminders.ts の一元化ロジックに委譲。
   try {
     const mod = await import('@capacitor/local-notifications')
-    const perm = await mod.LocalNotifications.requestPermissions()
-    if (perm.display !== 'granted') return
-    const pending = await mod.LocalNotifications.getPending()
-    if (pending.notifications.length > 0) {
-      await mod.LocalNotifications.cancel({ notifications: pending.notifications })
-    }
-    const enabled = reminders.filter((r) => r.enabled)
-    if (enabled.length === 0) return
-    const notifications = enabled.map((r, i) => {
-      const [h, m] = r.time.split(':').map(Number)
-      const at = new Date()
-      at.setHours(h ?? 0, m ?? 0, 0, 0)
-      if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1)
-      return {
-        id: i + 1,
-        title: 'RootLink',
-        body: '今日の1語を思い出そう',
-        schedule: { at, repeats: true, every: 'day' as const },
-      }
-    })
-    await mod.LocalNotifications.schedule({ notifications })
+    await mod.LocalNotifications.requestPermissions()
   } catch {
     // capacitor plugin unavailable (web preview) — silently skip
   }
+  await persistAndApplyReminders({
+    version: 1,
+    masterEnabled: true,
+    slots: reminders,
+  })
 }
 
 async function openNotificationSettings(): Promise<void> {

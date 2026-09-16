@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { clearReminders } from "@/lib/reminders";
+import { signOutRevenueCat } from "@/lib/revenuecat";
 import Button from "./Button";
 import { TextInput } from "./TextInput";
 
@@ -73,6 +75,11 @@ export default function DeleteAccountModal({
         setSubmitting(false);
         return;
       }
+      // 予約済みのローカル通知と保存済み設定は退会時に必ず片付ける。
+      // 別アカウントで再ログインしたときに前ユーザーの reminder が発火するのを防ぐ。
+      await clearReminders();
+      // RevenueCat の紐付けもリセット。
+      await signOutRevenueCat();
       await supabase.auth.signOut();
       onDeleted();
     } catch {

@@ -18,6 +18,7 @@ import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
 import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
 import { toggleSaveStatus, fetchWordlists, updatePinnedSense, fetchWordsByEtymologyPart } from '@/lib/supabaseApi'
+import { useAuthReload } from '@/lib/useAuthReload'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { supabase } from '@/lib/supabaseClient'
 import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
@@ -983,27 +984,24 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }
 
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.auth.getUser()
-      if (!data.user) return
-
-      const list = (await fetchWordlists(data.user.id)) as WordlistItem[]
-      setSavedWords(list.map((item) => item.word))
-
-      // この単語のsavedIdとpinnedSenseIdを取得
-      const thisItem = list.find((item) => item.word === word)
-      if (thisItem) {
-        setResolvedSavedId(thisItem.saved_id ?? null)
-        if (thisItem.pinned_sense_id) {
-          setResolvedPinnedSenseId(thisItem.pinned_sense_id)
-          setPinnedSenseId(thisItem.pinned_sense_id)
-        }
+  // マウント時と、後からログイン・ログアウトしたときに saved 状態を再取得。
+  useAuthReload(async (userId, event) => {
+    if (event === 'SIGNED_OUT' || !userId) {
+      setSavedWords([])
+      setResolvedSavedId(null)
+      return
+    }
+    const list = (await fetchWordlists(userId)) as WordlistItem[]
+    setSavedWords(list.map((item) => item.word))
+    const thisItem = list.find((item) => item.word === word)
+    if (thisItem) {
+      setResolvedSavedId(thisItem.saved_id ?? null)
+      if (thisItem.pinned_sense_id) {
+        setResolvedPinnedSenseId(thisItem.pinned_sense_id)
+        setPinnedSenseId(thisItem.pinned_sense_id)
       }
     }
-
-    load()
-  }, [word])
+  })
 
   // 単語の保存状態切り替え担当
   const handleSave = async () => {

@@ -1,31 +1,63 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import EditProfileModal from "@/components/EditProfileModal";
 import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
+import { useAuthReload } from "@/lib/useAuthReload";
+
+// AppShell.ensureProfile と同じロジックで、profiles 行が無ければその場で作る。
+// .single() は行が無いと throw するので .maybeSingle() で受けて、
+// null なら insert → 再取得する。
+async function loadOrInsertProfile(userId: string): Promise<Profile | null> {
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle<Profile>();
+  if (existing) return existing;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== userId) return null;
+
+  const username =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "";
+  const avatar_url =
+    user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+  const { error } = await supabase.from("profiles").insert({
+    id: user.id,
+    email: user.email,
+    username,
+    avatar_url,
+  });
+  if (error) return null;
+
+  const { data: refetched } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle<Profile>();
+  return refetched ?? null;
+}
 
 export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single<Profile>();
-
-      if (data) setProfile(data);
-    };
-
-    load();
-  }, []);
+  // マウント + SIGNED_IN で profile を再取得（行が無ければ insert 込み）。
+  // SIGNED_OUT では profile を空にする。
+  useAuthReload(async (userId, event) => {
+    if (event === "SIGNED_OUT" || !userId) {
+      setProfile(null);
+      return;
+    }
+    const p = await loadOrInsertProfile(userId);
+    if (p) setProfile(p);
+  });
 
   if (!profile) return <p>Loading...</p>;
 
