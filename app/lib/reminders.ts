@@ -160,3 +160,17 @@ export async function persistAndApplyReminders(
   }
   await scheduleReminderNotifications(settings)
 }
+
+// ログアウト・退会時に呼ぶ。予約済みの通知を全てキャンセルし、
+// 保存済みの設定 (masterEnabled / slots) も localStorage から消す。
+// 別アカウントで再ログインした時に前ユーザーの reminder が発火するのを防ぐ。
+export async function clearReminders(): Promise<void> {
+  await cancelAllReminderNotifications()
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // localStorage 使用不可（プライベートブラウズ等）は無視
+    }
+  }
+}

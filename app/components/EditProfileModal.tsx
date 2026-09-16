@@ -29,6 +29,7 @@ import Toggle from "@/components/Toggle";
 import InfoBanner from "@/components/InfoBanner";
 import Button from "@/components/Button";
 import {
+  clearReminders,
   DEFAULT_REMINDER_SETTINGS,
   loadReminderSettings,
   persistAndApplyReminders,
@@ -124,6 +125,9 @@ export default function EditProfileModal({
     "https://rootlink-server-v2-774622345521.asia-northeast1.run.app";
 
   const handleLogout = async () => {
+    // 予約済みのローカル通知と保存済み設定は logout 時に必ず片付ける。
+    // 別アカウントで再ログインしたときに前ユーザーの reminder が発火するのを防ぐ。
+    await clearReminders();
     await supabase.auth.signOut();
     window.location.href = "/";
   };
