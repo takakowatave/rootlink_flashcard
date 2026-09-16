@@ -26,6 +26,8 @@ import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
 import Toggle from "@/components/Toggle";
+import InfoBanner from "@/components/InfoBanner";
+import Button from "@/components/Button";
 import {
   DEFAULT_REMINDER_SETTINGS,
   loadReminderSettings,
@@ -33,6 +35,11 @@ import {
   type ReminderSettings,
   type ReminderSlotKey,
 } from "@/lib/reminders";
+
+// 'granted' | 'denied' | 'prompt' 等を返す。'prompt' 系は request で聞ける状態、
+// 'denied' 以降は OS 設定でしか復帰しない。plugin が無い / エラー時は 'unknown'
+// にしてセクション自体は現状維持（グレーアウトも InfoBanner も出さない）。
+type NotifPermission = "granted" | "prompt" | "denied" | "unknown";
 
 async function openNotificationSettings(): Promise<void> {
   try {
@@ -45,6 +52,31 @@ async function openNotificationSettings(): Promise<void> {
     });
   } catch {
     // plugin unavailable in web preview — silently skip
+  }
+}
+
+async function checkNotificationPermission(): Promise<NotifPermission> {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const state = (await mod.LocalNotifications.checkPermissions()).display;
+    if (state === "granted") return "granted";
+    if (state === "denied") return "denied";
+    // prompt / prompt-with-rationale / undetermined 等はまとめて 'prompt'
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function requestNotificationPermission(): Promise<NotifPermission> {
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const state = (await mod.LocalNotifications.requestPermissions()).display;
+    if (state === "granted") return "granted";
+    if (state === "denied") return "denied";
+    return "prompt";
+  } catch {
+    return "unknown";
   }
 }
 
@@ -85,6 +117,7 @@ export default function EditProfileModal({
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>(
     DEFAULT_REMINDER_SETTINGS,
   );
+  const [notifPermission, setNotifPermission] = useState<NotifPermission>("unknown");
 
   const API_BASE =
     process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -225,8 +258,36 @@ export default function EditProfileModal({
     if (saved === "en" || saved === "ja") setDisplayLocale(saved);
     if (isNativePlatform()) {
       setReminderSettings(loadReminderSettings());
+      checkNotificationPermission().then(setNotifPermission);
     }
   }, [isOpen]);
+
+  // モーダル表示中にアプリが復帰したら permission を取り直す
+  // （端末の設定でトグルを変えて戻ってきた等）
+  useEffect(() => {
+    if (!isOpen || !isNativePlatform()) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        checkNotificationPermission().then(setNotifPermission);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isOpen]);
+
+  const handleAllowNotifications = async () => {
+    if (notifPermission === "denied") {
+      // 拒否済みは request しても即 denied が返るので、端末の設定に飛ばす
+      await openNotificationSettings();
+      return;
+    }
+    const next = await requestNotificationPermission();
+    setNotifPermission(next);
+    if (next === "granted") {
+      // 許可が取れたのでその場で予約を反映する
+      await persistAndApplyReminders(reminderSettings);
+    }
+  };
 
   const updateReminderSettings = (patch: (prev: ReminderSettings) => ReminderSettings) => {
     setReminderSettings((prev) => {
@@ -458,15 +519,34 @@ export default function EditProfileModal({
 
             {isNativePlatform() && (
               <SettingsSection title="通知">
+                {(notifPermission === "denied" || notifPermission === "prompt") && (
+                  <div className="pt-4 pb-2 flex flex-col gap-3">
+                    <InfoBanner
+                      title="通知がオフになっています"
+                      body="リマインダーを受け取るには、端末の設定で通知を許可してください。"
+                    />
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      radius="full"
+                      onClick={handleAllowNotifications}
+                    >
+                      通知を許可する
+                    </Button>
+                  </div>
+                )}
                 <SettingsRow label="学習リマインダー">
                   <Toggle
                     checked={reminderSettings.masterEnabled}
                     onChange={handleMasterToggle}
                     label="学習リマインダー"
+                    disabled={notifPermission !== "granted" && notifPermission !== "unknown"}
                   />
                 </SettingsRow>
                 {reminderSettings.slots.map((slot) => {
-                  const disabled = !reminderSettings.masterEnabled;
+                  const notGranted =
+                    notifPermission !== "granted" && notifPermission !== "unknown";
+                  const disabled = !reminderSettings.masterEnabled || notGranted;
                   return (
                     <div
                       key={slot.key}
