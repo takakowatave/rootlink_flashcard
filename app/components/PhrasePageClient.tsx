@@ -11,6 +11,7 @@ import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
+import { useAuthReload } from '@/lib/useAuthReload'
 
 type PhraseSense = {
   sense_id: string
@@ -76,22 +77,24 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     return []
   }, [card])
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUserId(user.id)
-      const { data } = await supabase
-        .from('saved_phrase_cards')
-        .select('id, pinned_sense_id')
-        .eq('user_id', user.id)
-        .eq('phrase_card_id', card.id)
-        .maybeSingle()
-      setIsSaved(!!data)
-      setPinnedSenseId(data?.pinned_sense_id ?? null)
+  // マウント + SIGNED_IN で isSaved を再取得。SIGNED_OUT でクリア。
+  useAuthReload(async (uid, event) => {
+    if (event === 'SIGNED_OUT' || !uid) {
+      setUserId(null)
+      setIsSaved(false)
+      setPinnedSenseId(null)
+      return
     }
-    load()
-  }, [card.id])
+    setUserId(uid)
+    const { data } = await supabase
+      .from('saved_phrase_cards')
+      .select('id, pinned_sense_id')
+      .eq('user_id', uid)
+      .eq('phrase_card_id', card.id)
+      .maybeSingle()
+    setIsSaved(!!data)
+    setPinnedSenseId(data?.pinned_sense_id ?? null)
+  })
 
   useEffect(() => {
     const handler = () => {

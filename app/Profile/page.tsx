@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import EditProfileModal from "@/components/EditProfileModal";
 import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
+import { useAuthReload } from "@/lib/useAuthReload";
 
 // AppShell.ensureProfile と同じロジックで、profiles 行が無ければその場で作る。
 // .single() は行が無いと throw するので .maybeSingle() で受けて、
@@ -47,35 +48,16 @@ export default function Profile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) return;
-      const p = await loadOrInsertProfile(user.id);
-      if (!cancelled && p) setProfile(p);
-    };
-
-    load();
-
-    // ログイン・ログアウトで再実行（onAuthStateChange パターン）
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelled) return;
-      if (event === "SIGNED_OUT") {
-        setProfile(null);
-        return;
-      }
-      if (event === "SIGNED_IN" && session?.user) {
-        const p = await loadOrInsertProfile(session.user.id);
-        if (!cancelled && p) setProfile(p);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+  // マウント + SIGNED_IN で profile を再取得（行が無ければ insert 込み）。
+  // SIGNED_OUT では profile を空にする。
+  useAuthReload(async (userId, event) => {
+    if (event === "SIGNED_OUT" || !userId) {
+      setProfile(null);
+      return;
+    }
+    const p = await loadOrInsertProfile(userId);
+    if (p) setProfile(p);
+  });
 
   if (!profile) return <p>Loading...</p>;
 

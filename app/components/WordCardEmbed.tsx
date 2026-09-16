@@ -10,6 +10,7 @@ import SenseExample from '@/components/SenseExample'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { supabase } from '@/lib/supabaseClient'
 import { toggleSaveStatus } from '@/lib/supabaseApi'
+import { useAuthReload } from '@/lib/useAuthReload'
 import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
 import { sendEvent } from '@/lib/ga'
 import { POS_LABEL_JA } from '@/lib/pos'
@@ -104,28 +105,28 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
     [dictionary]
   )
 
-  useEffect(() => {
-    let alive = true
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!alive) return
-      if (!user) return
-      setUserId(user.id)
-      const { data: existingWord } = await supabase
-        .from('words')
-        .select('id')
-        .eq('word', word)
-        .maybeSingle()
-      if (!existingWord || !alive) return
-      const { data: saved } = await supabase
-        .from('saved_words')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('word_id', existingWord.id)
-        .maybeSingle()
-      if (alive) setIsSaved(!!saved)
-    })
-    return () => { alive = false }
-  }, [word])
+  // マウント + SIGNED_IN で isSaved を再取得。SIGNED_OUT でクリア。
+  useAuthReload(async (uid, event) => {
+    if (event === 'SIGNED_OUT' || !uid) {
+      setUserId(null)
+      setIsSaved(false)
+      return
+    }
+    setUserId(uid)
+    const { data: existingWord } = await supabase
+      .from('words')
+      .select('id')
+      .eq('word', word)
+      .maybeSingle()
+    if (!existingWord) return
+    const { data: saved } = await supabase
+      .from('saved_words')
+      .select('id')
+      .eq('user_id', uid)
+      .eq('word_id', existingWord.id)
+      .maybeSingle()
+    setIsSaved(!!saved)
+  })
 
   const handleBookmark = async () => {
     sendEvent('word_card_save', { word, logged_in: userId ? 'yes' : 'no' })
