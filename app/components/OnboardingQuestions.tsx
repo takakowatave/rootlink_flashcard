@@ -15,6 +15,7 @@ import {
 } from '@/lib/reminders'
 import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
+import Toggle from './Toggle'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
@@ -128,35 +129,6 @@ function Radio({ selected }: { selected: boolean }) {
     >
       {selected && <span className="size-2 rounded-full bg-primary" />}
     </span>
-  )
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean
-  onChange: (next: boolean) => void
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative h-[31px] w-[51px] rounded-full transition-colors shrink-0 ${
-        checked ? 'bg-primary' : 'bg-slate-300'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 size-[27px] rounded-full bg-white shadow transition-transform ${
-          checked ? 'translate-x-[20px]' : 'translate-x-0'
-        }`}
-      />
-    </button>
   )
 }
 
