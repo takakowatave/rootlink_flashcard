@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
@@ -15,8 +15,10 @@ import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
+import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 
 interface FormData {
@@ -29,6 +31,8 @@ export default function AuthSignup() {
   const [done, setDone] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => setInAppBrowser(isInAppBrowser()), []);
 
   const {
     register,
@@ -129,6 +133,7 @@ export default function AuthSignup() {
 
             <AuthDivider />
 
+            {inAppBrowser && <InAppBrowserNotice variant="signup" />}
             <div className="flex flex-col gap-2">
               <GoogleAuthButton
                 variant="signup"

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,8 @@ import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
+import { isInAppBrowser } from "@/lib/isInAppBrowser";
 
 interface FormData {
   email: string;
@@ -19,6 +22,8 @@ interface FormData {
 
 export default function AuthLogin() {
   const router = useRouter();
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => setInAppBrowser(isInAppBrowser()), []);
 
   const {
     register,
@@ -63,6 +68,7 @@ export default function AuthLogin() {
 
         <AuthDivider />
 
+        {inAppBrowser && <InAppBrowserNotice variant="login" />}
         <div className="flex flex-col gap-2">
           <GoogleAuthButton
             variant="login"
