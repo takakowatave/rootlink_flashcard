@@ -43,7 +43,7 @@ export default function OnboardingPage() {
       className="fixed inset-0 bg-teal-50 flex flex-col"
       style={{ paddingBottom: 0 }}
     >
-      <div className="flex-1 flex flex-col items-center justify-between pt-8 pb-6">
+      <div className="flex-1 flex flex-col items-center justify-center gap-12 pt-8 pb-6">
         <div className="flex flex-col items-center gap-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="RootLink" className="h-[45px] w-auto" />
