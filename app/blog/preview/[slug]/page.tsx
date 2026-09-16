@@ -43,6 +43,7 @@ export default async function BlogPreviewPage({ params }: Params) {
       .from('phrase_cards')
       .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
       .in('id', phraseIds)
+      .limit(phraseIds.length)
     if (phrases) {
       phraseMap = Object.fromEntries(
         (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
@@ -57,6 +58,7 @@ export default async function BlogPreviewPage({ params }: Params) {
       .from('words')
       .select('word, dictionary_cache!inner(payload)')
       .in('word', wordCardWords)
+      .limit(wordCardWords.length)
     if (cachedRows) {
       wordCardMap = Object.fromEntries(
         (cachedRows as Array<{
