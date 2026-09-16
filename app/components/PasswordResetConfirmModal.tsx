@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { isNativePlatform } from "@/lib/isNativePlatform";
+import { setPendingAuthFlow } from "@/lib/pendingAuthFlow";
 import Button from "./Button";
+
+// アプリで開始した場合の deeplink 戻り先。signup と同じ auth-callback を使う。
+// Supabase の redirect allowlist と AndroidManifest / iOS Info.plist にすでに登録済み。
+const NATIVE_REDIRECT_URL = "com.rootlink.app://auth-callback";
 
 interface Props {
   open: boolean;
@@ -35,8 +41,14 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
     if (!email) return;
     setSubmitting(true);
     setError(undefined);
+    // アプリで始めた場合は deeplink で戻して AppShell 側で reset-password に飛ばす。
+    // Web は今までどおり origin の reset-password ページを直接開かせる。
+    const redirectTo = isNativePlatform()
+      ? NATIVE_REDIRECT_URL
+      : `${window.location.origin}/reset-password`;
+    if (isNativePlatform()) setPendingAuthFlow("recovery");
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo,
     });
     setSubmitting(false);
     if (err) {
