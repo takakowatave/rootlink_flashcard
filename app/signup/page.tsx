@@ -42,10 +42,11 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
-    // native はアプリ deeplink に戻す (AndroidManifest / Supabase 許可リスト登録済み)。
-    // AppShell の appUrlOpen ハンドラが ?code= を受け取って exchangeCodeForSession → /callback へ遷移する。
+    // native はメール本文のリンクを Chrome が開くため、Supabase の 303 で
+    // カスタムスキームを起こせない。一旦 https の中継ページに戻し、そこで
+    // ユーザー操作の遷移として com.rootlink.app://auth-callback を叩かせる。
     const emailRedirectTo = isNativePlatform()
-      ? "com.rootlink.app://auth-callback"
+      ? "https://www.rootlink.app/auth/app-return"
       : `${window.location.origin}/callback`;
     const { error } = await supabase.auth.signUp({
       email: data.email,

@@ -6,9 +6,9 @@ import { isNativePlatform } from "@/lib/isNativePlatform";
 import { setPendingAuthFlow } from "@/lib/pendingAuthFlow";
 import Button from "./Button";
 
-// アプリで開始した場合の deeplink 戻り先。signup と同じ auth-callback を使う。
-// Supabase の redirect allowlist と AndroidManifest / iOS Info.plist にすでに登録済み。
-const NATIVE_REDIRECT_URL = "com.rootlink.app://auth-callback";
+// native は中継ページ経由で戻す。Chrome は 303 でカスタムスキームを起こせないため、
+// 一度 https の /auth/app-return を踏み、そこでユーザー操作として deeplink を叩く。
+const NATIVE_REDIRECT_URL = "https://www.rootlink.app/auth/app-return";
 
 interface Props {
   open: boolean;
