@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { HiX } from "react-icons/hi"
 import Button from "@/components/Button"
+import ModalShell from "@/components/ModalShell"
+import TermsContent from "@/components/TermsContent"
+import PrivacyContent from "@/components/PrivacyContent"
 import type { PaywallVariant } from "@/lib/paywall"
 import {
   getCurrentOffering,
   purchaseNativePlan,
   restoreNativePurchases,
 } from "@/lib/revenuecat"
+
+type LegalDoc = "terms" | "privacy" | null
 
 type Props = {
   variant: Exclude<PaywallVariant, 'none'>
@@ -27,6 +33,7 @@ export default function NativePaywall({ variant, onClose }: Props) {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
   const [offeringError, setOfferingError] = useState(false)
+  const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -229,22 +236,20 @@ export default function NativePaywall({ variant, onClose }: Props) {
                 <li>購入後は App Store / Google Play の設定から自動更新を管理・解約できます</li>
               </ul>
               <div className="flex gap-3 pt-1">
-                <a
-                  href="https://www.rootlink.app/terms"
-                  target="_blank"
-                  rel="noopener"
+                <button
+                  type="button"
+                  onClick={() => setOpenDoc("terms")}
                   className="underline"
                 >
                   利用規約
-                </a>
-                <a
-                  href="https://www.rootlink.app/privacy"
-                  target="_blank"
-                  rel="noopener"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenDoc("privacy")}
                   className="underline"
                 >
                   プライバシーポリシー
-                </a>
+                </button>
               </div>
             </div>
           </>
@@ -260,6 +265,26 @@ export default function NativePaywall({ variant, onClose }: Props) {
           閉じる
         </Button>
       </div>
+
+      <ModalShell
+        open={openDoc !== null}
+        onClose={() => setOpenDoc(null)}
+        headerRight={
+          <button
+            type="button"
+            onClick={() => setOpenDoc(null)}
+            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
+            aria-label="閉じる"
+          >
+            <HiX className="size-5" />
+          </button>
+        }
+      >
+        <div className="px-6 py-8">
+          {openDoc === "terms" && <TermsContent />}
+          {openDoc === "privacy" && <PrivacyContent />}
+        </div>
+      </ModalShell>
     </div>
   )
 }
