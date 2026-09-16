@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
-import InAppBrowserNotice from "./InAppBrowserNotice";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
@@ -63,17 +62,14 @@ export default function AppleAuthButton({
   };
 
   return (
-    <>
-      {inAppBrowser && <InAppBrowserNotice variant={variant} />}
-      <button
-        onClick={handleClick}
-        disabled={APPLE_DISABLED || inAppBrowser}
-        className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
-        {APPLE_DISABLED ? `${LABEL[variant]}（テスト中につき不可）` : LABEL[variant]}
-      </button>
-    </>
+    <button
+      onClick={handleClick}
+      disabled={APPLE_DISABLED || inAppBrowser}
+      className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
+      {APPLE_DISABLED ? `${LABEL[variant]}（テスト中につき不可）` : LABEL[variant]}
+    </button>
   );
 }

@@ -5,13 +5,13 @@ import { useState } from "react";
 type Variant = "signup" | "login";
 
 const HEADING: Record<Variant, string> = {
-  signup: "Google登録をご利用の方へ",
-  login: "Googleログインをご利用の方へ",
+  signup: "Google・Apple 登録をご利用の方へ",
+  login: "Google・Apple ログインをご利用の方へ",
 };
 
 const BODY: Record<Variant, string> = {
-  signup: "このアプリ内ブラウザでは Google の仕様により登録できません。",
-  login: "このアプリ内ブラウザでは Google の仕様によりログインできません。",
+  signup: "このアプリ内ブラウザでは Google / Apple の仕様により登録できません。",
+  login: "このアプリ内ブラウザでは Google / Apple の仕様によりログインできません。",
 };
 
 export default function InAppBrowserNotice({ variant }: { variant: Variant }) {

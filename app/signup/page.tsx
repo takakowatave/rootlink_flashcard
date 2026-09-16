@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 import { BsCheck2 } from "react-icons/bs";
 import { HiOutlineEnvelope } from "react-icons/hi2";
+import { HiX } from "react-icons/hi";
 import Button from "@/components/Button";
 import { TextInput } from "@/components/TextInput";
 import AuthPage from "@/components/auth/AuthPage";
@@ -14,6 +15,11 @@ import AuthDivider from "@/components/auth/AuthDivider";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
+import ModalShell from "@/components/ModalShell";
+import PrivacyContent from "@/components/PrivacyContent";
+import { isInAppBrowser } from "@/lib/isInAppBrowser";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 
 interface FormData {
   email: string;
@@ -24,6 +30,9 @@ interface FormData {
 export default function AuthSignup() {
   const [done, setDone] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => setInAppBrowser(isInAppBrowser()), []);
 
   const {
     register,
@@ -33,7 +42,11 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
-    const emailRedirectTo = `${window.location.origin}/callback`;
+    // native はアプリ deeplink に戻す (AndroidManifest / Supabase 許可リスト登録済み)。
+    // AppShell の appUrlOpen ハンドラが ?code= を受け取って exchangeCodeForSession → /callback へ遷移する。
+    const emailRedirectTo = isNativePlatform()
+      ? "com.rootlink.app://auth-callback"
+      : `${window.location.origin}/callback`;
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -99,7 +112,17 @@ export default function AuthSignup() {
                   <BsCheck2 size={14} className="text-current" />
                 </span>
                 <span className="text-xs text-gray-600 leading-relaxed">
-                  <Link href="/privacy" target="_blank" className="text-primary underline">プライバシーポリシー</Link>に同意する
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPrivacyOpen(true);
+                    }}
+                    className="text-primary underline"
+                  >
+                    プライバシーポリシー
+                  </button>
+                  に同意する
                 </span>
               </label>
               {errors.agreeToPrivacy && <p className="text-xs text-red-500 -mt-2">{errors.agreeToPrivacy.message}</p>}
@@ -110,6 +133,7 @@ export default function AuthSignup() {
 
             <AuthDivider />
 
+            {inAppBrowser && <InAppBrowserNotice variant="signup" />}
             <div className="flex flex-col gap-2">
               <GoogleAuthButton
                 variant="signup"
@@ -125,6 +149,25 @@ export default function AuthSignup() {
           </>
         )}
       </AuthCard>
+
+      <ModalShell
+        open={privacyOpen}
+        onClose={() => setPrivacyOpen(false)}
+        headerRight={
+          <button
+            type="button"
+            onClick={() => setPrivacyOpen(false)}
+            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
+            aria-label="閉じる"
+          >
+            <HiX className="size-5" />
+          </button>
+        }
+      >
+        <div className="px-6 py-8">
+          <PrivacyContent />
+        </div>
+      </ModalShell>
     </AuthPage>
   );
 }

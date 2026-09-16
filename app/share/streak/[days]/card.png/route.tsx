@@ -63,6 +63,14 @@ function StreakCard({
   const digits = String(days).length
   const numFontSize = digits <= 3 ? 200 : digits === 4 ? 160 : 128
   const sideFontSize = digits <= 3 ? 100 : digits === 4 ? 88 : 76
+  // next/og の flex-end は box bottom を揃えるが、NotoSansJP の descent
+  // (font-size の約 12%) と Latin 数字の視覚下端が食い違うため、数字側を
+  // 差分ぶん下げて視覚上の下端を揃える。
+  // 1 桁は数字周囲の CJK 側の視覚バランスが崩れがちなので係数を強め、
+  // 足りない分は translateY で微調整する。
+  const coefficient = digits === 1 ? 0.14 : 0.12
+  const numDropPx = Math.round((numFontSize - sideFontSize) * coefficient)
+  const numExtraTranslateY = digits === 1 ? 6 : 0
 
   return (
     <div
@@ -88,18 +96,25 @@ function StreakCard({
           gap: 48,
         }}
       >
-        {/* 連続{days}日学習中 */}
+        {/* 連続{days}日学習中 — next/og は baseline を正しく解決しないので flex-end で下端揃え */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'baseline',
+            alignItems: 'flex-end',
             color: '#ff8904',
             fontWeight: 700,
             lineHeight: 1,
           }}
         >
           <span style={{ fontSize: sideFontSize }}>連続</span>
-          <span style={{ fontSize: numFontSize, letterSpacing: '-0.02em', margin: '0 4px' }}>
+          <span
+            style={{
+              fontSize: numFontSize,
+              letterSpacing: '-0.02em',
+              margin: `0 4px -${numDropPx}px 4px`,
+              transform: numExtraTranslateY ? `translateY(${numExtraTranslateY}px)` : undefined,
+            }}
+          >
             {days}
           </span>
           <span style={{ fontSize: sideFontSize }}>日学習中</span>
