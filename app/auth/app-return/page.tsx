@@ -67,8 +67,10 @@ export default function AppReturn() {
 
   return (
     <AuthPage>
-      <AuthCard title="RootLink アプリに戻る">
+      <AuthCard title="メール認証が完了しました">
         <p className="text-base text-gray-950 leading-relaxed text-center mb-6">
+          RootLink アプリに戻って続きの操作を行ってください。
+          <br />
           自動でアプリに戻らない場合は、下のボタンから開いてください。
         </p>
         <a href={buttonHref} className="block">
