@@ -36,7 +36,7 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
 
   return (
     <div className="flex flex-col gap-1">
-      {label && <label className="text-sm text-gray-600">{label}</label>}
+      {label && <label className="text-sm font-medium text-gray-950">{label}</label>}
       <div className="relative">
         <input
           {...props}
@@ -69,9 +69,9 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
         )}
       </div>
       {error ? (
-        <p className="text-xs text-red-500">{error.message}</p>
+        <p className="text-sm text-red-500">{error.message}</p>
       ) : helperText ? (
-        <p className="text-xs text-gray-500">{helperText}</p>
+        <p className="text-sm text-muted">{helperText}</p>
       ) : null}
     </div>
   );
