@@ -1,8 +1,8 @@
 export default function PrivacyContent() {
   return (
-    <div className="text-gray-700">
+    <div className="text-gray-950 text-base leading-relaxed">
       <h1 className="text-2xl font-bold mb-2">プライバシーポリシー</h1>
-      <p className="text-sm text-gray-400 mb-10">制定日：2026年4月　最終更新：2026年9月</p>
+      <p className="text-sm text-muted mb-10">制定日：2026年4月　最終更新：2026年9月</p>
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">1. 事業者情報</h2>

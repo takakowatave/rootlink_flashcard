@@ -116,23 +116,54 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           if (!event.url.startsWith('com.rootlink.app://auth-callback')) return
           await Browser.close().catch(() => {})
 
-          const queryMatch = event.url.match(/[?&]code=([^&]+)/)
-          const code = queryMatch ? decodeURIComponent(queryMatch[1]) : null
-          if (code) {
-            const { error } = await supabase.auth.exchangeCodeForSession(code)
+          const query = event.url.includes('?') ? event.url.split('?')[1].split('#')[0] : ''
+          const params = new URLSearchParams(query)
+
+          // token_hash 方式 (新, PKCE の code_verifier 依存を回避)
+          // Supabase テンプレートの {{ .ConfirmationURL }} を
+          //   {{ .SiteURL }}/auth/app-return?token_hash={{ .TokenHash }}&type={{ .Type }}
+          // に切り替えたときにここが走る。type は signup / recovery / email_change。
+          const tokenHash = params.get('token_hash')
+          const type = params.get('type')
+          if (tokenHash && type) {
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              // Supabase の EmailOtpType: 'signup' | 'recovery' | 'email_change' 等
+              type: type as 'signup' | 'recovery' | 'email_change' | 'magiclink' | 'invite',
+            })
             if (!error) {
-              // アプリで始めた「パスワード再設定」なら reset-password 画面に。
-              // それ以外（signup / email 変更 / なし）は今どおり /callback。
-              const flow = consumePendingAuthFlow()
-              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              // type=recovery だけ reset-password 画面へ、それ以外は callback。
+              // pendingAuthFlow に頼らず deeplink の type で判定するのがポイント
+              // (別ブラウザで開いた場合でも取り違えない)。
+              consumePendingAuthFlow()
+              window.location.href = type === 'recovery' ? '/reset-password' : '/callback'
+              return
             }
+            // 失敗時: 期限切れ / 使用済み / bad_code_verifier を含む。
+            // メール認証は済んでいる可能性があるので /callback で「ログインして
+            // ください」の案内を出す。
+            window.location.href = '/callback?state=confirmed'
             return
           }
 
+          // 旧 PKCE 方式のフォールバック。既存メールがまだ届いていない期間の互換用。
+          const code = params.get('code')
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code)
+            if (!error) {
+              const flow = consumePendingAuthFlow()
+              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              return
+            }
+            window.location.href = '/callback?state=confirmed'
+            return
+          }
+
+          // hash fragment (#access_token=...) は magic link の別形式で来る場合の保険。
           const fragment = event.url.split('#')[1] ?? ''
-          const params = new URLSearchParams(fragment)
-          const access_token = params.get('access_token')
-          const refresh_token = params.get('refresh_token')
+          const hashParams = new URLSearchParams(fragment)
+          const access_token = hashParams.get('access_token')
+          const refresh_token = hashParams.get('refresh_token')
           if (access_token && refresh_token) {
             await supabase.auth.setSession({ access_token, refresh_token })
             const flow = consumePendingAuthFlow()
@@ -161,7 +192,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
 
   const isLP = pathname === '/' || pathname === '/about'
-  const isAuth = pathname === '/login' || pathname === '/signup'
+  const isAuth =
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/reset-password' ||
+    pathname === '/callback' ||
+    pathname === '/auth/app-return'
   const isQuiz = pathname === '/quiz'
   const isWordDetail = pathname?.startsWith('/word/') ?? false
   const isOnboarding = pathname === '/onboarding'

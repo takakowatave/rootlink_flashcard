@@ -13,21 +13,21 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative flex min-h-screen items-start justify-center bg-white px-2 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(6rem,env(safe-area-inset-bottom))] md:pt-24 md:pb-32">
-      <div className="w-full max-w-md">{children}</div>
+      <div className="w-full lg:max-w-md">{children}</div>
 
-      <footer className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-xs text-gray-400">
+      <footer className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-sm text-muted">
         <div className="flex gap-6">
           <button
             type="button"
             onClick={() => setPrivacyOpen(true)}
-            className="hover:text-gray-600 transition-colors"
+            className="hover:text-gray-950 transition-colors"
           >
             プライバシーポリシー
           </button>
           <button
             type="button"
             onClick={() => openExternalLink(CONTACT_URL)}
-            className="hover:text-gray-600 transition-colors"
+            className="hover:text-gray-950 transition-colors"
           >
             お問い合わせ
           </button>

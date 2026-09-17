@@ -12,7 +12,7 @@ export default function AuthBottomLink({
   href: string;
 }) {
   return (
-    <p className="text-center text-xs text-gray-400 mt-4">
+    <p className="text-center text-sm text-gray-950 mt-4">
       {prefix}{" "}
       <Link href={href} className="text-primary underline">
         {linkText}
