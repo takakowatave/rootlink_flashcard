@@ -57,6 +57,38 @@ async function openNotificationSettings(): Promise<void> {
   }
 }
 
+function formatJPDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+// 「現在のプラン」の下に出す補足文言。
+// - status=trialing → 「無料期間は○月○日まで」
+// - status=active + will_renew=false → 「○月○日で終了します（自動更新なし）」
+// - status=active + will_renew=true → 「次回更新日: ○月○日」
+// - store が無い (テスター) や日付が取れないケースは何も出さない。
+function buildPlanHelperText(params: {
+  plan: "premium" | "free" | null;
+  status: string | null;
+  expiresAt: string | null;
+  willRenew: boolean | null;
+  store: "stripe" | "app_store" | "play_store" | null;
+}): string | null {
+  const { plan, status, expiresAt, willRenew, store } = params;
+  if (plan !== "premium") return null;
+  if (store === null) return null;
+  const date = formatJPDate(expiresAt);
+  if (!date) return null;
+  if (status === "trialing") return `無料期間は ${date} まで`;
+  if (status === "active" && willRenew === false) {
+    return `${date}で終了します（自動更新なし）`;
+  }
+  if (status === "active") return `次回更新日: ${date}`;
+  return null;
+}
+
 async function checkNotificationPermission(): Promise<NotifPermission> {
   try {
     const mod = await import("@capacitor/local-notifications");
@@ -102,6 +134,15 @@ export default function EditProfileModal({
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
   const [subscriptionStore, setSubscriptionStore] = useState<
     "stripe" | "app_store" | "play_store" | null
+  >(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(
+    null,
+  );
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<
+    string | null
+  >(null);
+  const [subscriptionWillRenew, setSubscriptionWillRenew] = useState<
+    boolean | null
   >(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -250,7 +291,7 @@ export default function EditProfileModal({
       setEmail(user.email ?? "");
       supabase
         .from("subscriptions")
-        .select("store")
+        .select("store, status, expires_at, will_renew")
         .eq("user_id", user.id)
         .maybeSingle()
         .then(({ data }) => {
@@ -259,6 +300,15 @@ export default function EditProfileModal({
             store === "stripe" || store === "app_store" || store === "play_store"
               ? store
               : null,
+          );
+          setSubscriptionStatus(
+            typeof data?.status === "string" ? data.status : null,
+          );
+          setSubscriptionExpiresAt(
+            typeof data?.expires_at === "string" ? data.expires_at : null,
+          );
+          setSubscriptionWillRenew(
+            typeof data?.will_renew === "boolean" ? data.will_renew : null,
           );
         });
     });
@@ -516,7 +566,16 @@ export default function EditProfileModal({
             </SettingsSection>
 
             <SettingsSection title="設定">
-              <SettingsRow label="現在のプラン">
+              <SettingsRow
+                label="現在のプラン"
+                helperText={buildPlanHelperText({
+                  plan,
+                  status: subscriptionStatus,
+                  expiresAt: subscriptionExpiresAt,
+                  willRenew: subscriptionWillRenew,
+                  store: subscriptionStore,
+                })}
+              >
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
                     {subscriptionStore !== null ? "Premium" : "テスター"}
