@@ -61,6 +61,69 @@ export async function getCurrentOffering() {
   return offerings.current
 }
 
+// Paywall 用の商品情報サマリ。native の Purchases.getOfferings() から
+// 月額 / 年額それぞれの priceString / price / トライアル有無を吸い出す。
+//
+// トライアル判定は cross-platform に効かせるため、以下のいずれかで true。
+//   - iOS: product.introPrice.price === 0 かつ periodNumberOfUnits > 0
+//   - Android: product.subscriptionOptions のどれかに freePhase (price=0) が含まれる
+//   - product.defaultOption?.freePhase が存在する
+// ストアで無効化すれば自動で false になり、Paywall の文言も切り替わる。
+export type PaywallPlanInfo = {
+  priceString: string | null
+  price: number | null
+  currencyCode: string | null
+  hasFreeTrial: boolean
+}
+
+export type PaywallOfferingSummary = {
+  monthly: PaywallPlanInfo
+  yearly: PaywallPlanInfo
+}
+
+type MaybeProduct = {
+  price?: number
+  priceString?: string
+  currencyCode?: string
+  introPrice?: { price?: number; periodNumberOfUnits?: number } | null
+  subscriptionOptions?: Array<{
+    freePhase?: unknown
+    pricingPhases?: Array<{ price?: { amountMicros?: number } }>
+  }>
+  defaultOption?: {
+    freePhase?: unknown
+    pricingPhases?: Array<{ price?: { amountMicros?: number } }>
+  }
+}
+
+function readPlanInfo(pkg: { product: MaybeProduct } | undefined | null): PaywallPlanInfo {
+  const product = pkg?.product
+  if (!product) {
+    return { priceString: null, price: null, currencyCode: null, hasFreeTrial: false }
+  }
+  const iosTrial =
+    product.introPrice?.price === 0 && (product.introPrice?.periodNumberOfUnits ?? 0) > 0
+  const androidDefaultTrial = !!product.defaultOption?.freePhase
+  const androidAnyOptionTrial = (product.subscriptionOptions ?? []).some(
+    (opt) => !!opt.freePhase,
+  )
+  return {
+    priceString: product.priceString ?? null,
+    price: typeof product.price === 'number' ? product.price : null,
+    currencyCode: product.currencyCode ?? null,
+    hasFreeTrial: iosTrial || androidDefaultTrial || androidAnyOptionTrial,
+  }
+}
+
+export async function getPaywallOffering(): Promise<PaywallOfferingSummary | null> {
+  const offering = await getCurrentOffering()
+  if (!offering) return null
+  return {
+    monthly: readPlanInfo(offering.monthly as unknown as { product: MaybeProduct } | null),
+    yearly: readPlanInfo(offering.annual as unknown as { product: MaybeProduct } | null),
+  }
+}
+
 export type NativePlanKey = 'monthly' | 'yearly'
 
 export async function purchaseNativePlan(plan: NativePlanKey): Promise<{ ok: boolean; cancelled?: boolean; error?: string }> {
