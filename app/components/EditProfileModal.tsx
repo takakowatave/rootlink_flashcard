@@ -21,6 +21,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
 import NativePaywall from "@/components/NativePaywall";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { isNativeOrPreview } from "@/lib/isPreviewNative";
 import { openNativeManageSubscriptions, signOutRevenueCat } from "@/lib/revenuecat";
 import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
@@ -224,7 +225,9 @@ export default function EditProfileModal({
   };
 
   const handleUpgrade = async () => {
-    if (isNativePlatform()) {
+    // native と、Web プレビュー (?preview=native) は NativePaywall に流す。
+    // 本番 Web では UpgradeModal (Stripe Checkout) を出す。
+    if (isNativeOrPreview(isNativePlatform())) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const variant = await decidePaywallVariant(user.id);
@@ -325,7 +328,10 @@ export default function EditProfileModal({
     });
     const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
     if (saved === "en" || saved === "ja") setDisplayLocale(saved);
-    if (isNativePlatform()) {
+    // 実 native + Web プレビュー (?preview=native) の両方で通知セクションを
+    // 出す。checkNotificationPermission は Capacitor が無い環境では 'unknown'
+    // を返すので、Web でも表示に支障は無い。
+    if (isNativeOrPreview(isNativePlatform())) {
       setReminderSettings(loadReminderSettings());
       checkNotificationPermission().then(setNotifPermission);
     }
@@ -334,7 +340,7 @@ export default function EditProfileModal({
   // モーダル表示中にアプリが復帰したら permission を取り直す
   // （端末の設定でトグルを変えて戻ってきた等）
   useEffect(() => {
-    if (!isOpen || !isNativePlatform()) return;
+    if (!isOpen || !isNativeOrPreview(isNativePlatform())) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         checkNotificationPermission().then(setNotifPermission);
@@ -649,7 +655,7 @@ export default function EditProfileModal({
               </SettingsRow>
             </SettingsSection>
 
-            {isNativePlatform() && (
+            {isNativeOrPreview(isNativePlatform()) && (
               <SettingsSection title="通知">
                 {(notifPermission === "denied" || notifPermission === "prompt") && (
                   <div className="pt-4 pb-2 flex flex-col gap-3">

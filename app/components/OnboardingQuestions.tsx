@@ -8,6 +8,7 @@ import { HiOutlineTrash } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { isNativeOrPreview } from '@/lib/isPreviewNative'
 import {
   canDeleteReminderSlot,
   DEFAULT_REMINDER_SLOTS,
@@ -435,7 +436,10 @@ export default function OnboardingQuestions() {
   const [reminders, setReminders] = useState<ReminderSlot[]>(DEFAULT_REMINDERS)
   const [saving, setSaving] = useState(false)
 
-  const showReminders = useMemo(() => isNativePlatform(), [])
+  // native の他、Web プレビューで ?preview=native が付いていれば通知
+  // ステップ (step 5) を表示する。実 native では isNativePlatform() が
+  // 生きるので今までどおり。本番 Web では false。
+  const showReminders = useMemo(() => isNativeOrPreview(isNativePlatform()), [])
   const totalSteps = showReminders ? 6 : 5
 
   useEffect(() => {

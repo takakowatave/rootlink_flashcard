@@ -9,6 +9,7 @@ import ModalShell from '@/components/ModalShell'
 import TermsContent from '@/components/TermsContent'
 import PrivacyContent from '@/components/PrivacyContent'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { isNativeOrPreview } from '@/lib/isPreviewNative'
 
 // Figma: xe5UwVx38JWu5doqwXczQu / 2609:6530 (native only splash)
 // 通知許可はサインアップ後の OnboardingQuestions 側で聞く。
@@ -21,7 +22,9 @@ export default function OnboardingPage() {
   const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
 
   useEffect(() => {
-    if (!isNativePlatform()) {
+    // Web プレビューで ?preview=native が付いていれば /onboarding を表示する。
+    // 本番 Web ではこの条件が false になり従来どおり /login に飛ばす。
+    if (!isNativeOrPreview(isNativePlatform())) {
       router.replace('/login')
       return
     }

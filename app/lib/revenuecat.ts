@@ -1,4 +1,5 @@
 import { isNativePlatform } from './isNativePlatform'
+import { isPreviewNative } from './isPreviewNative'
 
 type NativePlatform = 'ios' | 'android' | null
 
@@ -117,11 +118,31 @@ function readPlanInfo(pkg: { product: MaybeProduct } | undefined | null): Paywal
 
 export async function getPaywallOffering(): Promise<PaywallOfferingSummary | null> {
   const offering = await getCurrentOffering()
-  if (!offering) return null
-  return {
-    monthly: readPlanInfo(offering.monthly as unknown as { product: MaybeProduct } | null),
-    yearly: readPlanInfo(offering.annual as unknown as { product: MaybeProduct } | null),
+  if (offering) {
+    return {
+      monthly: readPlanInfo(offering.monthly as unknown as { product: MaybeProduct } | null),
+      yearly: readPlanInfo(offering.annual as unknown as { product: MaybeProduct } | null),
+    }
   }
+  // Web プレビュー (?preview=native) では実 offering が取れないので、
+  // レイアウトを確認できるように mock を返す。本番 Web では null を返す。
+  if (isPreviewNative()) {
+    return {
+      monthly: {
+        priceString: '¥500',
+        price: 500,
+        currencyCode: 'JPY',
+        hasFreeTrial: true,
+      },
+      yearly: {
+        priceString: '¥4,800',
+        price: 4800,
+        currencyCode: 'JPY',
+        hasFreeTrial: false,
+      },
+    }
+  }
+  return null
 }
 
 export type NativePlanKey = 'monthly' | 'yearly'
