@@ -1,13 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Button from "@/components/Button";
+import AuthPage from "@/components/auth/AuthPage";
+import AuthCard from "@/components/auth/AuthCard";
 
 // Supabase の verify から 303 でここへ戻し、ユーザータップで
 // com.rootlink.app://auth-callback へ渡し直す中継ページ。
 // Chrome は 303 でのカスタムスキーム起動を許可しないため、
 // 一度 https の実ページを踏んでからユーザー操作で deeplink を開く。
+//
+// クエリパラメータはそのまま deeplink に転送する。
+//   - 新: ?token_hash=XXX&type=signup|recovery|email_change
+//   - 旧: ?code=XXX
+// いずれも AppShell.appUrlOpen 側で受けて verifyOtp / exchangeCodeForSession を叩く。
 const DEEP_LINK_BASE = "com.rootlink.app://auth-callback";
 
 export default function AppReturn() {
@@ -36,40 +42,41 @@ export default function AppReturn() {
 
   if (hasError) {
     return (
-      <div className="max-w-md mx-auto px-6 py-16 text-center">
-        <h1 className="text-xl font-semibold text-gray-900 mb-3">
-          認証に失敗しました
-        </h1>
-        <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-          リンクの有効期限が切れているか、無効になっている可能性があります。
-          <br />
-          もう一度お試しください。
-        </p>
-        <div className="flex items-center justify-center gap-6 text-sm">
-          <Link href="/login" className="text-primary underline">
-            ログイン
-          </Link>
-          <Link href="/signup" className="text-primary underline">
-            新規登録
-          </Link>
-        </div>
-      </div>
+      <AuthPage>
+        <AuthCard title="リンクの有効期限が切れているか、すでに使われています">
+          <p className="text-base text-gray-950 leading-relaxed text-center mb-6">
+            メール認証はすでに完了している可能性があります。
+            <br />
+            そのままログインしてご利用ください。
+          </p>
+          <Button
+            onClick={() => {
+              window.location.href = "/login";
+            }}
+            variant="primary"
+            size="md"
+            radius="lg"
+            fullWidth
+          >
+            ログイン画面へ
+          </Button>
+        </AuthCard>
+      </AuthPage>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16 text-center">
-      <h1 className="text-xl font-semibold text-gray-900 mb-3">
-        メール認証が完了しました
-      </h1>
-      <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-        RootLinkアプリに戻って続きの操作を行ってください。
-      </p>
-      <div className="flex items-center justify-center">
-        <a href={buttonHref}>
-          <Button variant="primary">RootLinkアプリを開く</Button>
+    <AuthPage>
+      <AuthCard title="RootLink アプリに戻る">
+        <p className="text-base text-gray-950 leading-relaxed text-center mb-6">
+          自動でアプリに戻らない場合は、下のボタンから開いてください。
+        </p>
+        <a href={buttonHref} className="block">
+          <Button variant="primary" size="md" radius="lg" fullWidth>
+            RootLink アプリを開く
+          </Button>
         </a>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthPage>
   );
 }
