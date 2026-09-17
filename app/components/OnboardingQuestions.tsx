@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
 import { MdAddCircle } from 'react-icons/md'
@@ -17,6 +16,7 @@ import {
 import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
 import Toggle from './Toggle'
+import PlantGrowthAnimation from './PlantGrowthAnimation'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
@@ -338,7 +338,7 @@ export function OnboardingQuestionsView({
             </h2>
             <div className="px-4">
               <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 flex flex-col items-center gap-6">
-                <Image src="/plant/lv4.png" alt="" width={240} height={240} priority />
+                <PlantGrowthAnimation />
                 <p className="text-xl font-semibold text-center leading-7 text-gray-950">
                   ログイン日数で<br />レベルアップします
                 </p>
