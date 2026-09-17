@@ -7,11 +7,15 @@
 //   状態ではない）。
 // - schedule / cancel は @capacitor/local-notifications を使う。
 //   Web preview では plugin が存在しないので silently no-op。
+//
+// 2026-09-17: カスタムスロット対応。既存の 3 枠 (morning / lunch / night) は
+// 削除不可の固定枠として残す。ユーザーはそれに加えて custom-<ts> のキーで
+// 最大 5 件までスロットを追加できる。旧 v1 データ（3 枠固定）も読み込める。
 
 const STORAGE_KEY = 'rootlink-reminder-settings'
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
-export type ReminderSlotKey = 'morning' | 'lunch' | 'night'
+export type ReminderSlotKey = string // 'morning' | 'lunch' | 'night' | 'custom-<ts>'
 
 export type ReminderSlot = {
   key: ReminderSlotKey
@@ -22,10 +26,14 @@ export type ReminderSlot = {
 
 export type ReminderSettings = {
   version: number
-  // 学習リマインダー全体の ON/OFF。false のときは 3 枠の設定に関わらず予約しない。
+  // 学習リマインダー全体の ON/OFF。false のときは全スロットに関わらず予約しない。
   masterEnabled: boolean
   slots: ReminderSlot[]
 }
+
+// 固定の 3 枠。削除不可、label 固定、順序保持のため先頭に置く。
+export const DEFAULT_REMINDER_KEYS = ['morning', 'lunch', 'night'] as const
+export type DefaultReminderKey = (typeof DEFAULT_REMINDER_KEYS)[number]
 
 export const DEFAULT_REMINDER_SLOTS: ReminderSlot[] = [
   { key: 'morning', label: '起床時', time: '07:00', enabled: true },
@@ -39,8 +47,30 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   slots: DEFAULT_REMINDER_SLOTS,
 }
 
-function isValidSlotKey(v: unknown): v is ReminderSlotKey {
-  return v === 'morning' || v === 'lunch' || v === 'night'
+export const MAX_REMINDER_SLOTS = 5
+
+// 追加スロット用の初期時刻の候補。3 枠と被らないよう夕方以降を優先。
+// 既存スロットの time と衝突しないものを順に返す。
+const CUSTOM_TIME_CANDIDATES = ['21:00', '15:00', '18:00', '09:00', '22:00']
+
+export function isDefaultReminderKey(key: string): key is DefaultReminderKey {
+  return (DEFAULT_REMINDER_KEYS as readonly string[]).includes(key)
+}
+
+export function canDeleteReminderSlot(slot: ReminderSlot): boolean {
+  return !isDefaultReminderKey(slot.key)
+}
+
+export function nextCustomSlotTime(existing: ReminderSlot[]): string {
+  const used = new Set(existing.map((s) => s.time))
+  for (const c of CUSTOM_TIME_CANDIDATES) {
+    if (!used.has(c)) return c
+  }
+  return '21:00'
+}
+
+export function nextCustomSlotKey(): string {
+  return `custom-${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`
 }
 
 function isValidTime(v: unknown): v is string {
@@ -49,27 +79,45 @@ function isValidTime(v: unknown): v is string {
 
 function normalizeSlots(raw: unknown): ReminderSlot[] {
   if (!Array.isArray(raw)) return DEFAULT_REMINDER_SLOTS
-  const bySkey = new Map<ReminderSlotKey, ReminderSlot>()
-  for (const item of raw) {
-    if (
-      item &&
-      typeof item === 'object' &&
-      isValidSlotKey((item as { key?: unknown }).key)
-    ) {
-      const key = (item as { key: ReminderSlotKey }).key
-      const template = DEFAULT_REMINDER_SLOTS.find((s) => s.key === key)!
-      const time = (item as { time?: unknown }).time
-      const enabled = (item as { enabled?: unknown }).enabled
-      bySkey.set(key, {
-        key,
-        label: template.label,
-        time: isValidTime(time) ? time : template.time,
-        enabled: typeof enabled === 'boolean' ? enabled : template.enabled,
-      })
+
+  // 既存の 3 枠は必ず先頭に固定し、保存データからは time / enabled を拾う。
+  const defaults: ReminderSlot[] = DEFAULT_REMINDER_SLOTS.map((template) => {
+    const stored = raw.find(
+      (item): item is { time?: unknown; enabled?: unknown } =>
+        !!item &&
+        typeof item === 'object' &&
+        (item as { key?: unknown }).key === template.key,
+    )
+    if (!stored) return template
+    const time = (stored as { time?: unknown }).time
+    const enabled = (stored as { enabled?: unknown }).enabled
+    return {
+      ...template,
+      time: isValidTime(time) ? time : template.time,
+      enabled: typeof enabled === 'boolean' ? enabled : template.enabled,
     }
+  })
+
+  // カスタムスロット。key が 'custom-' で始まるものだけ拾って上限内に丸める。
+  const customs: ReminderSlot[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const key = (item as { key?: unknown }).key
+    if (typeof key !== 'string' || !key.startsWith('custom-')) continue
+    if (customs.some((c) => c.key === key)) continue
+    const time = (item as { time?: unknown }).time
+    const enabled = (item as { enabled?: unknown }).enabled
+    const label = (item as { label?: unknown }).label
+    customs.push({
+      key,
+      label: typeof label === 'string' ? label : '',
+      time: isValidTime(time) ? time : '21:00',
+      enabled: typeof enabled === 'boolean' ? enabled : true,
+    })
+    if (defaults.length + customs.length >= MAX_REMINDER_SLOTS) break
   }
-  // 順序と欠落は DEFAULT_REMINDER_SLOTS に揃える
-  return DEFAULT_REMINDER_SLOTS.map((t) => bySkey.get(t.key) ?? t)
+
+  return [...defaults, ...customs]
 }
 
 export function loadReminderSettings(): ReminderSettings {

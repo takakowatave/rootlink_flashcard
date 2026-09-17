@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
 import { MdAddCircle } from 'react-icons/md'
+import { HiOutlineTrash } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import {
+  canDeleteReminderSlot,
   DEFAULT_REMINDER_SLOTS,
   ensureReminderPermission,
+  MAX_REMINDER_SLOTS,
+  nextCustomSlotKey,
+  nextCustomSlotTime,
   persistAndApplyReminders,
   type ReminderSlot as StoredReminderSlot,
 } from '@/lib/reminders'
@@ -84,7 +89,8 @@ type ViewProps = {
     key: ReminderSlot['key'],
     patch: Partial<ReminderSlot>,
   ) => void | Promise<void>
-  onOpenNotificationSettings: () => void
+  onReminderAdd: () => void
+  onReminderDelete: (key: ReminderSlot['key']) => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
@@ -152,7 +158,8 @@ export function OnboardingQuestionsView({
   onSourceChange,
   onExpectationChange,
   onReminderChange,
-  onOpenNotificationSettings,
+  onReminderAdd,
+  onReminderDelete,
   onNext,
   onBack,
   onSubmit,
@@ -295,33 +302,49 @@ export function OnboardingQuestionsView({
             <div className="px-4">
               <div className="bg-white border-2 border-slate-200 rounded-3xl px-6 pb-6">
                 <div className="divide-y divide-slate-200">
-                  {reminders.map((slot) => (
-                    <div key={slot.key} className="flex items-center justify-between py-4">
-                      <div className="flex items-center gap-1.5">
-                        <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
-                          <input
-                            type="time"
-                            value={slot.time}
-                            onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
-                            // w-[58px] 固定だと Android 12h 表記 (「午前 07:00」) で
-                            // 数字が切れるため、内容に合わせて広がるようにする。
-                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none"
+                  {reminders.map((slot) => {
+                    const deletable = canDeleteReminderSlot(slot)
+                    return (
+                      <div key={slot.key} className="flex items-center justify-between py-4 gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
+                            <input
+                              type="time"
+                              value={slot.time}
+                              onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
+                              className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none"
+                            />
+                          </label>
+                          {slot.label && (
+                            <span className="text-base text-gray-950 truncate">{slot.label}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Toggle
+                            checked={slot.enabled}
+                            onChange={(next) => onReminderChange(slot.key, { enabled: next })}
+                            label={`${slot.label || slot.time} の通知`}
                           />
-                        </label>
-                        <span className="text-base text-gray-950">{slot.label}</span>
+                          {deletable && (
+                            <button
+                              type="button"
+                              onClick={() => onReminderDelete(slot.key)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                              aria-label={`${slot.label || slot.time} を削除`}
+                            >
+                              <HiOutlineTrash className="size-5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <Toggle
-                        checked={slot.enabled}
-                        onChange={(next) => onReminderChange(slot.key, { enabled: next })}
-                        label={`${slot.label} の通知`}
-                      />
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <button
                   type="button"
-                  onClick={onOpenNotificationSettings}
-                  className="mt-6 w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary"
+                  onClick={onReminderAdd}
+                  disabled={reminders.length >= MAX_REMINDER_SLOTS}
+                  className="mt-6 w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary disabled:border-slate-300 disabled:text-slate-300 disabled:cursor-not-allowed"
                 >
                   追加
                   <MdAddCircle className="size-6" />
@@ -401,18 +424,6 @@ async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
   })
 }
 
-async function openNotificationSettings(): Promise<void> {
-  try {
-    const { NativeSettings, IOSSettings, AndroidSettings } = await import('capacitor-native-settings')
-    await NativeSettings.open({
-      optionIOS: IOSSettings.App,
-      optionAndroid: AndroidSettings.AppNotification,
-    })
-  } catch {
-    // plugin unavailable in web preview — silently skip
-  }
-}
-
 export default function OnboardingQuestions() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
@@ -482,6 +493,29 @@ export default function OnboardingQuestions() {
     setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
+  const addReminderSlot = () => {
+    setReminders((prev) => {
+      if (prev.length >= MAX_REMINDER_SLOTS) return prev
+      return [
+        ...prev,
+        {
+          key: nextCustomSlotKey(),
+          label: '',
+          time: nextCustomSlotTime(prev),
+          enabled: true,
+        },
+      ]
+    })
+  }
+
+  const deleteReminderSlot = (key: ReminderSlot['key']) => {
+    setReminders((prev) => {
+      const target = prev.find((s) => s.key === key)
+      if (!target || !canDeleteReminderSlot(target)) return prev
+      return prev.filter((s) => s.key !== key)
+    })
+  }
+
   const submit = async () => {
     if (!userId || !level || !source || !expectation) return
     setSaving(true)
@@ -522,7 +556,8 @@ export default function OnboardingQuestions() {
       onSourceChange={setSource}
       onExpectationChange={setExpectation}
       onReminderChange={patchReminder}
-      onOpenNotificationSettings={openNotificationSettings}
+      onReminderAdd={addReminderSlot}
+      onReminderDelete={deleteReminderSlot}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}

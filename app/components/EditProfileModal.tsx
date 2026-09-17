@@ -29,14 +29,20 @@ import Toggle from "@/components/Toggle";
 import InfoBanner from "@/components/InfoBanner";
 import Button from "@/components/Button";
 import {
+  canDeleteReminderSlot,
   clearReminders,
   DEFAULT_REMINDER_SETTINGS,
   ensureReminderPermission,
   loadReminderSettings,
+  MAX_REMINDER_SLOTS,
+  nextCustomSlotKey,
+  nextCustomSlotTime,
   persistAndApplyReminders,
   type ReminderSettings,
   type ReminderSlotKey,
 } from "@/lib/reminders";
+import { MdAddCircle } from "react-icons/md";
+import { HiOutlineTrash } from "react-icons/hi2";
 
 // 'granted' | 'denied' | 'prompt' 等を返す。'prompt' 系は request で聞ける状態、
 // 'denied' 以降は OS 設定でしか復帰しない。plugin が無い / エラー時は 'unknown'
@@ -407,6 +413,32 @@ export default function EditProfileModal({
     }));
   };
 
+  const handleAddReminderSlot = () => {
+    updateReminderSettings((prev) => {
+      if (prev.slots.length >= MAX_REMINDER_SLOTS) return prev;
+      return {
+        ...prev,
+        slots: [
+          ...prev.slots,
+          {
+            key: nextCustomSlotKey(),
+            label: "",
+            time: nextCustomSlotTime(prev.slots),
+            enabled: true,
+          },
+        ],
+      };
+    });
+  };
+
+  const handleDeleteReminderSlot = (key: ReminderSlotKey) => {
+    updateReminderSettings((prev) => {
+      const target = prev.slots.find((s) => s.key === key);
+      if (!target || !canDeleteReminderSlot(target)) return prev;
+      return { ...prev, slots: prev.slots.filter((s) => s.key !== key) };
+    });
+  };
+
   // profile 行が無い状態でモーダルが開いたら、その場で自己修復を試みる
   // AppShell のトリガーが効かなかった過去ユーザーの保険
   useEffect(() => {
@@ -644,12 +676,13 @@ export default function EditProfileModal({
                 </SettingsRow>
                 {reminderSettings.slots.map((slot) => {
                   const disabled = !reminderSettings.masterEnabled;
+                  const deletable = canDeleteReminderSlot(slot);
                   return (
                     <div
                       key={slot.key}
-                      className="flex items-center justify-between py-4 border-b border-line last:border-b-0"
+                      className="flex items-center justify-between py-4 border-b border-line last:border-b-0 gap-2"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <label
                           className={`inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer ${
                             disabled ? "opacity-40 cursor-not-allowed" : ""
@@ -665,32 +698,52 @@ export default function EditProfileModal({
                             className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none disabled:cursor-not-allowed"
                           />
                         </label>
-                        <span
-                          className={`text-base text-gray-950 ${
-                            disabled ? "opacity-40" : ""
-                          }`}
-                        >
-                          {slot.label}
-                        </span>
+                        {slot.label && (
+                          <span
+                            className={`text-base text-gray-950 truncate ${
+                              disabled ? "opacity-40" : ""
+                            }`}
+                          >
+                            {slot.label}
+                          </span>
+                        )}
                       </div>
-                      <Toggle
-                        checked={slot.enabled}
-                        onChange={(next) => handleSlotToggle(slot.key, next)}
-                        label={`${slot.label} の通知`}
-                        disabled={disabled}
-                      />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Toggle
+                          checked={slot.enabled}
+                          onChange={(next) => handleSlotToggle(slot.key, next)}
+                          label={`${slot.label || slot.time} の通知`}
+                          disabled={disabled}
+                        />
+                        {deletable && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReminderSlot(slot.key)}
+                            disabled={disabled}
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40 disabled:hover:text-gray-400"
+                            aria-label={`${slot.label || slot.time} を削除`}
+                          >
+                            <HiOutlineTrash className="size-5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-                <SettingsRow label="通知の詳細設定">
+                <div className="py-4">
                   <button
                     type="button"
-                    onClick={openNotificationSettings}
-                    className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
+                    onClick={handleAddReminderSlot}
+                    disabled={
+                      !reminderSettings.masterEnabled ||
+                      reminderSettings.slots.length >= MAX_REMINDER_SLOTS
+                    }
+                    className="w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary disabled:border-slate-300 disabled:text-slate-300 disabled:cursor-not-allowed"
                   >
-                    端末の設定を開く
+                    追加
+                    <MdAddCircle className="size-6" />
                   </button>
-                </SettingsRow>
+                </div>
               </SettingsSection>
             )}
 
