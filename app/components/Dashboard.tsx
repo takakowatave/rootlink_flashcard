@@ -474,12 +474,17 @@ export default function Dashboard() {
 
       await recordActivity(user.id)
 
-      const [savedData, quizData, decksData, dates] = await Promise.all([
+      const [savedData, quizData, decksData, dates, profileData] = await Promise.all([
         supabase.from('saved_words').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('quiz_results').select('word, correct, answered_at').eq('user_id', user.id).gte('answered_at', oneYearAgo).order('answered_at', { ascending: false }).limit(5000),
         supabase.from('decks').select('id, slug, name, label, word_count, is_premium').order('label').order('name').limit(100),
         getActivityLog(user.id),
+        supabase.from('profiles').select('acquisition_source').eq('id', user.id).maybeSingle(),
       ])
+      // オンボーディング属性質問が未回答 (acquisition_source が null) の間は
+      // OnboardingQuestions のモーダルが被さっているので、ストリークモーダルは
+      // 出さない。回答完了後の次回 Dashboard 訪問から通常どおり出す。
+      const onboardingPending = !profileData.data || !profileData.data.acquisition_source
 
       const currentStreak = calcStreak(dates)
       setStreak(currentStreak)
@@ -542,8 +547,9 @@ export default function Dashboard() {
       // フラグ有無に関わらず現在レベルで同期 (次回比較の基準)
       localStorage.setItem(LEVEL_STORAGE_KEY, String(currentLevel))
 
-      // 日次 StreakModal: レベルアップが発火する日は出さない (二重モーダル回避)
-      if (!levelUpFired && currentStreak > 0) {
+      // 日次 StreakModal: レベルアップが発火する日は出さない (二重モーダル回避)。
+      // オンボーディング質問が未回答の間も出さない (質問モーダルと二重表示になる)。
+      if (!levelUpFired && !onboardingPending && currentStreak > 0) {
         const today = new Date().toLocaleDateString('sv')
         const lastShown = localStorage.getItem(STREAK_MODAL_KEY)
         if (lastShown !== today) {
