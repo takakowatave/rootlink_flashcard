@@ -4,6 +4,9 @@ import { useState } from "react";
 import { HiX } from "react-icons/hi";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
+import { openExternalLink } from "@/lib/openExternal";
+
+const CONTACT_URL = "https://tally.so/r/ODJoEY";
 
 export default function AuthPage({ children }: { children: React.ReactNode }) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
@@ -21,14 +24,13 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
           >
             プライバシーポリシー
           </button>
-          <a
-            href="https://tally.so/r/ODJoEY"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openExternalLink(CONTACT_URL)}
             className="hover:text-gray-600 transition-colors"
           >
             お問い合わせ
-          </a>
+          </button>
         </div>
         <p>© 2026 RootLink. All rights reserved.</p>
       </footer>

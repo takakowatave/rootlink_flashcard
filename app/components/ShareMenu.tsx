@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaLink, FaXTwitter, FaLine, FaFacebook, FaThreads } from 'react-icons/fa6'
+import { openExternalLink } from '@/lib/openExternal'
 
 type Props = {
   open: boolean
@@ -62,7 +63,9 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
   if (!open) return null
 
   const openWindow = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer')
+    // native は Browser.open で SafariView / Custom Tabs に載せて
+    // アプリ内表示、Web は今までどおり別タブ (openExternalLink 内で分岐)。
+    void openExternalLink(url)
     onClose()
   }
 
@@ -84,10 +87,9 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
       onClose()
       return
     }
-    window.open(
+    // native は Browser.open、Web は別タブ (openExternalLink 内で分岐)
+    void openExternalLink(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
-      '_blank',
-      'noopener,noreferrer'
     )
     onClose()
   }

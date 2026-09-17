@@ -186,6 +186,11 @@ export default function EditProfileModal({
         return;
       }
       // subscriptionStore === "stripe" (or フォールバックで null は表示ガードで来ない)
+      // native は上の分岐で必ず openNativeManageSubscriptions に流すため、
+      // ここで Stripe ポータル URL に window.location.href を代入する経路には
+      // 到達しないはずだが、審査 NG の cloaking 事故 (呼び出し漏れ・future
+      // refactor) を防ぐ最終防波堤として明示ガード。
+      if (isNativePlatform()) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch(`${API_BASE}/stripe/portal`, {
