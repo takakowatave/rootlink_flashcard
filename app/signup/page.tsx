@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
-import { BsCheck2 } from "react-icons/bs";
 import { HiOutlineEnvelope } from "react-icons/hi2";
 import { HiX } from "react-icons/hi";
 import Button from "@/components/Button";
 import { TextInput } from "@/components/TextInput";
+import TermsAgreementCheckbox from "@/components/TermsAgreementCheckbox";
 import AuthPage from "@/components/auth/AuthPage";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthDivider from "@/components/auth/AuthDivider";
@@ -99,7 +99,7 @@ export default function AuthSignup() {
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
               <TextInput
                 type="email"
                 label="メールアドレス"
@@ -107,7 +107,7 @@ export default function AuthSignup() {
                 {...register("email", { required: "メールアドレスは必須です" })}
               />
               {existingAccount && (
-                <p className="-mt-2 text-xs">
+                <p className="-mt-3 text-sm">
                   <Link href="/login" className="text-primary underline">
                     ログインはこちら
                   </Link>
@@ -123,30 +123,22 @@ export default function AuthSignup() {
                   minLength: { value: 8, message: "8文字以上で設定してください" },
                 })}
               />
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="peer sr-only"
-                  {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
-                />
-                <span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-line bg-white flex items-center justify-center text-transparent transition-colors peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-hover">
-                  <BsCheck2 size={14} className="text-current" />
-                </span>
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPrivacyOpen(true);
-                    }}
-                    className="text-primary underline"
-                  >
-                    プライバシーポリシー
-                  </button>
-                  に同意する
-                </span>
-              </label>
-              {errors.agreeToPrivacy && <p className="text-xs text-red-500 -mt-2">{errors.agreeToPrivacy.message}</p>}
+              <TermsAgreementCheckbox
+                error={errors.agreeToPrivacy}
+                {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPrivacyOpen(true);
+                  }}
+                  className="text-primary underline"
+                >
+                  プライバシーポリシー
+                </button>
+                に同意する
+              </TermsAgreementCheckbox>
               <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
                 {isSubmitting ? "登録中..." : "新規作成"}
               </Button>

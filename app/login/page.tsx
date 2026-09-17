@@ -48,7 +48,7 @@ export default function AuthLogin() {
   return (
     <AuthPage>
       <AuthCard title="アカウントにログイン">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <TextInput
             type="email"
             label="メールアドレス"
