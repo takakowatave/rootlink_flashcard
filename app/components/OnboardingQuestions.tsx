@@ -480,18 +480,13 @@ export default function OnboardingQuestions() {
   ) => {
     // OFF → ON への切替時だけ通知許可を確認する。時刻変更や OFF 化は
     // permission を触らずに反映する。
+    // 拒否された場合はモーダル/エラー表示は出さず、そのままトグルを
+    // OFF に戻す (patch を無視して return する = 何も変えない)。
     if (patch.enabled === true) {
       const current = reminders.find((r) => r.key === key)
       if (current && !current.enabled) {
         const res = await ensureReminderPermission()
-        if (res.kind === 'denied') {
-          toast.error(
-            res.openedSettings
-              ? '端末の設定で通知を許可してから再度お試しください'
-              : '通知が許可されていないため、リマインダーを設定できません',
-          )
-          return
-        }
+        if (res.kind === 'denied') return
       }
     }
     setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
