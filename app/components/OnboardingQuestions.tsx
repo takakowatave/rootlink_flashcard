@@ -281,7 +281,9 @@ export function OnboardingQuestionsView({
                             type="time"
                             value={slot.time}
                             onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
-                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px]"
+                            // w-[58px] 固定だと Android 12h 表記 (「午前 07:00」) で
+                            // 数字が切れるため、内容に合わせて広がるようにする。
+                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none"
                           />
                         </label>
                         <span className="text-base text-gray-950">{slot.label}</span>

@@ -596,7 +596,9 @@ export default function EditProfileModal({
                             value={slot.time}
                             disabled={disabled}
                             onChange={(e) => handleSlotTimeChange(slot.key, e.target.value)}
-                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px] disabled:cursor-not-allowed"
+                            // w-[58px] 固定だと Android 12h 表記 (「午前 07:00」) で
+                            // 数字が切れるため、内容に合わせて広がるようにする。
+                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none disabled:cursor-not-allowed"
                           />
                         </label>
                         <span
