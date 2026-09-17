@@ -31,6 +31,7 @@ import Button from "@/components/Button";
 import {
   clearReminders,
   DEFAULT_REMINDER_SETTINGS,
+  ensureReminderPermission,
   loadReminderSettings,
   persistAndApplyReminders,
   type ReminderSettings,
@@ -54,6 +55,38 @@ async function openNotificationSettings(): Promise<void> {
   } catch {
     // plugin unavailable in web preview — silently skip
   }
+}
+
+function formatJPDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+// 「現在のプラン」の下に出す補足文言。
+// - status=trialing → 「無料期間は○月○日まで」
+// - status=active + will_renew=false → 「○月○日で終了します（自動更新なし）」
+// - status=active + will_renew=true → 「次回更新日: ○月○日」
+// - store が無い (テスター) や日付が取れないケースは何も出さない。
+function buildPlanHelperText(params: {
+  plan: "premium" | "free" | null;
+  status: string | null;
+  expiresAt: string | null;
+  willRenew: boolean | null;
+  store: "stripe" | "app_store" | "play_store" | null;
+}): string | null {
+  const { plan, status, expiresAt, willRenew, store } = params;
+  if (plan !== "premium") return null;
+  if (store === null) return null;
+  const date = formatJPDate(expiresAt);
+  if (!date) return null;
+  if (status === "trialing") return `無料期間は ${date} まで`;
+  if (status === "active" && willRenew === false) {
+    return `${date}で終了します（自動更新なし）`;
+  }
+  if (status === "active") return `次回更新日: ${date}`;
+  return null;
 }
 
 async function checkNotificationPermission(): Promise<NotifPermission> {
@@ -101,6 +134,15 @@ export default function EditProfileModal({
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
   const [subscriptionStore, setSubscriptionStore] = useState<
     "stripe" | "app_store" | "play_store" | null
+  >(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(
+    null,
+  );
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<
+    string | null
+  >(null);
+  const [subscriptionWillRenew, setSubscriptionWillRenew] = useState<
+    boolean | null
   >(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -249,7 +291,7 @@ export default function EditProfileModal({
       setEmail(user.email ?? "");
       supabase
         .from("subscriptions")
-        .select("store")
+        .select("store, status, expires_at, will_renew")
         .eq("user_id", user.id)
         .maybeSingle()
         .then(({ data }) => {
@@ -258,6 +300,15 @@ export default function EditProfileModal({
             store === "stripe" || store === "app_store" || store === "play_store"
               ? store
               : null,
+          );
+          setSubscriptionStatus(
+            typeof data?.status === "string" ? data.status : null,
+          );
+          setSubscriptionExpiresAt(
+            typeof data?.expires_at === "string" ? data.expires_at : null,
+          );
+          setSubscriptionWillRenew(
+            typeof data?.will_renew === "boolean" ? data.will_renew : null,
           );
         });
     });
@@ -305,7 +356,28 @@ export default function EditProfileModal({
     });
   };
 
-  const handleMasterToggle = (next: boolean) => {
+  // OFF → ON への切替では未許可なら OS ダイアログを出し、拒否済みなら
+  // 端末の通知設定を開く。denied のときは呼び出し側でトグルを OFF に戻す。
+  const ensurePermissionForOn = async (): Promise<boolean> => {
+    const res = await ensureReminderPermission();
+    if (res.kind === "denied") {
+      setNotifPermission("denied");
+      toast.error(
+        res.openedSettings
+          ? "端末の設定で通知を許可してから再度お試しください"
+          : "通知が許可されていないため、リマインダーを設定できません",
+      );
+      return false;
+    }
+    if (res.kind === "granted") setNotifPermission("granted");
+    return true;
+  };
+
+  const handleMasterToggle = async (next: boolean) => {
+    if (next && !reminderSettings.masterEnabled) {
+      const ok = await ensurePermissionForOn();
+      if (!ok) return;
+    }
     updateReminderSettings((prev) => ({ ...prev, masterEnabled: next }));
   };
 
@@ -316,7 +388,14 @@ export default function EditProfileModal({
     }));
   };
 
-  const handleSlotToggle = (key: ReminderSlotKey, enabled: boolean) => {
+  const handleSlotToggle = async (key: ReminderSlotKey, enabled: boolean) => {
+    if (enabled) {
+      const current = reminderSettings.slots.find((s) => s.key === key);
+      if (current && !current.enabled) {
+        const ok = await ensurePermissionForOn();
+        if (!ok) return;
+      }
+    }
     updateReminderSettings((prev) => ({
       ...prev,
       slots: prev.slots.map((s) => (s.key === key ? { ...s, enabled } : s)),
@@ -487,7 +566,16 @@ export default function EditProfileModal({
             </SettingsSection>
 
             <SettingsSection title="設定">
-              <SettingsRow label="現在のプラン">
+              <SettingsRow
+                label="現在のプラン"
+                helperText={buildPlanHelperText({
+                  plan,
+                  status: subscriptionStatus,
+                  expiresAt: subscriptionExpiresAt,
+                  willRenew: subscriptionWillRenew,
+                  store: subscriptionStore,
+                })}
+              >
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
                     {subscriptionStore !== null ? "Premium" : "テスター"}
@@ -547,13 +635,10 @@ export default function EditProfileModal({
                     checked={reminderSettings.masterEnabled}
                     onChange={handleMasterToggle}
                     label="学習リマインダー"
-                    disabled={notifPermission !== "granted" && notifPermission !== "unknown"}
                   />
                 </SettingsRow>
                 {reminderSettings.slots.map((slot) => {
-                  const notGranted =
-                    notifPermission !== "granted" && notifPermission !== "unknown";
-                  const disabled = !reminderSettings.masterEnabled || notGranted;
+                  const disabled = !reminderSettings.masterEnabled;
                   return (
                     <div
                       key={slot.key}
@@ -570,7 +655,9 @@ export default function EditProfileModal({
                             value={slot.time}
                             disabled={disabled}
                             onChange={(e) => handleSlotTimeChange(slot.key, e.target.value)}
-                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none w-[58px] disabled:cursor-not-allowed"
+                            // w-[58px] 固定だと Android 12h 表記 (「午前 07:00」) で
+                            // 数字が切れるため、内容に合わせて広がるようにする。
+                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none disabled:cursor-not-allowed"
                           />
                         </label>
                         <span

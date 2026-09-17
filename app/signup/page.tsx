@@ -32,6 +32,7 @@ export default function AuthSignup() {
   const [sentEmail, setSentEmail] = useState("");
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
 
   const {
@@ -42,19 +43,31 @@ export default function AuthSignup() {
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
+    setExistingAccount(false);
     // native はメール本文のリンクを Chrome が開くため、Supabase の 303 で
     // カスタムスキームを起こせない。一旦 https の中継ページに戻し、そこで
     // ユーザー操作の遷移として com.rootlink.app://auth-callback を叩かせる。
     const emailRedirectTo = isNativePlatform()
       ? "https://www.rootlink.app/auth/app-return"
       : `${window.location.origin}/callback`;
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: { emailRedirectTo },
     });
     if (error) {
       setError("email", { message: error.message });
+      return;
+    }
+    // Supabase は確認済みの既存メールで signUp すると error を返さず
+    // user.identities を空配列にする（なりすまし対策）。
+    // 未確認で残っているだけのメールは identities が付いてくるので、
+    // その場合は今まで通り確認メール送信の完了画面へ進める。
+    if (signUpData.user && signUpData.user.identities?.length === 0) {
+      setExistingAccount(true);
+      setError("email", {
+        message: "このメールアドレスはすでに登録されています",
+      });
       return;
     }
     setSentEmail(data.email);
@@ -93,6 +106,13 @@ export default function AuthSignup() {
                 error={errors.email}
                 {...register("email", { required: "メールアドレスは必須です" })}
               />
+              {existingAccount && (
+                <p className="-mt-2 text-xs">
+                  <Link href="/login" className="text-primary underline">
+                    ログインはこちら
+                  </Link>
+                </p>
+              )}
               <TextInput
                 type="password"
                 label="パスワード"

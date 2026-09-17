@@ -10,6 +10,7 @@ import PrivacyContent from "@/components/PrivacyContent"
 import type { PaywallVariant } from "@/lib/paywall"
 import {
   getCurrentOffering,
+  hasAnyPurchaseHistory,
   purchaseNativePlan,
   restoreNativePurchases,
 } from "@/lib/revenuecat"
@@ -34,6 +35,9 @@ export default function NativePaywall({ variant, onClose }: Props) {
   const [isRestoring, setIsRestoring] = useState(false)
   const [offeringError, setOfferingError] = useState(false)
   const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
+  // 過去に購入履歴のあるユーザーだけ「購入を復元」を表示する。
+  // 履歴ゼロのユーザーには押しても意味が無いので UI からも消す。
+  const [showRestore, setShowRestore] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -55,6 +59,9 @@ export default function NativePaywall({ variant, onClose }: Props) {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
+    hasAnyPurchaseHistory().then((v) => {
+      if (!cancelled) setShowRestore(v)
+    })
     return () => {
       cancelled = true
     }
@@ -88,6 +95,10 @@ export default function NativePaywall({ variant, onClose }: Props) {
       const result = await restoreNativePurchases()
       if (!result.ok) {
         toast.error('復元に失敗しました')
+        return
+      }
+      if (!result.hasActiveEntitlement) {
+        toast.error('復元できる購入が見つかりませんでした')
         return
       }
       toast.success('購入を復元しました')
@@ -206,14 +217,16 @@ export default function NativePaywall({ variant, onClose }: Props) {
             </Button>
             <p className="text-xs text-gray-500 text-center mt-2 mb-3">{ctaSummary}</p>
 
-            <button
-              type="button"
-              onClick={handleRestore}
-              disabled={isRestoring}
-              className="w-full text-xs text-gray-500 underline py-1 mb-4 disabled:opacity-40"
-            >
-              {isRestoring ? '復元中...' : '購入を復元'}
-            </button>
+            {showRestore && (
+              <button
+                type="button"
+                onClick={handleRestore}
+                disabled={isRestoring}
+                className="w-full text-xs text-gray-500 underline py-1 mb-4 disabled:opacity-40"
+              >
+                {isRestoring ? '復元中...' : '購入を復元'}
+              </button>
+            )}
 
             <div className="border-t border-line pt-3 text-[11px] text-gray-500 leading-relaxed space-y-2">
               <p className="font-semibold text-gray-600">自動更新について</p>

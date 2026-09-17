@@ -82,15 +82,44 @@ export async function purchaseNativePlan(plan: NativePlanKey): Promise<{ ok: boo
   }
 }
 
-export async function restoreNativePurchases(): Promise<{ ok: boolean; error?: string }> {
+export type RestoreResult =
+  | { ok: true; hasActiveEntitlement: boolean }
+  | { ok: false; error: string }
+
+// 復元後の customerInfo を確認し、有効な entitlement があるかを返す。
+// 呼び出し側は hasActiveEntitlement=true のときだけ「復元しました」と
+// プレミアム反映を行い、false なら「復元できる購入が見つかりませんでした」を出す。
+export async function restoreNativePurchases(): Promise<RestoreResult> {
   if (!isNativePlatform()) return { ok: false, error: 'not_native' }
   try {
     const { Purchases } = await import('@revenuecat/purchases-capacitor')
-    await Purchases.restorePurchases()
-    return { ok: true }
+    const { customerInfo } = await Purchases.restorePurchases()
+    const active = customerInfo?.entitlements?.active ?? {}
+    return { ok: true, hasActiveEntitlement: Object.keys(active).length > 0 }
   } catch (err) {
     const e = err as { message?: string }
     return { ok: false, error: e?.message ?? 'restore_failed' }
+  }
+}
+
+// 過去に購入履歴（期限切れ含む）があるかどうか。Paywall で「購入を復元」を
+// 表示するかの判定に使う。全ユーザーに出しっぱなしにするとタップして
+// 「見つかりませんでした」が頻発するので、履歴があるユーザーだけに絞る。
+export async function hasAnyPurchaseHistory(): Promise<boolean> {
+  if (!isNativePlatform()) return false
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    const { customerInfo } = await Purchases.getCustomerInfo()
+    const active = customerInfo?.entitlements?.active ?? {}
+    const all = customerInfo?.entitlements?.all ?? {}
+    const products = customerInfo?.allPurchasedProductIdentifiers ?? []
+    return (
+      Object.keys(active).length > 0 ||
+      Object.keys(all).length > 0 ||
+      products.length > 0
+    )
+  } catch {
+    return false
   }
 }
 
