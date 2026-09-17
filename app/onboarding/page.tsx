@@ -10,6 +10,7 @@ import TermsContent from '@/components/TermsContent'
 import PrivacyContent from '@/components/PrivacyContent'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { isNativeOrPreview } from '@/lib/isPreviewNative'
+import { supabase } from '@/lib/supabaseClient'
 
 // Figma: xe5UwVx38JWu5doqwXczQu / 2609:6530 (native only splash)
 // 通知許可はサインアップ後の OnboardingQuestions 側で聞く。
@@ -28,15 +29,43 @@ export default function OnboardingPage() {
       router.replace('/login')
       return
     }
-    setReady(true)
+
+    // 起動時にログイン済みかを確認する。ログイン済みなら同意画面には残さない。
+    //
+    // 判定はここでは acquisition_source を見に行かず、ログイン済みなら一律に
+    // '/' に飛ばす。'/' に着いたところで AppShell 配下の OnboardingQuestions
+    // overlay が、既存の判定 (profiles.acquisition_source が null なら質問を
+    // 出す / 既に埋まっていれば何も出さない) をそのまま実行する。
+    //
+    // つまり:
+    //   未ログイン           → 同意画面 (ここ)
+    //   ログイン済み・質問未 → '/' に遷移 → OnboardingQuestions が質問モーダル
+    //   ログイン済み・質問済 → '/' に遷移 → Dashboard がそのまま表示
+    //
+    // session 確認が終わるまでは setReady(false) のまま返し、画面のちらつきを
+    // 出さない (Capacitor の SplashScreen は最後に hide する)。
+    let cancelled = false
     ;(async () => {
       try {
-        const mod = await import('@capacitor/splash-screen')
-        await mod.SplashScreen.hide({ fadeOutDuration: 250 })
-      } catch {
-        // splash plugin unavailable in web preview; ignore
+        const { data: { session } } = await supabase.auth.getSession()
+        if (cancelled) return
+        if (session?.user) {
+          router.replace('/')
+          return
+        }
+        setReady(true)
+      } finally {
+        try {
+          const mod = await import('@capacitor/splash-screen')
+          await mod.SplashScreen.hide({ fadeOutDuration: 250 })
+        } catch {
+          // splash plugin unavailable in web preview; ignore
+        }
       }
     })()
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
   if (!ready) return null
