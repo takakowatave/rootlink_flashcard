@@ -1,5 +1,10 @@
+'use client'
+
 import Image from 'next/image'
 import Link from 'next/link'
+import { openExternalLink } from '@/lib/openExternal'
+
+const CONTACT_URL = 'https://tally.so/r/ODJoEY'
 
 export default function LPFooter() {
   return (
@@ -20,14 +25,13 @@ export default function LPFooter() {
           <Link href="/terms" className="transition-colors hover:text-white">
             利用規約
           </Link>
-          <a
-            href="https://tally.so/r/ODJoEY"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openExternalLink(CONTACT_URL)}
             className="transition-colors hover:text-white"
           >
             お問い合わせ
-          </a>
+          </button>
         </div>
 
         <p className="text-[12px] text-[#556070]">

@@ -1,4 +1,9 @@
+'use client'
+
 import Link from 'next/link'
+import { openExternalLink } from '@/lib/openExternal'
+
+const CONTACT_URL = 'https://tally.so/r/ODJoEY'
 
 export default function Footer() {
   return (
@@ -13,9 +18,13 @@ export default function Footer() {
         <Link href="/terms" className="hover:text-gray-600 transition-colors">
           利用規約
         </Link>
-        <a href="https://tally.so/r/ODJoEY" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">
+        <button
+          type="button"
+          onClick={() => openExternalLink(CONTACT_URL)}
+          className="hover:text-gray-600 transition-colors"
+        >
           お問い合わせ
-        </a>
+        </button>
       </div>
       <p>© 2026 RootLink. All rights reserved.</p>
     </footer>
