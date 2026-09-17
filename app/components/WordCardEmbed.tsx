@@ -165,10 +165,11 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
       return
     }
     setExampleAudioLoading(true)
-    const url = await fetchTtsAudioUrl('/audio/word/example', { word, sense_id: sense.senseId })
-    if (url) {
-      setExampleAudioUrl(url)
-      playAudioAtRate(url, 1.2)
+    const result = await fetchTtsAudioUrl('/audio/word/example', { word, sense_id: sense.senseId })
+    if (result.url) {
+      const audioUrl = result.url
+      setExampleAudioUrl(audioUrl)
+      playAudioAtRate(audioUrl, 1.2)
     }
     setExampleAudioLoading(false)
   }

@@ -519,11 +519,12 @@ export default function QuizSession({
       if (!card.audioPath) {
         const endpoint = isPhrase ? '/audio/phrase/headword' : '/audio'
         const body = isPhrase ? { phrase_card_id: card.phrase_card_id! } : { word: card.word }
-        fetchTtsAudioUrl(endpoint, body).then((url) => {
-          if (!url) return
+        fetchTtsAudioUrl(endpoint, body).then((result) => {
+          if (!result.url) return
+          const audioUrl = result.url
           setPrefetchedAudio((prev) => {
             const next = new Map(prev)
-            next.set(key, { ...(next.get(key) ?? {}), headwordUrl: url })
+            next.set(key, { ...(next.get(key) ?? {}), headwordUrl: audioUrl })
             return next
           })
         })
@@ -534,11 +535,12 @@ export default function QuizSession({
         const body = isPhrase
           ? { phrase_card_id: card.phrase_card_id! }
           : { word: card.word, sense_id: card.senseId ?? '' }
-        fetchTtsAudioUrl(endpoint, body).then((url) => {
-          if (!url) return
+        fetchTtsAudioUrl(endpoint, body).then((result) => {
+          if (!result.url) return
+          const audioUrl = result.url
           setPrefetchedAudio((prev) => {
             const next = new Map(prev)
-            next.set(key, { ...(next.get(key) ?? {}), exampleUrl: url })
+            next.set(key, { ...(next.get(key) ?? {}), exampleUrl: audioUrl })
             return next
           })
         })
