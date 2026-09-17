@@ -28,6 +28,9 @@ export default function UpgradeModal({ onClose, reason = "limit" }: Props) {
   if (isNativePlatform()) return null
 
   const handleUpgrade = async () => {
+    // 通常は上の isNativePlatform() return null で到達しないが、
+    // native から Stripe Checkout に到達する cloaking 事故を防ぐ最終防波堤。
+    if (isNativePlatform()) return
     setIsLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
