@@ -101,6 +101,47 @@ export function saveReminderSettings(settings: ReminderSettings): void {
   }
 }
 
+export type PermissionRequestResult =
+  // ダイアログで許可された、または既に granted。呼び出し側は予約に進める。
+  | { kind: 'granted' }
+  // ダイアログで拒否された、または既に denied。呼び出し側はトグルを OFF に戻す。
+  // openedSettings=true のときは端末の通知設定を開いた（前回拒否済みで
+  // OS が再表示しないケース）。
+  | { kind: 'denied'; openedSettings: boolean }
+  // capacitor plugin が使えない (Web preview 等)。トグルは触らずに保存だけ進める。
+  | { kind: 'unavailable' }
+
+// トグルを ON にしようとした時に呼ぶ。未許可なら OS のダイアログを出し、
+// 一度拒否されている場合は端末の通知設定を開く。
+export async function ensureReminderPermission(): Promise<PermissionRequestResult> {
+  try {
+    const mod = await import('@capacitor/local-notifications')
+    const current = (await mod.LocalNotifications.checkPermissions()).display
+    if (current === 'granted') return { kind: 'granted' }
+    if (current === 'denied') {
+      // 過去に拒否済み。OS はダイアログを再表示しないので、端末の通知設定を開く。
+      try {
+        const { NativeSettings, IOSSettings, AndroidSettings } = await import(
+          'capacitor-native-settings'
+        )
+        await NativeSettings.open({
+          optionIOS: IOSSettings.App,
+          optionAndroid: AndroidSettings.AppNotification,
+        })
+        return { kind: 'denied', openedSettings: true }
+      } catch {
+        return { kind: 'denied', openedSettings: false }
+      }
+    }
+    // prompt / prompt-with-rationale / undetermined → ここで初めてダイアログ
+    const next = (await mod.LocalNotifications.requestPermissions()).display
+    if (next === 'granted') return { kind: 'granted' }
+    return { kind: 'denied', openedSettings: false }
+  } catch {
+    return { kind: 'unavailable' }
+  }
+}
+
 // 予約済みの学習リマインダー通知を全てキャンセルする。
 export async function cancelAllReminderNotifications(): Promise<void> {
   try {
@@ -114,23 +155,34 @@ export async function cancelAllReminderNotifications(): Promise<void> {
   }
 }
 
+export type ReminderScheduleResult = {
+  // 実際に通知予約が走ったかどうか。permission=granted かつ enabled slot がある場合のみ true。
+  scheduled: boolean
+  // Capacitor LocalNotifications.checkPermissions().display の値。
+  // 'unknown' は Capacitor plugin が使えない Web preview 等。
+  permission: 'granted' | 'denied' | 'prompt' | 'prompt-with-rationale' | 'unknown'
+}
+
 // 現在の settings を通知予約に反映する（許可されていれば）。
 // - 全体 OFF、または有効な枠が 0 件のときは既存の予約を全解除。
 // - permission が 'granted' でない場合は予約せず、既存の予約もそのまま
 //   （通知許可を戻したときに直ちに動かすため、キャンセルは呼び出し側の
 //   masterEnabled=false 経路で行う）。
+// - 戻り値で「予約したか / permission 状態」を返す。呼び出し側で UI 反応
+//   （トグル OFF 戻し等）を分岐させるために使う。
 export async function scheduleReminderNotifications(
   settings: ReminderSettings,
-): Promise<void> {
+): Promise<ReminderScheduleResult> {
   try {
     const mod = await import('@capacitor/local-notifications')
     const perm = await mod.LocalNotifications.checkPermissions()
-    if (perm.display !== 'granted') return
+    const permission = perm.display as ReminderScheduleResult['permission']
+    if (permission !== 'granted') return { scheduled: false, permission }
     // 既存予約は必ず一度クリアしてから作り直す
     await cancelAllReminderNotifications()
-    if (!settings.masterEnabled) return
+    if (!settings.masterEnabled) return { scheduled: false, permission }
     const enabled = settings.slots.filter((s) => s.enabled)
-    if (enabled.length === 0) return
+    if (enabled.length === 0) return { scheduled: false, permission }
     const notifications = enabled.map((slot, index) => {
       const [h, m] = slot.time.split(':').map(Number)
       const at = new Date()
@@ -144,21 +196,25 @@ export async function scheduleReminderNotifications(
       }
     })
     await mod.LocalNotifications.schedule({ notifications })
+    return { scheduled: true, permission }
   } catch {
     // capacitor plugin unavailable (web preview) — silently skip
+    return { scheduled: false, permission: 'unknown' }
   }
 }
 
 // UI から一発で「保存＋予約反映」を呼べるようにするヘルパー。
+// 戻り値は scheduleReminderNotifications の結果をそのまま返す
+// （masterEnabled=false の経路では { scheduled:false, permission:'granted' } 相当）。
 export async function persistAndApplyReminders(
   settings: ReminderSettings,
-): Promise<void> {
+): Promise<ReminderScheduleResult> {
   saveReminderSettings(settings)
   if (!settings.masterEnabled) {
     await cancelAllReminderNotifications()
-    return
+    return { scheduled: false, permission: 'granted' }
   }
-  await scheduleReminderNotifications(settings)
+  return scheduleReminderNotifications(settings)
 }
 
 // ログアウト・退会時に呼ぶ。予約済みの通知を全てキャンセルし、

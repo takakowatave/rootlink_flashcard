@@ -31,6 +31,7 @@ import Button from "@/components/Button";
 import {
   clearReminders,
   DEFAULT_REMINDER_SETTINGS,
+  ensureReminderPermission,
   loadReminderSettings,
   persistAndApplyReminders,
   type ReminderSettings,
@@ -305,7 +306,28 @@ export default function EditProfileModal({
     });
   };
 
-  const handleMasterToggle = (next: boolean) => {
+  // OFF → ON への切替では未許可なら OS ダイアログを出し、拒否済みなら
+  // 端末の通知設定を開く。denied のときは呼び出し側でトグルを OFF に戻す。
+  const ensurePermissionForOn = async (): Promise<boolean> => {
+    const res = await ensureReminderPermission();
+    if (res.kind === "denied") {
+      setNotifPermission("denied");
+      toast.error(
+        res.openedSettings
+          ? "端末の設定で通知を許可してから再度お試しください"
+          : "通知が許可されていないため、リマインダーを設定できません",
+      );
+      return false;
+    }
+    if (res.kind === "granted") setNotifPermission("granted");
+    return true;
+  };
+
+  const handleMasterToggle = async (next: boolean) => {
+    if (next && !reminderSettings.masterEnabled) {
+      const ok = await ensurePermissionForOn();
+      if (!ok) return;
+    }
     updateReminderSettings((prev) => ({ ...prev, masterEnabled: next }));
   };
 
@@ -316,7 +338,14 @@ export default function EditProfileModal({
     }));
   };
 
-  const handleSlotToggle = (key: ReminderSlotKey, enabled: boolean) => {
+  const handleSlotToggle = async (key: ReminderSlotKey, enabled: boolean) => {
+    if (enabled) {
+      const current = reminderSettings.slots.find((s) => s.key === key);
+      if (current && !current.enabled) {
+        const ok = await ensurePermissionForOn();
+        if (!ok) return;
+      }
+    }
     updateReminderSettings((prev) => ({
       ...prev,
       slots: prev.slots.map((s) => (s.key === key ? { ...s, enabled } : s)),
@@ -547,13 +576,10 @@ export default function EditProfileModal({
                     checked={reminderSettings.masterEnabled}
                     onChange={handleMasterToggle}
                     label="学習リマインダー"
-                    disabled={notifPermission !== "granted" && notifPermission !== "unknown"}
                   />
                 </SettingsRow>
                 {reminderSettings.slots.map((slot) => {
-                  const notGranted =
-                    notifPermission !== "granted" && notifPermission !== "unknown";
-                  const disabled = !reminderSettings.masterEnabled || notGranted;
+                  const disabled = !reminderSettings.masterEnabled;
                   return (
                     <div
                       key={slot.key}

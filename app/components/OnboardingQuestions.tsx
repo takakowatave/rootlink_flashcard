@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import {
   DEFAULT_REMINDER_SLOTS,
+  ensureReminderPermission,
   persistAndApplyReminders,
   type ReminderSlot as StoredReminderSlot,
 } from '@/lib/reminders'
@@ -76,7 +77,10 @@ type ViewProps = {
   onLevelChange: (v: EnglishLevel) => void
   onSourceChange: (v: AcquisitionSource) => void
   onExpectationChange: (v: Expectation) => void
-  onReminderChange: (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => void
+  onReminderChange: (
+    key: ReminderSlot['key'],
+    patch: Partial<ReminderSlot>,
+  ) => void | Promise<void>
   onOpenNotificationSettings: () => void
   onNext: () => void
   onBack: () => void
@@ -426,7 +430,26 @@ export default function OnboardingQuestions() {
   const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
-  const patchReminder = (key: ReminderSlot['key'], patch: Partial<ReminderSlot>) => {
+  const patchReminder = async (
+    key: ReminderSlot['key'],
+    patch: Partial<ReminderSlot>,
+  ) => {
+    // OFF → ON への切替時だけ通知許可を確認する。時刻変更や OFF 化は
+    // permission を触らずに反映する。
+    if (patch.enabled === true) {
+      const current = reminders.find((r) => r.key === key)
+      if (current && !current.enabled) {
+        const res = await ensureReminderPermission()
+        if (res.kind === 'denied') {
+          toast.error(
+            res.openedSettings
+              ? '端末の設定で通知を許可してから再度お試しください'
+              : '通知が許可されていないため、リマインダーを設定できません',
+          )
+          return
+        }
+      }
+    }
     setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
