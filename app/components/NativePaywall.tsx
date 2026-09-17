@@ -9,10 +9,11 @@ import TermsContent from "@/components/TermsContent"
 import PrivacyContent from "@/components/PrivacyContent"
 import type { PaywallVariant } from "@/lib/paywall"
 import {
-  getCurrentOffering,
+  getPaywallOffering,
   hasAnyPurchaseHistory,
   purchaseNativePlan,
   restoreNativePurchases,
+  type PaywallPlanInfo,
 } from "@/lib/revenuecat"
 
 type LegalDoc = "terms" | "privacy" | null
@@ -22,14 +23,17 @@ type Props = {
   onClose: () => void
 }
 
-type Prices = {
-  monthly: string | null
-  yearly: string | null
+const EMPTY_PLAN: PaywallPlanInfo = {
+  priceString: null,
+  price: null,
+  currencyCode: null,
+  hasFreeTrial: false,
 }
 
 export default function NativePaywall({ variant, onClose }: Props) {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly')
-  const [prices, setPrices] = useState<Prices>({ monthly: null, yearly: null })
+  const [monthly, setMonthly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
+  const [yearly, setYearly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
   const [loading, setLoading] = useState(true)
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
@@ -41,17 +45,15 @@ export default function NativePaywall({ variant, onClose }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    getCurrentOffering()
-      .then((offering) => {
+    getPaywallOffering()
+      .then((summary) => {
         if (cancelled) return
-        if (!offering) {
+        if (!summary) {
           setOfferingError(true)
           return
         }
-        setPrices({
-          monthly: offering.monthly?.product.priceString ?? null,
-          yearly: offering.annual?.product.priceString ?? null,
-        })
+        setMonthly(summary.monthly)
+        setYearly(summary.yearly)
       })
       .catch(() => {
         if (!cancelled) setOfferingError(true)
@@ -109,16 +111,45 @@ export default function NativePaywall({ variant, onClose }: Props) {
     }
   }
 
-  const isTrialVariant = variant === 'trial'
-  const yearlyPrice = prices.yearly ?? '¥4,800'
-  const monthlyPrice = prices.monthly ?? '¥500'
+  // 表示価格。RevenueCat 未取得時は「¥○○」の default にフォールバック。
+  const yearlyPrice = yearly.priceString ?? '¥4,800'
+  const monthlyPrice = monthly.priceString ?? '¥500'
 
-  const ctaLabel = isTrialVariant ? '14日間無料で試す' : 'アップグレードする'
-  const selectedPriceString = selectedPlan === 'yearly' ? yearlyPrice : monthlyPrice
-  const selectedPeriod = selectedPlan === 'yearly' ? '年' : '月'
-  const ctaSummary = isTrialVariant
-    ? `14日間無料、その後 ${selectedPriceString} / ${selectedPeriod}`
-    : `${selectedPriceString} / ${selectedPeriod}`
+  // 選択中プランのトライアル有無 (RevenueCat の商品情報で判定)。
+  // 月額は既存動作を維持するため、variant==='trial' の場合もトライアル扱いにする。
+  const selectedPlanInfo = selectedPlan === 'yearly' ? yearly : monthly
+  const monthlyHasTrial = monthly.hasFreeTrial || variant === 'trial'
+  const yearlyHasTrial = yearly.hasFreeTrial
+  const selectedHasTrial = selectedPlan === 'yearly' ? yearlyHasTrial : monthlyHasTrial
+
+  // CTA: 月額はトライアルあれば「14日間無料で試す」、無ければ「月額プランで始める」。
+  //      年額はトライアルあれば「14日間無料で試す」、無ければ「年額プランで始める」。
+  const ctaLabel =
+    selectedPlan === 'monthly'
+      ? monthlyHasTrial
+        ? '14日間無料で試す'
+        : '月額プランで始める'
+      : yearlyHasTrial
+        ? '14日間無料で試す'
+        : '年額プランで始める'
+
+  // ボタン下の 1 行サマリ。トライアル有無・年/月で 4 パターン。
+  const planLabel = selectedPlan === 'yearly' ? '年額' : '月額'
+  const priceForSummary = selectedPlanInfo.priceString ??
+    (selectedPlan === 'yearly' ? yearlyPrice : monthlyPrice)
+  const ctaSummary = selectedHasTrial
+    ? `14日間無料、その後 ${planLabel}${priceForSummary}。いつでも解約できます`
+    : `${planLabel}${priceForSummary}。いつでも解約できます`
+
+  // 年額の「お得額」計算。月額 × 12 - 年額。
+  // どちらかの price が取れないときは表示しない。
+  const yearlySavings =
+    monthly.price !== null && yearly.price !== null
+      ? Math.max(0, Math.round(monthly.price * 12 - yearly.price))
+      : null
+  const yearlyMonthlyEquivalent =
+    yearly.price !== null ? Math.round(yearly.price / 12) : null
+  const currencySymbol = yearly.currencyCode === 'JPY' || !yearly.currencyCode ? '¥' : ''
 
   return (
     <div
@@ -130,10 +161,10 @@ export default function NativePaywall({ variant, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-gray-900 mb-1">
-          {isTrialVariant ? '14日間無料で試す' : 'プレミアムプラン'}
+          {selectedHasTrial ? '14日間無料で試す' : 'プレミアムプラン'}
         </h2>
         <p className="text-sm text-gray-500 mb-4">
-          {isTrialVariant
+          {selectedHasTrial
             ? '有料デッキとクイズが14日間無料。いつでも解約できます。'
             : '有料デッキとクイズをご利用いただけます。'}
         </p>
@@ -167,10 +198,14 @@ export default function NativePaywall({ variant, onClose }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-600">月あたり¥400</span>
-                  <span className="inline-flex items-center h-5 px-2 rounded-full font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm">
-                    年¥1,200お得
+                  <span className="text-gray-600">
+                    月あたり{currencySymbol}{yearlyMonthlyEquivalent ?? 400}
                   </span>
+                  {yearlySavings !== null && yearlySavings > 0 && (
+                    <span className="inline-flex items-center h-5 px-2 rounded-full font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm">
+                      年{currencySymbol}{yearlySavings.toLocaleString()}お得
+                    </span>
+                  )}
                 </div>
               </button>
 
@@ -230,19 +265,14 @@ export default function NativePaywall({ variant, onClose }: Props) {
 
             <div className="border-t border-line pt-3 text-[11px] text-gray-500 leading-relaxed space-y-2">
               <p className="font-semibold text-gray-600">自動更新について</p>
-              {isTrialVariant ? (
-                <p>
-                  14日間の無料トライアル後、選択したプランで自動的に課金が開始されます。
-                  <br />■ 月額プラン ¥500 / 月（14日間無料後）
-                  <br />■ 年額プラン ¥4,800 / 年（14日間無料後）
-                </p>
-              ) : (
-                <p>
-                  選択したプランで自動的に課金が継続されます。
-                  <br />■ 月額プラン ¥500 / 月
-                  <br />■ 年額プラン ¥4,800 / 年
-                </p>
-              )}
+              <p>
+                選択したプランで自動的に課金が
+                {selectedHasTrial ? '開始されます' : '継続されます'}。
+                <br />■ 月額プラン {monthlyPrice} / 月
+                {monthlyHasTrial && '（14日間無料後）'}
+                <br />■ 年額プラン {yearlyPrice} / 年
+                {yearlyHasTrial && '（14日間無料後）'}
+              </p>
               <ul className="list-disc list-inside space-y-1">
                 <li>支払いは購入確定時に Apple ID / Google アカウントに請求されます</li>
                 <li>自動更新は現在の期間終了の24時間前までにキャンセルしない限り継続されます</li>

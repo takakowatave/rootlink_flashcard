@@ -1,22 +1,28 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { HiOutlineArrowLeft } from 'react-icons/hi2'
 import { MdAddCircle } from 'react-icons/md'
+import { HiOutlineTrash } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { isNativeOrPreview } from '@/lib/isPreviewNative'
 import {
+  canDeleteReminderSlot,
   DEFAULT_REMINDER_SLOTS,
   ensureReminderPermission,
+  MAX_REMINDER_SLOTS,
+  nextCustomSlotKey,
+  nextCustomSlotTime,
   persistAndApplyReminders,
   type ReminderSlot as StoredReminderSlot,
 } from '@/lib/reminders'
 import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
 import Toggle from './Toggle'
+import PlantGrowthAnimation from './PlantGrowthAnimation'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
@@ -63,7 +69,10 @@ const EXPECTATION_OPTIONS: ExpectationOption[] = [
 
 const DEFAULT_REMINDERS: ReminderSlot[] = DEFAULT_REMINDER_SLOTS
 
-type Step = 1 | 2 | 3 | 4 | 5
+// step 1: ようこそ (D2 で追加)
+// step 2: 英語レベル / step 3: 流入元 / step 4: 期待
+// step 5 (native): 学習時間帯 / step 5 or 6: 完了
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 type ViewProps = {
   step: Step
@@ -81,7 +90,8 @@ type ViewProps = {
     key: ReminderSlot['key'],
     patch: Partial<ReminderSlot>,
   ) => void | Promise<void>
-  onOpenNotificationSettings: () => void
+  onReminderAdd: () => void
+  onReminderDelete: (key: ReminderSlot['key']) => void
   onNext: () => void
   onBack: () => void
   onSubmit: () => void
@@ -149,7 +159,8 @@ export function OnboardingQuestionsView({
   onSourceChange,
   onExpectationChange,
   onReminderChange,
-  onOpenNotificationSettings,
+  onReminderAdd,
+  onReminderDelete,
   onNext,
   onBack,
   onSubmit,
@@ -157,7 +168,9 @@ export function OnboardingQuestionsView({
   const canProceedLevel = level !== null
   const canProceedSource = source !== null
   const canProceedExpectation = expectation !== null
-  const completeStep = showReminders ? 5 : 4
+  // step 1 は welcome、質問は 2..4、native は 5 が reminders。完了は
+  // native なら 6、そうでなければ 5。
+  const completeStep: Step = showReminders ? 6 : 5
 
   return (
     <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
@@ -167,6 +180,23 @@ export function OnboardingQuestionsView({
 
       <div className="flex-1 overflow-y-auto pb-32">
         {step === 1 && (
+          <div className="flex flex-col gap-6 pt-8 px-6">
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="RootLink" className="h-[42px] w-auto" />
+            </div>
+            <h2 className="text-2xl font-bold text-center leading-8 text-gray-950">
+              語源で覚える<br />英単語・辞書アプリ
+            </h2>
+            <p className="text-base text-gray-700 leading-relaxed text-center">
+              英単語を丸暗記ではなく、<br />
+              語源とパーツから理解して覚えましょう。<br />
+              あなたに合う学習スタイルを教えてください。
+            </p>
+          </div>
+        )}
+
+        {step === 2 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               現在の英語レベルを<br />教えてください
@@ -201,7 +231,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               RootLink を<br />何で知ったか教えてください
@@ -233,7 +263,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               RootLink に<br />何を期待していますか
@@ -265,7 +295,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 4 && showReminders && (
+        {step === 5 && showReminders && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               学習する時間帯を決めて<br />習慣化しましょう
@@ -273,33 +303,49 @@ export function OnboardingQuestionsView({
             <div className="px-4">
               <div className="bg-white border-2 border-slate-200 rounded-3xl px-6 pb-6">
                 <div className="divide-y divide-slate-200">
-                  {reminders.map((slot) => (
-                    <div key={slot.key} className="flex items-center justify-between py-4">
-                      <div className="flex items-center gap-1.5">
-                        <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
-                          <input
-                            type="time"
-                            value={slot.time}
-                            onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
-                            // w-[58px] 固定だと Android 12h 表記 (「午前 07:00」) で
-                            // 数字が切れるため、内容に合わせて広がるようにする。
-                            className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none"
+                  {reminders.map((slot) => {
+                    const deletable = canDeleteReminderSlot(slot)
+                    return (
+                      <div key={slot.key} className="flex items-center justify-between py-4 gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <label className="inline-flex items-center rounded-md border border-slate-400 px-2.5 py-1 cursor-pointer">
+                            <input
+                              type="time"
+                              value={slot.time}
+                              onChange={(e) => onReminderChange(slot.key, { time: e.target.value })}
+                              className="bg-transparent text-[15px] font-medium text-gray-950 tabular-nums outline-none"
+                            />
+                          </label>
+                          {slot.label && (
+                            <span className="text-base text-gray-950 truncate">{slot.label}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Toggle
+                            checked={slot.enabled}
+                            onChange={(next) => onReminderChange(slot.key, { enabled: next })}
+                            label={`${slot.label || slot.time} の通知`}
                           />
-                        </label>
-                        <span className="text-base text-gray-950">{slot.label}</span>
+                          {deletable && (
+                            <button
+                              type="button"
+                              onClick={() => onReminderDelete(slot.key)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                              aria-label={`${slot.label || slot.time} を削除`}
+                            >
+                              <HiOutlineTrash className="size-5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <Toggle
-                        checked={slot.enabled}
-                        onChange={(next) => onReminderChange(slot.key, { enabled: next })}
-                        label={`${slot.label} の通知`}
-                      />
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <button
                   type="button"
-                  onClick={onOpenNotificationSettings}
-                  className="mt-6 w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary"
+                  onClick={onReminderAdd}
+                  disabled={reminders.length >= MAX_REMINDER_SLOTS}
+                  className="mt-6 w-full h-10 flex items-center justify-center gap-1 border border-primary rounded-full text-sm font-medium text-primary disabled:border-slate-300 disabled:text-slate-300 disabled:cursor-not-allowed"
                 >
                   追加
                   <MdAddCircle className="size-6" />
@@ -316,7 +362,7 @@ export function OnboardingQuestionsView({
             </h2>
             <div className="px-4">
               <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 flex flex-col items-center gap-6">
-                <Image src="/plant/lv4.png" alt="" width={240} height={240} priority />
+                <PlantGrowthAnimation />
                 <p className="text-xl font-semibold text-center leading-7 text-gray-950">
                   ログイン日数で<br />レベルアップします
                 </p>
@@ -328,21 +374,26 @@ export function OnboardingQuestionsView({
 
       <div className="absolute bottom-0 left-0 right-0 h-32 flex items-center justify-center px-6 bg-teal-50">
         {step === 1 && (
-          <Button onClick={onNext} disabled={!canProceedLevel} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
+          <Button onClick={onNext} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
         {step === 2 && (
-          <Button onClick={onNext} disabled={!canProceedSource} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
+          <Button onClick={onNext} disabled={!canProceedLevel} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
         {step === 3 && (
+          <Button onClick={onNext} disabled={!canProceedSource} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
+            次へ
+          </Button>
+        )}
+        {step === 4 && (
           <Button onClick={onNext} disabled={!canProceedExpectation} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === 4 && showReminders && (
+        {step === 5 && showReminders && (
           <Button onClick={onNext} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
@@ -374,18 +425,6 @@ async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
   })
 }
 
-async function openNotificationSettings(): Promise<void> {
-  try {
-    const { NativeSettings, IOSSettings, AndroidSettings } = await import('capacitor-native-settings')
-    await NativeSettings.open({
-      optionIOS: IOSSettings.App,
-      optionAndroid: AndroidSettings.AppNotification,
-    })
-  } catch {
-    // plugin unavailable in web preview — silently skip
-  }
-}
-
 export default function OnboardingQuestions() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
@@ -397,8 +436,11 @@ export default function OnboardingQuestions() {
   const [reminders, setReminders] = useState<ReminderSlot[]>(DEFAULT_REMINDERS)
   const [saving, setSaving] = useState(false)
 
-  const showReminders = useMemo(() => isNativePlatform(), [])
-  const totalSteps = showReminders ? 5 : 4
+  // native の他、Web プレビューで ?preview=native が付いていれば通知
+  // ステップ (step 5) を表示する。実 native では isNativePlatform() が
+  // 生きるので今までどおり。本番 Web では false。
+  const showReminders = useMemo(() => isNativeOrPreview(isNativePlatform()), [])
+  const totalSteps = showReminders ? 6 : 5
 
   useEffect(() => {
     let cancelled = false
@@ -455,6 +497,29 @@ export default function OnboardingQuestions() {
     setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
+  const addReminderSlot = () => {
+    setReminders((prev) => {
+      if (prev.length >= MAX_REMINDER_SLOTS) return prev
+      return [
+        ...prev,
+        {
+          key: nextCustomSlotKey(),
+          label: '',
+          time: nextCustomSlotTime(prev),
+          enabled: true,
+        },
+      ]
+    })
+  }
+
+  const deleteReminderSlot = (key: ReminderSlot['key']) => {
+    setReminders((prev) => {
+      const target = prev.find((s) => s.key === key)
+      if (!target || !canDeleteReminderSlot(target)) return prev
+      return prev.filter((s) => s.key !== key)
+    })
+  }
+
   const submit = async () => {
     if (!userId || !level || !source || !expectation) return
     setSaving(true)
@@ -495,7 +560,8 @@ export default function OnboardingQuestions() {
       onSourceChange={setSource}
       onExpectationChange={setExpectation}
       onReminderChange={patchReminder}
-      onOpenNotificationSettings={openNotificationSettings}
+      onReminderAdd={addReminderSlot}
+      onReminderDelete={deleteReminderSlot}
       onNext={goNext}
       onBack={goBack}
       onSubmit={submit}

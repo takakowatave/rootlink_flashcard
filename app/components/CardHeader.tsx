@@ -8,6 +8,9 @@ type Props = {
   title: string
   audioLoading?: boolean
   onPlayAudio?: () => void
+  // /audio が NO_AUDIO を返した後は true。音声ボタンを薄く disabled にして
+  // click を no-op にする。
+  audioUnavailable?: boolean
   isSaved: boolean
   onSave: (e?: ReactMouseEvent) => void
   onShare?: (e?: ReactMouseEvent) => void
@@ -21,6 +24,7 @@ export default function CardHeader({
   title,
   audioLoading,
   onPlayAudio,
+  audioUnavailable = false,
   isSaved,
   onSave,
   onShare,
@@ -34,6 +38,7 @@ export default function CardHeader({
   const handleAudioClick = (e: ReactMouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (audioUnavailable) return
     onPlayAudio?.()
   }
 
@@ -50,10 +55,19 @@ export default function CardHeader({
           <button
             type="button"
             onClick={handleAudioClick}
-            disabled={!!audioLoading}
-            className="shrink-0"
+            disabled={!!audioLoading || audioUnavailable}
+            aria-label={audioUnavailable ? '音声はありません' : '音声を再生'}
+            className="shrink-0 disabled:cursor-not-allowed"
           >
-            <HiSpeakerWave className={`size-6 ${audioLoading ? 'text-muted animate-pulse' : 'text-muted'}`} />
+            <HiSpeakerWave
+              className={`size-6 ${
+                audioUnavailable
+                  ? 'text-muted opacity-30'
+                  : audioLoading
+                    ? 'text-muted animate-pulse'
+                    : 'text-muted'
+              }`}
+            />
           </button>
         )}
       </div>

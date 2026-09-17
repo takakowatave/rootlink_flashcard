@@ -131,10 +131,11 @@ export default function EntryCard({
     const cached = exampleAudioUrls[senseId]
     if (cached) { playAudioAtRate(cached, 1.2); return }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
-    const url = await fetchTtsAudioUrl('/audio/word/example', { word: headword, sense_id: senseId })
-    if (url) {
-      setExampleAudioUrls(prev => ({ ...prev, [senseId]: url }))
-      playAudioAtRate(url, 1.2)
+    const result = await fetchTtsAudioUrl('/audio/word/example', { word: headword, sense_id: senseId })
+    if (result.url) {
+      const audioUrl = result.url
+      setExampleAudioUrls(prev => ({ ...prev, [senseId]: audioUrl }))
+      playAudioAtRate(audioUrl, 1.2)
     }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: false }))
   }
@@ -156,6 +157,7 @@ export default function EntryCard({
           title={headword}
           audioLoading={headwordAudio.loading}
           onPlayAudio={playAudio}
+          audioUnavailable={headwordAudio.unavailable}
           isSaved={isBookmarked}
           onSave={onSave}
           onShare={onShare}
