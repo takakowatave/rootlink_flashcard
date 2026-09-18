@@ -185,8 +185,11 @@ export default function TutorialOverlay() {
     })
   }, [])
 
-  // 初回のみ scrollIntoView。以降は毎フレーム rect を追従させる（スクロール・
-  // 回転・タブレット幅の再レイアウトで枠がずれる問題対策）。
+  // 初回 scrollIntoView + 以降の rect 追従。
+  // タブレットでずれる原因の 1 つは smooth scroll と初期 layout の間で
+  // rect が固定化されること。resize / scroll / RO / MO だけだと WebView に
+  // よってはイベントが取りこぼされるので、スクロール完了直後を狙う
+  // 遅延再計算 (100 / 400 / 900ms) と scrollend も足す。
   useEffect(() => {
     if (!visible) return
     const target = findTarget()
@@ -208,6 +211,9 @@ export default function TutorialOverlay() {
 
     window.addEventListener('resize', schedule)
     window.addEventListener('scroll', schedule, true)
+    // Chrome 114+ / Safari 18+: smooth scroll のアニメーション終了時に発火。
+    // scroll イベントを取りこぼす WebView でも最終位置を確定できる保険。
+    window.addEventListener('scrollend', schedule, true)
     window.addEventListener('orientationchange', schedule)
 
     // レイアウトの再計算 (画像の遅延読み込み・フォント切替・アコーディオン開閉 等)
@@ -221,12 +227,19 @@ export default function TutorialOverlay() {
     const mo = new MutationObserver(() => schedule())
     mo.observe(document.body, { childList: true, subtree: true })
 
+    // smooth scroll 完了と、画像・フォントの遅延読み込みで layout が
+    // 落ち着いたタイミングを狙う。scroll イベント頼みだと WebView によって
+    // 最終フレームを取りこぼして枠が古い位置に残る問題があった。
+    const timers = [100, 400, 900].map((ms) => window.setTimeout(schedule, ms))
+
     return () => {
       window.removeEventListener('resize', schedule)
       window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('scrollend', schedule, true)
       window.removeEventListener('orientationchange', schedule)
       ro.disconnect()
       mo.disconnect()
+      timers.forEach((t) => window.clearTimeout(t))
       if (rafId !== null) window.cancelAnimationFrame(rafId)
     }
   }, [visible, findTarget, computeRect])
