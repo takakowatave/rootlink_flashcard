@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react'
 // /plant/lv1.png → lv5.png を順に切り替えて Lv5 で停止するアニメ。
 //
 // - 1 枚あたり 0.6 秒 (kiko の指示)。Lv5 に到達したら停止して残す。
-// - タブレット等の広い画面でも小さくならないよう、
-//   w-[min(80vw,320px)] で 320px 上限まで大きくする。
+// - 表示領域は親の幅いっぱいの正方形 (aspect-square)。呼び出し側の
+//   カード幅に高さを合わせる。
 // - 全 5 枚を priority で並列プリロードして切替時の flash を防ぐ。
 const LEVELS = [1, 2, 3, 4, 5] as const
 const FRAME_MS = 600
@@ -25,7 +25,7 @@ export default function PlantGrowthAnimation() {
   }, [level])
 
   return (
-    <div className="relative w-[min(80vw,320px)] aspect-square">
+    <div className="relative w-full aspect-square">
       {LEVELS.map((lv) => (
         <Image
           key={lv}
@@ -33,7 +33,7 @@ export default function PlantGrowthAnimation() {
           alt=""
           fill
           priority
-          sizes="(max-width: 640px) 80vw, 320px"
+          sizes="(max-width: 640px) 90vw, 600px"
           className={`object-contain transition-opacity duration-200 ${
             lv === level ? 'opacity-100' : 'opacity-0'
           }`}
