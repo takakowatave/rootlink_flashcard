@@ -60,6 +60,17 @@ const STEPS: Step[] = [
     selector: '[data-tutorial="etymology-tree"]',
     requiredPath: /^\/word\//,
   },
+  // 06eccc1 (2026-08-06) の「オンボーディング属性質問追加」で step 数を
+  // 3 に短縮した際に削除された多義語ピン止めの説明を復活。
+  // data-tutorial="pin-button" は SensePinButton に残っている。
+  {
+    emoji: '📌',
+    title: '多義語はピン止めで整理',
+    description:
+      '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
+    selector: '[data-tutorial="pin-button"]',
+    requiredPath: /^\/word\//,
+  },
 ]
 
 type SpotlightRect = { top: number; left: number; width: number; height: number }
