@@ -477,18 +477,28 @@ export default function OnboardingQuestions() {
     key: ReminderSlot['key'],
     patch: Partial<ReminderSlot>,
   ) => {
-    // OFF → ON への切替時だけ通知許可を確認する。時刻変更や OFF 化は
-    // permission を触らずに反映する。
-    // 拒否された場合はモーダル/エラー表示は出さず、そのままトグルを
-    // OFF に戻す (patch を無視して return する = 何も変えない)。
-    if (patch.enabled === true) {
-      const current = reminders.find((r) => r.key === key)
-      if (current && !current.enabled) {
-        const res = await ensureReminderPermission()
-        if (res.kind === 'denied') return
-      }
+    const current = reminders.find((r) => r.key === key)
+    if (!current) return
+    // 時刻を触ったら「この時刻に通知したい」という意思とみなして、その枠を
+    // ON にする (以前は time だけ更新して OFF のまま = 通知が予約されず
+    // 「トグルが上がらない・許可も求められない」バグになっていた)。
+    const wantsOn = patch.enabled === true || patch.time !== undefined
+    const nextEnabled = patch.enabled === false
+      ? false
+      : wantsOn
+        ? true
+        : current.enabled
+    // OFF → ON への遷移のときだけ許可を確認する。既に ON のときの time
+    // 変更や OFF 化は許可 flow を触らない。
+    if (nextEnabled && !current.enabled) {
+      const res = await ensureReminderPermission()
+      // 拒否時はモーダルは出さず、state を触らずに戻す → トグルは
+      // checked={slot.enabled} で OFF のまま。
+      if (res.kind === 'denied') return
     }
-    setReminders((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+    setReminders((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, ...patch, enabled: nextEnabled } : r)),
+    )
   }
 
   const addReminderSlot = () => {
