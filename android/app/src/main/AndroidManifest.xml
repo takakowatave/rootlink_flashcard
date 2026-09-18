@@ -40,4 +40,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ (API 33) はローカル通知にも runtime permission が必要。
+         これが無いと LocalNotifications.requestPermissions() が
+         OS ダイアログを出さず無音で返って「許可が出ない」現象になる。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

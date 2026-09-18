@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Header from './Header'
 import Footer from './Footer'
+import MobileSearchOverlay from './MobileSearchOverlay'
 import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
 import { isNativePlatform } from '@/lib/isNativePlatform'
@@ -253,6 +254,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
       {!hideChrome && <OnboardingQuestions />}
       {!hideChrome && <TutorialOverlay />}
+      {!hideChrome && <MobileSearchOverlay />}
       {children}
       {!isLP && !hideChrome && (
         <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
