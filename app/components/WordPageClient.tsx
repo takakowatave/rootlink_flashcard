@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
+import { HiSearch } from 'react-icons/hi'
 import EntryCard from '@/components/EntryCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
@@ -1090,46 +1091,46 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   return (
     <div className={noCard ? 'bg-white' : 'min-h-screen bg-[#f8fafc]'}>
-    {/* Floating search button — SP only */}
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-      className={`${noCard ? 'hidden' : 'md:hidden'} fixed bottom-6 right-3 z-40 size-[60px] rounded-full bg-primary-hover flex items-center justify-center shadow-[0px_4px_14px_rgba(106,120,128,0.6)]`}
-      aria-label="Search"
-    >
-      <svg className="size-[28px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-    </button>
-    {/* SP top bar — 戻る + 共有 */}
+    {/* SP top bar — 戻る + 検索バー + 共有 (Figma xe5UwVx38JWu5doqwXczQu / 2897:6526 準拠) */}
     {dictionary && (
-      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white flex items-center justify-between border-b border-line pt-[env(safe-area-inset-top)] h-[calc(3.5rem+env(safe-area-inset-top))] px-4`}>
-        <button
-          type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined' && window.history.length > 1) {
-              router.back()
-            } else {
-              router.push('/dashboard')
-            }
-          }}
-          className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-muted"
-          aria-label="戻る"
-        >
-          <MdArrowBackIosNew className="size-6" />
-        </button>
-        <button
-          ref={shareBtnRef}
-          type="button"
-          onClick={() => {
-            prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
-            setShowShareMenu(true)
-          }}
-          className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-muted"
-          aria-label="共有"
-        >
-          <MdIosShare className="size-6" />
-        </button>
+      <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white border-b border-line pt-[env(safe-area-inset-top)]`}>
+        <div className="h-14 flex items-center gap-2 px-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back()
+              } else {
+                router.push('/dashboard')
+              }
+            }}
+            className="p-2 rounded-full hover:bg-gray-100 text-muted shrink-0"
+            aria-label="戻る"
+          >
+            <MdArrowBackIosNew className="size-6" />
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+            className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
+            aria-label="検索を開く"
+          >
+            <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
+            <HiSearch className="size-5 text-muted shrink-0" />
+          </button>
+          <button
+            ref={shareBtnRef}
+            type="button"
+            onClick={() => {
+              prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
+              setShowShareMenu(true)
+            }}
+            className="p-2 rounded-full hover:bg-gray-100 text-muted shrink-0"
+            aria-label="共有"
+          >
+            <MdIosShare className="size-6" />
+          </button>
+        </div>
       </div>
     )}
     {dictionary && (

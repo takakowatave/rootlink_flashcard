@@ -149,13 +149,22 @@ export default function TutorialOverlay() {
     return () => clearTimeout(timer)
   }, [authed, step, pathname])
 
-  const updateRect = useCallback(() => {
-    if (step === null) return
+  const findTarget = useCallback((): Element | null => {
+    if (step === null) return null
     const selector = STEPS[step]?.selector
-    if (!selector) { setRect(null); return }
-    const el = Array.from(document.querySelectorAll(selector))
-      .find((e) => e.getBoundingClientRect().width > 0) ?? null
-    if (!el) { setRect(null); return }
+    if (!selector) return null
+    return (
+      Array.from(document.querySelectorAll(selector)).find(
+        (e) => e.getBoundingClientRect().width > 0,
+      ) ?? null
+    )
+  }, [step])
+
+  const computeRect = useCallback((el: Element | null) => {
+    if (!el) {
+      setRect(null)
+      return
+    }
     const r = el.getBoundingClientRect()
     setRect({
       top: r.top - PADDING,
@@ -163,15 +172,53 @@ export default function TutorialOverlay() {
       width: r.width + PADDING * 2,
       height: r.height + PADDING * 2,
     })
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [step])
+  }, [])
 
+  // 初回のみ scrollIntoView。以降は毎フレーム rect を追従させる（スクロール・
+  // 回転・タブレット幅の再レイアウトで枠がずれる問題対策）。
   useEffect(() => {
     if (!visible) return
-    updateRect()
-    window.addEventListener('resize', updateRect)
-    return () => window.removeEventListener('resize', updateRect)
-  }, [visible, updateRect])
+    const target = findTarget()
+    if (!target) {
+      setRect(null)
+      return
+    }
+    computeRect(target)
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+    let rafId: number | null = null
+    const schedule = () => {
+      if (rafId !== null) return
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null
+        computeRect(findTarget())
+      })
+    }
+
+    window.addEventListener('resize', schedule)
+    window.addEventListener('scroll', schedule, true)
+    window.addEventListener('orientationchange', schedule)
+
+    // レイアウトの再計算 (画像の遅延読み込み・フォント切替・アコーディオン開閉 等)
+    // にも追従させる。ResizeObserver は target + body の両方を見張る。
+    const ro = new ResizeObserver(() => schedule())
+    ro.observe(target)
+    ro.observe(document.body)
+
+    // 目標要素が差し替わる (SPA 内のリマウント) 可能性もあるので MutationObserver
+    // でも監視。極端なコストにならないよう subtree=true / attributes=false。
+    const mo = new MutationObserver(() => schedule())
+    mo.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('orientationchange', schedule)
+      ro.disconnect()
+      mo.disconnect()
+      if (rafId !== null) window.cancelAnimationFrame(rafId)
+    }
+  }, [visible, findTarget, computeRect])
 
   const advance = () => {
     const current = step !== null ? STEPS[step] : null

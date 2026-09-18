@@ -203,10 +203,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isOnboarding = pathname === '/onboarding'
   const hideChrome = isAuth || isQuiz || isOnboarding
 
+  // 戻る + 検索の 56px ヘッダー (PageHeader / WordPageClient) を出す画面。
+  // SP ではロゴのヘッダーと相互排他にして 2 段にならないよう隠す。
+  // PC ではロゴ Header を残す（PageHeader は PC ではパンくずのみに切り替わる）。
+  const isBackHeader =
+    isWordDetail ||
+    pathname === '/wordlist' ||
+    (pathname?.startsWith('/decks') ?? false)
+
   return (
     <div className={isLP || hideChrome ? '' : 'min-h-screen bg-[#f8fafc]'}>
       {!hideChrome && (
-        <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
+        <div className={isBackHeader ? 'hidden md:contents' : 'contents'}>
           <Header />
         </div>
       )}

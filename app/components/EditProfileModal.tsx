@@ -374,16 +374,13 @@ export default function EditProfileModal({
   };
 
   // OFF → ON への切替では未許可なら OS ダイアログを出し、拒否済みなら
-  // 端末の通知設定を開く。denied のときは呼び出し側でトグルを OFF に戻す。
+  // 端末の通知設定を開く。denied のときはトグルを OFF に戻すだけで、
+  // モーダル / エラー表示は出さない。ユーザーへの案内は section 冒頭の
+  // InfoBanner (「通知がオフです」+「通知を許可する」) が担当する。
   const ensurePermissionForOn = async (): Promise<boolean> => {
     const res = await ensureReminderPermission();
     if (res.kind === "denied") {
       setNotifPermission("denied");
-      toast.error(
-        res.openedSettings
-          ? "端末の設定で通知を許可してから再度お試しください"
-          : "通知が許可されていないため、リマインダーを設定できません",
-      );
       return false;
     }
     if (res.kind === "granted") setNotifPermission("granted");

@@ -35,15 +35,17 @@ export type ReminderSettings = {
 export const DEFAULT_REMINDER_KEYS = ['morning', 'lunch', 'night'] as const
 export type DefaultReminderKey = (typeof DEFAULT_REMINDER_KEYS)[number]
 
+// 初期状態は全て OFF。ユーザーが明示的に ON にした枠だけ通知を予約する。
+// (勝手に朝 7:00 の通知が動く動作を防ぐ)
 export const DEFAULT_REMINDER_SLOTS: ReminderSlot[] = [
-  { key: 'morning', label: '起床時', time: '07:00', enabled: true },
+  { key: 'morning', label: '起床時', time: '07:00', enabled: false },
   { key: 'lunch', label: 'お昼休み', time: '12:00', enabled: false },
   { key: 'night', label: '寝る前', time: '20:00', enabled: false },
 ]
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   version: SCHEMA_VERSION,
-  masterEnabled: true,
+  masterEnabled: false,
   slots: DEFAULT_REMINDER_SLOTS,
 }
 
@@ -128,8 +130,12 @@ export function loadReminderSettings(): ReminderSettings {
     const parsed = JSON.parse(raw) as Partial<ReminderSettings>
     return {
       version: SCHEMA_VERSION,
+      // 保存済みの masterEnabled があればそれを尊重、無ければ DEFAULT に揃える。
+      // 既存ユーザーは既に v1 の頃から値を書いてあるので、そちらが優先される。
       masterEnabled:
-        typeof parsed.masterEnabled === 'boolean' ? parsed.masterEnabled : true,
+        typeof parsed.masterEnabled === 'boolean'
+          ? parsed.masterEnabled
+          : DEFAULT_REMINDER_SETTINGS.masterEnabled,
       slots: normalizeSlots(parsed.slots),
     }
   } catch {
