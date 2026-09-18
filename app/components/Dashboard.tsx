@@ -564,7 +564,7 @@ export default function Dashboard() {
 
   const myDeckItem: DeckItem = {
     key: 'my-wordlist',
-    title: 'オリジナル単語帳',
+    title: '辞書から単語帳を作成',
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
     wordCount: savedCount,
@@ -675,9 +675,9 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* オリジナル単語帳 */}
+            {/* 辞書から単語帳を作成 */}
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-gray-950">オリジナル単語帳</h2>
+              <h2 className="text-xl font-bold text-gray-950">辞書から単語帳を作成</h2>
               {savedCount > 0 ? (
                 <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
                   <SharedDeckCard
