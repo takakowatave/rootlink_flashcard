@@ -52,9 +52,18 @@ export default function AuthCallback() {
           return;
         }
 
+        // 既にセッションがある場合は verify / exchange をやり直さない。
+        // AppShell.appUrlOpen 側で verifyOtp が成功して /callback に来た
+        // ケースや、別タブで既にログイン済みの状態でリンクを踏み直した
+        // ケースで、同じ token で二度目の verifyOtp が「使用済み」で失敗し
+        // 失敗画面に落ちるのを防ぐ。
+        const {
+          data: { session: preSession },
+        } = await supabase.auth.getSession();
+
         const tokenHash = url.searchParams.get("token_hash");
         const type = url.searchParams.get("type");
-        if (tokenHash && type) {
+        if (tokenHash && type && !preSession) {
           const { error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: type as
@@ -65,11 +74,15 @@ export default function AuthCallback() {
               | "invite",
           });
           if (error) {
-            // 失敗時 (期限切れ・使用済み等) は再度メールを送っても意味が無い
-            // ことが多い。既に email_confirmed_at が付いている可能性が高いので、
-            // ログイン導線に流す。
-            setState("confirmed");
-            return;
+            // 失敗しても、既にセッションが張られていれば成功として扱う
+            // (別窓 / AppShell 側で既に verify 済みで、これは 2 回目)。
+            const {
+              data: { session: afterErr },
+            } = await supabase.auth.getSession();
+            if (!afterErr?.user) {
+              setState("confirmed");
+              return;
+            }
           }
           if (type === "recovery") {
             window.location.href = "/reset-password";
@@ -77,22 +90,27 @@ export default function AuthCallback() {
           }
           // signup / email_change / magic link 等はこの下の profile 補完 &
           // sign_up_complete 計測を通す。
-        } else {
+        } else if (tokenHash && type === "recovery" && preSession) {
+          // 既にセッション張り済み + recovery → verify を叩き直さず直接遷移。
+          window.location.href = "/reset-password";
+          return;
+        } else if (!tokenHash) {
           // 旧 PKCE 経路。@supabase/ssr は detectSessionInUrl で自動 exchange
-          // するので、既にセッションが張られている可能性がある。まず確認。
-          const {
-            data: { session: existingSession },
-          } = await supabase.auth.getSession();
-
-          if (!existingSession) {
+          // するので、既にセッションが張られている可能性がある。
+          if (!preSession) {
             const code = url.searchParams.get("code");
             if (code) {
               const { error } = await supabase.auth.exchangeCodeForSession(code);
               if (error) {
-                // 別ブラウザで開いた / code_verifier 無し等。email 認証は
-                // 済んでいる想定なので confirmed で案内。
-                setState("confirmed");
-                return;
+                // 別ブラウザで開いた / code_verifier 無し / 使用済み 等。
+                // ただしその間に別経路でセッションが張られていれば救う。
+                const {
+                  data: { session: afterErr },
+                } = await supabase.auth.getSession();
+                if (!afterErr?.user) {
+                  setState("confirmed");
+                  return;
+                }
               }
             } else {
               const fragment = window.location.hash.startsWith("#")
@@ -108,8 +126,13 @@ export default function AuthCallback() {
                     refresh_token,
                   });
                   if (error) {
-                    setState("confirmed");
-                    return;
+                    const {
+                      data: { session: afterErr },
+                    } = await supabase.auth.getSession();
+                    if (!afterErr?.user) {
+                      setState("confirmed");
+                      return;
+                    }
                   }
                 }
               }

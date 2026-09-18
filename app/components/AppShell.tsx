@@ -18,6 +18,13 @@ type PluginListenerHandle = { remove: () => Promise<void> }
 // 過去の壊れた /callback で auth ユーザーだけ作られて profiles 行が無いユーザーを救う
 export const PROFILE_CREATED_EVENT = 'rootlink-profile-created'
 
+// 同じ token_hash / code で二度 verifyOtp / exchangeCodeForSession が
+// 走るのを防ぐキャッシュ。app-return の自動遷移 + ボタンで deeplink が
+// 二度発火した場合、2 回目は「使用済み」で失敗して失敗画面に落ちるため。
+// module スコープに置くのは AppShell の再マウント (fast refresh 等) をまたいで
+// 同一ドキュメントの間は覚えておくため。
+const processedAuthTokens = new Set<string>()
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
@@ -126,6 +133,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const tokenHash = params.get('token_hash')
           const type = params.get('type')
           if (tokenHash && type) {
+            // 同一 token を二度検証しない。1回目で成功 → 2回目は「使用済み」で
+            // 失敗して失敗画面に落ちる問題を防ぐ。
+            const key = `token:${type}:${tokenHash}`
+            if (processedAuthTokens.has(key)) return
+            processedAuthTokens.add(key)
+
             const { error } = await supabase.auth.verifyOtp({
               token_hash: tokenHash,
               // Supabase の EmailOtpType: 'signup' | 'recovery' | 'email_change' 等
@@ -140,8 +153,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               return
             }
             // 失敗時: 期限切れ / 使用済み / bad_code_verifier を含む。
-            // メール認証は済んでいる可能性があるので /callback で「ログインして
-            // ください」の案内を出す。
+            // ただし別窓 / 前回で verify 済みで既にセッションが張られている
+            // ケースがあるので、セッションがあれば失敗画面ではなく通常経路へ。
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+              consumePendingAuthFlow()
+              window.location.href = type === 'recovery' ? '/reset-password' : '/callback'
+              return
+            }
             window.location.href = '/callback?state=confirmed'
             return
           }
@@ -149,8 +168,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           // 旧 PKCE 方式のフォールバック。既存メールがまだ届いていない期間の互換用。
           const code = params.get('code')
           if (code) {
+            const key = `code:${code}`
+            if (processedAuthTokens.has(key)) return
+            processedAuthTokens.add(key)
+
             const { error } = await supabase.auth.exchangeCodeForSession(code)
             if (!error) {
+              const flow = consumePendingAuthFlow()
+              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              return
+            }
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
               const flow = consumePendingAuthFlow()
               window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
               return
@@ -165,6 +194,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const access_token = hashParams.get('access_token')
           const refresh_token = hashParams.get('refresh_token')
           if (access_token && refresh_token) {
+            const key = `access:${access_token}`
+            if (processedAuthTokens.has(key)) return
+            processedAuthTokens.add(key)
+
             await supabase.auth.setSession({ access_token, refresh_token })
             const flow = consumePendingAuthFlow()
             window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
