@@ -33,7 +33,6 @@ import {
   canDeleteReminderSlot,
   clearReminders,
   DEFAULT_REMINDER_SETTINGS,
-  ensureReminderPermission,
   loadReminderSettings,
   MAX_REMINDER_SLOTS,
   nextCustomSlotKey,
@@ -168,6 +167,16 @@ export default function EditProfileModal({
     DEFAULT_REMINDER_SETTINGS,
   );
   const [notifPermission, setNotifPermission] = useState<NotifPermission>("unknown");
+  // 調査用の一時表示。トグル・時刻を操作するたびに、native 判定 /
+  // checkPermissions() / requestPermissions() / 例外を記録して画面下に出す。
+  const [notifDiag, setNotifDiag] = useState<{
+    native: boolean;
+    check: string;
+    requested: boolean;
+    requestResult: string | null;
+    error: string | null;
+    at: string;
+  } | null>(null);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -373,18 +382,64 @@ export default function EditProfileModal({
     });
   };
 
-  // OFF → ON への切替では未許可なら OS ダイアログを出し、拒否済みなら
-  // 端末の通知設定を開く。denied のときはトグルを OFF に戻すだけで、
-  // モーダル / エラー表示は出さない。ユーザーへの案内は section 冒頭の
-  // InfoBanner (「通知がオフです」+「通知を許可する」) が担当する。
-  const ensurePermissionForOn = async (): Promise<boolean> => {
-    const res = await ensureReminderPermission();
-    if (res.kind === "denied") {
-      setNotifPermission("denied");
-      return false;
+  // 調査用の一時表示のため、ensureReminderPermission の中身をここで
+  // インラインに再現し、各ステップの返り値を setNotifDiag に流す。
+  // requestIfNeeded=false のときは checkPermissions() だけ叩いて表示を
+  // 更新する (OFF 化のときに使う。ダイアログを出さない)。
+  const runNotifDiag = async ({
+    requestIfNeeded,
+  }: {
+    requestIfNeeded: boolean;
+  }): Promise<boolean> => {
+    const native = isNativePlatform();
+    let check = "unknown";
+    let requested = false;
+    let requestResult: string | null = null;
+    let error: string | null = null;
+    let granted = false;
+    try {
+      const mod = await import("@capacitor/local-notifications");
+      check = (await mod.LocalNotifications.checkPermissions()).display;
+      if (check === "granted") {
+        granted = true;
+      } else if (requestIfNeeded) {
+        if (check === "denied") {
+          try {
+            const { NativeSettings, IOSSettings, AndroidSettings } = await import(
+              "capacitor-native-settings"
+            );
+            await NativeSettings.open({
+              optionIOS: IOSSettings.App,
+              optionAndroid: AndroidSettings.AppNotification,
+            });
+          } catch {
+            // capacitor-native-settings 未インストール等は静かにスキップ
+          }
+        } else {
+          requested = true;
+          requestResult = (await mod.LocalNotifications.requestPermissions()).display;
+          granted = requestResult === "granted";
+        }
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
     }
-    if (res.kind === "granted") setNotifPermission("granted");
-    return true;
+    setNotifDiag({
+      native,
+      check,
+      requested,
+      requestResult,
+      error,
+      at: new Date().toLocaleTimeString("ja-JP"),
+    });
+    if (granted) setNotifPermission("granted");
+    else if (check === "denied") setNotifPermission("denied");
+    else if (check === "prompt") setNotifPermission("prompt");
+    return granted;
+  };
+
+  const ensurePermissionForOn = async (): Promise<boolean> => {
+    return runNotifDiag({ requestIfNeeded: true });
   };
 
   // 「触れた＝許可を求める」で統一。ON 化・時刻変更のどの導線でも、未許可なら
@@ -394,6 +449,8 @@ export default function EditProfileModal({
     if (next) {
       const ok = await ensurePermissionForOn();
       if (!ok) return;
+    } else {
+      void runNotifDiag({ requestIfNeeded: false });
     }
     updateReminderSettings((prev) => ({ ...prev, masterEnabled: next }));
   };
@@ -413,6 +470,8 @@ export default function EditProfileModal({
     if (enabled) {
       const ok = await ensurePermissionForOn();
       if (!ok) return;
+    } else {
+      void runNotifDiag({ requestIfNeeded: false });
     }
     updateReminderSettings((prev) => ({
       ...prev,
@@ -750,6 +809,32 @@ export default function EditProfileModal({
                     追加
                     <MdAddCircle className="size-6" />
                   </button>
+                </div>
+                {/* 調査用の一時表示: 通知許可まわりの実際の挙動を実機で切り分けるため */}
+                <div className="mt-2 p-3 border border-line rounded bg-slate-50 text-[11px] leading-relaxed text-gray-700 font-mono break-all">
+                  <div className="font-bold mb-1">[調査用の一時表示]</div>
+                  {notifDiag ? (
+                    <>
+                      <div>updated: {notifDiag.at}</div>
+                      <div>isNativePlatform: {String(notifDiag.native)}</div>
+                      <div>checkPermissions.display: {notifDiag.check}</div>
+                      <div>
+                        requestPermissions 呼び出し: {notifDiag.requested ? "yes" : "no"}
+                      </div>
+                      {notifDiag.requested && (
+                        <div>
+                          requestPermissions.display: {notifDiag.requestResult ?? "(null)"}
+                        </div>
+                      )}
+                      {notifDiag.error && (
+                        <div className="text-red-600">error: {notifDiag.error}</div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-gray-500">
+                      まだ操作されていません。トグルや時刻を触ると更新されます。
+                    </div>
+                  )}
                 </div>
               </SettingsSection>
             )}
