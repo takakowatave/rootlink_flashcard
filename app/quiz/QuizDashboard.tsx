@@ -247,7 +247,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
 
             {/* 説明 */}
             <p className="text-xs text-gray-500 text-center mb-4">
-              オリジナル単語帳とデッキの単語をまとめて復習できます
+              辞書から作った単語帳とデッキの単語をまとめて復習できます
             </p>
 
             {/* ドーナツ */}

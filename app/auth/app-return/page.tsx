@@ -99,7 +99,7 @@ export default function AppReturn() {
 
   return (
     <AuthPage>
-      <AuthCard title="メール認証が完了しました">
+      <AuthCard title="認証が完了しました">
         <p className="text-base text-gray-950 leading-relaxed text-center mb-6">
           RootLink アプリに戻って続きの操作を行ってください。
           <br />
