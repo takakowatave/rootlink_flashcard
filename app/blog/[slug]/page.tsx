@@ -38,7 +38,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     description,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: { title: post.title, description, type: 'article', images },
-    twitter: { card: images ? 'summary_large_image' : 'summary', title: post.title, description, images },
+    // 手動画像がなくても opengraph-image.tsx が必ず生成されるので large 固定
+    twitter: { card: 'summary_large_image', title: post.title, description, images },
   }
 }
 
