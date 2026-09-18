@@ -235,11 +235,12 @@ export default function QuizProgressPanel({
         </>
       )}
 
-      {/* CTA 下部スペーサー: フローティングボタンに隠れる領域を確保 */}
-      <div aria-hidden className="h-24" />
+      {/* SP: 浮遊 CTA と下部スペーサー。タブレット/PC では浮遊させると
+          画面全幅の帯になって背後の単語一覧に被って中途半端に見えるため
+          md+ ではインライン CTA に切り替える。 */}
+      <div aria-hidden className="md:hidden h-24" />
 
-      {/* 下部フローティング CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-[600px]">
           <Button
             onClick={onStart}
@@ -251,6 +252,19 @@ export default function QuizProgressPanel({
             {buttonLabel}
           </Button>
         </div>
+      </div>
+
+      {/* md+: インライン CTA。CardShell と同じ max-w / 横 padding にそろえる。 */}
+      <div className="hidden md:block w-full mx-auto max-w-[600px] px-4 pt-2 pb-6">
+        <Button
+          onClick={onStart}
+          disabled={buttonDisabled}
+          variant="primary"
+          size="lg"
+          fullWidth
+        >
+          {buttonLabel}
+        </Button>
       </div>
     </>
   )
