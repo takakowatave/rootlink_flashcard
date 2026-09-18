@@ -387,24 +387,22 @@ export default function EditProfileModal({
     return true;
   };
 
+  // 「触れた＝許可を求める」で統一。ON 化・時刻変更のどの導線でも、未許可なら
+  // OS ダイアログ or 設定画面を開く。checkPermissions() で granted なら
+  // ensurePermissionForOn は副作用なしで即 true を返すので毎回呼んでよい。
   const handleMasterToggle = async (next: boolean) => {
-    if (next && !reminderSettings.masterEnabled) {
+    if (next) {
       const ok = await ensurePermissionForOn();
       if (!ok) return;
     }
     updateReminderSettings((prev) => ({ ...prev, masterEnabled: next }));
   };
 
-  // 時刻の変更は「この時刻に通知したい」という意思とみなして、その枠を
-  // ON にする + 未許可なら許可を求める。以前は time だけ更新して OFF のまま
-  // = 通知が予約されず「トグルが上がらない・許可も求められない」バグ。
   const handleSlotTimeChange = async (key: ReminderSlotKey, time: string) => {
     const current = reminderSettings.slots.find((s) => s.key === key);
     if (!current) return;
-    if (!current.enabled) {
-      const ok = await ensurePermissionForOn();
-      if (!ok) return;
-    }
+    const ok = await ensurePermissionForOn();
+    if (!ok) return;
     updateReminderSettings((prev) => ({
       ...prev,
       slots: prev.slots.map((s) => (s.key === key ? { ...s, time, enabled: true } : s)),
@@ -413,11 +411,8 @@ export default function EditProfileModal({
 
   const handleSlotToggle = async (key: ReminderSlotKey, enabled: boolean) => {
     if (enabled) {
-      const current = reminderSettings.slots.find((s) => s.key === key);
-      if (current && !current.enabled) {
-        const ok = await ensurePermissionForOn();
-        if (!ok) return;
-      }
+      const ok = await ensurePermissionForOn();
+      if (!ok) return;
     }
     updateReminderSettings((prev) => ({
       ...prev,

@@ -496,12 +496,11 @@ export default function OnboardingQuestions() {
       : wantsOn
         ? true
         : current.enabled
-    // OFF → ON への遷移のときだけ許可を確認する。既に ON のときの time
-    // 変更や OFF 化は許可 flow を触らない。
-    if (nextEnabled && !current.enabled) {
+    // 「触れた＝許可を求める」で統一。ON 化に繋がる操作 (時刻変更・トグル ON)
+    // では必ず許可を確認する。granted なら副作用なしで即 true が返る。
+    // denied なら OS 設定画面を開き、state は触らずに戻す。
+    if (nextEnabled) {
       const res = await ensureReminderPermission()
-      // 拒否時はモーダルは出さず、state を触らずに戻す → トグルは
-      // checked={slot.enabled} で OFF のまま。
       if (res.kind === 'denied') return
     }
     setReminders((prev) =>
