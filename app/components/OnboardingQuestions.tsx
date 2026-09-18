@@ -186,12 +186,11 @@ export function OnboardingQuestionsView({
               <img src="/logo.svg" alt="RootLink" className="h-[42px] w-auto" />
             </div>
             <h2 className="text-2xl font-bold text-center leading-8 text-gray-950">
-              語源で覚える<br />英単語・辞書アプリ
+              RootLinkへようこそ
             </h2>
             <p className="text-base text-gray-700 leading-relaxed text-center">
-              英単語を丸暗記ではなく、<br />
-              語源とパーツから理解して覚えましょう。<br />
-              あなたに合う学習スタイルを教えてください。
+              RootLinkは語源で覚える英単語・辞書アプリです。<br />
+              あなたのことを教えてください。
             </p>
           </div>
         )}
