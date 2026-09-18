@@ -262,9 +262,9 @@ export default function AuthCallback() {
 
   return (
     <AuthPage>
-      <AuthCard title="読み込み中...">
+      <AuthCard title="認証しています">
         <p className="text-base text-muted text-center">
-          メール認証を確認しています。
+          しばらくお待ちください。
         </p>
       </AuthCard>
     </AuthPage>
