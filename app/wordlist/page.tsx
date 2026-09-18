@@ -277,10 +277,8 @@ export default function WordListPage() {
       <Toaster position="top-center" />
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
-      {/* SP は viewport 幅、md+ は 600px（CardShell と一致）。812px 幅のままだと
-          クイズ設定 (CardShell max-w-[600px]) と単語一覧の幅が食い違って、
-          タブレットで単語カードだけがはみ出て見える。 */}
-      <div className="max-w-[600px] mx-auto w-full">
+      {/* PageHeader はロゴのヘッダーと合わせて幅 100% の帯にしたいので
+          max-w のラッパの外に置く（内部で中身だけ max-w-[600px] で中央寄せ）。 */}
       <PageHeader
         items={[
           { label: 'ホーム', href: '/' },
@@ -288,6 +286,10 @@ export default function WordListPage() {
         ]}
       />
 
+      {/* SP は viewport 幅、md+ は 600px（CardShell と一致）。812px 幅のままだと
+          クイズ設定 (CardShell max-w-[600px]) と単語一覧の幅が食い違って、
+          タブレットで単語カードだけがはみ出て見える。 */}
+      <div className="max-w-[600px] mx-auto w-full">
       {/* ── 進捗＋クイズ ── */}
       <QuizProgressPanel
         header={

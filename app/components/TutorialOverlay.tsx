@@ -60,6 +60,17 @@ const STEPS: Step[] = [
     selector: '[data-tutorial="etymology-tree"]',
     requiredPath: /^\/word\//,
   },
+  // 06eccc1 (2026-08-06) の「オンボーディング属性質問追加」で step 数を
+  // 3 に短縮した際に削除された多義語ピン止めの説明を復活。
+  // data-tutorial="pin-button" は SensePinButton に残っている。
+  {
+    emoji: '📌',
+    title: '多義語はピン止めで整理',
+    description:
+      '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
+    selector: '[data-tutorial="pin-button"]',
+    requiredPath: /^\/word\//,
+  },
 ]
 
 type SpotlightRect = { top: number; left: number; width: number; height: number }
@@ -174,8 +185,11 @@ export default function TutorialOverlay() {
     })
   }, [])
 
-  // 初回のみ scrollIntoView。以降は毎フレーム rect を追従させる（スクロール・
-  // 回転・タブレット幅の再レイアウトで枠がずれる問題対策）。
+  // 初回 scrollIntoView + 以降の rect 追従。
+  // タブレットでずれる原因の 1 つは smooth scroll と初期 layout の間で
+  // rect が固定化されること。resize / scroll / RO / MO だけだと WebView に
+  // よってはイベントが取りこぼされるので、スクロール完了直後を狙う
+  // 遅延再計算 (100 / 400 / 900ms) と scrollend も足す。
   useEffect(() => {
     if (!visible) return
     const target = findTarget()
@@ -197,6 +211,9 @@ export default function TutorialOverlay() {
 
     window.addEventListener('resize', schedule)
     window.addEventListener('scroll', schedule, true)
+    // Chrome 114+ / Safari 18+: smooth scroll のアニメーション終了時に発火。
+    // scroll イベントを取りこぼす WebView でも最終位置を確定できる保険。
+    window.addEventListener('scrollend', schedule, true)
     window.addEventListener('orientationchange', schedule)
 
     // レイアウトの再計算 (画像の遅延読み込み・フォント切替・アコーディオン開閉 等)
@@ -210,12 +227,19 @@ export default function TutorialOverlay() {
     const mo = new MutationObserver(() => schedule())
     mo.observe(document.body, { childList: true, subtree: true })
 
+    // smooth scroll 完了と、画像・フォントの遅延読み込みで layout が
+    // 落ち着いたタイミングを狙う。scroll イベント頼みだと WebView によって
+    // 最終フレームを取りこぼして枠が古い位置に残る問題があった。
+    const timers = [100, 400, 900].map((ms) => window.setTimeout(schedule, ms))
+
     return () => {
       window.removeEventListener('resize', schedule)
       window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('scrollend', schedule, true)
       window.removeEventListener('orientationchange', schedule)
       ro.disconnect()
       mo.disconnect()
+      timers.forEach((t) => window.clearTimeout(t))
       if (rafId !== null) window.cancelAnimationFrame(rafId)
     }
   }, [visible, findTarget, computeRect])
