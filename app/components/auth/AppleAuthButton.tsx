@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { isAndroidPlatform } from "@/lib/isAndroidPlatform";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
@@ -30,10 +31,19 @@ export default function AppleAuthButton({
   onError?: (message: string) => void;
 }) {
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  // SSR / 初回レンダーは false → 初回ペイントで一瞬 Android にも出るのを避ける
+  // ため、mounted になるまでは描画しない。マウント後に platform を判定する。
+  const [mounted, setMounted] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
+    setIsAndroid(isAndroidPlatform());
+    setMounted(true);
   }, []);
+
+  // Android アプリでは Apple ボタン自体を出さない (Web / iOS は今までどおり)。
+  if (!mounted || isAndroid) return null;
 
   const handleClick = async () => {
     if (APPLE_DISABLED || inAppBrowser) return;
