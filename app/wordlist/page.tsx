@@ -277,7 +277,10 @@ export default function WordListPage() {
       <Toaster position="top-center" />
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
-      <div className="max-w-[812px] mx-auto w-full">
+      {/* SP は viewport 幅、md+ は 600px（CardShell と一致）。812px 幅のままだと
+          クイズ設定 (CardShell max-w-[600px]) と単語一覧の幅が食い違って、
+          タブレットで単語カードだけがはみ出て見える。 */}
+      <div className="max-w-[600px] mx-auto w-full">
       <PageHeader
         items={[
           { label: 'ホーム', href: '/' },
