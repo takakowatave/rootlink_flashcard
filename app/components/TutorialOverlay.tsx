@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
@@ -15,11 +15,6 @@ const STEP_PREFIX = 'rootlink_tutorial_step_'
 const _initializedUsers = new Set<string>()
 const _completedUsers = new Set<string>()
 
-/**
- * チュートリアル完了をDBに記録する。
- * supabase-js のクエリビルダーは await/then されるまで HTTP を送らないため、
- * 必ず await して実行＆エラーを握りつぶさないようにする。
- */
 async function markTutorialCompleted(uid: string): Promise<void> {
   const { error } = await supabase
     .from('profiles')
@@ -28,18 +23,17 @@ async function markTutorialCompleted(uid: string): Promise<void> {
   if (error) console.error('TUTORIAL COMPLETE WRITE FAILED:', error)
 }
 
-const PADDING = 10
-
 type Step = {
   emoji: string
   title: string
   description: string
-  selector?: string
   requiredPath?: RegExp
   waitHint?: string
   autoSearch?: string
 }
 
+// selector によるハイライト枠はタブレットで rect がずれ続けたため廃止。
+// 説明モーダルと進む操作だけ残し、対象要素の位置計算は行わない。
 const STEPS: Step[] = [
   {
     emoji: '🌱',
@@ -50,30 +44,22 @@ const STEPS: Step[] = [
     emoji: '🔍',
     title: '何か検索してみよう',
     description: '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
-    selector: '[data-tutorial="search"]',
     autoSearch: 'component',
   },
   {
     emoji: '🌳',
     title: '語源パーツで意味を掴む',
     description: '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
-    selector: '[data-tutorial="etymology-tree"]',
     requiredPath: /^\/word\//,
   },
-  // 06eccc1 (2026-08-06) の「オンボーディング属性質問追加」で step 数を
-  // 3 に短縮した際に削除された多義語ピン止めの説明を復活。
-  // data-tutorial="pin-button" は SensePinButton に残っている。
   {
     emoji: '📌',
     title: '多義語はピン止めで整理',
     description:
       '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
-    selector: '[data-tutorial="pin-button"]',
     requiredPath: /^\/word\//,
   },
 ]
-
-type SpotlightRect = { top: number; left: number; width: number; height: number }
 
 export default function TutorialOverlay() {
   const pathname = usePathname()
@@ -82,14 +68,12 @@ export default function TutorialOverlay() {
   const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
-  const [rect, setRect] = useState<SpotlightRect | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     const init = async (uid: string | undefined) => {
       if (!uid) return
-      // モジュールレベルで既に初期化済み or 完了済みなら何もしない
       if (_initializedUsers.has(uid) || _completedUsers.has(uid)) return
 
       const { data: profile } = await supabase
@@ -98,19 +82,13 @@ export default function TutorialOverlay() {
         .eq('id', uid)
         .maybeSingle()
       if (cancelled) return
-      // profile 行がまだ無いケース (AppShell の自己修復待ち) はキャッシュせず終了。
-      // PROFILE_CREATED_EVENT で再度 init が呼ばれる。
       if (!profile) return
       if (profile.tutorial_completed) {
         _completedUsers.add(uid)
         return
       }
-      // オンボーディング属性質問が未回答の間はツアーを起こさない。
-      // 回答完了で ONBOARDING_COMPLETE_EVENT が飛んできて再初期化される。
       if (!profile.acquisition_source) return
 
-      // 同一セッション内の二重 init だけ防ぐ。DB 完了フラグは最終 step で書く。
-      // 途中で init が再走してもチュートリアルが表示された状態は維持される。
       _initializedUsers.add(uid)
 
       setUserId(uid)
@@ -160,90 +138,6 @@ export default function TutorialOverlay() {
     return () => clearTimeout(timer)
   }, [authed, step, pathname])
 
-  const findTarget = useCallback((): Element | null => {
-    if (step === null) return null
-    const selector = STEPS[step]?.selector
-    if (!selector) return null
-    return (
-      Array.from(document.querySelectorAll(selector)).find(
-        (e) => e.getBoundingClientRect().width > 0,
-      ) ?? null
-    )
-  }, [step])
-
-  const computeRect = useCallback((el: Element | null) => {
-    if (!el) {
-      setRect(null)
-      return
-    }
-    const r = el.getBoundingClientRect()
-    setRect({
-      top: r.top - PADDING,
-      left: r.left - PADDING,
-      width: r.width + PADDING * 2,
-      height: r.height + PADDING * 2,
-    })
-  }, [])
-
-  // 初回 scrollIntoView + 以降の rect 追従。
-  // タブレットでずれる原因の 1 つは smooth scroll と初期 layout の間で
-  // rect が固定化されること。resize / scroll / RO / MO だけだと WebView に
-  // よってはイベントが取りこぼされるので、スクロール完了直後を狙う
-  // 遅延再計算 (100 / 400 / 900ms) と scrollend も足す。
-  useEffect(() => {
-    if (!visible) return
-    const target = findTarget()
-    if (!target) {
-      setRect(null)
-      return
-    }
-    computeRect(target)
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-
-    let rafId: number | null = null
-    const schedule = () => {
-      if (rafId !== null) return
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null
-        computeRect(findTarget())
-      })
-    }
-
-    window.addEventListener('resize', schedule)
-    window.addEventListener('scroll', schedule, true)
-    // Chrome 114+ / Safari 18+: smooth scroll のアニメーション終了時に発火。
-    // scroll イベントを取りこぼす WebView でも最終位置を確定できる保険。
-    window.addEventListener('scrollend', schedule, true)
-    window.addEventListener('orientationchange', schedule)
-
-    // レイアウトの再計算 (画像の遅延読み込み・フォント切替・アコーディオン開閉 等)
-    // にも追従させる。ResizeObserver は target + body の両方を見張る。
-    const ro = new ResizeObserver(() => schedule())
-    ro.observe(target)
-    ro.observe(document.body)
-
-    // 目標要素が差し替わる (SPA 内のリマウント) 可能性もあるので MutationObserver
-    // でも監視。極端なコストにならないよう subtree=true / attributes=false。
-    const mo = new MutationObserver(() => schedule())
-    mo.observe(document.body, { childList: true, subtree: true })
-
-    // smooth scroll 完了と、画像・フォントの遅延読み込みで layout が
-    // 落ち着いたタイミングを狙う。scroll イベント頼みだと WebView によって
-    // 最終フレームを取りこぼして枠が古い位置に残る問題があった。
-    const timers = [100, 400, 900].map((ms) => window.setTimeout(schedule, ms))
-
-    return () => {
-      window.removeEventListener('resize', schedule)
-      window.removeEventListener('scroll', schedule, true)
-      window.removeEventListener('scrollend', schedule, true)
-      window.removeEventListener('orientationchange', schedule)
-      ro.disconnect()
-      mo.disconnect()
-      timers.forEach((t) => window.clearTimeout(t))
-      if (rafId !== null) window.cancelAnimationFrame(rafId)
-    }
-  }, [visible, findTarget, computeRect])
-
   const advance = () => {
     const current = step !== null ? STEPS[step] : null
     const next = (step ?? 0) + 1
@@ -259,7 +153,6 @@ export default function TutorialOverlay() {
         _completedUsers.add(userId)
         _initializedUsers.delete(userId)
         localStorage.removeItem(STEP_PREFIX + userId)
-        // supabase-js のクエリは then/await されるまで実行されないため必ず await する
         void markTutorialCompleted(userId)
       }
       setVisible(false)
@@ -292,43 +185,14 @@ export default function TutorialOverlay() {
   if (!visible || step === null) return null
 
   const current = STEPS[step]
-  const hasSpotlight = rect !== null
-  const below = hasSpotlight && rect.top < window.innerHeight / 2
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
-      {hasSpotlight ? (
-        <>
-          <svg className="fixed inset-0 pointer-events-auto" style={{ width: '100vw', height: '100vh' }}>
-            <defs>
-              <mask id="tutorial-mask">
-                <rect width="100%" height="100%" fill="white" />
-                <rect x={rect.left} y={rect.top} width={rect.width} height={rect.height} rx="12" ry="12" fill="black" />
-              </mask>
-            </defs>
-            <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#tutorial-mask)" />
-          </svg>
-          <div
-            className="fixed rounded-xl pointer-events-none"
-            style={{
-              top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-              boxShadow: '0 0 0 3px #009689, 0 0 20px rgba(0,150,137,0.4)',
-            }}
-          />
-        </>
-      ) : (
-        <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
-      )}
+      <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
 
       <div
         className="fixed pointer-events-auto"
-        style={
-          hasSpotlight
-            ? below
-              ? { top: rect.top + rect.height + 12, left: '50%', transform: 'translateX(-50%)' }
-              : { bottom: window.innerHeight - rect.top + 12, left: '50%', transform: 'translateX(-50%)' }
-            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-        }
+        style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
       >
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
           <button onClick={advance} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="閉じる">
