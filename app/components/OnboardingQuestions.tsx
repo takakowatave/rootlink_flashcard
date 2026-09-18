@@ -192,6 +192,14 @@ export function OnboardingQuestionsView({
               RootLinkは語源で覚える英単語・辞書アプリです。<br />
               あなたのことを教えてください。
             </p>
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/onboarding/welcome-etymology.png"
+                alt="component を com と pon の語根に分解して関連語をツリー表示した例"
+                className="w-full max-w-[420px] h-auto"
+              />
+            </div>
           </div>
         )}
 
