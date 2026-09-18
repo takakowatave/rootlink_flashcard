@@ -1091,10 +1091,11 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   return (
     <div className={noCard ? 'bg-white' : 'min-h-screen bg-[#f8fafc]'}>
-    {/* SP top bar — 戻る + 検索バー + 共有 (Figma xe5UwVx38JWu5doqwXczQu / 2897:6526 準拠) */}
+    {/* SP top bar — 戻る + 検索バー + 共有 (Figma xe5UwVx38JWu5doqwXczQu / 2897:6526 準拠)
+        外側の sticky 帯は幅 100% (ロゴ Header と同じ)、中身だけ max-w-[600px] mx-auto。 */}
     {dictionary && (
       <div className={`${noCard ? 'hidden' : ''} md:hidden sticky top-0 z-30 bg-white border-b border-line pt-[env(safe-area-inset-top)]`}>
-        <div className="h-14 flex items-center gap-2 px-2">
+        <div className="max-w-[600px] mx-auto h-14 flex items-center gap-2 px-2">
           <button
             type="button"
             onClick={() => {

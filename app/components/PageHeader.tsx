@@ -9,13 +9,17 @@ import Breadcrumb, { type BreadcrumbItem } from './Breadcrumb'
 // 戻るボタン＋検索バーを1つの 56px ヘッダーにまとめる。ロゴのヘッダーとは
 // 相互排他（AppShell 側で SP のロゴ Header を隠す）。PC はロゴ Header を残し
 // パンくずをここに出す。
+//
+// 幅: 外側の sticky 帯は常に viewport 100% (ロゴ Header と同じ)。
+// 中身だけを max-w-[600px] mx-auto で中央寄せする。呼び出し側の
+// max-w ラッパの外側に配置する運用が前提。
 export default function PageHeader({ items }: { items: BreadcrumbItem[] }) {
   const router = useRouter()
   return (
     <>
       {/* SP: 戻る + 検索の 56px ヘッダー */}
       <div className="md:hidden sticky top-0 z-30 bg-white border-b border-line pt-[env(safe-area-inset-top)]">
-        <div className="h-14 flex items-center gap-2 px-2">
+        <div className="max-w-[600px] mx-auto h-14 flex items-center gap-2 px-2">
           <button
             type="button"
             onClick={() => router.back()}
