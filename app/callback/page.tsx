@@ -37,29 +37,31 @@ export default function AuthCallback() {
     const run = async () => {
       try {
         const url = new URL(window.location.href);
-        const urlError =
-          url.searchParams.get("error_description") ||
-          url.searchParams.get("error");
-        if (urlError) {
-          setState("confirmed");
-          return;
-        }
 
-        // 明示的な state=confirmed (AppShell.appUrlOpen から失敗時に渡される) は
-        // そのまま案内画面へ。
-        if (url.searchParams.get("state") === "confirmed") {
-          setState("confirmed");
-          return;
-        }
-
-        // 既にセッションがある場合は verify / exchange をやり直さない。
-        // AppShell.appUrlOpen 側で verifyOtp が成功して /callback に来た
-        // ケースや、別タブで既にログイン済みの状態でリンクを踏み直した
-        // ケースで、同じ token で二度目の verifyOtp が「使用済み」で失敗し
-        // 失敗画面に落ちるのを防ぐ。
+        // 先に session を取る。以下の全ての失敗フォールバックは
+        // 「session が無い」ときだけ発動させる。deeplink 二重発火 (AppShell
+        // 側で verifyOtp 成功 → /callback で二度目を試みて "使用済み" で失敗
+        // → 失敗画面が 1 フレーム描画されて onboarding に潜る) を根絶するため、
+        // session がある = 認証は済んでいる、として扱う。
         const {
           data: { session: preSession },
         } = await supabase.auth.getSession();
+
+        const urlError =
+          url.searchParams.get("error_description") ||
+          url.searchParams.get("error");
+        if (urlError && !preSession) {
+          setState("confirmed");
+          return;
+        }
+
+        // 明示的な state=confirmed (AppShell.appUrlOpen から失敗時に渡される)
+        // は本来「AppShell の verify が失敗した」シグナルだが、その後に別経路
+        // で session が張られていれば成功として扱う。
+        if (url.searchParams.get("state") === "confirmed" && !preSession) {
+          setState("confirmed");
+          return;
+        }
 
         const tokenHash = url.searchParams.get("token_hash");
         const type = url.searchParams.get("type");
@@ -140,9 +142,17 @@ export default function AuthCallback() {
           }
         }
 
+        // まず session を再取得し、user はそこから取り出す。verifyOtp や
+        // exchangeCodeForSession の直後は getUser がネットワーク経由の
+        // /user 呼び出しで刺さることがあり、null で返ると失敗画面に落ちて
+        // しまうため、session.user を優先して落とし込む。
         const {
-          data: { user },
-        } = await supabase.auth.getUser();
+          data: { session: finalSession },
+        } = await supabase.auth.getSession();
+        const user =
+          finalSession?.user ??
+          (await supabase.auth.getUser()).data.user ??
+          null;
 
         if (!user) {
           setState("confirmed");
