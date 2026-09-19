@@ -38,7 +38,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     description,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: { title: post.title, description, type: 'article', images },
-    twitter: { card: images ? 'summary_large_image' : 'summary', title: post.title, description, images },
+    // 手動画像がなくても opengraph-image.tsx が必ず生成されるので large 固定
+    twitter: { card: 'summary_large_image', title: post.title, description, images },
   }
 }
 
@@ -173,6 +174,8 @@ export default async function BlogPostPage({ params }: Params) {
               prose-blockquote:not-italic prose-blockquote:text-gray-700
               prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
+              prose-pre:text-gray-900 [&_pre_code]:text-gray-900
               prose-hr:border-line
             ">
               <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />

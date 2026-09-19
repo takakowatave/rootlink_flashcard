@@ -27,13 +27,17 @@ type Step = {
   emoji: string
   title: string
   description: string
+  // モーダルの中に「どこを見ればいいか」を文章で添える。図やハイライトは
+  // 使わず、テキストで場所を伝える (旧: 対象要素の rect を追いかけて緑枠を
+  // 出していたが、タブレットで位置ズレが解消しなかったため廃止)。
+  where?: string
   requiredPath?: RegExp
   waitHint?: string
   autoSearch?: string
 }
 
-// selector によるハイライト枠はタブレットで rect がずれ続けたため廃止。
-// 説明モーダルと進む操作だけ残し、対象要素の位置計算は行わない。
+// selector によるハイライト枠と対象要素の位置計算は完全に廃止。
+// 固定中央のモーダルと進む操作だけを残し、対象要素の位置は一切参照しない。
 const STEPS: Step[] = [
   {
     emoji: '🌱',
@@ -44,19 +48,22 @@ const STEPS: Step[] = [
     emoji: '🔍',
     title: '何か検索してみよう',
     description: '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
+    where: '画面右下の丸い🔍ボタン (PC はヘッダーの検索バー) をタップ',
     autoSearch: 'component',
   },
   {
     emoji: '🌳',
     title: '語源パーツで意味を掴む',
     description: '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
+    where: '単語ページ上部の語源ブロックにある緑色のパーツをタップ',
     requiredPath: /^\/word\//,
   },
   {
     emoji: '📌',
     title: '多義語はピン止めで整理',
     description:
-      '複数の意味がある単語は、覚えたい意味だけピン留めできます。意味の右のピンアイコンをタップして選んでみましょう。',
+      '複数の意味がある単語は、覚えたい意味だけピン留めできます。ピン留めした意味だけがクイズと単語帳に表示されます。',
+    where: '各意味の右上にある📌ピンのアイコンをタップして選ぶ',
     requiredPath: /^\/word\//,
   },
 ]
@@ -201,7 +208,12 @@ export default function TutorialOverlay() {
 
           <div className="text-3xl text-center mb-3 select-none">{current.emoji}</div>
           <h2 className="text-base font-bold text-center text-gray-900 mb-2">{current.title}</h2>
-          <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">{current.description}</p>
+          <p className="text-sm text-gray-600 text-center leading-relaxed mb-3">{current.description}</p>
+          {current.where && (
+            <p className="text-xs text-primary text-center leading-relaxed mb-5 px-2">
+              {current.where}
+            </p>
+          )}
 
           <div className="flex justify-center gap-1.5 mb-4">
             {STEPS.map((_, i) => (
