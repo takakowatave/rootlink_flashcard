@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     emoji: '🔍',
     title: '何か検索してみよう',
     description: '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
-    where: '画面上部の「Search a word or phrase...」の検索バーに入力',
+    where: '画面右下の丸い🔍ボタン (PC はヘッダーの検索バー) をタップ',
     autoSearch: 'component',
   },
   {
