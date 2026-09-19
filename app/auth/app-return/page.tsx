@@ -27,6 +27,16 @@ export default function AppReturn() {
   const [hasError, setHasError] = useState(false);
   const [deepLink, setDeepLink] = useState<string>(DEEP_LINK_BASE);
   const [buttonUsed, setButtonUsed] = useState(false);
+  // Chrome から deeplink でアプリに遷移する典型的なケースでは 1 秒以内に
+  // アプリが手前に来て Chrome タブは背景に回る。その前に「認証が完了しました」
+  // 「アプリを開く」の card を描画すると 1 秒フラッシュしてユーザーに
+  // 「認証失敗」と誤読される。マウント後 1500ms 経ってから初めて card を
+  // 出すことで、通常フローでは何も描画されないまま Chrome が背景化する。
+  const [showCard, setShowCard] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShowCard(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -71,6 +81,11 @@ export default function AppReturn() {
   }, []);
 
   const buttonHref = useMemo(() => deepLink, [deepLink]);
+
+  // 1500ms 経つまでは何も描画しない (通常フローでは Chrome が背景化する)。
+  if (!showCard) {
+    return <AuthPage>{null}</AuthPage>;
+  }
 
   if (hasError) {
     return (

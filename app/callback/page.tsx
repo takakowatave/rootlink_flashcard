@@ -32,6 +32,17 @@ type State = "loading" | "confirmed";
 // 画面は AuthPage / AuthCard を流用してログイン・新規登録画面と同じ枠にする。
 export default function AuthCallback() {
   const [state, setState] = useState<State>("loading");
+  // 失敗画面 (「リンクの有効期限が切れているか、すでに使われています」) は
+  // 認証が実際に成功して window.location.href = "/" で即遷移するケースで
+  // 1 フレームだけ描画されて「失敗が一瞬出る」フラッシュになる。
+  // 「マウント後 1500ms 経つまでは失敗画面を描画しない」にすることで、
+  // 通常フローでは 1 秒以内に離脱するので失敗画面は絶対に見えなくなる。
+  // 本当に auth が失敗して 1.5 秒滞在した場合だけ表示する。
+  const [mayShowError, setMayShowError] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMayShowError(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -245,7 +256,7 @@ export default function AuthCallback() {
     run();
   }, []);
 
-  if (state === "confirmed") {
+  if (state === "confirmed" && mayShowError) {
     return (
       <AuthPage>
         <AuthCard title="リンクの有効期限が切れているか、すでに使われています">
