@@ -102,8 +102,23 @@ export default function TutorialOverlay() {
 
       _initializedUsers.add(uid)
 
+      // 前回セッションの途中ステップから再開する。localStorage に step が
+      // 残っていなければ 0 (welcome) から。advance() 側で step 前進のたびに
+      // setItem していたが読み手が無かったため、再マウント (WebView 復帰・
+      // 検索遷移後の再描画・フルリロード等) のたびに welcome に戻る不具合が
+      // 出ていた。tutorial_completed=true のケースは上でリターン済みなので、
+      // ここでは中断ステップの復元だけ考えればよい。
+      let resumeStep = 0
+      if (typeof window !== 'undefined') {
+        const raw = window.localStorage.getItem(STEP_PREFIX + uid)
+        const parsed = raw !== null ? Number(raw) : NaN
+        if (Number.isInteger(parsed) && parsed >= 0 && parsed < STEPS.length) {
+          resumeStep = parsed
+        }
+      }
+
       setUserId(uid)
-      setStep(0)
+      setStep(resumeStep)
       setAuthed(true)
     }
 
