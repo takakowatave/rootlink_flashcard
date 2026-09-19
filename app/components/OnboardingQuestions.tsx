@@ -416,22 +416,6 @@ export function OnboardingQuestionsView({
   )
 }
 
-async function scheduleReminders(reminders: ReminderSlot[]): Promise<void> {
-  // onboarding では初回なので permission を明示要求してから予約する。
-  // 保存と予約反映は app/lib/reminders.ts の一元化ロジックに委譲。
-  try {
-    const mod = await import('@capacitor/local-notifications')
-    await mod.LocalNotifications.requestPermissions()
-  } catch {
-    // capacitor plugin unavailable (web preview) — silently skip
-  }
-  await persistAndApplyReminders({
-    version: 1,
-    masterEnabled: true,
-    slots: reminders,
-  })
-}
-
 export default function OnboardingQuestions() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
@@ -478,31 +462,45 @@ export default function OnboardingQuestions() {
     }
   }, [])
 
-  const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
+  // 学習時間帯ステップ (step 5) では、トグル ON / OFF も時刻の変更も
+  // 許可ダイアログを出さずに自由に触れるようにする。実際の許可ダイアログは
+  // step 5 の「次へ」を押したタイミング (goNext) で初めて出す。
+  const goNext = async () => {
+    if (step === 5 && showReminders) {
+      // ON にした枠が 1 つも無ければ、許可ダイアログを出さずそのまま次へ。
+      const hasAnyEnabled = reminders.some((r) => r.enabled)
+      if (hasAnyEnabled) {
+        // 許可されたらこの後の persistAndApplyReminders が予約する。
+        // 拒否されてもモーダルやエラーは出さず、設定は保存だけしてそのまま次へ進む
+        // (後から設定画面で許可を戻したときに、その設定が引き継がれる)。
+        await ensureReminderPermission()
+        await persistAndApplyReminders({
+          version: 1,
+          masterEnabled: true,
+          slots: reminders,
+        })
+      }
+    }
+    setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
+  }
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
-  const patchReminder = async (
+  const patchReminder = (
     key: ReminderSlot['key'],
     patch: Partial<ReminderSlot>,
   ) => {
     const current = reminders.find((r) => r.key === key)
     if (!current) return
-    // 時刻を触ったら「この時刻に通知したい」という意思とみなして、その枠を
-    // ON にする (以前は time だけ更新して OFF のまま = 通知が予約されず
-    // 「トグルが上がらない・許可も求められない」バグになっていた)。
+    // 時刻を触ったら「この時刻に通知したい」という意思とみなして、その枠を ON にする
+    // (以前は time だけ更新して OFF のままだと通知が予約されず、トグルが上がらない
+    // バグになっていた)。許可ダイアログは step 5 の「次へ」でまとめて出すので、
+    // ここでは state 更新だけ行う。
     const wantsOn = patch.enabled === true || patch.time !== undefined
     const nextEnabled = patch.enabled === false
       ? false
       : wantsOn
         ? true
         : current.enabled
-    // 「触れた＝許可を求める」で統一。ON 化に繋がる操作 (時刻変更・トグル ON)
-    // では必ず許可を確認する。granted なら副作用なしで即 true が返る。
-    // denied なら OS 設定画面を開き、state は触らずに戻す。
-    if (nextEnabled) {
-      const res = await ensureReminderPermission()
-      if (res.kind === 'denied') return
-    }
     setReminders((prev) =>
       prev.map((r) => (r.key === key ? { ...r, ...patch, enabled: nextEnabled } : r)),
     )
@@ -548,7 +546,7 @@ export default function OnboardingQuestions() {
       toast.error('保存に失敗しました')
       return
     }
-    if (showReminders) await scheduleReminders(reminders)
+    // 通知の許可要求と予約は step 5 の「次へ」で完了済み。ここでは追加処理なし。
     setSaving(false)
     window.dispatchEvent(new CustomEvent(ONBOARDING_COMPLETE_EVENT))
     setVisible(false)
