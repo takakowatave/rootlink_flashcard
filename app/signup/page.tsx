@@ -33,7 +33,12 @@ export default function AuthSignup() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [existingAccount, setExistingAccount] = useState(false);
+  // native は /onboarding のスプラッシュで規約・プライバシーへの同意動線を
+  // 通しているので、signup の checkbox は重複。ここでは Web だけ出す。
+  // hydration mismatch を避けるため mount 後に判定する。
+  const [isNative, setIsNative] = useState(false);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
+  useEffect(() => setIsNative(isNativePlatform()), []);
 
   const {
     register,
@@ -123,22 +128,24 @@ export default function AuthSignup() {
                   minLength: { value: 8, message: "8文字以上で設定してください" },
                 })}
               />
-              <TermsAgreementCheckbox
-                error={errors.agreeToPrivacy}
-                {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setPrivacyOpen(true);
-                  }}
-                  className="text-primary underline"
+              {!isNative && (
+                <TermsAgreementCheckbox
+                  error={errors.agreeToPrivacy}
+                  {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
                 >
-                  プライバシーポリシー
-                </button>
-                に同意する
-              </TermsAgreementCheckbox>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPrivacyOpen(true);
+                    }}
+                    className="text-primary underline"
+                  >
+                    プライバシーポリシー
+                  </button>
+                  に同意する
+                </TermsAgreementCheckbox>
+              )}
               <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
                 {isSubmitting ? "登録中..." : "新規作成"}
               </Button>
