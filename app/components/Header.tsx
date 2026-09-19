@@ -115,8 +115,9 @@ const Header = () => {
           <img src="/logo.svg" alt="RootLink" className="h-[17px]" />
         </Link>
 
-        {/* PC検索 */}
-        <div className="hidden md:flex flex-1 items-center justify-center" data-tutorial="search">
+        {/* PC 検索: lg (1024px) 以上のみ。SP・iPad は Dashboard の右下 FAB
+            (Dashboard.tsx) に集約して、ヘッダーには検索バーを置かない。 */}
+        <div className="hidden lg:flex flex-1 items-center justify-center" data-tutorial="search">
           <SearchBox
             value={searchValue}
             onChange={v => { setSearchValue(v); setSearchError(false); }}

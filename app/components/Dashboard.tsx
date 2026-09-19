@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import confetti from 'canvas-confetti'
-import { HiChevronRight } from 'react-icons/hi'
+import { HiChevronRight, HiSearch } from 'react-icons/hi'
 import { HiXMark } from 'react-icons/hi2'
 import { FaShareNodes } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabaseClient'
@@ -719,6 +719,18 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* SP・iPad 用の検索 FAB。PC (lg 以上) はヘッダーのインライン
+          検索バーがあるので非表示。既存の MobileSearchOverlay を
+          `open-mobile-search` イベントで開き直す (Header/PageHeader と同じ)。 */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+        aria-label="検索"
+        className="lg:hidden fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary-hover active:scale-95 transition-transform"
+      >
+        <HiSearch className="size-6" />
+      </button>
     </>
   )
 }
