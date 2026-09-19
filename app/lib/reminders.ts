@@ -239,14 +239,20 @@ export async function scheduleReminderNotifications(
     if (enabled.length === 0) return { scheduled: false, permission }
     const notifications = enabled.map((slot, index) => {
       const [h, m] = slot.time.split(':').map(Number)
-      const at = new Date()
-      at.setHours(h ?? 0, m ?? 0, 0, 0)
-      if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1)
       return {
         id: index + 1,
         title: 'RootLink',
         body: '今日の1語を思い出そう',
-        schedule: { at, repeats: true, every: 'day' as const },
+        // on (cron-like) を使う。plugin 側で発火のたびに DateMatch.nextTrigger
+        // が「次の h:m」を計算して自動再予約するため、真に毎日 24 時間サイクル
+        // で回る。allowWhileIdle=true で Doze 中でもメンテナンスウィンドウで
+        // 発火する (setAndAllowWhileIdle にフォールバック)。
+        // 旧: { at, repeats: true, every: 'day' } は plugin が every を無視し、
+        // setRepeating(RTC, interval=at-now) になっていて Doze で消えていた。
+        schedule: {
+          on: { hour: h ?? 0, minute: m ?? 0 },
+          allowWhileIdle: true,
+        },
       }
     })
     await mod.LocalNotifications.schedule({ notifications })
