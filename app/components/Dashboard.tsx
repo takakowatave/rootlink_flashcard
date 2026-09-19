@@ -727,6 +727,7 @@ export default function Dashboard() {
         type="button"
         onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
         aria-label="検索"
+        data-tutorial="search"
         className="lg:hidden fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary-hover active:scale-95 transition-transform"
       >
         <HiSearch className="size-6" />
