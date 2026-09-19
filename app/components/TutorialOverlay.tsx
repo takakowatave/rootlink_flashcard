@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
@@ -23,21 +23,20 @@ async function markTutorialCompleted(uid: string): Promise<void> {
   if (error) console.error('TUTORIAL COMPLETE WRITE FAILED:', error)
 }
 
+const PADDING = 10
+
 type Step = {
   emoji: string
   title: string
   description: string
-  // モーダルの中に「どこを見ればいいか」を文章で添える。図やハイライトは
-  // 使わず、テキストで場所を伝える (旧: 対象要素の rect を追いかけて緑枠を
-  // 出していたが、タブレットで位置ズレが解消しなかったため廃止)。
+  // 「どこを見ればいいか」を文章で添える (対象要素の位置とは独立)。
   where?: string
+  selector?: string
   requiredPath?: RegExp
   waitHint?: string
   autoSearch?: string
 }
 
-// selector によるハイライト枠と対象要素の位置計算は完全に廃止。
-// 固定中央のモーダルと進む操作だけを残し、対象要素の位置は一切参照しない。
 const STEPS: Step[] = [
   {
     emoji: '🌱',
@@ -49,6 +48,7 @@ const STEPS: Step[] = [
     title: '何か検索してみよう',
     description: '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
     where: '画面右下の丸い🔍ボタン (PC はヘッダーの検索バー) をタップ',
+    selector: '[data-tutorial="search"]',
     autoSearch: 'component',
   },
   {
@@ -56,6 +56,7 @@ const STEPS: Step[] = [
     title: '語源パーツで意味を掴む',
     description: '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
     where: '単語ページ上部の語源ブロックにある緑色のパーツをタップ',
+    selector: '[data-tutorial="etymology-tree"]',
     requiredPath: /^\/word\//,
   },
   {
@@ -64,9 +65,12 @@ const STEPS: Step[] = [
     description:
       '複数の意味がある単語は、覚えたい意味だけピン留めできます。ピン留めした意味だけがクイズと単語帳に表示されます。',
     where: '各意味の右上にある📌ピンのアイコンをタップして選ぶ',
+    selector: '[data-tutorial="pin-button"]',
     requiredPath: /^\/word\//,
   },
 ]
+
+type SpotlightRect = { top: number; left: number; width: number; height: number }
 
 export default function TutorialOverlay() {
   const pathname = usePathname()
@@ -75,6 +79,7 @@ export default function TutorialOverlay() {
   const [step, setStep] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
   const [waitMode, setWaitMode] = useState(false)
+  const [rect, setRect] = useState<SpotlightRect | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -145,6 +150,80 @@ export default function TutorialOverlay() {
     return () => clearTimeout(timer)
   }, [authed, step, pathname])
 
+  const findTarget = useCallback((): Element | null => {
+    if (step === null) return null
+    const selector = STEPS[step]?.selector
+    if (!selector) return null
+    return (
+      Array.from(document.querySelectorAll(selector)).find(
+        (e) => e.getBoundingClientRect().width > 0,
+      ) ?? null
+    )
+  }, [step])
+
+  const computeRect = useCallback((el: Element | null) => {
+    if (!el) {
+      setRect(null)
+      return
+    }
+    const r = el.getBoundingClientRect()
+    setRect({
+      top: r.top - PADDING,
+      left: r.left - PADDING,
+      width: r.width + PADDING * 2,
+      height: r.height + PADDING * 2,
+    })
+  }, [])
+
+  // 初回 scrollIntoView + 以降の rect 追従。
+  // タブレットで rect が固定化されるのを防ぐため、
+  // scrollend + resize + orientationchange + ResizeObserver +
+  // MutationObserver + 遅延タイマーで複層に監視する。
+  useEffect(() => {
+    if (!visible) return
+    const target = findTarget()
+    if (!target) {
+      setRect(null)
+      return
+    }
+    computeRect(target)
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+    let rafId: number | null = null
+    const schedule = () => {
+      if (rafId !== null) return
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null
+        computeRect(findTarget())
+      })
+    }
+
+    window.addEventListener('resize', schedule)
+    window.addEventListener('scroll', schedule, true)
+    window.addEventListener('scrollend', schedule, true)
+    window.addEventListener('orientationchange', schedule)
+
+    const ro = new ResizeObserver(() => schedule())
+    ro.observe(target)
+    ro.observe(document.body)
+
+    const mo = new MutationObserver(() => schedule())
+    mo.observe(document.body, { childList: true, subtree: true })
+
+    const timers = [100, 400, 900].map((ms) => window.setTimeout(schedule, ms))
+
+    return () => {
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('scrollend', schedule, true)
+      window.removeEventListener('orientationchange', schedule)
+      ro.disconnect()
+      mo.disconnect()
+      timers.forEach((t) => window.clearTimeout(t))
+      if (rafId !== null) window.cancelAnimationFrame(rafId)
+    }
+  }, [visible, findTarget, computeRect])
+
   const advance = () => {
     const current = step !== null ? STEPS[step] : null
     const next = (step ?? 0) + 1
@@ -192,11 +271,50 @@ export default function TutorialOverlay() {
   if (!visible || step === null) return null
 
   const current = STEPS[step]
+  const hasSpotlight = rect !== null
 
+  // ラッパ div と SVG は inset-0 クラスを使わない。
+  // 理由: globals.css の `.fixed.inset-0 { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }`
+  // グローバルルールにマッチすると、SVG の user coord (0,0) が
+  // viewport (0, safe-area-inset-top) に相当してしまい、
+  // `<rect x={rect.left} y={rect.top}>` が safe-area 分だけ下にずれる
+  // (タブレット・ノッチ機で長らく直っていなかったハイライトずれの正体)。
+  // inline style で top:0/left:0 に直指定するとルールにマッチしないので回避できる。
   return (
-    <div className="fixed inset-0 z-[100] pointer-events-none">
-      <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
+    <div
+      className="fixed z-[100] pointer-events-none"
+      style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+    >
+      {hasSpotlight ? (
+        <>
+          <svg
+            className="fixed pointer-events-auto"
+            style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}
+          >
+            <defs>
+              <mask id="tutorial-mask">
+                <rect width="100%" height="100%" fill="white" />
+                <rect x={rect.left} y={rect.top} width={rect.width} height={rect.height} rx="12" ry="12" fill="black" />
+              </mask>
+            </defs>
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#tutorial-mask)" />
+          </svg>
+          <div
+            className="fixed rounded-xl pointer-events-none"
+            style={{
+              top: rect.top, left: rect.left, width: rect.width, height: rect.height,
+              boxShadow: '0 0 0 3px #009689, 0 0 20px rgba(0,150,137,0.4)',
+            }}
+          />
+        </>
+      ) : (
+        <div
+          className="fixed pointer-events-auto bg-black/70"
+          style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      )}
 
+      {/* モーダルは対象要素の位置を参照せず、常に画面中央に固定表示。 */}
       <div
         className="fixed pointer-events-auto"
         style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
