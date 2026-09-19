@@ -420,6 +420,29 @@ export default function EditProfileModal({
     }));
   };
 
+  // 動作確認用の一時ボタン。90 秒後に単発の通知を予約する。
+  // ID 999 は毎日リマインダー (1..N) と衝突しないよう固定。
+  // 発火確認が済んだら別 commit で削除する前提。
+  const handleTestNotification = async () => {
+    try {
+      const mod = await import("@capacitor/local-notifications");
+      const at = new Date(Date.now() + 90 * 1000);
+      await mod.LocalNotifications.schedule({
+        notifications: [
+          {
+            id: 999,
+            title: "RootLink (テスト)",
+            body: "90秒後のテスト通知が届きました",
+            schedule: { at, allowWhileIdle: true },
+          },
+        ],
+      });
+      toast.success("90秒後に通知します");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "予約に失敗しました");
+    }
+  };
+
   const handleAddReminderSlot = () => {
     updateReminderSettings((prev) => {
       if (prev.slots.length >= MAX_REMINDER_SLOTS) return prev;
@@ -749,6 +772,16 @@ export default function EditProfileModal({
                   >
                     追加
                     <MdAddCircle className="size-6" />
+                  </button>
+                </div>
+                {/* 動作確認用の一時ボタン: 発火確認が取れたら別 commit で削除する */}
+                <div className="pt-2 pb-4">
+                  <button
+                    type="button"
+                    onClick={handleTestNotification}
+                    className="w-full h-10 flex items-center justify-center gap-1 border border-slate-400 rounded-full text-sm font-medium text-gray-700"
+                  >
+                    90秒後にテスト通知 (動作確認用)
                   </button>
                 </div>
               </SettingsSection>
