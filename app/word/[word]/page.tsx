@@ -96,10 +96,13 @@ function readDerivativesFromDictionary(dictionary: RewrittenPayload | null): str
   return raw.filter((v): v is string => typeof v === 'string' && v.length > 0)
 }
 
+// 完全一致 (ilike, case-insensitive) で引く。以前は末尾に `*` を付けていたため
+// `/word/meet` のフォールバックが `meet up with someone` を prefix match で拾って
+// 単語検索が熟語ページに化ける事故が起きていた (2026-09-20 kiko 指摘)。
 const resolvePhrase = cache(async (raw: string) => {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/phrase_cards?phrase=ilike.${encodeURIComponent(raw)}*&meaning_ja=not.is.null&skip_reason=is.null&limit=1`,
+      `${SUPABASE_URL}/rest/v1/phrase_cards?phrase=ilike.${encodeURIComponent(raw)}&meaning_ja=not.is.null&skip_reason=is.null&limit=1`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }, next: { revalidate: 60 * 60 } }
     )
     if (!res.ok) return null
