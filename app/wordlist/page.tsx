@@ -282,7 +282,7 @@ export default function WordListPage() {
       <PageHeader
         items={[
           { label: 'ホーム', href: '/' },
-          { label: '辞書から単語帳を作成' },
+          { label: 'My単語帳' },
         ]}
       />
 
@@ -294,7 +294,7 @@ export default function WordListPage() {
       <QuizProgressPanel
         header={
           <>
-            <h2 className="text-lg font-bold text-gray-950">辞書から単語帳を作成</h2>
+            <h2 className="text-lg font-bold text-gray-950">My単語帳</h2>
             <p className="text-sm text-gray-600 mt-1">辞書から単語を検索してオリジナルの単語帳をつくれます。</p>
           </>
         }

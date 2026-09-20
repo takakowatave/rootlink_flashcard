@@ -564,7 +564,7 @@ export default function Dashboard() {
 
   const myDeckItem: DeckItem = {
     key: 'my-wordlist',
-    title: '辞書から単語帳を作成',
+    title: 'My単語帳',
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
     wordCount: savedCount,
