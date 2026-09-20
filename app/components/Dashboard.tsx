@@ -452,7 +452,9 @@ const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
 export default function Dashboard() {
   const router = useRouter()
   const [streak, setStreak] = useState(0)
-  const [savedCount, setSavedCount] = useState(0)
+  // null = 未取得。Supabase から返るまで 0 扱いにすると savedCount>0 の
+  // ユーザーにも WordlistEmptyCard が一瞬映る。フェッチ完了までは分岐を保留する。
+  const [savedCount, setSavedCount] = useState<number | null>(null)
   const [masteredCount, setMasteredCount] = useState(0)
   const [quizAttemptCount, setQuizAttemptCount] = useState(0)
   const [activityDates, setActivityDates] = useState<string[]>([])
@@ -490,7 +492,7 @@ export default function Dashboard() {
       setStreak(currentStreak)
       setActivityDates(dates)
       window.dispatchEvent(new Event('streak-updated'))
-      if (savedData.count != null) setSavedCount(savedData.count)
+      setSavedCount(savedData.count ?? 0)
       if (quizData.data) {
         const masteredWords = new Set(quizData.data.filter(r => r.correct).map(r => r.word))
         setMasteredCount(masteredWords.size)
@@ -564,10 +566,10 @@ export default function Dashboard() {
 
   const myDeckItem: DeckItem = {
     key: 'my-wordlist',
-    title: '辞書から単語帳を作成',
+    title: 'My単語帳',
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
-    wordCount: savedCount,
+    wordCount: savedCount ?? undefined,
   }
   const activeDeckItems: DeckItem[] = activeDeckIds
     .map(id => decks.find(d => d.id === id))
@@ -658,7 +660,7 @@ export default function Dashboard() {
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
                   <p className="text-xs text-muted">学習中の単語数</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
-                    {savedCount.toLocaleString()}
+                    {(savedCount ?? 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex-1 px-6 py-3 flex flex-col justify-center">
@@ -678,7 +680,10 @@ export default function Dashboard() {
             {/* 辞書から単語帳を作成 */}
             <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">辞書から単語帳を作成</h2>
-              {savedCount > 0 ? (
+              {savedCount === null ? (
+                // フェッチ完了までは何も出さない (0扱いで空カードが一瞬映るのを防ぐ)
+                <div aria-hidden className="h-[188px]" />
+              ) : savedCount > 0 ? (
                 <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
                   <SharedDeckCard
                     title={myDeckItem.title}
