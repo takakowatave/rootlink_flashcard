@@ -10,6 +10,7 @@ import type { Profile } from "@/types/Profile";
 import EditProfileModal from "@/components/EditProfileModal";
 import Button from "@/components/Button";
 import SearchBox from "@/components/SearchBox";
+import { PHRASES_PUBLIC } from "@/lib/featureFlags";
 import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
 
 const API_BASE =
@@ -48,8 +49,10 @@ const Header = () => {
         router.push(r.redirectTo);
         return;
       }
-      const { data: phraseMatch } = await supabase
-        .from('phrase_cards').select('id').ilike('phrase', query).limit(1).maybeSingle();
+      const { data: phraseMatch } = PHRASES_PUBLIC
+        ? await supabase
+            .from('phrase_cards').select('id').ilike('phrase', query).not('meaning_ja', 'is', null).is('skip_reason', null).limit(1).maybeSingle()
+        : { data: null };
       if (phraseMatch) {
         router.push(`/word/${query.replace(/\s+/g, '_')}`);
       } else {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { HiSearch } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { displayPhrase } from '@/lib/phraseDisplay'
+import { PHRASES_PUBLIC } from '@/lib/featureFlags'
 
 type Suggestion = { label: string; type: 'word' | 'phrase' }
 
@@ -40,7 +41,9 @@ export default function SearchBox({
     if (q.length < 2) { setSuggestions([]); return }
     const [wordsRes, phrasesRes] = await Promise.all([
       supabase.from('words').select('word').ilike('word', `${q}%`).limit(4),
-      supabase.from('phrase_cards').select('phrase').ilike('phrase', `${q}%`).limit(4),
+      PHRASES_PUBLIC
+        ? supabase.from('phrase_cards').select('phrase').ilike('phrase', `${q}%`).not('meaning_ja', 'is', null).is('skip_reason', null).limit(4)
+        : Promise.resolve({ data: [] as { phrase: string }[] }),
     ])
     const wordItems: Suggestion[] = (wordsRes.data ?? []).map(r => ({ label: r.word, type: 'word' }))
     const phraseItems: Suggestion[] = (phrasesRes.data ?? []).map(r => ({ label: r.phrase, type: 'phrase' }))

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { PHRASES_PUBLIC } from '@/lib/featureFlags'
 import SearchBox from './SearchBox'
 
 const API_BASE =
@@ -49,8 +50,10 @@ export default function MobileSearchOverlay() {
         router.push(r.redirectTo)
         return
       }
-      const { data: phraseMatch } = await supabase
-        .from('phrase_cards').select('id').ilike('phrase', query).limit(1).maybeSingle()
+      const { data: phraseMatch } = PHRASES_PUBLIC
+        ? await supabase
+            .from('phrase_cards').select('id').ilike('phrase', query).not('meaning_ja', 'is', null).is('skip_reason', null).limit(1).maybeSingle()
+        : { data: null }
       if (phraseMatch) {
         setOpen(false)
         router.push(`/word/${query.replace(/\s+/g, '_')}`)
