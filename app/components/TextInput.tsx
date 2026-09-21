@@ -68,7 +68,7 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
           </button>
         )}
       </div>
-      {error ? (
+      {error?.message ? (
         <p className="text-sm text-red-500">{error.message}</p>
       ) : helperText ? (
         <p className="text-sm text-muted">{helperText}</p>

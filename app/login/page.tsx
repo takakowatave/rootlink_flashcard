@@ -38,7 +38,11 @@ export default function AuthLogin() {
       password: data.password,
     });
     if (error) {
+      // メール/パスワードのどちらが間違っているかは Supabase から特定できないので、
+      // メッセージは email 側にだけ出し、password 側は border を赤くする manual error
+      // だけ立てる (message なし)。両方の欄が「入力を見直す対象」だと視覚的に伝える。
       setError("email", { message: "メールアドレスまたはパスワードが正しくありません" });
+      setError("password", { type: "manual" });
       return;
     }
     router.push("/");
