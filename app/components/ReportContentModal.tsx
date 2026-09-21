@@ -83,8 +83,8 @@ export default function ReportContentModal({ open, onClose, kind, content }: Pro
         </div>
 
         <p className="text-sm text-gray-700 leading-relaxed">
-          語源や意味のソースは Oxford Dictionary の正規版を利用しています。
-          内容に誤りが含まれている場合はご報告ください。
+          本アプリで表示される語源・意味は Oxford Dictionary の正規版を出典と
+          しております。万が一内容に誤りがございましたらこちらよりご報告ください。
         </p>
 
         <div className="flex flex-col gap-2">
