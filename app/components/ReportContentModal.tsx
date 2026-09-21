@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import Button from './Button'
+import { supabase } from '@/lib/supabaseClient'
 
 type Kind = 'word' | 'phrase'
 
@@ -13,8 +14,9 @@ type Props = {
   content: string
 }
 
-// TODO(report-backend): 現時点では送信は stub。
-// レビュー後に Supabase テーブル (word_reports) への insert に置き換える。
+const API_BASE =
+  process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
+  'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
 
 const WORD_REASONS = [
   { value: 'meaning_wrong', label: '意味が違う' },
@@ -57,12 +59,34 @@ export default function ReportContentModal({ open, onClose, kind, content }: Pro
 
   const handleSubmit = async () => {
     setSubmitting(true)
-    // TODO(report-backend): Supabase の word_reports へ insert する処理を追加する。
-    // 現状は動作確認用のため成功トーストだけ出して閉じる。
-    await new Promise((r) => setTimeout(r, 250))
-    toast.success('ご報告ありがとうございます', { position: 'top-center' })
-    setSubmitting(false)
-    onClose()
+    try {
+      const reasonLabel = reasons.find(r => r.value === reason)?.label ?? reason
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
+      const res = await fetch(`${API_BASE}/report`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          kind,
+          content,
+          reason: reasonLabel,
+          message: message.trim() || undefined,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        toast.error('送信に失敗しました。時間をおいて再度お試しください', { position: 'top-center' })
+        return
+      }
+      toast.success('ご報告ありがとうございます', { position: 'top-center' })
+      onClose()
+    } catch {
+      toast.error('送信に失敗しました。時間をおいて再度お試しください', { position: 'top-center' })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
