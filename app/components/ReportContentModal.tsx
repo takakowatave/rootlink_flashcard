@@ -83,9 +83,8 @@ export default function ReportContentModal({ open, onClose, kind, content }: Pro
         </div>
 
         <p className="text-sm text-gray-700 leading-relaxed">
-          辞書データは Oxford Dictionaries を元にしていますが、公開直後のため
-          明らかに間違いと思われる内容が混じっている可能性があります。気になる箇所を
-          教えてください。
+          語源や意味のソースは Oxford Dictionary の正規版を利用しています。
+          内容に誤りが含まれている場合はご報告ください。
         </p>
 
         <div className="flex flex-col gap-2">
@@ -96,7 +95,16 @@ export default function ReportContentModal({ open, onClose, kind, content }: Pro
             id="report-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-12 rounded-lg border border-line bg-white px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            // appearance-none + 独自 chevron。native の chevron が右端に張り付いて
+            // 見えるのを避け、pr-10 で余白を確保する。
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2390a1b9' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '18px',
+            }}
+            className="appearance-none h-12 rounded-lg border border-line bg-white pl-3 pr-10 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             {reasons.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
