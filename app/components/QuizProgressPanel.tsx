@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { HiChevronRight } from 'react-icons/hi'
-import { MdArrowBackIosNew } from 'react-icons/md'
+import { MdClose } from 'react-icons/md'
 import CardShell from '@/components/CardShell'
 import ModalShell from '@/components/ModalShell'
 import TriDonutChart from '@/components/TriDonutChart'
@@ -202,29 +202,21 @@ export default function QuizProgressPanel({
           <ModalShell
             open={settingsOpen}
             onClose={() => setSettingsOpen(false)}
+            variant="halfsheet"
             headerLeft={
-              <>
-                <button
-                  onClick={() => setSettingsOpen(false)}
-                  className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
-                  aria-label="戻る"
-                >
-                  <MdArrowBackIosNew className="size-6" />
-                </button>
-                <h2 className="hidden md:block text-base font-bold text-gray-950 pl-2">出題形式の設定</h2>
-              </>
+              <h2 className="text-base font-bold text-gray-950 pl-2">出題形式の設定</h2>
             }
             headerRight={
               <button
                 onClick={() => setSettingsOpen(false)}
-                className="hidden md:block text-sm text-muted hover:text-gray-700 px-2"
+                className="p-2 rounded-full hover:bg-gray-100 text-muted"
+                aria-label="閉じる"
               >
-                閉じる
+                <MdClose className="size-6" />
               </button>
             }
           >
-            <h2 className="md:hidden text-base font-bold text-gray-950 px-4 pt-4">出題形式の設定</h2>
-            <div className="py-2 md:py-4">
+            <div className="py-2 lg:py-4">
               <CardShell>
                 <SettingRow
                   label="デフォルト表示設定"
