@@ -36,8 +36,8 @@ export default async function ChapterPage({ params }: { params: { id: string; ch
     permanentRedirect(canonicalPath(deck, chapter))
   }
 
-  const initialEntries = await getChapterEntriesSSR(deck.id, chapter)
-  const total = chapterCount(initialEntries.length)
+  const { chapterEntries, totalWords } = await getChapterEntriesSSR(deck.id, chapter)
+  const total = chapterCount(totalWords)
   if (chapter > total) notFound()
 
   return (
@@ -50,7 +50,8 @@ export default async function ChapterPage({ params }: { params: { id: string; ch
         description: deck.description,
         is_premium: deck.is_premium,
       }}
-      initialEntries={initialEntries}
+      initialEntries={chapterEntries}
+      totalWordsHint={totalWords}
       chapter={chapter}
     />
   )

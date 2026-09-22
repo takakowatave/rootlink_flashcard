@@ -175,34 +175,73 @@ export const getDeckWordsMetaSSR = cache(async (deckId: string): Promise<DeckWor
   }
 })
 
+// 内部 helper: そのデッキの deck_words 総数だけを取る (Content-Range 経由)。
+// 章画面のロック判定 (totalChapters) にしか使わないので row body は捨てる。
+async function fetchDeckWordCount(deckId: string): Promise<number> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/deck_words?deck_id=eq.${encodeURIComponent(deckId)}&select=word`,
+    {
+      headers: {
+        ...SUPABASE_HEADERS,
+        Range: '0-0',
+        'Range-Unit': 'items',
+        Prefer: 'count=exact',
+      },
+      next: { revalidate: DAY, tags: [deckMetaTag(deckId), 'deck-words'] },
+    }
+  )
+  if (!res.ok) return 0
+  // 消費しないと keep-alive に悪影響なので読み捨てる
+  try { await res.text() } catch { /* ignore */ }
+  const cr = res.headers.get('Content-Range') ?? ''
+  return Number(cr.split('/')[1] ?? '') || 0
+}
+
+// 内部 helper: 指定 chapter の 50 語ぶんだけ deck_words を position 範囲で取る。
+async function fetchChapterWordRows(deckId: string, chapterNo: number): Promise<SsrDeckWordRow[]> {
+  const from = (chapterNo - 1) * CHAPTER_SIZE
+  const to = from + CHAPTER_SIZE - 1
+  const url =
+    `${SUPABASE_URL}/rest/v1/deck_words` +
+    `?select=word,position,meaning,example,example_translation,rank,pinned_sense_id` +
+    `&deck_id=eq.${encodeURIComponent(deckId)}` +
+    `&position=gte.${from}&position=lte.${to}` +
+    `&order=position.asc`
+  const res = await fetch(url, {
+    headers: SUPABASE_HEADERS,
+    next: { revalidate: DAY, tags: [deckMetaTag(deckId), 'deck-words'] },
+  })
+  if (!res.ok) return []
+  return (await res.json()) as SsrDeckWordRow[]
+}
+
 /**
- * 章画面用。deck_words 全件のメタ情報は返しつつ、dictionary_cache は
- * 指定 chapter の 50 語ぶんだけ読み込む。deck_words の meaning/example/
- * example_translation は該当 chapter のエントリにだけ焼き込む。
- * SEO 用の章単語一覧を SSR HTML に含めるための最小コストが得られる。
+ * 章画面用。以下 3 本を並列で叩く:
+ *   1) その章の 50 語ぶんの deck_words (position 範囲で filter)
+ *   2) デッキ全体の総語数 (Content-Range のヘッダのみ拾って body は捨てる) —
+ *      totalChapters を出してロック判定と章数表示に使うため
+ *   3) → 1) が返ったあと、その 50 語ぶんの words + dictionary_cache
+ * 直列 3 段だった前バージョンから 2 段に短縮している。
  */
 export const getChapterEntriesSSR = cache(
-  async (deckId: string, chapterNo: number): Promise<DeckWordEntry[]> => {
+  async (
+    deckId: string,
+    chapterNo: number,
+  ): Promise<{ chapterEntries: DeckWordEntry[]; totalWords: number }> => {
     try {
-      const rows = await fetchDeckWordRows(deckId)
-      if (rows.length === 0) return []
+      const [totalWords, chapterRows] = await Promise.all([
+        fetchDeckWordCount(deckId),
+        fetchChapterWordRows(deckId, chapterNo),
+      ])
+      if (chapterRows.length === 0) return { chapterEntries: [], totalWords }
 
-      const from = (chapterNo - 1) * CHAPTER_SIZE
-      const to = from + CHAPTER_SIZE - 1
-      const chapterRows = rows.filter((r) => r.position >= from && r.position <= to)
       const chapterWords = chapterRows.map((r) => r.word)
-      const dictByWord =
-        chapterWords.length === 0
-          ? new Map<string, SavedWordDictionary | null>()
-          : await fetchDictionariesFor(chapterWords, [
-              deckMetaTag(deckId),
-              chapterDictTag(deckId, chapterNo),
-              'deck-dictionaries',
-            ])
-
-      return rows.map((row) => {
-        const light = rowToLightEntry(row)
-        if (row.position < from || row.position > to) return light
+      const dictByWord = await fetchDictionariesFor(chapterWords, [
+        deckMetaTag(deckId),
+        chapterDictTag(deckId, chapterNo),
+        'deck-dictionaries',
+      ])
+      const chapterEntries = chapterRows.map((row) => {
         const raw = dictByWord.get(row.word) ?? null
         const dictionary = applyDeckOverridesToDictionary(raw, {
           pinnedSenseId: row.pinned_sense_id ?? null,
@@ -210,10 +249,11 @@ export const getChapterEntriesSSR = cache(
           example: row.example ?? null,
           exampleTranslation: row.example_translation ?? null,
         })
-        return { ...light, dictionary }
+        return { ...rowToLightEntry(row), dictionary }
       })
+      return { chapterEntries, totalWords }
     } catch {
-      return []
+      return { chapterEntries: [], totalWords: 0 }
     }
   }
 )

@@ -46,11 +46,18 @@ export default function DeckClient({
   deck,
   initialEntries = [],
   chapter = null,
+  totalWordsHint,
 }: {
   deck: DeckInfo
   initialEntries?: DeckWordEntry[]
   /** null → デッキ画面、number → その章の画面 */
   chapter?: number | null
+  /**
+   * 章画面のときに親から渡す、デッキ全体の総単語数。
+   * 章画面は initialEntries に 50 語しか含まないので、totalChapters をここから算出する。
+   * デッキ画面 (chapter=null) では initialEntries.length が deck 全体なので不要。
+   */
+  totalWordsHint?: number
 }) {
   const router = useRouter()
   const [entries, setEntries] = useState<DeckWordEntry[]>(initialEntries)
@@ -176,10 +183,12 @@ export default function DeckClient({
     if (authData.user) {
       setUserId(authData.user.id)
       const uid = authData.user.id
+      // 「前回の続き」CTA はデッキ画面でしか使わないので、章画面では lastPlayedChapter
+      // のフェッチをスキップして 1 リクエスト削る。
       const results = await Promise.all([
         data.length > 0 ? loadStatus(data, uid) : Promise.resolve(),
         loadSavedWords(uid, data.map(e => e.word)),
-        loadLastPlayedChapter(uid, data),
+        chapter == null ? loadLastPlayedChapter(uid, data) : Promise.resolve(),
         getUserPlan(),
         fetchQuizSettings(uid),
       ] as const)
@@ -193,7 +202,7 @@ export default function DeckClient({
       setPlan('free')
     }
     setLoading(false)
-  }, [deck.id, initialEntries, loadStatus, loadSavedWords, loadLastPlayedChapter])
+  }, [deck.id, chapter, initialEntries, loadStatus, loadSavedWords, loadLastPlayedChapter])
 
   useEffect(() => {
     toast.dismiss()
@@ -243,7 +252,12 @@ export default function DeckClient({
     recent: availableEntries,
   }
 
-  const totalChapters = useMemo(() => chapterCount(entries.length), [entries.length])
+  // 章画面は entries が 50 語しかないので、親から渡された totalWordsHint (デッキ全体の
+  // 総語数) を使って totalChapters を出す。デッキ画面は entries が全件なのでそちら。
+  const totalChapters = useMemo(
+    () => chapterCount(totalWordsHint ?? entries.length),
+    [totalWordsHint, entries.length],
+  )
   const currentChapterLocked = chapter != null
     && isChapterLocked(chapter, deck.is_premium, totalChapters, plan)
 
@@ -313,23 +327,21 @@ export default function DeckClient({
     router.push(chapterHref(slugForUrl, n))
   }, [deck.is_premium, totalChapters, plan, isAuthed, openPaywall, router, slugForUrl])
 
-  // 章ごとの (mastered, total)
-  const chapterProgress = useMemo(() => {
-    const map = new Map<number, { mastered: number; total: number }>()
+  // 章一覧はデッキ画面でだけ描く。章画面では entries が 50 語しかないので
+  // 章別集計は正しく取れないし、そもそも表示もしないので skip する。
+  const chapters = useMemo(() => {
+    if (chapter != null) return []
+    const progressByChapter = new Map<number, { mastered: number; total: number }>()
     for (const e of entries) {
       const n = chapterOfPosition(e.position)
-      const bucket = map.get(n) ?? { mastered: 0, total: 0 }
+      const bucket = progressByChapter.get(n) ?? { mastered: 0, total: 0 }
       bucket.total++
       if (wordStatus.get(e.word) === 'mastered') bucket.mastered++
-      map.set(n, bucket)
+      progressByChapter.set(n, bucket)
     }
-    return map
-  }, [entries, wordStatus])
-
-  const chapters = useMemo(() => {
     const list: Array<{ no: number; mastered: number; total: number; locked: boolean }> = []
     for (let n = 1; n <= totalChapters; n++) {
-      const p = chapterProgress.get(n) ?? { mastered: 0, total: 0 }
+      const p = progressByChapter.get(n) ?? { mastered: 0, total: 0 }
       list.push({
         no: n,
         mastered: p.mastered,
@@ -338,7 +350,7 @@ export default function DeckClient({
       })
     }
     return list
-  }, [totalChapters, chapterProgress, deck.is_premium, plan])
+  }, [chapter, entries, wordStatus, totalChapters, deck.is_premium, plan])
 
   if (quizEntries !== null) {
     return (
