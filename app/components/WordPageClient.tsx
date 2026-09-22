@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import { HiSearch } from 'react-icons/hi'
 import EntryCard from '@/components/EntryCard'
+import ReportContentLink from '@/components/ReportContentLink'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
@@ -1208,6 +1209,10 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           ))}
         </ul>
       </section>
+    )}
+
+    {!noCard && dictionary && (
+      <ReportContentLink kind="word" content={word} />
     )}
 
     </div>

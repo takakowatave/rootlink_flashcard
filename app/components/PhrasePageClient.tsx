@@ -10,6 +10,7 @@ import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phras
 import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
+import ReportContentLink from '@/components/ReportContentLink'
 import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
 import { useAuthReload } from '@/lib/useAuthReload'
 
@@ -245,6 +246,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
           </div>
         )}
       </CardShell>
+      <ReportContentLink kind="phrase" content={card.phrase} />
     </div>
   )
 }

@@ -5,12 +5,15 @@
  *   node scripts/prefetch-deck-words.mjs --label TOEIC --limit 100
  *   node scripts/prefetch-deck-words.mjs --label IELTS --limit 50
  *   node scripts/prefetch-deck-words.mjs --limit 100   # 全ラベル
+ *   node scripts/prefetch-deck-words.mjs --words-file words.txt --limit 400 --i-know-the-cost
  *
  * オプション:
  *   --label   対象ラベル (TOEIC / IELTS / TOEFL / 英検)
  *   --limit   1回の実行で処理する上限語数 (デフォルト: 100)
  *   --dry-run 実際には叩かず、対象単語リストだけ表示
  *   --i-know-the-cost  Oxford 従量課金の合意確認。ないと 100 語超では実行拒否
+ *   --words-file  デッキに追加する前の単語を 1 行 1 語で書いたファイル。指定すると deck_words は見ない
+ *                 （デッキに空のカードを出さずに、先に辞書データを作るため）
  *
  * コスト前提:
  *   1 cache miss = 最大 2 Oxford API call (entries + inflections)
@@ -21,6 +24,7 @@
 const HARD_CAP_WITHOUT_ACK = 100
 
 import { createClient } from '@supabase/supabase-js'
+import { readFileSync } from 'node:fs'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -40,8 +44,18 @@ const label = get('--label')
 const limit = parseInt(get('--limit') ?? '100', 10)
 const dryRun = args.includes('--dry-run')
 const ackCost = args.includes('--i-know-the-cost')
+const wordsFile = get('--words-file')
 
-async function fetchUncachedWords() {
+function readWordsFile(path) {
+  return [...new Set(
+    readFileSync(path, 'utf-8')
+      .split(/\r?\n/)
+      .map(w => w.trim())
+      .filter(w => w && !w.startsWith('#'))
+  )]
+}
+
+async function fetchDeckWords() {
   let query = supabase
     .from('deck_words')
     .select('word, decks!inner(label)')
@@ -52,7 +66,11 @@ async function fetchUncachedWords() {
   const { data: deckRows, error } = await query
   if (error) throw error
 
-  const words = [...new Set((deckRows ?? []).map(r => r.word))].filter(Boolean)
+  return [...new Set((deckRows ?? []).map(r => r.word))].filter(Boolean)
+}
+
+async function fetchUncachedWords() {
+  const words = wordsFile ? readWordsFile(wordsFile) : await fetchDeckWords()
 
   // dictionary_cache に存在するか確認
   const { data: wordRows } = await supabase
@@ -90,7 +108,8 @@ async function resolveWord(word) {
 }
 
 async function main() {
-  console.log(`\n🔍 未キャッシュ単語を取得中... (label=${label ?? '全て'}, limit=${limit})`)
+  const source = wordsFile ? `file=${wordsFile}` : `label=${label ?? '全て'}`
+  console.log(`\n🔍 未キャッシュ単語を取得中... (${source}, limit=${limit})`)
   const words = await fetchUncachedWords()
   console.log(`対象: ${words.length}語\n`)
 

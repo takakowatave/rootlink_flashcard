@@ -1,7 +1,10 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { HiChevronRight } from 'react-icons/hi'
+import { MdClose } from 'react-icons/md'
 import CardShell from '@/components/CardShell'
+import ModalShell from '@/components/ModalShell'
 import TriDonutChart from '@/components/TriDonutChart'
 import QuizScopeSelector, { type QuizScope, type QuizScopeItem } from '@/components/QuizScopeSelector'
 import Button from '@/components/Button'
@@ -162,6 +165,7 @@ export default function QuizProgressPanel({
   settings,
 }: Props) {
   const hasScope = scopeItems && selectedScope && onScopeChange
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <>
@@ -185,53 +189,84 @@ export default function QuizProgressPanel({
       {settings && (
         <>
           <CardShell>
-            <SettingRow
-              label="デフォルト表示設定"
-              control={
-                <ModeSegmented
-                  value={settings.defaultMode}
-                  onChange={settings.onDefaultModeChange}
-                />
-              }
-            />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className="w-full flex items-center justify-between gap-4 px-1 py-1 text-left"
+            >
+              <span className="text-sm font-semibold text-gray-800">出題形式の設定</span>
+              <HiChevronRight className="size-5 text-muted shrink-0" />
+            </button>
           </CardShell>
-          <CardShell>
-            <SettingRow
-              label="一回の問題数"
-              control={
-                <CountStepper
-                  value={settings.questionCount}
-                  onChange={settings.onQuestionCountChange}
-                  min={settings.questionCountMin ?? 5}
-                  max={settings.questionCountMax}
+
+          <ModalShell
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            variant="halfsheet"
+            headerLeft={
+              <h2 className="text-base font-bold text-gray-950 pl-2">出題形式の設定</h2>
+            }
+            headerRight={
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 text-muted"
+                aria-label="閉じる"
+              >
+                <MdClose className="size-6" />
+              </button>
+            }
+          >
+            <div className="py-2 lg:py-4">
+              <CardShell>
+                <SettingRow
+                  label="デフォルト表示設定"
+                  control={
+                    <ModeSegmented
+                      value={settings.defaultMode}
+                      onChange={settings.onDefaultModeChange}
+                    />
+                  }
                 />
-              }
-            />
-          </CardShell>
-          <CardShell>
-            <SettingRow
-              label="例文音声の自動再生"
-              control={
-                <ToggleSwitch
-                  checked={settings.autoPlayAudio}
-                  onChange={settings.onAutoPlayAudioChange}
+              </CardShell>
+              <CardShell>
+                <SettingRow
+                  label="一回の問題数"
+                  control={
+                    <CountStepper
+                      value={settings.questionCount}
+                      onChange={settings.onQuestionCountChange}
+                      min={settings.questionCountMin ?? 5}
+                      max={settings.questionCountMax}
+                    />
+                  }
+                />
+              </CardShell>
+              <CardShell>
+                <SettingRow
                   label="例文音声の自動再生"
+                  control={
+                    <ToggleSwitch
+                      checked={settings.autoPlayAudio}
+                      onChange={settings.onAutoPlayAudioChange}
+                      label="例文音声の自動再生"
+                    />
+                  }
                 />
-              }
-            />
-          </CardShell>
-          <CardShell>
-            <SettingRow
-              label="見出し語音声の自動再生"
-              control={
-                <ToggleSwitch
-                  checked={settings.autoPlayHeadword}
-                  onChange={settings.onAutoPlayHeadwordChange}
+              </CardShell>
+              <CardShell>
+                <SettingRow
                   label="見出し語音声の自動再生"
+                  control={
+                    <ToggleSwitch
+                      checked={settings.autoPlayHeadword}
+                      onChange={settings.onAutoPlayHeadwordChange}
+                      label="見出し語音声の自動再生"
+                    />
+                  }
                 />
-              }
-            />
-          </CardShell>
+              </CardShell>
+            </div>
+          </ModalShell>
         </>
       )}
 
