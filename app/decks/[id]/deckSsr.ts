@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import { applyDeckOverridesToDictionary } from '@/lib/dictionaryRender'
 import type { DeckWordEntry } from '@/lib/supabaseApi'
+import { CHAPTER_SIZE } from '@/lib/chapters'
 
 export type DeckRow = {
   id: string
@@ -36,6 +37,16 @@ export const getDeck = cache(async (idOrSlug: string): Promise<DeckRow | null> =
   return (data as DeckRow | null) ?? null
 })
 
+// キャッシュタグ:
+//   - `deck-list`             : /decks 一覧
+//   - `deck-${deckId}`        : そのデッキの meta (word/position/rank/例文) と辞書
+//   - `deck-${deckId}-ch-${n}`: そのデッキのある章の辞書だけ
+// deck_words を書き換えたら revalidateTag(`deck-${deckId}`) を叩けば
+// デッキ画面と章画面が両方フレッシュになる。/api/revalidate/deck 経由。
+export const deckMetaTag = (deckId: string) => `deck-${deckId}`
+export const chapterDictTag = (deckId: string, chapterNo: number) =>
+  `deck-${deckId}-ch-${chapterNo}`
+
 const RANGE_CHUNK = 1000
 const WORDS_CHUNK = 500      // avg 8 chars * 500 ≈ 4KB URL — 安全
 const DICT_CHUNK = 200       // UUID 36 chars * 200 ≈ 7KB URL — 安全
@@ -53,102 +64,156 @@ type SsrDeckWordRow = {
 const deckWordsUrl = (deckId: string) =>
   `${SUPABASE_URL}/rest/v1/deck_words?select=word,position,meaning,example,example_translation,rank,pinned_sense_id&deck_id=eq.${encodeURIComponent(deckId)}&order=position.asc`
 
-// deck_words + words + dictionary_cache を REST 直叩きで取得（SSR で使う）。
-// クライアントの fetchDeckWords と同じ結果を返すが、Next.js Data Cache に載る。
-// 2,000 語超のデッキ (英検 1 級 ≈ 2,200 語) にも耐えるように:
-//   1) 先頭 range を Prefer: count=exact で叩いて総件数を Content-Range から取得
-//   2) 残りの range を Promise.all で並列取得
-//   3) words / dictionary_cache の .in() チャンクも Promise.all で並列化
-// これで直列 25 回超だった HTTP を先頭 1 + 並列 24 に短縮する。
-export const getDeckWordsSSR = cache(async (deckId: string): Promise<DeckWordEntry[]> => {
-  try {
-    const firstRes = await fetch(deckWordsUrl(deckId), {
-      headers: {
-        ...SUPABASE_HEADERS,
-        Range: `0-${RANGE_CHUNK - 1}`,
-        'Range-Unit': 'items',
-        Prefer: 'count=exact',
-      },
-      next: { revalidate: DAY },
-    })
-    if (!firstRes.ok) return []
-    const firstRows = (await firstRes.json()) as SsrDeckWordRow[]
-    if (firstRows.length === 0) return []
+// 内部 helper: deck_words 全件を position 順で取得 (辞書は含まない)。
+// 先頭 range を Prefer: count=exact で叩いて総件数を Content-Range から得て、
+// 残り range を Promise.all で並列取得する。
+async function fetchDeckWordRows(deckId: string): Promise<SsrDeckWordRow[]> {
+  const tags = [deckMetaTag(deckId), 'deck-words']
+  const firstRes = await fetch(deckWordsUrl(deckId), {
+    headers: {
+      ...SUPABASE_HEADERS,
+      Range: `0-${RANGE_CHUNK - 1}`,
+      'Range-Unit': 'items',
+      Prefer: 'count=exact',
+    },
+    next: { revalidate: DAY, tags },
+  })
+  if (!firstRes.ok) return []
+  const firstRows = (await firstRes.json()) as SsrDeckWordRow[]
+  if (firstRows.length === 0) return []
+  // Content-Range: "0-999/2200"
+  const contentRange = firstRes.headers.get('Content-Range') ?? ''
+  const total = Number(contentRange.split('/')[1] ?? '') || firstRows.length
 
-    // Content-Range: "0-999/2200" のような形式
-    const contentRange = firstRes.headers.get('Content-Range') ?? ''
-    const total = Number(contentRange.split('/')[1] ?? '') || firstRows.length
-
-    const restRanges: Array<[number, number]> = []
-    for (let from = RANGE_CHUNK; from < total; from += RANGE_CHUNK) {
-      restRanges.push([from, Math.min(from + RANGE_CHUNK - 1, total - 1)])
-    }
-    const restRows = (
-      await Promise.all(
-        restRanges.map(async ([a, b]) => {
-          const r = await fetch(deckWordsUrl(deckId), {
-            headers: { ...SUPABASE_HEADERS, Range: `${a}-${b}`, 'Range-Unit': 'items' },
-            next: { revalidate: DAY },
-          })
-          if (!r.ok) return [] as SsrDeckWordRow[]
-          return (await r.json()) as SsrDeckWordRow[]
+  const restRanges: Array<[number, number]> = []
+  for (let from = RANGE_CHUNK; from < total; from += RANGE_CHUNK) {
+    restRanges.push([from, Math.min(from + RANGE_CHUNK - 1, total - 1)])
+  }
+  const restRows = (
+    await Promise.all(
+      restRanges.map(async ([a, b]) => {
+        const r = await fetch(deckWordsUrl(deckId), {
+          headers: { ...SUPABASE_HEADERS, Range: `${a}-${b}`, 'Range-Unit': 'items' },
+          next: { revalidate: DAY, tags },
         })
-      )
-    ).flat()
-    const deckRows = [...firstRows, ...restRows]
-
-    const words = deckRows.map((r) => r.word)
-    const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
-    for (let i = 0; i < words.length; i += WORDS_CHUNK) {
-      const slice = words.slice(i, i + WORDS_CHUNK)
-      const inList = slice.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
-      wordChunkPromises.push(
-        fetch(
-          `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})`,
-          { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
-        ).then((r) => (r.ok ? r.json() : []))
-      )
-    }
-    const wordRows = (await Promise.all(wordChunkPromises)).flat() as Array<{ id: string; word: string }>
-    const wordIdByWord = new Map<string, string>(wordRows.map((r) => [r.word, r.id]))
-
-    const wordIds = [...wordIdByWord.values()]
-    const dictChunkPromises: Array<Promise<Array<{ word_id: string; payload: SavedWordDictionary | null }>>> = []
-    for (let i = 0; i < wordIds.length; i += DICT_CHUNK) {
-      const slice = wordIds.slice(i, i + DICT_CHUNK)
-      const idList = slice.map((id) => `"${id}"`).join(',')
-      dictChunkPromises.push(
-        fetch(
-          `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id,payload&word_id=in.(${encodeURIComponent(idList)})`,
-          { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
-        ).then((r) => (r.ok ? r.json() : []))
-      )
-    }
-    const cacheRows = (await Promise.all(dictChunkPromises)).flat()
-    const cacheByWordId = new Map<string, SavedWordDictionary | null>(
-      cacheRows.map((r) => [r.word_id, r.payload ?? null])
-    )
-
-    return deckRows.map((row) => {
-      const raw = cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null
-      const dictionary = applyDeckOverridesToDictionary(raw, {
-        pinnedSenseId: row.pinned_sense_id ?? null,
-        meaning: row.meaning ?? null,
-        example: row.example ?? null,
-        exampleTranslation: row.example_translation ?? null,
+        if (!r.ok) return [] as SsrDeckWordRow[]
+        return (await r.json()) as SsrDeckWordRow[]
       })
-      return {
-        word: row.word,
-        position: row.position,
-        meaning: row.meaning ?? null,
-        example: row.example ?? null,
-        example_translation: row.example_translation ?? null,
-        rank: row.rank ?? null,
-        pinned_sense_id: row.pinned_sense_id ?? null,
-        dictionary,
-      }
-    })
+    )
+  ).flat()
+  return [...firstRows, ...restRows]
+}
+
+function rowToLightEntry(row: SsrDeckWordRow): DeckWordEntry {
+  return {
+    word: row.word,
+    position: row.position,
+    meaning: row.meaning ?? null,
+    example: row.example ?? null,
+    example_translation: row.example_translation ?? null,
+    rank: row.rank ?? null,
+    pinned_sense_id: row.pinned_sense_id ?? null,
+    dictionary: null,
+  }
+}
+
+// 内部 helper: 指定 word[] の dictionary_cache を並列取得して word→payload を返す。
+async function fetchDictionariesFor(
+  words: string[],
+  tags: string[],
+): Promise<Map<string, SavedWordDictionary | null>> {
+  const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
+  for (let i = 0; i < words.length; i += WORDS_CHUNK) {
+    const slice = words.slice(i, i + WORDS_CHUNK)
+    const inList = slice.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
+    wordChunkPromises.push(
+      fetch(
+        `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY, tags } }
+      ).then((r) => (r.ok ? r.json() : []))
+    )
+  }
+  const wordRows = (await Promise.all(wordChunkPromises)).flat() as Array<{ id: string; word: string }>
+  const wordIdByWord = new Map<string, string>(wordRows.map((r) => [r.word, r.id]))
+
+  const wordIds = [...wordIdByWord.values()]
+  const dictChunkPromises: Array<Promise<Array<{ word_id: string; payload: SavedWordDictionary | null }>>> = []
+  for (let i = 0; i < wordIds.length; i += DICT_CHUNK) {
+    const slice = wordIds.slice(i, i + DICT_CHUNK)
+    const idList = slice.map((id) => `"${id}"`).join(',')
+    dictChunkPromises.push(
+      fetch(
+        `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id,payload&word_id=in.(${encodeURIComponent(idList)})`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY, tags } }
+      ).then((r) => (r.ok ? r.json() : []))
+    )
+  }
+  const cacheRows = (await Promise.all(dictChunkPromises)).flat()
+  const cacheByWordId = new Map<string, SavedWordDictionary | null>(
+    cacheRows.map((r) => [r.word_id, r.payload ?? null])
+  )
+  const byWord = new Map<string, SavedWordDictionary | null>()
+  for (const [word, wordId] of wordIdByWord.entries()) {
+    byWord.set(word, cacheByWordId.get(wordId) ?? null)
+  }
+  return byWord
+}
+
+/**
+ * デッキ画面用 (dictionary_cache を読まない軽量版)。
+ * word/position/rank/例文差し替え項目だけの deck_words 行を返し、
+ * dictionary は常に null。scope カウント・章一覧・「前回の続き」計算に十分。
+ * SSR HTML から dictionary payload (per-word 数 KB) が抜けるため、
+ * 2,200 語のデッキで HTML サイズが劇的に縮む。
+ */
+export const getDeckWordsMetaSSR = cache(async (deckId: string): Promise<DeckWordEntry[]> => {
+  try {
+    const rows = await fetchDeckWordRows(deckId)
+    return rows.map(rowToLightEntry)
   } catch {
     return []
   }
 })
+
+/**
+ * 章画面用。deck_words 全件のメタ情報は返しつつ、dictionary_cache は
+ * 指定 chapter の 50 語ぶんだけ読み込む。deck_words の meaning/example/
+ * example_translation は該当 chapter のエントリにだけ焼き込む。
+ * SEO 用の章単語一覧を SSR HTML に含めるための最小コストが得られる。
+ */
+export const getChapterEntriesSSR = cache(
+  async (deckId: string, chapterNo: number): Promise<DeckWordEntry[]> => {
+    try {
+      const rows = await fetchDeckWordRows(deckId)
+      if (rows.length === 0) return []
+
+      const from = (chapterNo - 1) * CHAPTER_SIZE
+      const to = from + CHAPTER_SIZE - 1
+      const chapterRows = rows.filter((r) => r.position >= from && r.position <= to)
+      const chapterWords = chapterRows.map((r) => r.word)
+      const dictByWord =
+        chapterWords.length === 0
+          ? new Map<string, SavedWordDictionary | null>()
+          : await fetchDictionariesFor(chapterWords, [
+              deckMetaTag(deckId),
+              chapterDictTag(deckId, chapterNo),
+              'deck-dictionaries',
+            ])
+
+      return rows.map((row) => {
+        const light = rowToLightEntry(row)
+        if (row.position < from || row.position > to) return light
+        const raw = dictByWord.get(row.word) ?? null
+        const dictionary = applyDeckOverridesToDictionary(raw, {
+          pinnedSenseId: row.pinned_sense_id ?? null,
+          meaning: row.meaning ?? null,
+          example: row.example ?? null,
+          exampleTranslation: row.example_translation ?? null,
+        })
+        return { ...light, dictionary }
+      })
+    } catch {
+      return []
+    }
+  }
+)

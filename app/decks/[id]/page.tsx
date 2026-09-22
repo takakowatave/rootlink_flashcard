@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import DeckClient from './DeckClient'
 import { toShortName } from '@/lib/deckDisplay'
-import { getDeck, getDeckWordsSSR, UUID_RE, type DeckRow } from './deckSsr'
+import { getDeck, getDeckWordsMetaSSR, UUID_RE, type DeckRow } from './deckSsr'
 
 function buildTitleHead(label: string, shortName: string): string {
   if (label === 'TOEIC') return shortName === '頻出' ? 'TOEIC 頻出' : `TOEIC ${shortName}点`
@@ -48,7 +48,9 @@ export default async function DeckPage({ params }: { params: { id: string } }) {
     permanentRedirect(`/decks/${deck.slug}`)
   }
 
-  const initialEntries = await getDeckWordsSSR(deck.id)
+  // デッキ画面は dictionary_cache を読まない (章一覧 / 進捗グラフ / 前回の続きに不要)。
+  // 章に入ったときだけ、その章の 50 語ぶんの辞書を読む。
+  const initialEntries = await getDeckWordsMetaSSR(deck.id)
 
   return (
     <DeckClient

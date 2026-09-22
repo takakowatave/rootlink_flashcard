@@ -217,7 +217,13 @@ export default function DeckClient({
     return entries.filter(e => chapterOfPosition(e.position) === chapter)
   }, [entries, chapter])
 
-  const availableEntries = scopedEntries.filter(e => !!e.dictionary)
+  // 章画面はクイズ開始があるので dictionary_cache が入ってる語だけを quiz 対象にする。
+  // デッキ画面は「はじめる」ボタンがない (前回の続きで章画面へ遷移する) ため、
+  // dictionary を待たずに deck_words だけでスコープ数を出す (SSR 軽量化のため
+  // デッキ画面では dictionary_cache を読まなくしている)。
+  const availableEntries = chapter == null
+    ? scopedEntries
+    : scopedEntries.filter(e => !!e.dictionary)
   const availableCount = availableEntries.length
 
   const hardWords = availableEntries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2)
@@ -458,7 +464,7 @@ export default function DeckClient({
       {chapter == null && entries.length > 0 && (
         <nav aria-hidden="true" className="sr-only">
           <ul>
-            {entries.filter(e => !!e.dictionary).map((entry) => (
+            {entries.map((entry) => (
               <li key={`ssr-${entry.word}`}>
                 <a href={`/word/${encodeURIComponent(entry.word)}`} tabIndex={-1}>
                   {entry.word}

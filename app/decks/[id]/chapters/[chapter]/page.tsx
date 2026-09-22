@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import DeckClient from '../../DeckClient'
-import { getDeck, getDeckWordsSSR, UUID_RE, type DeckRow } from '../../deckSsr'
+import { getDeck, getChapterEntriesSSR, UUID_RE, type DeckRow } from '../../deckSsr'
 import { chapterCount } from '@/lib/chapters'
 
 function canonicalPath(deck: DeckRow, chapter: number): string {
@@ -36,7 +36,7 @@ export default async function ChapterPage({ params }: { params: { id: string; ch
     permanentRedirect(canonicalPath(deck, chapter))
   }
 
-  const initialEntries = await getDeckWordsSSR(deck.id)
+  const initialEntries = await getChapterEntriesSSR(deck.id, chapter)
   const total = chapterCount(initialEntries.length)
   if (chapter > total) notFound()
 
