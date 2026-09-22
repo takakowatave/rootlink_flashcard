@@ -3,9 +3,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
 import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
-import BlogContent from '../BlogContent'
-import Button from '@/components/Button'
-import AuthorBox from '@/components/AuthorBox'
+import BlogArticle from '@/components/blog/BlogArticle'
 import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import type { SavedWordDictionary } from '@/types/Dictionary'
@@ -118,112 +116,16 @@ export default async function BlogPostPage({ params }: Params) {
         </Link>
       </nav>
 
-      <article>
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {post.hero_image_url && (
-            <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={post.hero_image_url}
-                alt={post.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-
-          <div className="px-5 py-8 sm:px-8 sm:py-10">
-            <header className="mb-8">
-              {post.tags && post.tags.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-line px-2 py-0.5 text-sm text-muted"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-              <p className="mt-3 text-sm text-muted">
-                {new Date(post.published_at!).toLocaleDateString('ja-JP')}
-              </p>
-            </header>
-
-            {headings.length > 0 && (
-              <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
-                <p className="mb-2 text-sm font-semibold text-muted">目次</p>
-                <ul className="space-y-1 text-base">
-                  {headings.map((h) => (
-                    <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
-                      <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
-                        {h.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            )}
-
-            <div className="prose prose-base max-w-none
-              prose-headings:text-gray-950 prose-headings:font-semibold
-              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
-              prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
-              prose-p:text-gray-800 prose-p:leading-relaxed
-              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-              prose-blockquote:border-l-4 prose-blockquote:border-primary
-              prose-blockquote:not-italic prose-blockquote:text-gray-700
-              prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-              prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-base
-              prose-hr:border-line
-            ">
-              <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
-            </div>
-          </div>
-        </div>
-
-        {/* 末尾 CTA */}
-        <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-          <p className="mb-3 text-base text-gray-800">
-            気に入った表現は、RootLink に保存して復習しよう。
-          </p>
-          <Link href="/signup">
-            <Button variant="primary" size="md" radius="lg">
-              無料で始める
-            </Button>
-          </Link>
-        </div>
-
-        {/* 前後ナビ */}
-        {(prev || next) && (
-          <nav className="mt-10 flex items-stretch justify-between gap-3 border-t border-line pt-6">
-            {prev ? (
-              <Link
-                href={`/blog/${prev.slug}`}
-                className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-muted"
-              >
-                <p className="text-sm text-muted">← 前の記事</p>
-                <p className="mt-1 line-clamp-1 text-base text-gray-800">{prev.title}</p>
-              </Link>
-            ) : <span className="flex-1" />}
-            {next ? (
-              <Link
-                href={`/blog/${next.slug}`}
-                className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-right transition-colors hover:border-muted"
-              >
-                <p className="text-sm text-muted">次の記事 →</p>
-                <p className="mt-1 line-clamp-1 text-base text-gray-800">{next.title}</p>
-              </Link>
-            ) : <span className="flex-1" />}
-          </nav>
-        )}
-
-        {/* 著者 */}
-        <AuthorBox author={BLOG_AUTHOR} className="mt-10" />
-      </article>
+      <BlogArticle
+        post={post}
+        displayDate={post.published_at!}
+        headings={headings}
+        phraseMap={phraseMap}
+        wordCardMap={wordCardMap}
+        author={BLOG_AUTHOR}
+        prev={prev}
+        next={next}
+      />
     </main>
   )
 }

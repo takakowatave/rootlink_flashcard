@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import type { Post } from '@/lib/blog'
+import { BlogDate, BlogTagList } from '@/components/blog/BlogMeta'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -48,22 +49,9 @@ export default async function BlogListPage() {
                 href={`/blog/${post.slug}`}
                 className="block rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
               >
-                {post.tags && post.tags.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {post.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-line px-2 py-0.5 text-sm text-muted"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <BlogTagList tags={post.tags} className="mb-2" />
                 <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
-                <p className="mt-2 text-sm text-muted">
-                  {new Date(post.published_at ?? post.created_at).toLocaleDateString('ja-JP')}
-                </p>
+                <BlogDate date={post.published_at ?? post.created_at} className="mt-2" />
               </Link>
             </li>
           ))}
