@@ -73,7 +73,9 @@ export default function DeckClient({
   const [selectedEntry, setSelectedEntry] = useState<DeckWordEntry | null>(null)
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
   const [lastPlayedChapter, setLastPlayedChapter] = useState<number | null>(null)
-  const [nativeChecked, setNativeChecked] = useState(false)
+  // Native 判定は client-only。SSR / 初期 client render では false 扱いにして
+  // Web 前提の HTML を出す (SEO のために章単語リストは HTML に含めたい)。
+  // Capacitor 実行時は mount 直後の useEffect で true に反転し、単語リストを畳む。
   const [isNative, setIsNative] = useState(false)
 
   const openWord = useCallback((entry: DeckWordEntry) => {
@@ -86,7 +88,6 @@ export default function DeckClient({
 
   useEffect(() => {
     setIsNative(isNativePlatform())
-    setNativeChecked(true)
   }, [])
 
   useEffect(() => {
@@ -370,8 +371,10 @@ export default function DeckClient({
 
   // 単語一覧プレビュー表示条件:
   //   - 章画面のみ (デッキ画面では表示しない)
-  //   - native では非表示、Web のみ (SEO のため)
-  const showWordPreview = chapter != null && nativeChecked && !isNative
+  //   - native では非表示、Web のみ (SEO のため章単位で HTML に含める)
+  //   - SSR / 初期 client render は Web 扱い (isNative=false) なので Web と同じ HTML が
+  //     出る。Capacitor 上では mount 後の useEffect で isNative=true に切り替わり畳む。
+  const showWordPreview = chapter != null && !isNative
 
   return (
     <>
