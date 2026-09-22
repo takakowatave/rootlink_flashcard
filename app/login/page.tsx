@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
+import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 
 interface FormData {
@@ -23,6 +24,8 @@ interface FormData {
 export default function AuthLogin() {
   const router = useRouter();
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
 
   const {
@@ -36,6 +39,11 @@ export default function AuthLogin() {
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
+      options: {
+        // 総当たり攻撃対策の captcha。未配布時は空文字で送り、Supabase 側で captcha が
+        // 無効なら無視される。有効時は 400 で弾かれる。
+        captchaToken: captchaToken || undefined,
+      },
     });
     if (error) {
       // メール/パスワードのどちらが間違っているかは Supabase から特定できないので、
@@ -65,6 +73,7 @@ export default function AuthLogin() {
             error={errors.password}
             {...register("password", { required: "パスワードは必須です" })}
           />
+          <TurnstileWidget onVerify={handleCaptcha} />
           <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
             {isSubmitting ? "ログイン中..." : "ログイン"}
           </Button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
+import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
@@ -33,6 +34,8 @@ export default function AuthSignup() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [existingAccount, setExistingAccount] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   // native は /onboarding のスプラッシュで規約・プライバシーへの同意動線を
   // 通しているので、signup の checkbox は重複。ここでは Web だけ出す。
   // hydration mismatch を避けるため mount 後に判定する。
@@ -58,7 +61,12 @@ export default function AuthSignup() {
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { emailRedirectTo },
+      options: {
+        emailRedirectTo,
+        // 未配布時は空文字。Supabase Dashboard 側で captcha protection が有効
+        // なら 400 で弾かれる (段階導入前提)。無効なら captchaToken は無視される。
+        captchaToken: captchaToken || undefined,
+      },
     });
     if (error) {
       setError("email", { message: error.message });
@@ -146,6 +154,7 @@ export default function AuthSignup() {
                   に同意する
                 </TermsAgreementCheckbox>
               )}
+              <TurnstileWidget onVerify={handleCaptcha} />
               <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
                 {isSubmitting ? "登録中..." : "新規作成"}
               </Button>
