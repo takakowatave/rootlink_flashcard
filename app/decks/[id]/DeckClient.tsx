@@ -162,19 +162,29 @@ export default function DeckClient({
   }, [deck.id])
 
   const reload = useCallback(async () => {
-    const [data, { data: authData }] = await Promise.all([
-      fetchDeckWords(deck.id),
+    // entries は SSR で initialEntries が渡ってくる (Data Cache DAY で再検証) ため、
+    // client 側では再取得しない。ユーザー固有状態 (auth / quiz_results / saved_words /
+    // last chapter / plan / settings) だけを並列で叩く。initialEntries が空のとき
+    // (SSR 失敗など) のみ fallback として fetchDeckWords する。
+    const [{ data: authData }, refreshedEntries] = await Promise.all([
       supabase.auth.getUser(),
+      initialEntries.length === 0 ? fetchDeckWords(deck.id) : Promise.resolve(null),
     ])
-    setEntries(data)
+    const data = refreshedEntries ?? initialEntries
+    if (refreshedEntries) setEntries(refreshedEntries)
     setIsAuthed(!!authData.user)
     if (authData.user) {
       setUserId(authData.user.id)
-      if (data.length > 0) await loadStatus(data, authData.user.id)
-      await loadSavedWords(authData.user.id, data.map(e => e.word))
-      await loadLastPlayedChapter(authData.user.id, data)
-      setPlan(await getUserPlan())
-      const settings = await fetchQuizSettings(authData.user.id)
+      const uid = authData.user.id
+      const results = await Promise.all([
+        data.length > 0 ? loadStatus(data, uid) : Promise.resolve(),
+        loadSavedWords(uid, data.map(e => e.word)),
+        loadLastPlayedChapter(uid, data),
+        getUserPlan(),
+        fetchQuizSettings(uid),
+      ] as const)
+      const [, , , userPlan, settings] = results
+      setPlan(userPlan)
       setQuizDefaultMode(settings.defaultMode)
       setQuizCount(settings.questionCount)
       setQuizAutoAudio(settings.autoPlayAudio)
@@ -183,7 +193,7 @@ export default function DeckClient({
       setPlan('free')
     }
     setLoading(false)
-  }, [deck.id, loadStatus, loadSavedWords, loadLastPlayedChapter])
+  }, [deck.id, initialEntries, loadStatus, loadSavedWords, loadLastPlayedChapter])
 
   useEffect(() => {
     toast.dismiss()

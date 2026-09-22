@@ -37,7 +37,8 @@ export const getDeck = cache(async (idOrSlug: string): Promise<DeckRow | null> =
 })
 
 const RANGE_CHUNK = 1000
-const IN_CHUNK = 200
+const WORDS_CHUNK = 500      // avg 8 chars * 500 ≈ 4KB URL — 安全
+const DICT_CHUNK = 200       // UUID 36 chars * 200 ≈ 7KB URL — 安全
 
 type SsrDeckWordRow = {
   word: string
@@ -49,59 +50,84 @@ type SsrDeckWordRow = {
   pinned_sense_id: string | null
 }
 
+const deckWordsUrl = (deckId: string) =>
+  `${SUPABASE_URL}/rest/v1/deck_words?select=word,position,meaning,example,example_translation,rank,pinned_sense_id&deck_id=eq.${encodeURIComponent(deckId)}&order=position.asc`
+
 // deck_words + words + dictionary_cache を REST 直叩きで取得（SSR で使う）。
 // クライアントの fetchDeckWords と同じ結果を返すが、Next.js Data Cache に載る。
-// 2,000 語超のデッキにも対応するため deck_words は Range ヘッダで range 分割、
-// words / dictionary_cache は URL 長対策で .in() を 200 件ずつに分割する。
+// 2,000 語超のデッキ (英検 1 級 ≈ 2,200 語) にも耐えるように:
+//   1) 先頭 range を Prefer: count=exact で叩いて総件数を Content-Range から取得
+//   2) 残りの range を Promise.all で並列取得
+//   3) words / dictionary_cache の .in() チャンクも Promise.all で並列化
+// これで直列 25 回超だった HTTP を先頭 1 + 並列 24 に短縮する。
 export const getDeckWordsSSR = cache(async (deckId: string): Promise<DeckWordEntry[]> => {
   try {
-    const deckRows: SsrDeckWordRow[] = []
-    let from = 0
-    while (true) {
-      const to = from + RANGE_CHUNK - 1
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/deck_words?select=word,position,meaning,example,example_translation,rank,pinned_sense_id&deck_id=eq.${encodeURIComponent(deckId)}&order=position.asc`,
-        {
-          headers: { ...SUPABASE_HEADERS, Range: `${from}-${to}`, 'Range-Unit': 'items' },
-          next: { revalidate: DAY },
-        }
-      )
-      if (!res.ok) break
-      const rows = (await res.json()) as SsrDeckWordRow[]
-      if (rows.length === 0) break
-      deckRows.push(...rows)
-      if (rows.length < RANGE_CHUNK) break
-      from += RANGE_CHUNK
+    const firstRes = await fetch(deckWordsUrl(deckId), {
+      headers: {
+        ...SUPABASE_HEADERS,
+        Range: `0-${RANGE_CHUNK - 1}`,
+        'Range-Unit': 'items',
+        Prefer: 'count=exact',
+      },
+      next: { revalidate: DAY },
+    })
+    if (!firstRes.ok) return []
+    const firstRows = (await firstRes.json()) as SsrDeckWordRow[]
+    if (firstRows.length === 0) return []
+
+    // Content-Range: "0-999/2200" のような形式
+    const contentRange = firstRes.headers.get('Content-Range') ?? ''
+    const total = Number(contentRange.split('/')[1] ?? '') || firstRows.length
+
+    const restRanges: Array<[number, number]> = []
+    for (let from = RANGE_CHUNK; from < total; from += RANGE_CHUNK) {
+      restRanges.push([from, Math.min(from + RANGE_CHUNK - 1, total - 1)])
     }
-    if (deckRows.length === 0) return []
+    const restRows = (
+      await Promise.all(
+        restRanges.map(async ([a, b]) => {
+          const r = await fetch(deckWordsUrl(deckId), {
+            headers: { ...SUPABASE_HEADERS, Range: `${a}-${b}`, 'Range-Unit': 'items' },
+            next: { revalidate: DAY },
+          })
+          if (!r.ok) return [] as SsrDeckWordRow[]
+          return (await r.json()) as SsrDeckWordRow[]
+        })
+      )
+    ).flat()
+    const deckRows = [...firstRows, ...restRows]
 
     const words = deckRows.map((r) => r.word)
-    const wordIdByWord = new Map<string, string>()
-    for (let i = 0; i < words.length; i += IN_CHUNK) {
-      const slice = words.slice(i, i + IN_CHUNK)
+    const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
+    for (let i = 0; i < words.length; i += WORDS_CHUNK) {
+      const slice = words.slice(i, i + WORDS_CHUNK)
       const inList = slice.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})`,
-        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      wordChunkPromises.push(
+        fetch(
+          `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})`,
+          { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+        ).then((r) => (r.ok ? r.json() : []))
       )
-      if (!res.ok) continue
-      const rows = (await res.json()) as Array<{ id: string; word: string }>
-      rows.forEach((r) => wordIdByWord.set(r.word, r.id))
     }
+    const wordRows = (await Promise.all(wordChunkPromises)).flat() as Array<{ id: string; word: string }>
+    const wordIdByWord = new Map<string, string>(wordRows.map((r) => [r.word, r.id]))
 
     const wordIds = [...wordIdByWord.values()]
-    const cacheByWordId = new Map<string, SavedWordDictionary | null>()
-    for (let i = 0; i < wordIds.length; i += IN_CHUNK) {
-      const slice = wordIds.slice(i, i + IN_CHUNK)
+    const dictChunkPromises: Array<Promise<Array<{ word_id: string; payload: SavedWordDictionary | null }>>> = []
+    for (let i = 0; i < wordIds.length; i += DICT_CHUNK) {
+      const slice = wordIds.slice(i, i + DICT_CHUNK)
       const idList = slice.map((id) => `"${id}"`).join(',')
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id,payload&word_id=in.(${encodeURIComponent(idList)})`,
-        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      dictChunkPromises.push(
+        fetch(
+          `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id,payload&word_id=in.(${encodeURIComponent(idList)})`,
+          { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+        ).then((r) => (r.ok ? r.json() : []))
       )
-      if (!res.ok) continue
-      const rows = (await res.json()) as Array<{ word_id: string; payload: SavedWordDictionary | null }>
-      rows.forEach((r) => cacheByWordId.set(r.word_id, r.payload ?? null))
     }
+    const cacheRows = (await Promise.all(dictChunkPromises)).flat()
+    const cacheByWordId = new Map<string, SavedWordDictionary | null>(
+      cacheRows.map((r) => [r.word_id, r.payload ?? null])
+    )
 
     return deckRows.map((row) => {
       const raw = cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null
