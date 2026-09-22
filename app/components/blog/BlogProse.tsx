@@ -15,6 +15,9 @@ const PROSE_CLASS = [
   'prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line',
   'prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-base',
   'prose-hr:border-line',
+  // <mark> は蛍光ペン風のハイライト（下40%だけ薄いオレンジ＝ティールの補色）
+  '[&_mark]:bg-transparent [&_mark]:bg-[linear-gradient(transparent_60%,#fed7aa_60%)] [&_mark]:font-semibold [&_mark]:text-gray-950 [&_mark]:px-0.5',
+  'prose-strong:text-gray-950',
 ].join(' ')
 
 export default function BlogProse({ children }: { children: ReactNode }) {

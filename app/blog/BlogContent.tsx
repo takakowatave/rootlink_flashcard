@@ -7,6 +7,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import PhraseCardEmbed, { type EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import WordCardEmbed from '@/components/WordCardEmbed'
+import WordCheckList from '@/components/blog/WordCheckList'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 type Props = {
@@ -19,17 +20,20 @@ type Props = {
 // 統一マーカーに置換 → split で分割 → 順番に埋め込みコンポーネントに差し替える。
 const PHRASE_CARD_RE = /<phrase-card\s+id=["']([^"']+)["']\s*(?:\/>|><\/phrase-card>)/gi
 const WORD_CARD_RE = /<word-card\s+([^/>]+?)\s*(?:\/>|><\/word-card>)/gi
+const WORD_LIST_RE = /<word-list\s+words=["']([^"']+)["']\s*(?:\/>|><\/word-list>)/gi
 
 type Token =
   | { kind: 'md'; text: string }
   | { kind: 'phrase'; id: string }
   | { kind: 'word'; word: string; senseIndex?: number }
+  | { kind: 'wordlist'; words: string[] }
 
 function tokenize(source: string): Token[] {
   const tokens: Token[] = []
   type Match =
     | { start: number; end: number; kind: 'phrase'; id: string }
     | { start: number; end: number; kind: 'word'; word: string; senseIndex?: number }
+    | { start: number; end: number; kind: 'wordlist'; words: string[] }
   const matches: Match[] = []
 
   let m: RegExpExecArray | null
@@ -50,6 +54,12 @@ function tokenize(source: string): Token[] {
     matches.push({ start: m.index, end: m.index + m[0].length, kind: 'word', word, senseIndex })
   }
 
+  WORD_LIST_RE.lastIndex = 0
+  while ((m = WORD_LIST_RE.exec(source)) !== null) {
+    const words = m[1].split(',').map((w) => w.trim()).filter(Boolean)
+    matches.push({ start: m.index, end: m.index + m[0].length, kind: 'wordlist', words })
+  }
+
   matches.sort((a, b) => a.start - b.start)
 
   let cursor = 0
@@ -59,6 +69,8 @@ function tokenize(source: string): Token[] {
     }
     if (match.kind === 'phrase') {
       tokens.push({ kind: 'phrase', id: match.id })
+    } else if (match.kind === 'wordlist') {
+      tokens.push({ kind: 'wordlist', words: match.words })
     } else {
       tokens.push({ kind: 'word', word: match.word, senseIndex: match.senseIndex })
     }
@@ -108,6 +120,9 @@ export default function BlogContent({ content, phraseMap, wordCardMap = {} }: Pr
               <PhraseCardEmbed phrase={phrase} />
             </Fragment>
           )
+        }
+        if (t.kind === 'wordlist') {
+          return <WordCheckList key={`wl-${i}`} words={t.words} />
         }
         // t.kind === 'word'
         const dictionary = wordCardMap[t.word] ?? null
