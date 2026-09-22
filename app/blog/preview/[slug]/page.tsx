@@ -157,7 +157,7 @@ export default async function BlogPreviewPage({ params }: Params) {
               prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900
+              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-sm
               prose-hr:border-line
             ">
               <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
