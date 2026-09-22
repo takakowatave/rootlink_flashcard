@@ -10,6 +10,9 @@ import type { SavedWordDictionary } from '@/types/Dictionary'
 
 // プレビュー: 下書き含めて slug で1件取得。SSR キャッシュしない
 export const dynamic = 'force-dynamic'
+// supabase-js の fetch が Data Cache に載り、下書きを編集しても古い本文が出続けていた。
+// プレビューは常に最新を見たいので fetch もキャッシュしない。
+export const fetchCache = 'force-no-store'
 
 // プレビュールートは検索エンジンにインデックスさせない
 export const metadata: Metadata = {
