@@ -410,18 +410,14 @@ export default function DeckClient({
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
       {paywallVariant && <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />}
 
-      <PageHeader items={breadcrumbItems} />
+      <PageHeader items={breadcrumbItems} showSearch={chapter != null} />
 
       <QuizProgressPanel
         header={
           <div>
-            <span className="text-xs font-semibold text-primary bg-primary-subtle px-2 py-0.5 rounded-full">{deck.label}</span>
-            <h2 className="text-xl font-bold text-gray-900 mt-2">
+            <h2 className="text-xl font-bold text-gray-900">
               {deck.name}{chapter != null ? ` ・ ${chapterLabel(chapter)}` : ''}
             </h2>
-            {chapter == null && deck.description && (
-              <p className="text-sm text-gray-500 mt-1">{deck.description}</p>
-            )}
           </div>
         }
         mastered={masteredCount}

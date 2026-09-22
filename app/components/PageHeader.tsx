@@ -13,7 +13,14 @@ import Breadcrumb, { type BreadcrumbItem } from './Breadcrumb'
 // 幅: 外側の sticky 帯は常に viewport 100% (ロゴ Header と同じ)。
 // 中身だけを max-w-[600px] mx-auto で中央寄せする。呼び出し側の
 // max-w ラッパの外側に配置する運用が前提。
-export default function PageHeader({ items }: { items: BreadcrumbItem[] }) {
+export default function PageHeader({
+  items,
+  showSearch = true,
+}: {
+  items: BreadcrumbItem[]
+  /** SP の 56px ヘッダーで検索バーを出すか。デッキ画面など学習中に不要な画面は false。 */
+  showSearch?: boolean
+}) {
   const router = useRouter()
   return (
     <>
@@ -28,15 +35,17 @@ export default function PageHeader({ items }: { items: BreadcrumbItem[] }) {
           >
             <MdArrowBackIosNew className="size-6" />
           </button>
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-            className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
-            aria-label="検索を開く"
-          >
-            <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
-            <HiSearch className="size-5 text-muted shrink-0" />
-          </button>
+          {showSearch && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+              className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
+              aria-label="検索を開く"
+            >
+              <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
+              <HiSearch className="size-5 text-muted shrink-0" />
+            </button>
+          )}
         </div>
       </div>
       {/* PC: パンくず */}
