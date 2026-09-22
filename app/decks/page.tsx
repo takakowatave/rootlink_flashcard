@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import DeckCard from '@/components/DeckCard'
 import DeckLabelBadge from '@/components/DeckLabelBadge'
 import PageHeader from '@/components/PageHeader'
@@ -14,44 +13,20 @@ type Deck = {
   is_premium: boolean
 }
 
-async function getPlanServer(): Promise<'premium' | 'free'> {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 'free'
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_tester')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (profile?.is_tester) return 'premium'
-
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('status')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (sub?.status === 'active' || sub?.status === 'trialing') return 'premium'
-
-  return 'free'
-}
-
+// 章単位の課金へ移行したため、デッキカードでは premium 判定を出さない (常に全デッキを開ける)
 export default async function DecksPage() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const [{ data: decksData }, plan] = await Promise.all([
-    supabase
-      .from('decks')
-      .select('id, slug, name, label, word_count, is_premium')
-      .eq('is_official', true)
-      .order('label')
-      .order('name')
-      .limit(100),
-    getPlanServer(),
-  ])
+  const { data: decksData } = await supabase
+    .from('decks')
+    .select('id, slug, name, label, word_count, is_premium')
+    .eq('is_official', true)
+    .order('label')
+    .order('name')
+    .limit(100)
   const decks = (decksData ?? []) as Deck[]
 
   return (
@@ -83,7 +58,6 @@ export default async function DecksPage() {
                         title={shortName}
                         imageSrc={getDeckImage(deck.label, shortName)}
                         wordCount={deck.word_count}
-                        isPremium={deck.is_premium && plan === 'free'}
                         href={`/decks/${deck.slug ?? deck.id}`}
                       />
                     )

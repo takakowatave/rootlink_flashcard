@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { WordInfo } from "@/types/WordInfo";
 import type { SavedWordDictionary } from "@/types/Dictionary";
+import { applyDeckOverridesToDictionary } from "./dictionaryRender";
 
 type SavedWordQueryRow = {
   id: string
@@ -568,44 +569,93 @@ export const fetchSavedPhrases = async (userId: string): Promise<SavedPhraseRow[
 /* =========================================
  ③ デッキ単語取得（deck_words + dictionary_cache）
 ========================================= */
-export const fetchDeckWords = async (deckId: string) => {
-  const { data: deckRows } = await supabase
-    .from('deck_words')
-    .select('word, meaning')
-    .eq('deck_id', deckId)
-    .limit(2000)
 
-  if (!deckRows || deckRows.length === 0) return []
+export type DeckWordEntry = {
+  word: string
+  position: number
+  meaning: string | null
+  example: string | null
+  example_translation: string | null
+  rank: string | null
+  pinned_sense_id: string | null
+  dictionary: SavedWordDictionary | null
+}
+
+type DeckWordRow = {
+  word: string
+  position: number
+  meaning: string | null
+  example: string | null
+  example_translation: string | null
+  rank: string | null
+  pinned_sense_id: string | null
+}
+
+// 2,000 語超のデッキ (英検 1 級 ≈ 2,200 語) にも耐えられるよう、
+// deck_words は range で分割、words / dictionary_cache は .in() を分割して引く。
+export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> => {
+  const RANGE_CHUNK = 1000
+  const IN_CHUNK = 200
+
+  const deckRows: DeckWordRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('deck_words')
+      .select('word, position, meaning, example, example_translation, rank, pinned_sense_id')
+      .eq('deck_id', deckId)
+      .order('position', { ascending: true })
+      .range(from, from + RANGE_CHUNK - 1)
+    if (error) break
+    const rows = (data ?? []) as DeckWordRow[]
+    if (rows.length === 0) break
+    deckRows.push(...rows)
+    if (rows.length < RANGE_CHUNK) break
+    from += RANGE_CHUNK
+  }
+  if (deckRows.length === 0) return []
 
   const wordTexts = deckRows.map(r => r.word)
+  const wordIdByWord = new Map<string, string>()
+  for (let i = 0; i < wordTexts.length; i += IN_CHUNK) {
+    const { data } = await supabase
+      .from('words')
+      .select('id, word')
+      .in('word', wordTexts.slice(i, i + IN_CHUNK))
+    ;(data ?? []).forEach(r => wordIdByWord.set(r.word as string, r.id as string))
+  }
 
-  const { data: wordRows } = await supabase
-    .from('words')
-    .select('id, word')
-    .in('word', wordTexts)
-    .limit(2000)
-
-  const wordIdByWord = new Map((wordRows ?? []).map(r => [r.word, r.id]))
   const wordIds = [...wordIdByWord.values()]
-
   const cacheByWordId = new Map<string, SavedWordDictionary | null>()
-  if (wordIds.length > 0) {
-    const { data: cacheRows } = await supabase
+  for (let i = 0; i < wordIds.length; i += IN_CHUNK) {
+    const { data } = await supabase
       .from('dictionary_cache')
       .select('word_id, payload')
-      .in('word_id', wordIds)
-      .limit(2000)
-    ;(cacheRows ?? []).forEach(r => {
-      cacheByWordId.set(r.word_id, (r.payload as SavedWordDictionary) ?? null)
+      .in('word_id', wordIds.slice(i, i + IN_CHUNK))
+    ;(data ?? []).forEach(r => {
+      cacheByWordId.set(r.word_id as string, (r.payload as SavedWordDictionary) ?? null)
     })
   }
 
-  return deckRows.map(row => ({
-    word: row.word,
-    meaning: (row.meaning as string | null) ?? null,
-    dictionary: cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null,
-    pinned_sense_id: null as string | null,
-  }))
+  return deckRows.map(row => {
+    const rawDictionary = cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null
+    const dictionary = applyDeckOverridesToDictionary(rawDictionary, {
+      pinnedSenseId: row.pinned_sense_id ?? null,
+      meaning: row.meaning ?? null,
+      example: row.example ?? null,
+      exampleTranslation: row.example_translation ?? null,
+    })
+    return {
+      word: row.word,
+      position: row.position,
+      meaning: row.meaning ?? null,
+      example: row.example ?? null,
+      example_translation: row.example_translation ?? null,
+      rank: row.rank ?? null,
+      pinned_sense_id: row.pinned_sense_id ?? null,
+      dictionary,
+    }
+  })
 }
 
 /* =========================================
