@@ -231,8 +231,95 @@ export const fetchWordsByEtymologyPart = async (
  ⑥ 保存一覧取得（辞書データは取らない）
 ========================================= */
 /* =========================================
- ② 保存一覧取得（saved_words + words + dictionary_cache を返す）
+ 保存済み単語一覧 (軽量版): dictionary_cache は含まない。
+ /wordlist の初期描画に必要な項目だけを返す。dictionary は後段で
+ fetchWordDictionaries を呼び出して visible batch ぶんだけ引く。
+========================================= */
+export type SavedWordMetaRow = {
+  saved_id: string
+  word_id: string
+  word: string
+  pinned_sense_id: string | null
+  created_at: string
+}
+
+export const fetchSavedWordsMeta = async (userId: string): Promise<SavedWordMetaRow[]> => {
+  const { data, error } = await supabase
+    .from('saved_words')
+    .select(`id, word_id, pinned_sense_id, created_at, words(word)`)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(5000)
+  if (error) {
+    console.error('fetchSavedWordsMeta error:', error)
+    return []
+  }
+  const rows = (data ?? []) as unknown as Array<{
+    id: string
+    word_id: string
+    pinned_sense_id: string | null
+    created_at: string | null
+    words: { word: string } | null
+  }>
+  return rows
+    .map((r) => ({
+      saved_id: r.id,
+      word_id: r.word_id,
+      word: r.words?.word ?? '',
+      pinned_sense_id: r.pinned_sense_id ?? null,
+      created_at: r.created_at ?? '',
+    }))
+    .filter((r) => !!r.word)
+}
+
+/**
+ * 指定した word[] だけ dictionary_cache を引く。PostgREST embed で
+ * words → dictionary_cache を 1 リクエスト/chunk に畳んでいる
+ * (以前は words → id 引き → dictionary_cache 引きの 2 段直列だった)。
+ * 500 語ごとに chunk 分割 + Promise.all で並列。
+ */
+export const fetchWordDictionaries = async (
+  words: string[],
+): Promise<Map<string, SavedWordDictionary | null>> => {
+  if (words.length === 0) return new Map()
+  const CHUNK = 500
+  const out = new Map<string, SavedWordDictionary | null>()
+  const chunks: Array<Promise<void>> = []
+  for (let i = 0; i < words.length; i += CHUNK) {
+    const slice = words.slice(i, i + CHUNK)
+    chunks.push(
+      (async () => {
+        const { data } = await supabase
+          .from('words')
+          .select('word, dictionary_cache(payload)')
+          .in('word', slice)
+        const rows = (data ?? []) as unknown as Array<{
+          word: string
+          dictionary_cache:
+            | { payload: SavedWordDictionary | null }
+            | Array<{ payload: SavedWordDictionary | null }>
+            | null
+        }>
+        for (const r of rows) {
+          let payload: SavedWordDictionary | null = null
+          if (Array.isArray(r.dictionary_cache)) {
+            payload = r.dictionary_cache[0]?.payload ?? null
+          } else if (r.dictionary_cache) {
+            payload = r.dictionary_cache.payload ?? null
+          }
+          out.set(r.word, payload)
+        }
+      })(),
+    )
+  }
+  await Promise.all(chunks)
+  return out
+}
+
+/* =========================================
+ ② 保存一覧取得（saved_words + words + dictionary_cache を返す・フル版）
     ※ join名ズレでも動く: 2クエリで dictionary_cache をマージ
+    /wordlist は fetchSavedWordsMeta + fetchWordDictionaries に移行済み。
 ========================================= */
 export const fetchWordlists = async (userId: string) => {
   // 1) saved_words -> words（ここは安定）
