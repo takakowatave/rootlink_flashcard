@@ -82,17 +82,17 @@ export default async function BlogPreviewPage({ params }: Params) {
       {/* プレビュー用ステータスバー */}
       <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-quiz-review bg-white px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="rounded-full bg-quiz-review px-2 py-0.5 text-xs font-semibold text-white shrink-0">
+          <span className="rounded-full bg-quiz-review px-2 py-0.5 text-sm font-semibold text-white shrink-0">
             PREVIEW
           </span>
-          <span className="text-xs text-gray-700 truncate">
+          <span className="text-sm text-gray-700 truncate">
             {isDraft ? '未公開の下書きです' : '公開済み記事のプレビュー'}
           </span>
         </div>
         {!isDraft && (
           <Link
             href={`/blog/${post.slug}`}
-            className="shrink-0 text-xs text-primary hover:underline"
+            className="shrink-0 text-sm text-primary hover:underline"
           >
             公開ページを見る →
           </Link>
@@ -119,7 +119,7 @@ export default async function BlogPreviewPage({ params }: Params) {
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
+                      className="rounded-full border border-line px-2 py-0.5 text-sm text-muted"
                     >
                       {tag}
                     </span>
@@ -127,7 +127,7 @@ export default async function BlogPreviewPage({ params }: Params) {
                 </div>
               )}
               <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-              <p className="mt-3 text-xs text-muted">
+              <p className="mt-3 text-sm text-muted">
                 {new Date(displayDate).toLocaleDateString('ja-JP')}
                 {isDraft && <span className="ml-2 text-quiz-review">（下書き・未公開）</span>}
               </p>
@@ -135,8 +135,8 @@ export default async function BlogPreviewPage({ params }: Params) {
 
             {headings.length > 0 && (
               <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
-                <p className="mb-2 text-xs font-semibold text-muted">目次</p>
-                <ul className="space-y-1 text-sm">
+                <p className="mb-2 text-sm font-semibold text-muted">目次</p>
+                <ul className="space-y-1 text-base">
                   {headings.map((h) => (
                     <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
                       <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
@@ -148,7 +148,7 @@ export default async function BlogPreviewPage({ params }: Params) {
               </aside>
             )}
 
-            <div className="prose prose-sm max-w-none
+            <div className="prose prose-base max-w-none
               prose-headings:text-gray-950 prose-headings:font-semibold
               prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
               prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
@@ -159,7 +159,7 @@ export default async function BlogPreviewPage({ params }: Params) {
               prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-sm
+              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-base
               prose-hr:border-line
             ">
               <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
@@ -169,7 +169,7 @@ export default async function BlogPreviewPage({ params }: Params) {
 
         {/* 末尾 CTA */}
         <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-          <p className="mb-3 text-sm text-gray-800">
+          <p className="mb-3 text-base text-gray-800">
             気に入った表現は、RootLink に保存して復習しよう。
           </p>
           <Link href="/signup">
@@ -184,10 +184,10 @@ export default async function BlogPreviewPage({ params }: Params) {
 
         {/* 公開手順ヒント（下書き時のみ） */}
         {isDraft && (
-          <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-xs text-gray-600">
+          <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-sm text-gray-600">
             <p className="mb-2 font-semibold text-gray-800">公開手順</p>
             <p>Supabase MCP で下記を実行すると公開されます：</p>
-            <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-[11px] text-gray-800">
+            <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-sm text-gray-800">
 {`UPDATE posts SET published_at = NOW() WHERE slug = '${post.slug}';`}
             </pre>
           </div>

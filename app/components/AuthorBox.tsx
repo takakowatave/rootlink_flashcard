@@ -21,9 +21,9 @@ export default function AuthorBox({ author, className }: Props) {
         className="size-16 shrink-0 rounded-full object-cover"
       />
       <div className="min-w-0">
-        <p className="text-xs text-muted">この記事を書いた人</p>
+        <p className="text-sm text-muted">この記事を書いた人</p>
         <p className="mt-0.5 text-base font-semibold text-gray-950">{author.name}</p>
-        <p className="mt-2 text-sm leading-relaxed text-gray-700">{author.bio}</p>
+        <p className="mt-2 text-base leading-relaxed text-gray-700">{author.bio}</p>
       </div>
     </section>
   )

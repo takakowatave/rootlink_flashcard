@@ -112,7 +112,7 @@ export default async function BlogPostPage({ params }: Params) {
 
   return (
     <main className="max-w-[672px] mx-auto px-4 py-8">
-      <nav className="mb-4 text-xs">
+      <nav className="mb-4 text-sm">
         <Link href="/blog" className="text-muted hover:text-gray-950">
           ← Blog
         </Link>
@@ -138,7 +138,7 @@ export default async function BlogPostPage({ params }: Params) {
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
+                      className="rounded-full border border-line px-2 py-0.5 text-sm text-muted"
                     >
                       {tag}
                     </span>
@@ -146,15 +146,15 @@ export default async function BlogPostPage({ params }: Params) {
                 </div>
               )}
               <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-              <p className="mt-3 text-xs text-muted">
+              <p className="mt-3 text-sm text-muted">
                 {new Date(post.published_at!).toLocaleDateString('ja-JP')}
               </p>
             </header>
 
             {headings.length > 0 && (
               <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
-                <p className="mb-2 text-xs font-semibold text-muted">目次</p>
-                <ul className="space-y-1 text-sm">
+                <p className="mb-2 text-sm font-semibold text-muted">目次</p>
+                <ul className="space-y-1 text-base">
                   {headings.map((h) => (
                     <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
                       <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
@@ -166,7 +166,7 @@ export default async function BlogPostPage({ params }: Params) {
               </aside>
             )}
 
-            <div className="prose prose-sm max-w-none
+            <div className="prose prose-base max-w-none
               prose-headings:text-gray-950 prose-headings:font-semibold
               prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
               prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
@@ -177,7 +177,7 @@ export default async function BlogPostPage({ params }: Params) {
               prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
               prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-sm
+              prose-pre:text-gray-900 [&_pre_code]:text-gray-900 prose-pre:text-base
               prose-hr:border-line
             ">
               <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
@@ -187,7 +187,7 @@ export default async function BlogPostPage({ params }: Params) {
 
         {/* 末尾 CTA */}
         <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-          <p className="mb-3 text-sm text-gray-800">
+          <p className="mb-3 text-base text-gray-800">
             気に入った表現は、RootLink に保存して復習しよう。
           </p>
           <Link href="/signup">
@@ -205,8 +205,8 @@ export default async function BlogPostPage({ params }: Params) {
                 href={`/blog/${prev.slug}`}
                 className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-muted"
               >
-                <p className="text-xs text-muted">← 前の記事</p>
-                <p className="mt-1 line-clamp-1 text-sm text-gray-800">{prev.title}</p>
+                <p className="text-sm text-muted">← 前の記事</p>
+                <p className="mt-1 line-clamp-1 text-base text-gray-800">{prev.title}</p>
               </Link>
             ) : <span className="flex-1" />}
             {next ? (
@@ -214,8 +214,8 @@ export default async function BlogPostPage({ params }: Params) {
                 href={`/blog/${next.slug}`}
                 className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-right transition-colors hover:border-muted"
               >
-                <p className="text-xs text-muted">次の記事 →</p>
-                <p className="mt-1 line-clamp-1 text-sm text-gray-800">{next.title}</p>
+                <p className="text-sm text-muted">次の記事 →</p>
+                <p className="mt-1 line-clamp-1 text-base text-gray-800">{next.title}</p>
               </Link>
             ) : <span className="flex-1" />}
           </nav>

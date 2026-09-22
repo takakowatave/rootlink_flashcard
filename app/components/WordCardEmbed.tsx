@@ -189,7 +189,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
             >
               {word}
             </Link>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-sm text-muted">
               この単語の詳細ページを開く
             </p>
           </div>
@@ -259,7 +259,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
         {/* Sense（1件のみ） */}
         {sense && (
           <div className="mt-2">
-            <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
+            <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-sm font-medium text-muted">
               {posLabel(sense.pos)}
             </span>
             <p className="mt-2 text-base font-medium text-black">

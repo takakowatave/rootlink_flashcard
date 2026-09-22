@@ -22,7 +22,7 @@ export default async function BlogListPage() {
   if (error) {
     return (
       <main className="max-w-[672px] mx-auto px-4 py-8">
-        <p className="text-sm text-red-500">記事の取得に失敗しました。</p>
+        <p className="text-base text-red-500">記事の取得に失敗しました。</p>
       </main>
     )
   }
@@ -33,13 +33,13 @@ export default async function BlogListPage() {
     <main className="max-w-[672px] mx-auto px-4 py-8">
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-gray-950">Blog</h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-base text-muted">
           語源とUK Englishで、暗記に頼らない英語学習を。
         </p>
       </header>
 
       {posts.length === 0 ? (
-        <p className="text-sm text-muted">記事はまだありません。</p>
+        <p className="text-base text-muted">記事はまだありません。</p>
       ) : (
         <ul className="space-y-4">
           {posts.map((post) => (
@@ -53,7 +53,7 @@ export default async function BlogListPage() {
                     {post.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
+                        className="rounded-full border border-line px-2 py-0.5 text-sm text-muted"
                       >
                         {tag}
                       </span>
@@ -61,7 +61,7 @@ export default async function BlogListPage() {
                   </div>
                 )}
                 <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 text-sm text-muted">
                   {new Date(post.published_at ?? post.created_at).toLocaleDateString('ja-JP')}
                 </p>
               </Link>
