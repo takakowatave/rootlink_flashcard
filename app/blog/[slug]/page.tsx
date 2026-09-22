@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
 import BlogContent from '../BlogContent'
 import Button from '@/components/Button'
+import AuthorBox from '@/components/AuthorBox'
+import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
@@ -218,6 +220,9 @@ export default async function BlogPostPage({ params }: Params) {
             ) : <span className="flex-1" />}
           </nav>
         )}
+
+        {/* 著者 */}
+        <AuthorBox author={BLOG_AUTHOR} className="mt-10" />
       </article>
     </main>
   )

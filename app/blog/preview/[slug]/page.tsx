@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient'
 import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
 import BlogContent from '../../BlogContent'
 import Button from '@/components/Button'
+import AuthorBox from '@/components/AuthorBox'
+import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
@@ -176,6 +178,9 @@ export default async function BlogPreviewPage({ params }: Params) {
             </Button>
           </Link>
         </div>
+
+        {/* 著者 */}
+        <AuthorBox author={BLOG_AUTHOR} className="mt-10" />
 
         {/* 公開手順ヒント（下書き時のみ） */}
         {isDraft && (
