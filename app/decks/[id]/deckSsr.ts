@@ -49,7 +49,6 @@ export const chapterDictTag = (deckId: string, chapterNo: number) =>
 
 const RANGE_CHUNK = 1000
 const WORDS_CHUNK = 500      // avg 8 chars * 500 ≈ 4KB URL — 安全
-const DICT_CHUNK = 200       // UUID 36 chars * 200 ≈ 7KB URL — 安全
 
 type SsrDeckWordRow = {
   word: string
@@ -117,44 +116,41 @@ function rowToLightEntry(row: SsrDeckWordRow): DeckWordEntry {
   }
 }
 
-// 内部 helper: 指定 word[] の dictionary_cache を並列取得して word→payload を返す。
+type WordsWithDict = {
+  word: string
+  dictionary_cache: { payload: SavedWordDictionary | null } | Array<{ payload: SavedWordDictionary | null }> | null
+}
+
+// 内部 helper: 指定 word[] の dictionary_cache を「words を経由した embed」で
+// 1 リクエストにまとめて取り、word → payload の Map を返す。
+// PostgREST が words.id ↔ dictionary_cache.word_id の FK を認識するので
+// words と dictionary_cache を別々に叩く必要がない (以前は 2 段直列だった)。
 async function fetchDictionariesFor(
   words: string[],
   tags: string[],
 ): Promise<Map<string, SavedWordDictionary | null>> {
-  const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
+  if (words.length === 0) return new Map()
+  const chunkPromises: Array<Promise<WordsWithDict[]>> = []
   for (let i = 0; i < words.length; i += WORDS_CHUNK) {
     const slice = words.slice(i, i + WORDS_CHUNK)
     const inList = slice.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
-    wordChunkPromises.push(
+    chunkPromises.push(
       fetch(
-        `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})`,
+        `${SUPABASE_URL}/rest/v1/words?select=word,dictionary_cache(payload)&word=in.(${encodeURIComponent(inList)})`,
         { headers: SUPABASE_HEADERS, next: { revalidate: DAY, tags } }
       ).then((r) => (r.ok ? r.json() : []))
     )
   }
-  const wordRows = (await Promise.all(wordChunkPromises)).flat() as Array<{ id: string; word: string }>
-  const wordIdByWord = new Map<string, string>(wordRows.map((r) => [r.word, r.id]))
-
-  const wordIds = [...wordIdByWord.values()]
-  const dictChunkPromises: Array<Promise<Array<{ word_id: string; payload: SavedWordDictionary | null }>>> = []
-  for (let i = 0; i < wordIds.length; i += DICT_CHUNK) {
-    const slice = wordIds.slice(i, i + DICT_CHUNK)
-    const idList = slice.map((id) => `"${id}"`).join(',')
-    dictChunkPromises.push(
-      fetch(
-        `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id,payload&word_id=in.(${encodeURIComponent(idList)})`,
-        { headers: SUPABASE_HEADERS, next: { revalidate: DAY, tags } }
-      ).then((r) => (r.ok ? r.json() : []))
-    )
-  }
-  const cacheRows = (await Promise.all(dictChunkPromises)).flat()
-  const cacheByWordId = new Map<string, SavedWordDictionary | null>(
-    cacheRows.map((r) => [r.word_id, r.payload ?? null])
-  )
+  const rows = (await Promise.all(chunkPromises)).flat()
   const byWord = new Map<string, SavedWordDictionary | null>()
-  for (const [word, wordId] of wordIdByWord.entries()) {
-    byWord.set(word, cacheByWordId.get(wordId) ?? null)
+  for (const r of rows) {
+    let payload: SavedWordDictionary | null = null
+    if (Array.isArray(r.dictionary_cache)) {
+      payload = r.dictionary_cache[0]?.payload ?? null
+    } else if (r.dictionary_cache) {
+      payload = r.dictionary_cache.payload ?? null
+    }
+    byWord.set(r.word, payload)
   }
   return byWord
 }
