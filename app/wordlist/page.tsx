@@ -9,7 +9,7 @@ import type { QuizEntry } from "@/components/QuizSession"
 import { type QuizScope } from "@/components/QuizScopeSelector"
 import { classifyQuizStatus, type WordStatus } from "@/lib/quizScope"
 import QuizProgressPanel from "@/components/QuizProgressPanel"
-import { fetchWordlists, fetchSavedPhrases, toggleSaveStatus, saveQuizResult, type SavedPhraseRow } from "@/lib/supabaseApi"
+import { fetchSavedWordsMeta, fetchWordDictionaries, fetchSavedPhrases, toggleSaveStatus, saveQuizResult, type SavedPhraseRow, type SavedWordMetaRow } from "@/lib/supabaseApi"
 import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from "@/lib/quizSettings"
 import { useTtsAudio } from "@/lib/useTtsAudio"
 import toast, { Toaster } from "react-hot-toast"
@@ -80,7 +80,8 @@ const INITIAL_VISIBLE = 30
 const LOAD_MORE_STEP = 30
 
 export default function WordListPage() {
-  const [wordList, setWordList] = useState<SavedWordRow[]>([])
+  const [wordList, setWordList] = useState<SavedWordMetaRow[]>([])
+  const [dictByWord, setDictByWord] = useState<Map<string, SavedWordDictionary | null>>(new Map())
   const [phraseList, setPhraseList] = useState<SavedPhraseRow[]>([])
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
@@ -122,8 +123,9 @@ export default function WordListPage() {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); return }
     setUserId(data.user.id)
+    // 1) 単語のメタ (dictionary_cache は含まない) と、フレーズ / 設定を並列で
     const [words, phrases, settings] = await Promise.all([
-      fetchWordlists(data.user.id),
+      fetchSavedWordsMeta(data.user.id),
       fetchSavedPhrases(data.user.id),
       fetchQuizSettings(data.user.id),
     ])
@@ -135,8 +137,19 @@ export default function WordListPage() {
     setQuizCount(settings.questionCount)
     setQuizAutoAudio(settings.autoPlayAudio)
     setQuizAutoHeadword(settings.autoPlayHeadword)
+    // 2) 初期表示ぶん (INITIAL_VISIBLE=30 語) の dictionary_cache と、
+    //    quiz_results ステータスを並列で。全単語ぶんは読まない。
+    const initialWords = words.slice(0, INITIAL_VISIBLE).map((w) => w.word)
     const allKeys = [...words.map((w) => w.word), ...phrases.map((p) => p.phrase)]
-    if (allKeys.length > 0) await loadStatus(allKeys, data.user.id)
+    const [initialDicts] = await Promise.all([
+      fetchWordDictionaries(initialWords),
+      allKeys.length > 0 ? loadStatus(allKeys, data.user.id) : Promise.resolve(),
+    ])
+    setDictByWord((prev) => {
+      const m = new Map(prev)
+      for (const [k, v] of initialDicts) m.set(k, v)
+      return m
+    })
   }
 
   // マウント時と、後からログイン・ログアウトしたときに再実行する。
@@ -169,6 +182,25 @@ export default function WordListPage() {
     return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
   }, [])
 
+  // visibleCount が増えたら、まだ dictionary_cache を読んでいない語ぶんだけを追加取得する。
+  // 「もっと見る」タップ時にも、ページ再フェッチや全語ぶんの再取得は起こさない。
+  useEffect(() => {
+    if (wordList.length === 0) return
+    const visible = wordList.slice(0, visibleCount).map((w) => w.word)
+    const missing = visible.filter((w) => !dictByWord.has(w))
+    if (missing.length === 0) return
+    let cancelled = false
+    fetchWordDictionaries(missing).then((fetched) => {
+      if (cancelled) return
+      setDictByWord((prev) => {
+        const m = new Map(prev)
+        for (const [k, v] of fetched) m.set(k, v)
+        return m
+      })
+    })
+    return () => { cancelled = true }
+  }, [wordList, visibleCount, dictByWord])
+
   const handleToggleSave = async (word: SavedWordRow) => {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { toast.error("ログインが必要です"); return }
@@ -178,8 +210,22 @@ export default function WordListPage() {
     toast.success("更新しました")
   }
 
-  const handleOpenModal = (item: SavedWordRow) => {
-    setSelectedItem(item)
+  const handleOpenModal = async (item: SavedWordMetaRow) => {
+    // モーダル用に、その 1 語ぶんだけ確実に dict を持っておく (まだ未取得なら 1 リクエスト)
+    let dict = dictByWord.get(item.word) ?? null
+    if (!dictByWord.has(item.word)) {
+      const fetched = await fetchWordDictionaries([item.word])
+      dict = fetched.get(item.word) ?? null
+      setDictByWord((prev) => new Map(prev).set(item.word, dict))
+    }
+    setSelectedItem({
+      saved_id: item.saved_id,
+      word_id: item.word_id,
+      word: item.word,
+      pinned_sense_id: item.pinned_sense_id,
+      dictionary: dict,
+      created_at: item.created_at,
+    })
   }
 
   const handleCloseModal = () => {
@@ -187,10 +233,13 @@ export default function WordListPage() {
     load()
   }
 
-  const availableWords = wordList.filter((w) => !!w.dictionary)
+  // 保存済み単語は全部クイズ / scope 対象にする (以前は dict 未ロードで !!w.dictionary=false
+  // になった語を弾いていたが、今は初期表示ぶんしか dict を持たないため誤って弾いてしまう)。
+  // dict 未ロードの語はクイズ開始時に足りないぶんだけ埋める (startQuiz 参照)。
+  const availableWords = wordList
   const wordEntries: QuizEntry[] = availableWords.map((w) => ({
     word: w.word,
-    dictionary: w.dictionary ?? null,
+    dictionary: dictByWord.get(w.word) ?? null,
     pinned_sense_id: w.pinned_sense_id ?? null,
   }))
   const phraseEntries: QuizEntry[] = phraseList.map((p) => ({
@@ -233,12 +282,29 @@ export default function WordListPage() {
     if (max > 0 && quizCount > max) setQuizCount(max)
   }, [quizScope, scopeSource, quizCount])
 
-  const startQuiz = () => {
+  const startQuiz = async () => {
     const sourceEntries = scopeSource[quizScope]
     const take = Math.min(quizCount, sourceEntries.length)
-    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)
+    // 先に shuffle して、実際に出題する候補 (take*2 くらい) の dict を足りない分だけ取る。
+    // 「はじめる」を押したときにだけ発生する 1 リクエスト。
+    const shuffled = shuffleCards([...sourceEntries]).slice(0, Math.min(sourceEntries.length, take * 2))
+    const missing = shuffled
+      .filter((e) => !e.phrase_card_id && !e.dictionary)
+      .map((e) => e.word)
+    if (missing.length > 0) {
+      const fetched = await fetchWordDictionaries(missing)
+      setDictByWord((prev) => {
+        const m = new Map(prev)
+        for (const [k, v] of fetched) m.set(k, v)
+        return m
+      })
+      for (const e of shuffled) {
+        if (!e.dictionary && fetched.has(e.word)) e.dictionary = fetched.get(e.word) ?? null
+      }
+    }
+    const cards = buildQuizCards(shuffled).slice(0, take)
     const sessionEntries: QuizEntry[] = cards.map(
-      (c) => sourceEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
+      (c) => shuffled.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
   }
@@ -376,13 +442,21 @@ export default function WordListPage() {
                     )
                   }
                   const item = entry.word
-                  const d = item.dictionary
+                  const d = dictByWord.get(item.word) ?? null
                   const pronunciation = buildPronunciation(d)
                   const senses = buildSenses(d, displayLocale)
                   const inflections: string[] = d?.inflections ?? []
                   const allSenses = Object.values(senses).flat()
                   const firstSenseId = allSenses[0]?.senseId ?? null
                   const pinnedSenseId = item.pinned_sense_id ?? firstSenseId
+                  const toggleTarget: SavedWordRow = {
+                    saved_id: item.saved_id,
+                    word_id: item.word_id,
+                    word: item.word,
+                    pinned_sense_id: item.pinned_sense_id,
+                    dictionary: d,
+                    created_at: item.created_at,
+                  }
                   return (
                     <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
                       <EntryCard
@@ -393,7 +467,7 @@ export default function WordListPage() {
                         inflections={inflections}
                         grammarTags={{}}
                         isBookmarked={savedWords.includes(item.word)}
-                        onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(item) }}
+                        onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(toggleTarget) }}
                         pinnedSenseId={pinnedSenseId}
                         displayLocale={displayLocale}
                         compact

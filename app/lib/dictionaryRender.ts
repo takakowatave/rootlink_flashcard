@@ -1,6 +1,69 @@
 import type { SavedWordDictionary, SavedWordSenseGroup } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
+export type DeckWordOverride = {
+  pinnedSenseId: string | null
+  meaning: string | null
+  example: string | null
+  exampleTranslation: string | null
+}
+
+/**
+ * deck_words の meaning / example / example_translation / pinned_sense_id を
+ * 共有 dictionary_cache には触れずに、この 1 エントリ用のペイロードに焼き込む。
+ * pinned_sense_id が null のときは senseGroups の先頭 sense に上書きする。
+ * text がすべて空なら元をそのまま返す (dictionary_cache そのものを渡す)。
+ */
+export function applyDeckOverridesToDictionary(
+  dictionary: SavedWordDictionary | null,
+  override: DeckWordOverride,
+): SavedWordDictionary | null {
+  if (!dictionary) return dictionary
+  const meaning = override.meaning?.trim() || null
+  const example = override.example?.trim() || null
+  const exampleTranslation = override.exampleTranslation?.trim() || null
+  if (!meaning && !example && !exampleTranslation) return dictionary
+
+  let targetSenseId = override.pinnedSenseId
+  if (!targetSenseId) {
+    for (const g of dictionary.senseGroups ?? []) {
+      const first = (g.senses ?? [])[0]
+      if (first?.senseId) { targetSenseId = String(first.senseId); break }
+    }
+  }
+  if (!targetSenseId) return dictionary
+
+  const cloned: SavedWordDictionary = {
+    ...dictionary,
+    senseGroups: (dictionary.senseGroups ?? []).map(g => ({
+      ...g,
+      senses: (g.senses ?? []).map(s => {
+        if (String(s.senseId ?? '') !== targetSenseId) return s
+        return example ? { ...s, example } : s
+      }),
+    })),
+  }
+  if (meaning || exampleTranslation) {
+    const jaSenses = cloned.locales?.ja?.senses ?? {}
+    const prev = jaSenses[targetSenseId] ?? {}
+    cloned.locales = {
+      ...(cloned.locales ?? {}),
+      ja: {
+        ...(cloned.locales?.ja ?? {}),
+        senses: {
+          ...jaSenses,
+          [targetSenseId]: {
+            ...prev,
+            ...(meaning ? { meaning } : {}),
+            ...(exampleTranslation ? { exampleTranslation } : {}),
+          },
+        },
+      },
+    }
+  }
+  return cloned
+}
+
 export type DisplaySense = {
   senseId: string
   meaning: string
