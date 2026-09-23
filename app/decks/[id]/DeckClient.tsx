@@ -24,7 +24,7 @@ import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
-import { CHAPTER_SIZE, chapterOfPosition, chapterCount, isChapterLocked } from '@/lib/chapters'
+import { CHAPTER_SIZE, chapterOfPosition, chapterCount, isChapterLocked, freeChapterCount } from '@/lib/chapters'
 import { toShortName } from '@/lib/deckDisplay'
 import toast from 'react-hot-toast'
 
@@ -221,16 +221,33 @@ export default function DeckClient({
     })
   }
 
-  // 章スコープの entries (章画面ならその章だけ、デッキ画面なら全件)
+  // 章画面は entries が 50 語しかないので、親から渡された totalWordsHint (デッキ全体の
+  // 総語数) を使って totalChapters を出す。デッキ画面は entries が全件なのでそちら。
+  const totalChapters = useMemo(
+    () => chapterCount(totalWordsHint ?? entries.length),
+    [totalWordsHint, entries.length],
+  )
+
+  // 未課金かつ is_premium なデッキは freeChapterCount() までしか出題対象にしない。
+  // premium (getUserPlan === 'premium' = 課金 or is_tester) は全開放。
+  // is_premium=false のデッキも全開放。
+  const unlockedChapterCount = useMemo(() => {
+    if (plan === 'premium') return totalChapters
+    if (!deck.is_premium) return totalChapters
+    return freeChapterCount(true, totalChapters)
+  }, [plan, deck.is_premium, totalChapters])
+  const hasLockedChapters = unlockedChapterCount < totalChapters
+
+  // 章スコープの entries:
+  //   章画面: その章の 50 語だけ
+  //   デッキ画面: 「全章を解く」用に、未課金でロックされている章の語は除外する
   const scopedEntries = useMemo(() => {
-    if (chapter == null) return entries
-    return entries.filter(e => chapterOfPosition(e.position) === chapter)
-  }, [entries, chapter])
+    if (chapter != null) return entries.filter(e => chapterOfPosition(e.position) === chapter)
+    return entries.filter(e => chapterOfPosition(e.position) <= unlockedChapterCount)
+  }, [entries, chapter, unlockedChapterCount])
 
   // 章画面はクイズ開始があるので dictionary_cache が入ってる語だけを quiz 対象にする。
-  // デッキ画面は「はじめる」ボタンがない (前回の続きで章画面へ遷移する) ため、
-  // dictionary を待たずに deck_words だけでスコープ数を出す (SSR 軽量化のため
-  // デッキ画面では dictionary_cache を読まなくしている)。
+  // デッキ画面も 「全章を解く」でクイズを開始するので dictionary を持つ語のみ。
   const availableEntries = chapter == null
     ? scopedEntries
     : scopedEntries.filter(e => !!e.dictionary)
@@ -253,17 +270,11 @@ export default function DeckClient({
     recent: availableEntries,
   }
 
-  // 章画面は entries が 50 語しかないので、親から渡された totalWordsHint (デッキ全体の
-  // 総語数) を使って totalChapters を出す。デッキ画面は entries が全件なのでそちら。
-  const totalChapters = useMemo(
-    () => chapterCount(totalWordsHint ?? entries.length),
-    [totalWordsHint, entries.length],
-  )
   const currentChapterLocked = chapter != null
     && isChapterLocked(chapter, deck.is_premium, totalChapters, plan)
 
   // 章画面: その章がロックされていれば isLocked
-  // デッキ画面: 全体は「はじめる」ではなく「前回の続き」なので isLocked は使わない (CTA 側で章単位に判定)
+  // デッキ画面: 全章を解くは解放章だけで開始するので isLocked は false 固定
   const isLocked = chapter == null ? false : currentChapterLocked
 
   // scope 変更で対象数が減ったら count を max に丸める
@@ -379,19 +390,24 @@ export default function DeckClient({
         { label: deck.name },
       ]
 
-  // Figma 2961:7396 準拠。
-  //   デッキ画面: 2 行の「前回の続き / Chapter NN」
+  // 履歴があるかどうかで primary の表示が切り替わる。履歴なし = Chapter 01 からはじめる (サブ無し)
+  const hasResumeHistory = chapter == null && lastPlayedChapter != null
+
+  // primary CTA
+  //   デッキ画面: 履歴あり=「前回の続き / Chapter NN」/ 履歴なし=「Chapter 01からはじめる」(1 行)
   //   章画面   : 「はじめる」(ロック時は premium 誘導)
   const buttonLabel = loading
     ? '読み込み中...'
     : chapter == null
       ? (
-          <span className="flex flex-col items-center leading-tight">
-            <span>前回の続き</span>
-            {resumeChapter != null && (
-              <span className="text-xs font-normal opacity-90">{chapterLabel(resumeChapter)}</span>
-            )}
-          </span>
+          hasResumeHistory && resumeChapter != null
+            ? (
+                <span className="flex flex-col items-center leading-tight">
+                  <span>前回の続き</span>
+                  <span className="text-xs font-normal opacity-90">{chapterLabel(resumeChapter)}</span>
+                </span>
+              )
+            : 'Chapter 01からはじめる'
         )
       : isLocked
         ? '🔒 プレミアム登録ではじめる'
@@ -406,6 +422,25 @@ export default function DeckClient({
   )
 
   const onStart = chapter == null ? handleResumeChapter : startQuiz
+
+  // secondary CTA (デッキ画面のみ)。「全章を解く」 outline。
+  // ロック章あるときはサブに「Chapter 01〜NN」。全開放ならサブなし。
+  const secondaryButtonLabel = chapter == null && !loading && availableCount > 0
+    ? (
+        hasLockedChapters
+          ? (
+              <span className="flex flex-col items-center leading-tight">
+                <span>全章を解く</span>
+                <span className="text-xs font-normal opacity-80">
+                  Chapter 01〜{String(unlockedChapterCount).padStart(2, '0')}
+                </span>
+              </span>
+            )
+          : '全章を解く'
+      )
+    : undefined
+  const onSecondaryStart = chapter == null ? startQuiz : undefined
+  const secondaryButtonDisabled = loading || (chapter == null && scopeSource[quizScope].length === 0)
 
   // 単語一覧プレビュー表示条件:
   //   - 章画面のみ (デッキ画面では表示しない)
@@ -433,23 +468,30 @@ export default function DeckClient({
       <QuizProgressPanel
         compact={isNative}
         afterSettings={
-          chapters.length > 0 ? (
-            <CardShell>
-              <div className="flex flex-col divide-y divide-line">
-                {chapters.map(ch => (
-                  <ChapterListItem
-                    key={ch.no}
-                    chapterNo={ch.no}
-                    label={chapterLabel(ch.no)}
-                    mastered={ch.mastered}
-                    total={ch.total}
-                    locked={ch.locked}
-                    highlighted={chapter === ch.no}
-                    onClick={() => handleChapterTap(ch.no)}
-                  />
-                ))}
-              </div>
-            </CardShell>
+          // 章一覧はデッキ画面のみ。章画面では非表示 (他の章を選ぶ導線はここでは出さない)。
+          chapter == null && chapters.length > 0 ? (
+            <>
+              <CardShell>
+                <div className="flex flex-col divide-y divide-line">
+                  {chapters.map(ch => (
+                    <ChapterListItem
+                      key={ch.no}
+                      chapterNo={ch.no}
+                      label={chapterLabel(ch.no)}
+                      mastered={ch.mastered}
+                      total={ch.total}
+                      locked={ch.locked}
+                      onClick={() => handleChapterTap(ch.no)}
+                    />
+                  ))}
+                </div>
+              </CardShell>
+              {/* 2 段 CTA (secondary + primary) で最後の章が隠れないように、
+                  一覧の下に追加余白を確保する。QuizProgressPanel 側の spacer は
+                  fixed 帯ぶんだけ。ここではさらに少し積んで、スクロールで最後の
+                  章まで確実に見えるようにする。 */}
+              <div aria-hidden className="md:hidden h-4" />
+            </>
           ) : null
         }
         mastered={masteredCount}
@@ -467,6 +509,9 @@ export default function DeckClient({
         buttonLabel={buttonLabel}
         buttonDisabled={buttonDisabled}
         onStart={onStart}
+        secondaryButtonLabel={secondaryButtonLabel}
+        secondaryButtonDisabled={secondaryButtonDisabled}
+        onSecondaryStart={onSecondaryStart}
         settings={!isLocked && !loading ? {
           defaultMode: quizDefaultMode,
           onDefaultModeChange: (v) => { setQuizDefaultMode(v); if (userId) saveQuizSettings(userId, { defaultMode: v }) },

@@ -24,6 +24,13 @@ type Props = {
   buttonLabel: ReactNode
   buttonDisabled?: boolean
   onStart: () => void
+  /**
+   * 2 段 CTA の上段 (outline)。指定時は primary の上に積む。
+   * デッキ画面の「全章を解く」で使う。SP fixed 帯 / md+ inline 帯 の両方に反映。
+   */
+  secondaryButtonLabel?: ReactNode
+  secondaryButtonDisabled?: boolean
+  onSecondaryStart?: () => void
   /** SP/native 用のコンパクト表示。donut を小さく、凡例を消し、余白を詰めて 1st view に収める */
   compact?: boolean
   /**
@@ -170,10 +177,14 @@ export default function QuizProgressPanel({
   buttonLabel,
   buttonDisabled,
   onStart,
+  secondaryButtonLabel,
+  secondaryButtonDisabled,
+  onSecondaryStart,
   settings,
   compact = false,
   afterSettings,
 }: Props) {
+  const hasSecondary = !!secondaryButtonLabel && !!onSecondaryStart
   const hasScope = scopeItems && selectedScope && onScopeChange
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -293,13 +304,24 @@ export default function QuizProgressPanel({
 
       {afterSettings}
 
-      {/* SP: 浮遊 CTA と下部スペーサー。タブレット/PC では浮遊させると
-          画面全幅の帯になって背後の単語一覧に被って中途半端に見えるため
+      {/* SP: 浮遊 CTA と下部スペーサー。secondary が積むと帯が高くなるので spacer も広げる。
+          タブレット/PC では浮遊させると画面全幅の帯になって背景に被って中途半端に見えるため
           md+ ではインライン CTA に切り替える。 */}
-      <div aria-hidden className="md:hidden h-24" />
+      <div aria-hidden className={hasSecondary ? 'md:hidden h-40' : 'md:hidden h-24'} />
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto max-w-[600px]">
+        <div className="mx-auto max-w-[600px] flex flex-col gap-2">
+          {hasSecondary && (
+            <Button
+              onClick={onSecondaryStart}
+              disabled={secondaryButtonDisabled}
+              variant="secondary"
+              size="lg"
+              fullWidth
+            >
+              {secondaryButtonLabel}
+            </Button>
+          )}
           <Button
             onClick={onStart}
             disabled={buttonDisabled}
@@ -313,7 +335,18 @@ export default function QuizProgressPanel({
       </div>
 
       {/* md+: インライン CTA。CardShell と同じ max-w / 横 padding にそろえる。 */}
-      <div className="hidden md:block w-full mx-auto max-w-[600px] px-4 pt-2 pb-6">
+      <div className="hidden md:flex flex-col gap-2 w-full mx-auto max-w-[600px] px-4 pt-2 pb-6">
+        {hasSecondary && (
+          <Button
+            onClick={onSecondaryStart}
+            disabled={secondaryButtonDisabled}
+            variant="secondary"
+            size="lg"
+            fullWidth
+          >
+            {secondaryButtonLabel}
+          </Button>
+        )}
         <Button
           onClick={onStart}
           disabled={buttonDisabled}
