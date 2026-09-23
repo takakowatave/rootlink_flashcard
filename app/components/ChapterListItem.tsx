@@ -9,6 +9,8 @@ type Props = {
   mastered: number
   total: number
   locked?: boolean
+  /** 現在いる章 (章画面のとき) をハイライトする */
+  highlighted?: boolean
   href?: string
   onClick?: () => void
 }
@@ -19,7 +21,7 @@ type Props = {
  * locked=true のときは右側を鍵アイコンに置き換える (課金導線へ)。
  */
 export default function ChapterListItem({
-  chapterNo, label, mastered, total, locked, href, onClick,
+  chapterNo, label, mastered, total, locked, highlighted, href, onClick,
 }: Props) {
   const size = 40
   const stroke = 3
@@ -45,7 +47,7 @@ export default function ChapterListItem({
         </svg>
         <span className="absolute text-sm font-bold text-gray-700 tabular-nums">{chapterNo}</span>
       </span>
-      <span className="flex-1 text-sm font-semibold text-gray-800">{label}</span>
+      <span className={`flex-1 text-sm font-semibold ${highlighted ? 'text-primary' : 'text-gray-800'}`}>{label}</span>
       {locked ? (
         <span className="shrink-0 grid place-items-center size-8 rounded-full bg-primary-subtle text-primary" aria-label="プレミアム限定">
           <HiLockClosed className="size-4" />

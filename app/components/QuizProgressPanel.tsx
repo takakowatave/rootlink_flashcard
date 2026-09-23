@@ -20,7 +20,7 @@ type Props = {
   scopeItems?: QuizScopeItem[]
   selectedScope?: QuizScope
   onScopeChange?: (scope: QuizScope) => void
-  buttonLabel: string
+  buttonLabel: ReactNode
   buttonDisabled?: boolean
   onStart: () => void
   /** SP/native 用のコンパクト表示。donut を小さく、凡例を消し、余白を詰めて 1st view に収める */

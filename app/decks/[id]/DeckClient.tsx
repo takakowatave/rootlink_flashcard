@@ -328,10 +328,9 @@ export default function DeckClient({
     router.push(chapterHref(slugForUrl, n))
   }, [deck.is_premium, totalChapters, plan, isAuthed, openPaywall, router, slugForUrl])
 
-  // 章一覧はデッキ画面でだけ描く。章画面では entries が 50 語しかないので
-  // 章別集計は正しく取れないし、そもそも表示もしないので skip する。
+  // 章一覧はデッキ画面 / 章画面 の両方で描く (Figma 2961:7396)。
+  // 章画面でも他の章に飛べる導線を出したいので、entries には全 deck_words メタが入っている前提。
   const chapters = useMemo(() => {
-    if (chapter != null) return []
     const progressByChapter = new Map<number, { mastered: number; total: number }>()
     for (const e of entries) {
       const n = chapterOfPosition(e.position)
@@ -351,7 +350,7 @@ export default function DeckClient({
       })
     }
     return list
-  }, [chapter, entries, wordStatus, totalChapters, deck.is_premium, plan])
+  }, [entries, wordStatus, totalChapters, deck.is_premium, plan])
 
   if (quizEntries !== null) {
     return (
@@ -380,12 +379,20 @@ export default function DeckClient({
         { label: deck.name },
       ]
 
-  // デッキ / 章の両方で CTA は「はじめる」に統一 (Figma 2957-7272)。
-  // デッキ画面のタップ挙動は前回チャプター / Chapter 01 への遷移。章画面はクイズ開始。
+  // Figma 2961:7396 準拠。
+  //   デッキ画面: 2 行の「前回の続き / Chapter NN」
+  //   章画面   : 「はじめる」(ロック時は premium 誘導)
   const buttonLabel = loading
     ? '読み込み中...'
     : chapter == null
-      ? 'はじめる'
+      ? (
+          <span className="flex flex-col items-center leading-tight">
+            <span>前回の続き</span>
+            {resumeChapter != null && (
+              <span className="text-xs font-normal opacity-90">{chapterLabel(resumeChapter)}</span>
+            )}
+          </span>
+        )
       : isLocked
         ? '🔒 プレミアム登録ではじめる'
         : availableCount === 0
@@ -454,8 +461,8 @@ export default function DeckClient({
         } : undefined}
       />
 
-      {/* デッキ画面: 章リスト */}
-      {chapter == null && chapters.length > 0 && (
+      {/* 章一覧: デッキ画面と章画面の両方で描く (章画面では現在章を強調) */}
+      {chapters.length > 0 && (
         <CardShell>
           <div className="flex flex-col divide-y divide-line">
             {chapters.map(ch => (
@@ -466,6 +473,7 @@ export default function DeckClient({
                 mastered={ch.mastered}
                 total={ch.total}
                 locked={ch.locked}
+                highlighted={chapter === ch.no}
                 onClick={() => handleChapterTap(ch.no)}
               />
             ))}
