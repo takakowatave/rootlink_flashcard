@@ -1,7 +1,7 @@
 import { Children, cloneElement, Fragment, isValidElement, type ReactElement, type ReactNode } from 'react'
 
 // 例文の中の対象語を太字のオレンジにする。英語は単語単位、日本語は部分一致。
-export const TERM_CLASS = 'font-semibold text-[#c2410c]'
+export const TERM_CLASS = 'font-semibold text-orange-700'
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

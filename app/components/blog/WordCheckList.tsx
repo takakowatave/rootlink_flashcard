@@ -1,14 +1,13 @@
 // 記事の書き出しなどで、比べる単語をチェック付きで並べる箱。
+// 色は Tailwind 標準のパレット（orange-500 / gray 系）をそのまま使う。
 // 本文中では <word-list words="farther,further" /> と書く。
-export const CHECK_COLOR = '#f97316' // orange-500（ハイライトのオレンジと同系色）
-
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" className="shrink-0">
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" className="shrink-0 text-orange-500">
       <path
         d="M4 10.5l4 4 8-9"
         fill="none"
-        stroke={CHECK_COLOR}
+        stroke="currentColor"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
