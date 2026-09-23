@@ -1,5 +1,4 @@
-import DeckCard from '@/components/DeckCard'
-import DeckLabelBadge from '@/components/DeckLabelBadge'
+import DeckScrollStrip from '@/components/DeckScrollStrip'
 import { getDeckImage } from '@/lib/deckDisplay'
 
 type DeckGroup = {
@@ -58,21 +57,18 @@ export default function LPDecks() {
 
         <div className="flex flex-col gap-10">
           {DECK_GROUPS.map(group => (
-            <div key={group.label}>
-              <DeckLabelBadge label={group.label} />
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {group.decks.map(deck => (
-                  <DeckCard
-                    key={deck.slug}
-                    label={group.label}
-                    title={deck.shortName}
-                    imageSrc={getDeckImage(group.label, deck.shortName)}
-                    wordCount={deck.wordCount}
-                    href={`/decks/${deck.slug}`}
-                  />
-                ))}
-              </div>
-            </div>
+            <DeckScrollStrip
+              key={group.label}
+              label={group.label}
+              items={group.decks.map(deck => ({
+                key: deck.slug,
+                label: group.label,
+                title: deck.shortName,
+                imageSrc: getDeckImage(group.label, deck.shortName),
+                wordCount: deck.wordCount,
+                href: `/decks/${deck.slug}`,
+              }))}
+            />
           ))}
         </div>
       </div>
