@@ -58,7 +58,7 @@ export default function DeckRequestForm() {
         toast.error('送信できませんでした。少し時間をおいてもう一度お試しください', { position: 'top-center' })
         return
       }
-      toast.success('ありがとうございます！内容を確認します 🌱', { position: 'top-center' })
+      toast.success('リクエストを受け付けました', { position: 'top-center' })
       setSubject('')
       setMessage('')
       setOpen(false)
@@ -78,15 +78,10 @@ export default function DeckRequestForm() {
             alt=""
             className="w-[220px] max-w-full h-auto"
           />
-          <div className="text-center">
-            <p className="text-base font-bold text-gray-950">
-              勉強したい教材、ありますか？
-            </p>
-            <p className="text-sm text-muted mt-1">
-              リクエストがあれば教えてください。<br />
-              あなたの声で、次の教材が生まれます。
-            </p>
-          </div>
+          <p className="text-center text-sm text-muted">
+            欲しい教材がなかったら、<br className="sm:hidden" />
+            リクエストお願いします。
+          </p>
           <Button
             type="button"
             variant="primary"
@@ -117,8 +112,7 @@ export default function DeckRequestForm() {
       >
         <div className="flex flex-col gap-4 p-4 lg:p-6">
           <p className="text-sm text-gray-700 leading-relaxed">
-            どんな教材があると嬉しいか、ひとことで OK です。<br />
-            送っていただいた内容は kiko が全部読みます 🙏
+            欲しい教材があれば教えてください。
           </p>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-gray-950" htmlFor="deck-request-subject">
