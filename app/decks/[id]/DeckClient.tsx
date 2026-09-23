@@ -432,6 +432,26 @@ export default function DeckClient({
 
       <QuizProgressPanel
         compact={isNative}
+        afterSettings={
+          chapters.length > 0 ? (
+            <CardShell>
+              <div className="flex flex-col divide-y divide-line">
+                {chapters.map(ch => (
+                  <ChapterListItem
+                    key={ch.no}
+                    chapterNo={ch.no}
+                    label={chapterLabel(ch.no)}
+                    mastered={ch.mastered}
+                    total={ch.total}
+                    locked={ch.locked}
+                    highlighted={chapter === ch.no}
+                    onClick={() => handleChapterTap(ch.no)}
+                  />
+                ))}
+              </div>
+            </CardShell>
+          ) : null
+        }
         mastered={masteredCount}
         review={reviewCount}
         hard={hardCount}
@@ -461,25 +481,7 @@ export default function DeckClient({
         } : undefined}
       />
 
-      {/* 章一覧: デッキ画面と章画面の両方で描く (章画面では現在章を強調) */}
-      {chapters.length > 0 && (
-        <CardShell>
-          <div className="flex flex-col divide-y divide-line">
-            {chapters.map(ch => (
-              <ChapterListItem
-                key={ch.no}
-                chapterNo={ch.no}
-                label={chapterLabel(ch.no)}
-                mastered={ch.mastered}
-                total={ch.total}
-                locked={ch.locked}
-                highlighted={chapter === ch.no}
-                onClick={() => handleChapterTap(ch.no)}
-              />
-            ))}
-          </div>
-        </CardShell>
-      )}
+      {/* 章一覧は QuizProgressPanel の afterSettings slot に差し込んでいる (CTA spacer より前に置くため) */}
 
       {/* ── SSR-only internal links for crawlers ── */}
       {chapter == null && entries.length > 0 && (
