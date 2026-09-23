@@ -23,6 +23,8 @@ type Props = {
   buttonLabel: string
   buttonDisabled?: boolean
   onStart: () => void
+  /** SP/native 用のコンパクト表示。donut を小さく、凡例を消し、余白を詰めて 1st view に収める */
+  compact?: boolean
   // 設定ブロック（任意）: 渡された時のみ表示
   settings?: {
     defaultMode: QuizDefaultMode
@@ -163,6 +165,7 @@ export default function QuizProgressPanel({
   buttonDisabled,
   onStart,
   settings,
+  compact = false,
 }: Props) {
   const hasScope = scopeItems && selectedScope && onScopeChange
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -171,11 +174,18 @@ export default function QuizProgressPanel({
     <>
       <CardShell>
         {header && <div className="mb-2">{header}</div>}
-        <div className="flex justify-center py-2">
-          <TriDonutChart mastered={mastered} review={review} hard={hard} unseen={unseen} />
+        <div className={`flex justify-center ${compact ? 'py-1' : 'py-2'}`}>
+          <TriDonutChart
+            mastered={mastered}
+            review={review}
+            hard={hard}
+            unseen={unseen}
+            showLegend={!compact}
+            size={compact ? 140 : 180}
+          />
         </div>
         {hasScope && (
-          <div className="mt-4">
+          <div className={compact ? 'mt-3' : 'mt-4'}>
             <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
             <QuizScopeSelector
               items={scopeItems!}

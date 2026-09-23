@@ -25,6 +25,7 @@ import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import { CHAPTER_SIZE, chapterOfPosition, chapterCount, isChapterLocked } from '@/lib/chapters'
+import { toShortName } from '@/lib/deckDisplay'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -379,10 +380,12 @@ export default function DeckClient({
         { label: deck.name },
       ]
 
+  // デッキ / 章の両方で CTA は「はじめる」に統一 (Figma 2957-7272)。
+  // デッキ画面のタップ挙動は前回チャプター / Chapter 01 への遷移。章画面はクイズ開始。
   const buttonLabel = loading
     ? '読み込み中...'
     : chapter == null
-      ? (resumeChapter != null ? `前回の続き (${chapterLabel(resumeChapter)})` : 'Chapter 01 をはじめる')
+      ? 'はじめる'
       : isLocked
         ? '🔒 プレミアム登録ではじめる'
         : availableCount === 0
@@ -410,16 +413,18 @@ export default function DeckClient({
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
       {paywallVariant && <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />}
 
-      <PageHeader items={breadcrumbItems} showSearch={chapter != null} />
+      <PageHeader
+        items={breadcrumbItems}
+        showSearch={false}
+        title={
+          chapter != null
+            ? `${deck.label}${toShortName(deck.name, deck.label)} / ${chapterLabel(chapter)}`
+            : `${deck.label}${toShortName(deck.name, deck.label)}`
+        }
+      />
 
       <QuizProgressPanel
-        header={
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {deck.name}{chapter != null ? ` ・ ${chapterLabel(chapter)}` : ''}
-            </h2>
-          </div>
-        }
+        compact={isNative}
         mastered={masteredCount}
         review={reviewCount}
         hard={hardCount}
