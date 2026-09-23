@@ -16,10 +16,16 @@ import Breadcrumb, { type BreadcrumbItem } from './Breadcrumb'
 export default function PageHeader({
   items,
   showSearch = true,
+  title,
 }: {
   items: BreadcrumbItem[]
   /** SP の 56px ヘッダーで検索バーを出すか。デッキ画面など学習中に不要な画面は false。 */
   showSearch?: boolean
+  /**
+   * showSearch=false のとき、SP ヘッダーの検索の代わりに出すタイトル文字列。
+   * デッキ/章画面で「IELTS6.5 / Chapter 01」のようなパンくずを見せるのに使う。
+   */
+  title?: string
 }) {
   const router = useRouter()
   return (
@@ -35,7 +41,7 @@ export default function PageHeader({
           >
             <MdArrowBackIosNew className="size-6" />
           </button>
-          {showSearch && (
+          {showSearch ? (
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
@@ -45,6 +51,8 @@ export default function PageHeader({
               <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
               <HiSearch className="size-5 text-muted shrink-0" />
             </button>
+          ) : (
+            <h1 className="flex-1 min-w-0 truncate text-base font-bold text-gray-950">{title ?? ''}</h1>
           )}
         </div>
       </div>

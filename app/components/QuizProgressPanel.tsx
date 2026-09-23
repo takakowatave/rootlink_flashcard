@@ -7,6 +7,7 @@ import CardShell from '@/components/CardShell'
 import ModalShell from '@/components/ModalShell'
 import TriDonutChart from '@/components/TriDonutChart'
 import QuizScopeSelector, { type QuizScope, type QuizScopeItem } from '@/components/QuizScopeSelector'
+import QuizStatusHelp from '@/components/QuizStatusHelp'
 import Button from '@/components/Button'
 
 export type QuizDefaultMode = 'example' | 'word'
@@ -20,9 +21,16 @@ type Props = {
   scopeItems?: QuizScopeItem[]
   selectedScope?: QuizScope
   onScopeChange?: (scope: QuizScope) => void
-  buttonLabel: string
+  buttonLabel: ReactNode
   buttonDisabled?: boolean
   onStart: () => void
+  /** SP/native 用のコンパクト表示。donut を小さく、凡例を消し、余白を詰めて 1st view に収める */
+  compact?: boolean
+  /**
+   * 設定 CardShell の直後 (画面下部の CTA spacer より前) に差し込む slot。
+   * 章一覧などをここに置くと、CTA spacer との異常な空白を回避できる。
+   */
+  afterSettings?: ReactNode
   // 設定ブロック（任意）: 渡された時のみ表示
   settings?: {
     defaultMode: QuizDefaultMode
@@ -163,6 +171,8 @@ export default function QuizProgressPanel({
   buttonDisabled,
   onStart,
   settings,
+  compact = false,
+  afterSettings,
 }: Props) {
   const hasScope = scopeItems && selectedScope && onScopeChange
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -171,12 +181,23 @@ export default function QuizProgressPanel({
     <>
       <CardShell>
         {header && <div className="mb-2">{header}</div>}
-        <div className="flex justify-center py-2">
-          <TriDonutChart mastered={mastered} review={review} hard={hard} unseen={unseen} />
+        <div className={`flex justify-center ${compact ? 'py-1' : 'py-2'}`}>
+          <TriDonutChart
+            mastered={mastered}
+            review={review}
+            hard={hard}
+            unseen={unseen}
+            showLegend={!compact}
+            size={compact ? 140 : 180}
+          />
         </div>
         {hasScope && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-400 mb-2">出題範囲</p>
+          <div className={compact ? 'mt-3' : 'mt-4'}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-400">出題範囲</p>
+              {/* compact 時 (native) は凡例が消えるので、? をここに出す */}
+              {compact && <QuizStatusHelp />}
+            </div>
             <QuizScopeSelector
               items={scopeItems!}
               selected={selectedScope!}
@@ -269,6 +290,8 @@ export default function QuizProgressPanel({
           </ModalShell>
         </>
       )}
+
+      {afterSettings}
 
       {/* SP: 浮遊 CTA と下部スペーサー。タブレット/PC では浮遊させると
           画面全幅の帯になって背後の単語一覧に被って中途半端に見えるため

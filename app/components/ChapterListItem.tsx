@@ -9,6 +9,8 @@ type Props = {
   mastered: number
   total: number
   locked?: boolean
+  /** 現在いる章 (章画面のとき) をハイライトする */
+  highlighted?: boolean
   href?: string
   onClick?: () => void
 }
@@ -19,9 +21,10 @@ type Props = {
  * locked=true のときは右側を鍵アイコンに置き換える (課金導線へ)。
  */
 export default function ChapterListItem({
-  chapterNo, label, mastered, total, locked, href, onClick,
+  chapterNo, label, mastered, total, locked, highlighted, href, onClick,
 }: Props) {
-  const size = 40
+  // Figma 2957:7272 Frame 570: row 72px / circle-container 56 / progress-ring 52
+  const size = 52
   const stroke = 3
   const r = (size - stroke) / 2
   const cx = size / 2
@@ -30,7 +33,7 @@ export default function ChapterListItem({
   const frac = total > 0 ? Math.min(1, mastered / total) : 0
 
   const inner = (
-    <div className="w-full flex items-center gap-3 py-2 pr-2 pl-1">
+    <div className="w-full h-[72px] flex items-center gap-3 px-2">
       <span className="relative shrink-0 grid place-items-center" style={{ width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
           <circle cx={cx} cy={cy} r={r} fill="#F0FDFA" stroke="#E2E8F0" strokeWidth={stroke} />
@@ -43,22 +46,22 @@ export default function ChapterListItem({
             />
           )}
         </svg>
-        <span className="absolute text-sm font-bold text-gray-700 tabular-nums">{chapterNo}</span>
+        <span className="absolute text-base font-bold text-gray-700 tabular-nums">{chapterNo}</span>
       </span>
-      <span className="flex-1 text-sm font-semibold text-gray-800">{label}</span>
+      <span className={`flex-1 text-base font-semibold ${highlighted ? 'text-primary' : 'text-gray-800'}`}>{label}</span>
       {locked ? (
         <span className="shrink-0 grid place-items-center size-8 rounded-full bg-primary-subtle text-primary" aria-label="プレミアム限定">
           <HiLockClosed className="size-4" />
         </span>
       ) : (
-        <span className="shrink-0 text-xs font-semibold text-primary bg-primary-subtle rounded-full px-2 py-1 tabular-nums">
+        <span className="shrink-0 text-sm font-semibold text-primary bg-primary-subtle rounded-full px-3 py-1.5 tabular-nums">
           {mastered} / {total}
         </span>
       )}
     </div>
   )
 
-  const className = 'w-full text-left rounded-lg transition-colors hover:bg-gray-50'
+  const className = 'w-full text-left transition-colors hover:bg-gray-50'
 
   if (href && !onClick) {
     return (

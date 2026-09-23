@@ -25,6 +25,7 @@ import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import { CHAPTER_SIZE, chapterOfPosition, chapterCount, isChapterLocked } from '@/lib/chapters'
+import { toShortName } from '@/lib/deckDisplay'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -327,10 +328,9 @@ export default function DeckClient({
     router.push(chapterHref(slugForUrl, n))
   }, [deck.is_premium, totalChapters, plan, isAuthed, openPaywall, router, slugForUrl])
 
-  // 章一覧はデッキ画面でだけ描く。章画面では entries が 50 語しかないので
-  // 章別集計は正しく取れないし、そもそも表示もしないので skip する。
+  // 章一覧はデッキ画面 / 章画面 の両方で描く (Figma 2961:7396)。
+  // 章画面でも他の章に飛べる導線を出したいので、entries には全 deck_words メタが入っている前提。
   const chapters = useMemo(() => {
-    if (chapter != null) return []
     const progressByChapter = new Map<number, { mastered: number; total: number }>()
     for (const e of entries) {
       const n = chapterOfPosition(e.position)
@@ -350,7 +350,7 @@ export default function DeckClient({
       })
     }
     return list
-  }, [chapter, entries, wordStatus, totalChapters, deck.is_premium, plan])
+  }, [entries, wordStatus, totalChapters, deck.is_premium, plan])
 
   if (quizEntries !== null) {
     return (
@@ -379,10 +379,20 @@ export default function DeckClient({
         { label: deck.name },
       ]
 
+  // Figma 2961:7396 準拠。
+  //   デッキ画面: 2 行の「前回の続き / Chapter NN」
+  //   章画面   : 「はじめる」(ロック時は premium 誘導)
   const buttonLabel = loading
     ? '読み込み中...'
     : chapter == null
-      ? (resumeChapter != null ? `前回の続き (${chapterLabel(resumeChapter)})` : 'Chapter 01 をはじめる')
+      ? (
+          <span className="flex flex-col items-center leading-tight">
+            <span>前回の続き</span>
+            {resumeChapter != null && (
+              <span className="text-xs font-normal opacity-90">{chapterLabel(resumeChapter)}</span>
+            )}
+          </span>
+        )
       : isLocked
         ? '🔒 プレミアム登録ではじめる'
         : availableCount === 0
@@ -410,15 +420,37 @@ export default function DeckClient({
       {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />}
       {paywallVariant && <NativePaywall variant={paywallVariant} onClose={() => setPaywallVariant(null)} />}
 
-      <PageHeader items={breadcrumbItems} showSearch={chapter != null} />
+      <PageHeader
+        items={breadcrumbItems}
+        showSearch={false}
+        title={
+          chapter != null
+            ? `${deck.label}${toShortName(deck.name, deck.label)} / ${chapterLabel(chapter)}`
+            : `${deck.label}${toShortName(deck.name, deck.label)}`
+        }
+      />
 
       <QuizProgressPanel
-        header={
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {deck.name}{chapter != null ? ` ・ ${chapterLabel(chapter)}` : ''}
-            </h2>
-          </div>
+        compact={isNative}
+        afterSettings={
+          chapters.length > 0 ? (
+            <CardShell>
+              <div className="flex flex-col divide-y divide-line">
+                {chapters.map(ch => (
+                  <ChapterListItem
+                    key={ch.no}
+                    chapterNo={ch.no}
+                    label={chapterLabel(ch.no)}
+                    mastered={ch.mastered}
+                    total={ch.total}
+                    locked={ch.locked}
+                    highlighted={chapter === ch.no}
+                    onClick={() => handleChapterTap(ch.no)}
+                  />
+                ))}
+              </div>
+            </CardShell>
+          ) : null
         }
         mastered={masteredCount}
         review={reviewCount}
@@ -449,24 +481,7 @@ export default function DeckClient({
         } : undefined}
       />
 
-      {/* デッキ画面: 章リスト */}
-      {chapter == null && chapters.length > 0 && (
-        <CardShell>
-          <div className="flex flex-col divide-y divide-line">
-            {chapters.map(ch => (
-              <ChapterListItem
-                key={ch.no}
-                chapterNo={ch.no}
-                label={chapterLabel(ch.no)}
-                mastered={ch.mastered}
-                total={ch.total}
-                locked={ch.locked}
-                onClick={() => handleChapterTap(ch.no)}
-              />
-            ))}
-          </div>
-        </CardShell>
-      )}
+      {/* 章一覧は QuizProgressPanel の afterSettings slot に差し込んでいる (CTA spacer より前に置くため) */}
 
       {/* ── SSR-only internal links for crawlers ── */}
       {chapter == null && entries.length > 0 && (
