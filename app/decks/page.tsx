@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import DeckScrollStrip from '@/components/DeckScrollStrip'
+import DeckRequestForm from '@/components/DeckRequestForm'
 import PageHeader from '@/components/PageHeader'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
@@ -62,6 +63,8 @@ export default async function DecksPage() {
               />
             )
           })}
+
+          <DeckRequestForm />
         </div>
       </div>
     </div>
