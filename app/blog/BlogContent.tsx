@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Children, Fragment, isValidElement, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -8,6 +8,7 @@ import rehypeSlug from 'rehype-slug'
 import PhraseCardEmbed, { type EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import WordCardEmbed from '@/components/WordCardEmbed'
 import WordCheckList from '@/components/blog/WordCheckList'
+import ExampleBlock from '@/components/blog/ExampleBlock'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 type Props = {
@@ -82,12 +83,40 @@ function tokenize(source: string): Token[] {
   return tokens
 }
 
+// 「英文<改行>和訳」の形の段落は例文とみなして ExampleBlock に載せる。
+// 記事側は普通に書くだけでよく、Markdown の書き方を変えずに見た目だけ切り替わる。
+function splitByBreaks(children: ReactNode): ReactNode[][] {
+  const lines: ReactNode[][] = [[]]
+  Children.toArray(children).forEach((child) => {
+    if (isValidElement(child) && child.type === 'br') {
+      lines.push([])
+      return
+    }
+    lines[lines.length - 1].push(child)
+  })
+  return lines.filter((line) => line.length > 0)
+}
+
+function firstText(nodes: ReactNode[]): string {
+  const head = nodes[0]
+  return typeof head === 'string' ? head.trim() : ''
+}
+
 const markdownComponents: Components = {
   iframe: (props) => (
     <div className="not-prose my-6 aspect-video w-full overflow-hidden rounded-2xl border border-line">
       <iframe {...props} className="h-full w-full" />
     </div>
   ),
+  p: ({ children }) => {
+    const lines = splitByBreaks(children)
+    // 2行以上あり、1行目が英文で始まるものだけを例文として扱う
+    const isExample = lines.length >= 2 && /^["'(]?[A-Za-z]/.test(firstText(lines[0]))
+    if (isExample) {
+      return <ExampleBlock lines={lines.map((line, i) => <Fragment key={i}>{line}</Fragment>)} />
+    }
+    return <p>{children}</p>
+  },
 }
 
 function MarkdownChunk({ text }: { text: string }) {

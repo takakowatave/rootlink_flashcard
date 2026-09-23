@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
-import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
+import { extractHeadings, type Post } from '@/lib/blog'
 import BlogArticle from '@/components/blog/BlogArticle'
+import BlogSidebar from '@/components/blog/BlogSidebar'
+import { fetchAdjacentPosts, fetchPostEmbeds, fetchSidebarPosts } from '@/lib/blogQueries'
 import { BLOG_AUTHOR } from '@/lib/blogAuthor'
-import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
-import type { SavedWordDictionary } from '@/types/Dictionary'
 
 // プレビュー: 下書き含めて slug で1件取得。SSR キャッシュしない
 export const dynamic = 'force-dynamic'
@@ -36,87 +36,63 @@ export default async function BlogPreviewPage({ params }: Params) {
 
   const isDraft = post.published_at === null
   const displayDate = post.published_at ?? post.created_at
-
   const headings = extractHeadings(post.content)
 
-  const phraseIds = extractPhraseCardIds(post.content)
-  let phraseMap: Record<string, EmbeddedPhrase> = {}
-  if (phraseIds.length > 0) {
-    const { data: phrases } = await supabase
-      .from('phrase_cards')
-      .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
-      .in('id', phraseIds)
-      .limit(phraseIds.length)
-    if (phrases) {
-      phraseMap = Object.fromEntries(
-        (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
-      )
-    }
-  }
-
-  const wordCardWords = extractWordCardWords(post.content)
-  let wordCardMap: Record<string, SavedWordDictionary | null> = {}
-  if (wordCardWords.length > 0) {
-    const { data: cachedRows } = await supabase
-      .from('words')
-      .select('word, dictionary_cache!inner(payload)')
-      .in('word', wordCardWords)
-      .limit(wordCardWords.length)
-    if (cachedRows) {
-      wordCardMap = Object.fromEntries(
-        (cachedRows as Array<{
-          word: string
-          dictionary_cache: { payload: SavedWordDictionary | null } | { payload: SavedWordDictionary | null }[] | null
-        }>).map((row) => {
-          const cache = Array.isArray(row.dictionary_cache) ? row.dictionary_cache[0] : row.dictionary_cache
-          return [row.word, (cache?.payload ?? null) as SavedWordDictionary | null]
-        })
-      )
-    }
-  }
+  const [{ phraseMap, wordCardMap }, { prev, next }, { related, backNumbers }] = await Promise.all([
+    fetchPostEmbeds(post.content),
+    fetchAdjacentPosts(displayDate),
+    fetchSidebarPosts(post),
+  ])
 
   return (
-    <main className="max-w-[672px] mx-auto px-4 py-8">
-      {/* プレビュー用ステータスバー */}
-      <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-quiz-review bg-white px-4 py-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="rounded-full bg-quiz-review px-2 py-0.5 text-sm font-semibold text-white shrink-0">
-            PREVIEW
-          </span>
-          <span className="text-sm text-gray-700 truncate">
-            {isDraft ? '未公開の下書きです' : '公開済み記事のプレビュー'}
-          </span>
+    <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-8 lg:flex-row">
+      <main className="w-full min-w-0 lg:max-w-[672px]">
+        {/* プレビュー用ステータスバー */}
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-quiz-review bg-white px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 rounded-full bg-quiz-review px-2 py-0.5 text-base font-semibold text-white">
+              PREVIEW
+            </span>
+            <span className="truncate text-base text-gray-700">
+              {isDraft ? '未公開の下書きです' : '公開済み記事のプレビュー'}
+            </span>
+          </div>
+          {!isDraft && (
+            <Link href={`/blog/${post.slug}`} className="shrink-0 text-base text-primary hover:underline">
+              公開ページを見る →
+            </Link>
+          )}
         </div>
-        {!isDraft && (
-          <Link
-            href={`/blog/${post.slug}`}
-            className="shrink-0 text-sm text-primary hover:underline"
-          >
-            公開ページを見る →
-          </Link>
-        )}
-      </div>
 
-      <BlogArticle
-        post={post}
-        displayDate={displayDate}
-        headings={headings}
-        phraseMap={phraseMap}
-        wordCardMap={wordCardMap}
-        author={BLOG_AUTHOR}
-        dateNote={isDraft ? <span className="ml-2 text-quiz-review">（下書き・未公開）</span> : null}
-      />
+        <BlogArticle
+          post={post}
+          displayDate={displayDate}
+          headings={headings}
+          phraseMap={phraseMap}
+          wordCardMap={wordCardMap}
+          author={BLOG_AUTHOR}
+          prev={prev}
+          next={next}
+          dateNote={isDraft ? <span className="ml-2 text-quiz-review">（下書き・未公開）</span> : null}
+        />
 
-      {/* 公開手順ヒント（下書き時のみ） */}
-      {isDraft && (
-        <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-sm text-gray-600">
-          <p className="mb-2 font-semibold text-gray-800">公開手順</p>
-          <p>Supabase MCP で下記を実行すると公開されます：</p>
-          <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-sm text-gray-800">
+        {/* 公開手順ヒント（下書き時のみ） */}
+        {isDraft && (
+          <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-base text-gray-600">
+            <p className="mb-2 font-semibold text-gray-800">公開手順</p>
+            <p>Supabase MCP で下記を実行すると公開されます。</p>
+            <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-base text-gray-800">
 {`UPDATE posts SET published_at = NOW() WHERE slug = '${post.slug}';`}
-          </pre>
+            </pre>
+          </div>
+        )}
+      </main>
+
+      <aside className="w-full lg:w-[280px] lg:shrink-0">
+        <div className="lg:sticky lg:top-8">
+          <BlogSidebar related={related} backNumbers={backNumbers} />
         </div>
-      )}
-    </main>
+      </aside>
+    </div>
   )
 }
