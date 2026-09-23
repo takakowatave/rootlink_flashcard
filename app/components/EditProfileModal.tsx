@@ -518,7 +518,9 @@ export default function EditProfileModal({
           </button>
         }
       >
-        <div className="px-5 md:px-6 pt-4 pb-8 flex flex-col gap-8">
+        {/* pb-2: 外側 .fixed.inset-0 が safe-area-inset-bottom を padding として噛んでいる (globals.css) ため、
+            さらに pb-8 を積むと iOS で余白が二重計算になる。中身側は最小限だけ。 */}
+        <div className="px-5 md:px-6 pt-4 pb-2 flex flex-col gap-8">
             {profile && (
               <>
                 {/* アバター */}

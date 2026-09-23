@@ -2,14 +2,18 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
-import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
-import BlogContent from '../../BlogContent'
-import Button from '@/components/Button'
-import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
-import type { SavedWordDictionary } from '@/types/Dictionary'
+import { extractHeadings, type Post } from '@/lib/blog'
+import BlogArticle from '@/components/blog/BlogArticle'
+import BlogSidebar from '@/components/blog/BlogSidebar'
+import { getHighlightTerms } from '@/lib/blogHighlights'
+import { fetchAdjacentPosts, fetchPostEmbeds, fetchRelatedPosts, fetchTagCounts } from '@/lib/blogQueries'
+import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 
 // プレビュー: 下書き含めて slug で1件取得。SSR キャッシュしない
 export const dynamic = 'force-dynamic'
+// supabase-js の fetch が Data Cache に載り、下書きを編集しても古い本文が出続けていた。
+// プレビューは常に最新を見たいので fetch もキャッシュしない。
+export const fetchCache = 'force-no-store'
 
 // プレビュールートは検索エンジンにインデックスさせない
 export const metadata: Metadata = {
@@ -33,158 +37,66 @@ export default async function BlogPreviewPage({ params }: Params) {
 
   const isDraft = post.published_at === null
   const displayDate = post.published_at ?? post.created_at
-
   const headings = extractHeadings(post.content)
 
-  const phraseIds = extractPhraseCardIds(post.content)
-  let phraseMap: Record<string, EmbeddedPhrase> = {}
-  if (phraseIds.length > 0) {
-    const { data: phrases } = await supabase
-      .from('phrase_cards')
-      .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
-      .in('id', phraseIds)
-      .limit(phraseIds.length)
-    if (phrases) {
-      phraseMap = Object.fromEntries(
-        (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
-      )
-    }
-  }
-
-  const wordCardWords = extractWordCardWords(post.content)
-  let wordCardMap: Record<string, SavedWordDictionary | null> = {}
-  if (wordCardWords.length > 0) {
-    const { data: cachedRows } = await supabase
-      .from('words')
-      .select('word, dictionary_cache!inner(payload)')
-      .in('word', wordCardWords)
-      .limit(wordCardWords.length)
-    if (cachedRows) {
-      wordCardMap = Object.fromEntries(
-        (cachedRows as Array<{
-          word: string
-          dictionary_cache: { payload: SavedWordDictionary | null } | { payload: SavedWordDictionary | null }[] | null
-        }>).map((row) => {
-          const cache = Array.isArray(row.dictionary_cache) ? row.dictionary_cache[0] : row.dictionary_cache
-          return [row.word, (cache?.payload ?? null) as SavedWordDictionary | null]
-        })
-      )
-    }
-  }
+  const [{ phraseMap, wordCardMap }, { prev, next }, { related }, categories] = await Promise.all([
+    fetchPostEmbeds(post.content),
+    fetchAdjacentPosts(displayDate),
+    fetchRelatedPosts(post),
+    fetchTagCounts(),
+  ])
 
   return (
-    <main className="max-w-[672px] mx-auto px-4 py-8">
-      {/* プレビュー用ステータスバー */}
-      <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-quiz-review bg-white px-4 py-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="rounded-full bg-quiz-review px-2 py-0.5 text-xs font-semibold text-white shrink-0">
-            PREVIEW
-          </span>
-          <span className="text-xs text-gray-700 truncate">
-            {isDraft ? '未公開の下書きです' : '公開済み記事のプレビュー'}
-          </span>
-        </div>
-        {!isDraft && (
-          <Link
-            href={`/blog/${post.slug}`}
-            className="shrink-0 text-xs text-primary hover:underline"
-          >
-            公開ページを見る →
-          </Link>
-        )}
-      </div>
-
-      <article>
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {post.hero_image_url && (
-            <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={post.hero_image_url}
-                alt={post.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-
-          <div className="px-5 py-8 sm:px-8 sm:py-10">
-            <header className="mb-8">
-              {post.tags && post.tags.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-              <p className="mt-3 text-xs text-muted">
-                {new Date(displayDate).toLocaleDateString('ja-JP')}
-                {isDraft && <span className="ml-2 text-quiz-review">（下書き・未公開）</span>}
-              </p>
-            </header>
-
-            {headings.length > 0 && (
-              <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
-                <p className="mb-2 text-xs font-semibold text-muted">目次</p>
-                <ul className="space-y-1 text-sm">
-                  {headings.map((h) => (
-                    <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
-                      <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
-                        {h.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            )}
-
-            <div className="prose prose-sm max-w-none
-              prose-headings:text-gray-950 prose-headings:font-semibold
-              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
-              prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
-              prose-p:text-gray-800 prose-p:leading-relaxed
-              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-              prose-blockquote:border-l-4 prose-blockquote:border-primary
-              prose-blockquote:not-italic prose-blockquote:text-gray-700
-              prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-              prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900
-              prose-hr:border-line
-            ">
-              <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
-            </div>
+    <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-8 lg:flex-row">
+      <main className="w-full min-w-0 lg:max-w-[672px]">
+        {/* プレビュー用ステータスバー */}
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-quiz-review bg-white px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 rounded-full bg-quiz-review px-2 py-0.5 text-base font-semibold text-white">
+              PREVIEW
+            </span>
+            <span className="truncate text-base text-gray-700">
+              {isDraft ? '未公開の下書きです' : '公開済み記事のプレビュー'}
+            </span>
           </div>
+          {!isDraft && (
+            <Link href={`/blog/${post.slug}`} className="shrink-0 text-base text-primary hover:underline">
+              公開ページを見る →
+            </Link>
+          )}
         </div>
 
-        {/* 末尾 CTA */}
-        <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-          <p className="mb-3 text-sm text-gray-800">
-            気に入った表現は、RootLink に保存して復習しよう。
-          </p>
-          <Link href="/signup">
-            <Button variant="primary" size="md" radius="lg">
-              無料で始める
-            </Button>
-          </Link>
-        </div>
+        <BlogArticle
+          post={post}
+          displayDate={displayDate}
+          headings={headings}
+          phraseMap={phraseMap}
+          wordCardMap={wordCardMap}
+          author={BLOG_AUTHOR}
+          prev={prev}
+          next={next}
+          highlightTerms={getHighlightTerms(params.slug)}
+          coverSrc={`/blog/${params.slug}/cover.png`}
+          dateNote={isDraft ? <span className="ml-2 text-quiz-review">（下書き・未公開）</span> : null}
+        />
 
         {/* 公開手順ヒント（下書き時のみ） */}
         {isDraft && (
-          <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-xs text-gray-600">
+          <div className="mt-8 rounded-2xl border border-line bg-white px-5 py-4 text-base text-gray-600">
             <p className="mb-2 font-semibold text-gray-800">公開手順</p>
-            <p>Supabase MCP で下記を実行すると公開されます：</p>
-            <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-[11px] text-gray-800">
+            <p>Supabase MCP で下記を実行すると公開されます。</p>
+            <pre className="mt-2 overflow-x-auto rounded bg-surface px-3 py-2 text-base text-gray-800">
 {`UPDATE posts SET published_at = NOW() WHERE slug = '${post.slug}';`}
             </pre>
           </div>
         )}
-      </article>
-    </main>
+      </main>
+
+      <aside className="w-full lg:w-[280px] lg:shrink-0">
+        <div className="lg:sticky lg:top-8">
+          <BlogSidebar related={related} categories={categories} />
+        </div>
+      </aside>
+    </div>
   )
 }

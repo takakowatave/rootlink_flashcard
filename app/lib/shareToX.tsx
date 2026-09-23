@@ -45,21 +45,35 @@ async function shareOnNative({ cardUrl, filename, shareText }: Params) {
     import('@capacitor/filesystem'),
   ])
 
-  const res = await fetch(cardUrl)
-  if (!res.ok) throw new Error(`card fetch failed: ${res.status}`)
-  const blob = await res.blob()
-  const base64 = await blobToBase64(blob)
+  // fetch: WebView origin が capacitor:// になる経路もあるので絶対 URL で叩く
+  const absoluteUrl = /^https?:\/\//.test(cardUrl)
+    ? cardUrl
+    : new URL(cardUrl, 'https://www.rootlink.app').toString()
 
-  const { uri } = await Filesystem.writeFile({
-    path: filename,
-    data: base64,
-    directory: Directory.Cache,
-  })
+  let stage: 'fetch' | 'encode' | 'write' | 'share' = 'fetch'
+  try {
+    const res = await fetch(absoluteUrl)
+    if (!res.ok) {
+      throw new Error(`card fetch failed: ${res.status} ${res.statusText}`)
+    }
+    stage = 'encode'
+    const blob = await res.blob()
+    const base64 = await blobToBase64(blob)
 
-  await Share.share({
-    files: [uri],
-    text: shareText,
-  })
+    stage = 'write'
+    const { uri } = await Filesystem.writeFile({
+      path: filename,
+      data: base64,
+      directory: Directory.Cache,
+    })
+
+    stage = 'share'
+    await Share.share({ files: [uri], text: shareText })
+  } catch (err) {
+    const message = (err as { message?: string })?.message ?? String(err)
+    console.error(`[share] native share failed at stage=${stage}: ${message}`, err)
+    throw new Error(`${stage}: ${message}`)
+  }
 }
 
 export async function shareViaClipboardAndX(params: Params) {

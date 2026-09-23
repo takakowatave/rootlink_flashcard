@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabaseClient'
-import { extractHeadings, extractPhraseCardIds, extractWordCardWords, type Post } from '@/lib/blog'
-import BlogContent from '../BlogContent'
-import Button from '@/components/Button'
-import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
-import type { SavedWordDictionary } from '@/types/Dictionary'
+import { extractHeadings, type Post } from '@/lib/blog'
+import BlogArticle from '@/components/blog/BlogArticle'
+import BlogSidebar from '@/components/blog/BlogSidebar'
+import { getHighlightTerms } from '@/lib/blogHighlights'
+import { fetchAdjacentPosts, fetchPostEmbeds, fetchRelatedPosts, fetchTagCounts } from '@/lib/blogQueries'
+import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 
 export const revalidate = 60
 
@@ -32,7 +33,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost(params.slug)
   if (!post) return { title: 'Not Found' }
   const description = buildDescription(post)
-  const images = post.hero_image_url ? [{ url: post.hero_image_url }] : undefined
+  // 手動画像がなければ自動生成のカバー画像を使う
+  const images = [{ url: post.hero_image_url ?? `https://www.rootlink.app/blog/${post.slug}/cover.png`, width: 1200, height: 630 }]
   return {
     title: post.title,
     description,
@@ -48,177 +50,41 @@ export default async function BlogPostPage({ params }: Params) {
   if (!post) notFound()
 
   const headings = extractHeadings(post.content)
-
-  // 本文中に埋め込まれた <phrase-card id="..." /> を先にまとめて取得
-  const phraseIds = extractPhraseCardIds(post.content)
-  let phraseMap: Record<string, EmbeddedPhrase> = {}
-  if (phraseIds.length > 0) {
-    const { data: phrases } = await supabase
-      .from('phrase_cards')
-      .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
-      .in('id', phraseIds)
-      .limit(phraseIds.length)
-    if (phrases) {
-      phraseMap = Object.fromEntries(
-        (phrases as EmbeddedPhrase[]).map((p) => [p.id, p])
-      )
-    }
-  }
-
-  // <word-card word="..." /> の全単語を dictionary_cache から一括取得。
-  // SSR で HTML に焼き込むことで Googlebot が本文として認識できる。
-  const wordCardWords = extractWordCardWords(post.content)
-  let wordCardMap: Record<string, SavedWordDictionary | null> = {}
-  if (wordCardWords.length > 0) {
-    const { data: cachedRows } = await supabase
-      .from('words')
-      .select('word, dictionary_cache!inner(payload)')
-      .in('word', wordCardWords)
-      .limit(wordCardWords.length)
-    if (cachedRows) {
-      wordCardMap = Object.fromEntries(
-        (cachedRows as Array<{
-          word: string
-          dictionary_cache: { payload: SavedWordDictionary | null } | { payload: SavedWordDictionary | null }[] | null
-        }>).map((row) => {
-          const cache = Array.isArray(row.dictionary_cache) ? row.dictionary_cache[0] : row.dictionary_cache
-          return [row.word, (cache?.payload ?? null) as SavedWordDictionary | null]
-        })
-      )
-    }
-  }
-
-  // 前後記事
-  const [{ data: prev }, { data: next }] = await Promise.all([
-    supabase
-      .from('posts')
-      .select('slug, title')
-      .not('published_at', 'is', null)
-      .lt('published_at', post.published_at!)
-      .order('published_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('posts')
-      .select('slug, title')
-      .not('published_at', 'is', null)
-      .gt('published_at', post.published_at!)
-      .order('published_at', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
+  const [{ phraseMap, wordCardMap }, { prev, next }, { related }, categories] = await Promise.all([
+    fetchPostEmbeds(post.content),
+    fetchAdjacentPosts(post.published_at!),
+    fetchRelatedPosts(post),
+    fetchTagCounts(),
   ])
 
   return (
-    <main className="max-w-[672px] mx-auto px-4 py-8">
-      <nav className="mb-4 text-xs">
-        <Link href="/blog" className="text-muted hover:text-gray-950">
-          ← Blog
-        </Link>
-      </nav>
-
-      <article>
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {post.hero_image_url && (
-            <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={post.hero_image_url}
-                alt={post.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-
-          <div className="px-5 py-8 sm:px-8 sm:py-10">
-            <header className="mb-8">
-              {post.tags && post.tags.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
-              <p className="mt-3 text-xs text-muted">
-                {new Date(post.published_at!).toLocaleDateString('ja-JP')}
-              </p>
-            </header>
-
-            {headings.length > 0 && (
-              <aside className="mb-8 rounded-xl border border-line bg-surface px-5 py-4">
-                <p className="mb-2 text-xs font-semibold text-muted">目次</p>
-                <ul className="space-y-1 text-sm">
-                  {headings.map((h) => (
-                    <li key={h.id} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
-                      <a href={`#${h.id}`} className="text-gray-800 hover:text-primary">
-                        {h.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            )}
-
-            <div className="prose prose-sm max-w-none
-              prose-headings:text-gray-950 prose-headings:font-semibold
-              prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3
-              prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
-              prose-p:text-gray-800 prose-p:leading-relaxed
-              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-              prose-blockquote:border-l-4 prose-blockquote:border-primary
-              prose-blockquote:not-italic prose-blockquote:text-gray-700
-              prose-blockquote:bg-primary-subtle prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-              prose-code:text-primary-hover prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-gray-100 prose-pre:border prose-pre:border-line
-              prose-pre:text-gray-900 [&_pre_code]:text-gray-900
-              prose-hr:border-line
-            ">
-              <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
-            </div>
-          </div>
-        </div>
-
-        {/* 末尾 CTA */}
-        <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-          <p className="mb-3 text-sm text-gray-800">
-            気に入った表現は、RootLink に保存して復習しよう。
-          </p>
-          <Link href="/signup">
-            <Button variant="primary" size="md" radius="lg">
-              無料で始める
-            </Button>
+    <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-8 lg:flex-row">
+      <main className="w-full min-w-0 lg:max-w-[672px]">
+        <nav className="mb-4 text-base">
+          <Link href="/blog" className="text-muted hover:text-gray-950">
+            ← Blog
           </Link>
-        </div>
+        </nav>
 
-        {/* 前後ナビ */}
-        {(prev || next) && (
-          <nav className="mt-10 flex items-stretch justify-between gap-3 border-t border-line pt-6">
-            {prev ? (
-              <Link
-                href={`/blog/${prev.slug}`}
-                className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-muted"
-              >
-                <p className="text-xs text-muted">← 前の記事</p>
-                <p className="mt-1 line-clamp-1 text-sm text-gray-800">{prev.title}</p>
-              </Link>
-            ) : <span className="flex-1" />}
-            {next ? (
-              <Link
-                href={`/blog/${next.slug}`}
-                className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-right transition-colors hover:border-muted"
-              >
-                <p className="text-xs text-muted">次の記事 →</p>
-                <p className="mt-1 line-clamp-1 text-sm text-gray-800">{next.title}</p>
-              </Link>
-            ) : <span className="flex-1" />}
-          </nav>
-        )}
-      </article>
-    </main>
+        <BlogArticle
+          post={post}
+          displayDate={post.published_at!}
+          headings={headings}
+          phraseMap={phraseMap}
+          wordCardMap={wordCardMap}
+          author={BLOG_AUTHOR}
+          prev={prev}
+          next={next}
+          highlightTerms={getHighlightTerms(params.slug)}
+          coverSrc={`/blog/${params.slug}/cover.png`}
+        />
+      </main>
+
+      <aside className="w-full lg:w-[280px] lg:shrink-0">
+        <div className="lg:sticky lg:top-8">
+          <BlogSidebar related={related} categories={categories} />
+        </div>
+      </aside>
+    </div>
   )
 }

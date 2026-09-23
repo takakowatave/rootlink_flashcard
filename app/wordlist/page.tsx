@@ -83,6 +83,7 @@ export default function WordListPage() {
   const [wordList, setWordList] = useState<SavedWordMetaRow[]>([])
   const [dictByWord, setDictByWord] = useState<Map<string, SavedWordDictionary | null>>(new Map())
   const [phraseList, setPhraseList] = useState<SavedPhraseRow[]>([])
+  const [listLoaded, setListLoaded] = useState(false)
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [savedPhraseIds, setSavedPhraseIds] = useState<Set<string>>(new Set())
   const [selectedItem, setSelectedItem] = useState<SavedWordRow | null>(null)
@@ -133,6 +134,7 @@ export default function WordListPage() {
     setPhraseList(phrases)
     setSavedWords(words.map((w) => w.word))
     setSavedPhraseIds(new Set(phrases.map((p) => p.phrase_card_id)))
+    setListLoaded(true)
     setQuizDefaultMode(settings.defaultMode)
     setQuizCount(settings.questionCount)
     setQuizAutoAudio(settings.autoPlayAudio)
@@ -163,6 +165,7 @@ export default function WordListPage() {
       setSavedPhraseIds(new Set())
       setWordStatus(new Map())
       setWrongCounts(new Map())
+      setListLoaded(false)
       return
     }
     if (userId) {
@@ -395,7 +398,14 @@ export default function WordListPage() {
 
       {/* ── オリジナル単語リスト（単語＋フレーズ） ── */}
       <section className="pt-6">
-        {totalItems === 0 ? (
+        {!listLoaded ? (
+          // 初回読み込み中は空状態を出さず、レイアウトを潰さないだけの
+          // プレースホルダにする。totalItems===0 判定を先出しすると、
+          // 保存済みユーザーにも一瞬 EmptyState がチラつく (8f54e4c と同種)。
+          <div className="px-4">
+            <div className="h-[188px] w-full" aria-hidden />
+          </div>
+        ) : totalItems === 0 ? (
           <CardShell>
             <div className="flex flex-col items-center gap-4 py-6 px-4">
               <p className="font-bold text-base text-center text-default">

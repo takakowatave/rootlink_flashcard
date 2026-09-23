@@ -1,16 +1,20 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Children, Fragment, isValidElement, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import PhraseCardEmbed, { type EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import WordCardEmbed from '@/components/WordCardEmbed'
+import WordCheckList from '@/components/blog/WordCheckList'
+import ExampleBlock from '@/components/blog/ExampleBlock'
+import HighlightedText from '@/components/blog/HighlightedText'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 type Props = {
   content: string
+  highlightTerms?: string[]
   phraseMap: Record<string, EmbeddedPhrase>
   wordCardMap?: Record<string, SavedWordDictionary | null>
 }
@@ -19,17 +23,20 @@ type Props = {
 // 統一マーカーに置換 → split で分割 → 順番に埋め込みコンポーネントに差し替える。
 const PHRASE_CARD_RE = /<phrase-card\s+id=["']([^"']+)["']\s*(?:\/>|><\/phrase-card>)/gi
 const WORD_CARD_RE = /<word-card\s+([^/>]+?)\s*(?:\/>|><\/word-card>)/gi
+const WORD_LIST_RE = /<word-list\s+words=["']([^"']+)["']\s*(?:\/>|><\/word-list>)/gi
 
 type Token =
   | { kind: 'md'; text: string }
   | { kind: 'phrase'; id: string }
   | { kind: 'word'; word: string; senseIndex?: number }
+  | { kind: 'wordlist'; words: string[] }
 
 function tokenize(source: string): Token[] {
   const tokens: Token[] = []
   type Match =
     | { start: number; end: number; kind: 'phrase'; id: string }
     | { start: number; end: number; kind: 'word'; word: string; senseIndex?: number }
+    | { start: number; end: number; kind: 'wordlist'; words: string[] }
   const matches: Match[] = []
 
   let m: RegExpExecArray | null
@@ -50,6 +57,12 @@ function tokenize(source: string): Token[] {
     matches.push({ start: m.index, end: m.index + m[0].length, kind: 'word', word, senseIndex })
   }
 
+  WORD_LIST_RE.lastIndex = 0
+  while ((m = WORD_LIST_RE.exec(source)) !== null) {
+    const words = m[1].split(',').map((w) => w.trim()).filter(Boolean)
+    matches.push({ start: m.index, end: m.index + m[0].length, kind: 'wordlist', words })
+  }
+
   matches.sort((a, b) => a.start - b.start)
 
   let cursor = 0
@@ -59,6 +72,8 @@ function tokenize(source: string): Token[] {
     }
     if (match.kind === 'phrase') {
       tokens.push({ kind: 'phrase', id: match.id })
+    } else if (match.kind === 'wordlist') {
+      tokens.push({ kind: 'wordlist', words: match.words })
     } else {
       tokens.push({ kind: 'word', word: match.word, senseIndex: match.senseIndex })
     }
@@ -70,35 +85,78 @@ function tokenize(source: string): Token[] {
   return tokens
 }
 
-const markdownComponents: Components = {
+// 「英文<改行>和訳」の形の段落は例文とみなして ExampleBlock に載せる。
+// 記事側は普通に書くだけでよく、Markdown の書き方を変えずに見た目だけ切り替わる。
+function splitByBreaks(children: ReactNode): ReactNode[][] {
+  const lines: ReactNode[][] = [[]]
+  Children.toArray(children).forEach((child) => {
+    if (isValidElement(child) && child.type === 'br') {
+      lines.push([])
+      return
+    }
+    lines[lines.length - 1].push(child)
+  })
+  return lines.filter((line) => line.length > 0)
+}
+
+function firstText(nodes: ReactNode[]): string {
+  const head = nodes[0]
+  return typeof head === 'string' ? head.trim() : ''
+}
+
+function buildComponents(terms: string[]): Components {
+  return {
   iframe: (props) => (
     <div className="not-prose my-6 aspect-video w-full overflow-hidden rounded-2xl border border-line">
       <iframe {...props} className="h-full w-full" />
     </div>
   ),
+  p: ({ children }) => {
+    const lines = splitByBreaks(children)
+    // 2行以上あり、1行目が英文で始まるものだけを例文として扱う
+    const isExample = lines.length >= 2 && /^["'(]?[A-Za-z]/.test(firstText(lines[0]))
+    if (isExample) {
+      return (
+        <ExampleBlock
+          terms={terms}
+          lines={lines.map((line, i) => <Fragment key={i}>{line}</Fragment>)}
+        />
+      )
+    }
+    return <p>{children}</p>
+  },
+  // 練習問題などの番号付きリストも例なので、例文と同じ箱に載せる
+  ol: ({ children }) => (
+    <div className="not-prose my-4 rounded-2xl bg-gray-50 px-5 py-4">
+      <ol className="list-decimal space-y-2 pl-6 text-base leading-relaxed text-gray-950 marker:text-gray-600">
+        <HighlightedText terms={terms}>{children}</HighlightedText>
+      </ol>
+    </div>
+  ),
+  }
 }
 
-function MarkdownChunk({ text }: { text: string }) {
+function MarkdownChunk({ text, terms }: { text: string; terms: string[] }) {
   if (!text.trim()) return null
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeSlug]}
-      components={markdownComponents}
+      components={buildComponents(terms)}
     >
       {text}
     </ReactMarkdown>
   )
 }
 
-export default function BlogContent({ content, phraseMap, wordCardMap = {} }: Props) {
+export default function BlogContent({ content, phraseMap, wordCardMap = {}, highlightTerms = [] }: Props) {
   const tokens = tokenize(content)
 
   return (
     <>
       {tokens.map((t, i) => {
         if (t.kind === 'md') {
-          return <MarkdownChunk key={`md-${i}`} text={t.text} />
+          return <MarkdownChunk key={`md-${i}`} text={t.text} terms={highlightTerms} />
         }
         if (t.kind === 'phrase') {
           const phrase = phraseMap[t.id]
@@ -108,6 +166,9 @@ export default function BlogContent({ content, phraseMap, wordCardMap = {} }: Pr
               <PhraseCardEmbed phrase={phrase} />
             </Fragment>
           )
+        }
+        if (t.kind === 'wordlist') {
+          return <WordCheckList key={`wl-${i}`} words={t.words} />
         }
         // t.kind === 'word'
         const dictionary = wordCardMap[t.word] ?? null
