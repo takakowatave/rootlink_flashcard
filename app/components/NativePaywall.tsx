@@ -21,7 +21,28 @@ const EMPTY_PLAN: PaywallPlanInfo = {
   priceString: null,
   price: null,
   currencyCode: null,
+  pricePerMonthString: null,
+  pricePerMonth: null,
+  pricePerYear: null,
   hasFreeTrial: false,
+}
+
+// store の currencyCode に合わせて金額を整形する。
+// - JPY: 整数 (小数 0 桁)
+// - USD 等: 通貨のデフォルト桁数 (Intl が処理)
+// currencyCode が取れない場合は null を返して非表示にする (通貨記号のない裸の数字は出さない)。
+function formatCurrency(value: number, currencyCode: string | null): string | null {
+  if (!currencyCode) return null
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      currencyDisplay: 'symbol',
+      maximumFractionDigits: currencyCode === 'JPY' ? 0 : undefined,
+    }).format(value)
+  } catch {
+    return null
+  }
 }
 
 // Capacitor.getPlatform() の値。web は import 元コンポーネントで既に別 (UpgradeModal) に振り分け済み。
@@ -114,7 +135,7 @@ export default function NativePaywall({ variant, onClose }: Props) {
     }
   }
 
-  // 表示価格。RevenueCat 未取得時は default にフォールバック。
+  // 表示価格。RevenueCat 未取得時は default にフォールバック (どちらも JPY)。
   const yearlyPriceString = yearly.priceString ?? "¥4,800"
   const monthlyPriceString = monthly.priceString ?? "¥500"
 
@@ -123,18 +144,28 @@ export default function NativePaywall({ variant, onClose }: Props) {
   const monthlyHasTrial = monthly.hasFreeTrial || variant === "trial"
   const yearlyHasTrial = yearly.hasFreeTrial
 
-  // 年額の「月あたり」「お得額」計算。RevenueCat の price から算出。
-  // どちらかの price が取れないときは null にして非表示。
-  const currencySymbol = yearly.currencyCode === "JPY" || !yearly.currencyCode ? "¥" : ""
+  // 年額の「月あたり」:
+  //   - RC SDK が用意している pricePerMonthString (store 通貨で整形済み) をそのまま使う
+  //   - 未提供の store バージョンなら pricePerMonth + currencyCode で自前整形
+  //   - どちらも無ければ null (非表示)。通貨記号なしの裸の数字は絶対に出さない
   const yearlyMonthlyEquivalent =
-    yearly.price !== null ? `${currencySymbol}${Math.round(yearly.price / 12).toLocaleString()}` : null
+    yearly.pricePerMonthString ??
+    (yearly.pricePerMonth !== null ? formatCurrency(yearly.pricePerMonth, yearly.currencyCode) : null) ??
+    (yearly.price !== null ? formatCurrency(yearly.price / 12, yearly.currencyCode) : null)
+
+  // 年額の「お得額」: monthly を 12 か月払ったときとの差額。
+  //   - monthly.pricePerYear (SDK 提供) or monthly.price * 12 を年間コストとして扱う
+  //   - yearly.price との差額を、yearly の通貨で整形
+  //   - 通貨コードが取れないケースは非表示 (裸の数字は出さない)
+  const monthlyAnnualCost =
+    monthly.pricePerYear ?? (monthly.price !== null ? monthly.price * 12 : null)
   const yearlySavingsValue =
-    monthly.price !== null && yearly.price !== null
-      ? Math.max(0, Math.round(monthly.price * 12 - yearly.price))
+    monthlyAnnualCost !== null && yearly.price !== null
+      ? Math.max(0, monthlyAnnualCost - yearly.price)
       : null
   const yearlySavings =
     yearlySavingsValue !== null && yearlySavingsValue > 0
-      ? `${currencySymbol}${yearlySavingsValue.toLocaleString()}`
+      ? formatCurrency(yearlySavingsValue, yearly.currencyCode)
       : null
 
   const monthlyDisplay: PaywallPlanDisplay = {
