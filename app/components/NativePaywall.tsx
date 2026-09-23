@@ -53,6 +53,42 @@ function detectNativePlatform(): PaywallPlatform {
   return p === "android" ? "android" : "ios"
 }
 
+// 本番 App Store Connect の JPY 価格。store 側と乖離しないよう、価格改定時はここも更新する。
+const JPY_MONTHLY_STRING = "¥500"
+const JPY_YEARLY_STRING = "¥4,800"
+const JPY_MONTHLY = 500
+const JPY_YEARLY = 4800
+
+// JP ストアでは必ず JPY で表示するためのフォールバック用プラン情報。
+// Sandbox で RC が USD 等を返してきたときに強制的にこれに差し替えて、
+// 円で整合する price / pricePerMonth / pricePerYear を渡す。
+const JPY_FALLBACK_MONTHLY: PaywallPlanInfo = {
+  priceString: JPY_MONTHLY_STRING,
+  price: JPY_MONTHLY,
+  currencyCode: "JPY",
+  pricePerMonthString: JPY_MONTHLY_STRING,
+  pricePerMonth: JPY_MONTHLY,
+  pricePerYear: JPY_MONTHLY * 12,
+  hasFreeTrial: false,
+}
+const JPY_FALLBACK_YEARLY: PaywallPlanInfo = {
+  priceString: JPY_YEARLY_STRING,
+  price: JPY_YEARLY,
+  currencyCode: "JPY",
+  pricePerMonthString: `¥${Math.round(JPY_YEARLY / 12).toLocaleString()}`,
+  pricePerMonth: Math.round(JPY_YEARLY / 12),
+  pricePerYear: JPY_YEARLY,
+  hasFreeTrial: false,
+}
+
+// storefrontCountry が JP 系 (JPN / JP) かどうか。RC は SDK バージョンにより
+// alpha-3 / alpha-2 のどちらかを返すので両方許容する。
+function isJapanStorefront(cc: string | null): boolean {
+  if (!cc) return false
+  const u = cc.toUpperCase()
+  return u === "JPN" || u === "JP"
+}
+
 export default function NativePaywall({ variant, onClose }: Props) {
   const [monthly, setMonthly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
   const [yearly, setYearly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
@@ -76,8 +112,20 @@ export default function NativePaywall({ variant, onClose }: Props) {
           setOfferingError(true)
           return
         }
-        setMonthly(summary.monthly)
-        setYearly(summary.yearly)
+        // JP ストアなのに RC の currencyCode が JPY 以外 (Sandbox / TestFlight で
+        // 稀に発生) のときは、その値を表示に使わず JPY フォールバックへ差し替える。
+        // 実 Apple 購入シートは常に JPY で表示されるので、UI とストアで齟齬が
+        // 出ないように保険をかける。本番 (JP Apple ID) では通常 JPY が来る
+        // ため no-op。
+        const jpStorefront = isJapanStorefront(summary.storefrontCountry)
+        const monthlyMismatch = jpStorefront && summary.monthly.currencyCode && summary.monthly.currencyCode !== "JPY"
+        const yearlyMismatch = jpStorefront && summary.yearly.currencyCode && summary.yearly.currencyCode !== "JPY"
+        setMonthly(monthlyMismatch
+          ? { ...JPY_FALLBACK_MONTHLY, hasFreeTrial: summary.monthly.hasFreeTrial }
+          : summary.monthly)
+        setYearly(yearlyMismatch
+          ? { ...JPY_FALLBACK_YEARLY, hasFreeTrial: summary.yearly.hasFreeTrial }
+          : summary.yearly)
       })
       .catch(() => {
         if (!cancelled) setOfferingError(true)
@@ -136,8 +184,8 @@ export default function NativePaywall({ variant, onClose }: Props) {
   }
 
   // 表示価格。RevenueCat 未取得時は default にフォールバック (どちらも JPY)。
-  const yearlyPriceString = yearly.priceString ?? "¥4,800"
-  const monthlyPriceString = monthly.priceString ?? "¥500"
+  const yearlyPriceString = yearly.priceString ?? JPY_YEARLY_STRING
+  const monthlyPriceString = monthly.priceString ?? JPY_MONTHLY_STRING
 
   // トライアル有無 (RevenueCat の商品情報で判定)。
   // 月額は既存動作を維持するため、variant==='trial' の場合もトライアル扱いにする。
@@ -154,14 +202,16 @@ export default function NativePaywall({ variant, onClose }: Props) {
     (yearly.price !== null ? formatCurrency(yearly.price / 12, yearly.currencyCode) : null)
 
   // 年額の「お得額」: monthly を 12 か月払ったときとの差額。
-  //   - monthly.pricePerYear (SDK 提供) or monthly.price * 12 を年間コストとして扱う
-  //   - yearly.price との差額を、yearly の通貨で整形
+  //   - float の精度で 2.99 * 12 = 35.879999... のようなズレが出ないよう、
+  //     一旦 cents (整数) に上げて計算してから通貨単位に戻す
+  //   - Math.round() で総額を整数に丸めない (currency default 桁数で Intl が整形)
+  //   - JPY は元から整数なので x100 → /100 でも損失なし
   //   - 通貨コードが取れないケースは非表示 (裸の数字は出さない)
-  const monthlyAnnualCost =
-    monthly.pricePerYear ?? (monthly.price !== null ? monthly.price * 12 : null)
+  const monthlyCents = monthly.price !== null ? Math.round(monthly.price * 100) : null
+  const yearlyCents = yearly.price !== null ? Math.round(yearly.price * 100) : null
   const yearlySavingsValue =
-    monthlyAnnualCost !== null && yearly.price !== null
-      ? Math.max(0, monthlyAnnualCost - yearly.price)
+    monthlyCents !== null && yearlyCents !== null
+      ? Math.max(0, (monthlyCents * 12 - yearlyCents) / 100)
       : null
   const yearlySavings =
     yearlySavingsValue !== null && yearlySavingsValue > 0

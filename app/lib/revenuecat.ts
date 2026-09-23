@@ -86,6 +86,12 @@ export type PaywallPlanInfo = {
 export type PaywallOfferingSummary = {
   monthly: PaywallPlanInfo
   yearly: PaywallPlanInfo
+  /**
+   * 現在のストア国コード (ISO 3166 alpha-3 / alpha-2 のどちらか — Store SDK 依存)。
+   * JPN のはずなのに priceString が USD 等になっているときは RC / Sandbox の
+   * キャッシュ不整合。NativePaywall で JPY フォールバックに落とす判定に使う。
+   */
+  storefrontCountry: string | null
 }
 
 type MaybeProduct = {
@@ -138,12 +144,28 @@ function readPlanInfo(pkg: { product: MaybeProduct } | undefined | null): Paywal
   }
 }
 
+async function getStorefrontCountry(): Promise<string | null> {
+  if (!isNativePlatform()) return null
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    // 型定義上 getStorefront が存在しない古い SDK バージョンでも落ちないように any 経由。
+    const p = Purchases as unknown as { getStorefront?: () => Promise<{ countryCode?: string }> }
+    if (typeof p.getStorefront !== 'function') return null
+    const sf = await p.getStorefront()
+    return sf?.countryCode ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getPaywallOffering(): Promise<PaywallOfferingSummary | null> {
   const offering = await getCurrentOffering()
   if (offering) {
+    const [storefrontCountry] = await Promise.all([getStorefrontCountry()])
     return {
       monthly: readPlanInfo(offering.monthly as unknown as { product: MaybeProduct } | null),
       yearly: readPlanInfo(offering.annual as unknown as { product: MaybeProduct } | null),
+      storefrontCountry,
     }
   }
   // Web プレビュー (?preview=native) では実 offering が取れないので、
@@ -168,6 +190,7 @@ export async function getPaywallOffering(): Promise<PaywallOfferingSummary | nul
         pricePerYear: 4800,
         hasFreeTrial: false,
       },
+      storefrontCountry: 'JPN',
     }
   }
   return null
