@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { fetchPostsByTag, fetchTagCounts } from '@/lib/blogQueries'
 import { BlogDate, BlogTagList } from '@/components/blog/BlogMeta'
+import BlogThumb from '@/components/blog/BlogThumb'
 
 export const revalidate = 60
 
@@ -44,11 +45,14 @@ export default async function BlogTagPage({ params }: Params) {
           <li key={post.slug}>
             <Link
               href={`/blog/${post.slug}`}
-              className="block rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
+              className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
             >
-              <BlogTagList tags={post.tags} className="mb-2" />
-              <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
-              {post.published_at && <BlogDate date={post.published_at} className="mt-2" />}
+              <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} />
+              <div className="min-w-0 flex-1">
+                <BlogTagList tags={post.tags} className="mb-2" />
+                <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
+                {post.published_at && <BlogDate date={post.published_at} className="mt-2" />}
+              </div>
             </Link>
           </li>
         ))}

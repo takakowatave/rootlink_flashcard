@@ -4,7 +4,13 @@ import type { EmbeddedPhrase } from '@/components/PhraseCardEmbed'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 export type PostLink = { slug: string; title: string }
-export type PostCard = { slug: string; title: string; tags: string[] | null; published_at: string | null }
+export type PostCard = {
+  slug: string
+  title: string
+  tags: string[] | null
+  published_at: string | null
+  hero_image_url?: string | null
+}
 
 // 本文に埋め込まれた phrase-card / word-card をまとめて取得する。
 // 記事ページとプレビューページで同じ処理を使う。
@@ -98,7 +104,7 @@ export async function fetchTagCounts(): Promise<TagCount[]> {
 export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
   const { data } = await supabase
     .from('posts')
-    .select('slug, title, tags, published_at')
+    .select('slug, title, tags, published_at, hero_image_url')
     .not('published_at', 'is', null)
     .contains('tags', [tag])
     .order('published_at', { ascending: false })
