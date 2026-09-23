@@ -78,10 +78,15 @@ export default function DeckRequestForm() {
             alt=""
             className="w-[220px] max-w-full h-auto"
           />
-          <p className="text-center text-sm text-muted">
-            欲しい教材がなかったら、<br className="sm:hidden" />
-            リクエストお願いします。
-          </p>
+          <div className="text-center">
+            <h2 className="text-base font-bold text-gray-950">
+              勉強したい教材をリクエストしよう
+            </h2>
+            <p className="text-sm text-muted mt-1">
+              欲しい教材がなかったら、<br className="sm:hidden" />
+              リクエストお願いします。
+            </p>
+          </div>
           <Button
             type="button"
             variant="primary"
