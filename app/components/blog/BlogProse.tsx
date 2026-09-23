@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 const PROSE_CLASS = [
   'prose prose-base max-w-none',
   'prose-headings:text-gray-950 prose-headings:font-semibold',
-  'prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-3',
-  'prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2',
+  'prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4',
+  'prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3',
   'prose-p:text-gray-800 prose-p:leading-relaxed',
   'prose-a:text-primary prose-a:no-underline hover:prose-a:underline',
   'prose-blockquote:border-l-4 prose-blockquote:border-primary',
