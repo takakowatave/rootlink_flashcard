@@ -76,6 +76,7 @@ export default async function BlogPreviewPage({ params }: Params) {
           prev={prev}
           next={next}
           highlightTerms={getHighlightTerms(params.slug)}
+          coverSrc={`/blog/${params.slug}/cover.png`}
           dateNote={isDraft ? <span className="ml-2 text-quiz-review">（下書き・未公開）</span> : null}
         />
 

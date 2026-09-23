@@ -1,5 +1,5 @@
-// ブログ記事の OG 画像 (/blog/[slug] の opengraph-image)
-// 1200×630。タイトル一本の構成で、記事ごとの画像作成を不要にする。
+// ブログ記事のカバー画像 (/blog/[slug]/cover.png)
+// 1200×630。OG 画像と記事ヘッダーの両方で同じ画像を使う。
 // - 外枠ミント + 白カードは単語カード (/word/[word]/card.png) と同じ世界観
 // - タイトルは行数を増やす前にフォントサイズを下げる（1行 → 2行 → 3行）
 // - posts.hero_image_url がある記事は generateMetadata 側の images が優先されるため、
@@ -9,9 +9,11 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export const runtime = 'nodejs'
-export const alt = 'RootLink'
-export const size = { width: 1200, height: 630 }
-export const contentType = 'image/png'
+
+const SIZE = { width: 1200, height: 630 }
+// 正しく描けたときだけ CDN に長めのキャッシュを許可する。
+const CACHE_SUCCESS = 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+const CACHE_FALLBACK = 'no-store'
 
 const MINT = '#00d5be'
 const TEAL_700 = '#00786f'
@@ -82,14 +84,20 @@ function titleSize(s: string): number {
   return Math.max(40, fit(3))
 }
 
-// 「タイトル｜サブタイトル」を分割する
+// 「タイトル｜サブタイトル」と「〜の違いは？サブタイトル」を分割する。
+// 問いかけの「？」は主題側に残す。
 function splitTitle(t: string): [string, string | null] {
-  const i = t.indexOf('｜')
-  if (i === -1) return [t, null]
-  return [t.slice(0, i).trim(), t.slice(i + 1).trim()]
+  const bar = t.indexOf('｜')
+  if (bar !== -1) return [t.slice(0, bar).trim(), t.slice(bar + 1).trim()]
+
+  const q = t.indexOf('？')
+  if (q !== -1 && q < t.length - 1) {
+    return [t.slice(0, q + 1).trim(), t.slice(q + 1).trim()]
+  }
+  return [t, null]
 }
 
-export default async function Image({ params }: { params: { slug: string } }) {
+export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const [fonts, logo, post] = await Promise.all([
     loadFonts(),
     loadLogoDataUrl(),
@@ -100,7 +108,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
   const [main, sub] = splitTitle(rawTitle)
   const tags = (post?.tags ?? []).slice(0, 2)
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div style={{ width: '100%', height: '100%', display: 'flex', backgroundColor: MINT, padding: 16 }}>
         <div
@@ -173,7 +181,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
       </div>
     ),
     {
-      ...size,
+      ...SIZE,
       fonts: [
         { name: 'NotoSansJP', data: fonts.regular, weight: 400, style: 'normal' },
         { name: 'NotoSansJP', data: fonts.medium, weight: 500, style: 'normal' },
@@ -181,4 +189,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
       ],
     }
   )
+  // Vercel は .png の拡張子で長期キャッシュを自動付与するので set() で上書きする。
+  image.headers.set('Cache-Control', post ? CACHE_SUCCESS : CACHE_FALLBACK)
+  return image
 }

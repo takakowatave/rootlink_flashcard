@@ -33,7 +33,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost(params.slug)
   if (!post) return { title: 'Not Found' }
   const description = buildDescription(post)
-  const images = post.hero_image_url ? [{ url: post.hero_image_url }] : undefined
+  // 手動画像がなければ自動生成のカバー画像を使う
+  const images = [{ url: post.hero_image_url ?? `https://www.rootlink.app/blog/${post.slug}/cover.png`, width: 1200, height: 630 }]
   return {
     title: post.title,
     description,
@@ -75,6 +76,7 @@ export default async function BlogPostPage({ params }: Params) {
           prev={prev}
           next={next}
           highlightTerms={getHighlightTerms(params.slug)}
+          coverSrc={`/blog/${params.slug}/cover.png`}
         />
       </main>
 

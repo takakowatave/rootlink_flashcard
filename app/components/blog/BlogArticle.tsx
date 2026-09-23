@@ -23,6 +23,8 @@ type Props = {
   next?: AdjacentPost
   // 例文の中で太字オレンジにする語
   highlightTerms?: string[]
+  // 自動生成のカバー画像。hero_image_url がなければこれを使う
+  coverSrc?: string
   // 日付の横に出す注記（プレビューの「下書き・未公開」など）
   dateNote?: ReactNode
 }
@@ -38,15 +40,17 @@ export default function BlogArticle({
   prev = null,
   next = null,
   highlightTerms = [],
+  coverSrc,
   dateNote,
 }: Props) {
+  const heroSrc = post.hero_image_url ?? coverSrc ?? null
   return (
     <article>
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        {post.hero_image_url && (
+        {heroSrc && (
           <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={post.hero_image_url} alt={post.title} className="h-full w-full object-cover" />
+            <img src={heroSrc} alt={post.title} className="h-full w-full object-cover" />
           </div>
         )}
 
