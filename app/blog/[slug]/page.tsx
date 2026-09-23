@@ -6,7 +6,7 @@ import { extractHeadings, type Post } from '@/lib/blog'
 import BlogArticle from '@/components/blog/BlogArticle'
 import BlogSidebar from '@/components/blog/BlogSidebar'
 import { getHighlightTerms } from '@/lib/blogHighlights'
-import { fetchAdjacentPosts, fetchPostEmbeds, fetchSidebarPosts } from '@/lib/blogQueries'
+import { fetchAdjacentPosts, fetchPostEmbeds, fetchRelatedPosts, fetchTagCounts } from '@/lib/blogQueries'
 import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 
 export const revalidate = 60
@@ -49,10 +49,11 @@ export default async function BlogPostPage({ params }: Params) {
   if (!post) notFound()
 
   const headings = extractHeadings(post.content)
-  const [{ phraseMap, wordCardMap }, { prev, next }, { related, backNumbers }] = await Promise.all([
+  const [{ phraseMap, wordCardMap }, { prev, next }, { related }, categories] = await Promise.all([
     fetchPostEmbeds(post.content),
     fetchAdjacentPosts(post.published_at!),
-    fetchSidebarPosts(post),
+    fetchRelatedPosts(post),
+    fetchTagCounts(),
   ])
 
   return (
@@ -79,7 +80,7 @@ export default async function BlogPostPage({ params }: Params) {
 
       <aside className="w-full lg:w-[280px] lg:shrink-0">
         <div className="lg:sticky lg:top-8">
-          <BlogSidebar related={related} backNumbers={backNumbers} />
+          <BlogSidebar related={related} categories={categories} />
         </div>
       </aside>
     </div>

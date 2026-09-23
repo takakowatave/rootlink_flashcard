@@ -74,34 +74,53 @@ export async function fetchAdjacentPosts(date: string): Promise<{ prev: PostLink
   return { prev: (prev as PostLink | null) ?? null, next: (next as PostLink | null) ?? null }
 }
 
-// サイドカラム用。関連記事は同じタグを持つ公開記事、バックナンバーは新着順。
-export async function fetchSidebarPosts(current: Pick<Post, 'slug' | 'tags'>): Promise<{
+export type TagCount = { tag: string; count: number }
+
+// 公開記事のタグを数えて多い順に返す。サイドカラムのカテゴリー欄で使う。
+export async function fetchTagCounts(): Promise<TagCount[]> {
+  const { data } = await supabase
+    .from('posts')
+    .select('tags')
+    .not('published_at', 'is', null)
+    .limit(5000)
+
+  const counts = new Map<string, number>()
+  ;((data as { tags: string[] | null }[] | null) ?? []).forEach((row) => {
+    ;(row.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1))
+  })
+
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'ja'))
+}
+
+// タグで絞った公開記事の一覧。
+export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
+  const { data } = await supabase
+    .from('posts')
+    .select('slug, title, tags, published_at')
+    .not('published_at', 'is', null)
+    .contains('tags', [tag])
+    .order('published_at', { ascending: false })
+    .limit(200)
+  return (data as PostCard[] | null) ?? []
+}
+
+// サイドカラム用の関連記事。同じタグを持つ公開記事を新しい順に。
+export async function fetchRelatedPosts(current: Pick<Post, 'slug' | 'tags'>): Promise<{
   related: PostCard[]
-  backNumbers: PostCard[]
 }> {
   const tags = current.tags ?? []
-  const [relatedRes, backRes] = await Promise.all([
-    tags.length > 0
-      ? supabase
-          .from('posts')
-          .select('slug, title, tags, published_at')
-          .not('published_at', 'is', null)
-          .neq('slug', current.slug)
-          .overlaps('tags', tags)
-          .order('published_at', { ascending: false })
-          .limit(3)
-      : Promise.resolve({ data: null }),
-    supabase
-      .from('posts')
-      .select('slug, title, tags, published_at')
-      .not('published_at', 'is', null)
-      .neq('slug', current.slug)
-      .order('published_at', { ascending: false })
-      .limit(5),
-  ])
+  if (tags.length === 0) return { related: [] }
 
-  return {
-    related: (relatedRes.data as PostCard[] | null) ?? [],
-    backNumbers: (backRes.data as PostCard[] | null) ?? [],
-  }
+  const { data } = await supabase
+    .from('posts')
+    .select('slug, title, tags, published_at')
+    .not('published_at', 'is', null)
+    .neq('slug', current.slug)
+    .overlaps('tags', tags)
+    .order('published_at', { ascending: false })
+    .limit(3)
+
+  return { related: (data as PostCard[] | null) ?? [] }
 }

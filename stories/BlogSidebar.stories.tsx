@@ -17,12 +17,20 @@ export default meta
 
 type Story = StoryObj<typeof BlogSidebar>
 
-export const Default: Story = { args: { related: posts.slice(0, 2), backNumbers: posts } }
+const categories = [
+  { tag: '語源', count: 7 },
+  { tag: '使い分け', count: 7 },
+  { tag: 'TOEIC', count: 7 },
+  { tag: '接尾辞', count: 3 },
+  { tag: '比較級', count: 1 },
+]
+
+export const Default: Story = { args: { related: posts.slice(0, 2), categories } }
 
 export const WithBanner: Story = {
   args: {
     related: posts.slice(0, 2),
-    backNumbers: posts,
+    categories,
     banner: (
       <a href="/signup" className="block bg-primary-subtle px-5 py-6 text-center text-base text-gray-800">
         バナー枠のサンプル

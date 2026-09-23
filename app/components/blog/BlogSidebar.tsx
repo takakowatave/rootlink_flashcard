@@ -1,12 +1,11 @@
 import Link from 'next/link'
 import BlogBannerSlot from '@/components/blog/BlogBannerSlot'
-import { BlogDate } from '@/components/blog/BlogMeta'
-import type { PostCard } from '@/lib/blogQueries'
+import type { PostCard, TagCount } from '@/lib/blogQueries'
 import type { ReactNode } from 'react'
 
 type Props = {
   related: PostCard[]
-  backNumbers: PostCard[]
+  categories: TagCount[]
   banner?: ReactNode
 }
 
@@ -19,36 +18,46 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function PostList({ posts, withDate = false }: { posts: PostCard[]; withDate?: boolean }) {
-  return (
-    <ul className="space-y-3">
-      {posts.map((post) => (
-        <li key={post.slug}>
-          <Link href={`/blog/${post.slug}`} className="block text-base leading-snug text-gray-800 hover:text-primary">
-            {post.title}
-          </Link>
-          {withDate && post.published_at && <BlogDate date={post.published_at} className="mt-1" />}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-// 記事ページのサイドカラム。関連記事とバックナンバーとバナー枠を縦に並べる。
-export default function BlogSidebar({ related, backNumbers, banner }: Props) {
-  if (related.length === 0 && backNumbers.length === 0 && !banner) return null
+// 記事ページのサイドカラム。関連記事とカテゴリーとバナー枠を縦に並べる。
+export default function BlogSidebar({ related, categories, banner }: Props) {
+  if (related.length === 0 && categories.length === 0 && !banner) return null
   return (
     <div className="space-y-6">
       {related.length > 0 && (
         <Section title="関連記事">
-          <PostList posts={related} />
+          <ul className="space-y-3">
+            {related.map((post) => (
+              <li key={post.slug}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="block text-sm leading-snug text-gray-600 underline-offset-2 hover:text-primary hover:underline"
+                >
+                  {post.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
-      {backNumbers.length > 0 && (
-        <Section title="バックナンバー">
-          <PostList posts={backNumbers} withDate />
+
+      {categories.length > 0 && (
+        <Section title="カテゴリー">
+          <ul className="divide-y divide-line">
+            {categories.map(({ tag, count }) => (
+              <li key={tag}>
+                <Link
+                  href={`/blog/tag/${encodeURIComponent(tag)}`}
+                  className="flex items-center justify-between gap-2 py-2 text-base text-gray-800 hover:text-primary"
+                >
+                  <span className="truncate">{tag}</span>
+                  <span className="shrink-0 text-muted">({count})</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
+
       <BlogBannerSlot>{banner}</BlogBannerSlot>
     </div>
   )
