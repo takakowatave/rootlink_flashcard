@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { extractHeadings, type Post } from '@/lib/blog'
 import BlogArticle from '@/components/blog/BlogArticle'
 import BlogSidebar from '@/components/blog/BlogSidebar'
+import { getHighlightTerms } from '@/lib/blogHighlights'
 import { fetchAdjacentPosts, fetchPostEmbeds, fetchSidebarPosts } from '@/lib/blogQueries'
 import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 
@@ -73,6 +74,7 @@ export default async function BlogPreviewPage({ params }: Params) {
           author={BLOG_AUTHOR}
           prev={prev}
           next={next}
+          highlightTerms={getHighlightTerms(params.slug)}
           dateNote={isDraft ? <span className="ml-2 text-quiz-review">（下書き・未公開）</span> : null}
         />
 

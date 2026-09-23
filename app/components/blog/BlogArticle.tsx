@@ -21,6 +21,8 @@ type Props = {
   author: BlogAuthor
   prev?: AdjacentPost
   next?: AdjacentPost
+  // 例文の中で太字オレンジにする語
+  highlightTerms?: string[]
   // 日付の横に出す注記（プレビューの「下書き・未公開」など）
   dateNote?: ReactNode
 }
@@ -35,6 +37,7 @@ export default function BlogArticle({
   author,
   prev = null,
   next = null,
+  highlightTerms = [],
   dateNote,
 }: Props) {
   return (
@@ -72,7 +75,12 @@ export default function BlogArticle({
           )}
 
           <BlogProse>
-            <BlogContent content={post.content} phraseMap={phraseMap} wordCardMap={wordCardMap} />
+            <BlogContent
+              content={post.content}
+              phraseMap={phraseMap}
+              wordCardMap={wordCardMap}
+              highlightTerms={highlightTerms}
+            />
           </BlogProse>
         </div>
       </div>

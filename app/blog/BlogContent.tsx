@@ -9,10 +9,12 @@ import PhraseCardEmbed, { type EmbeddedPhrase } from '@/components/PhraseCardEmb
 import WordCardEmbed from '@/components/WordCardEmbed'
 import WordCheckList from '@/components/blog/WordCheckList'
 import ExampleBlock from '@/components/blog/ExampleBlock'
+import HighlightedText from '@/components/blog/HighlightedText'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
 type Props = {
   content: string
+  highlightTerms?: string[]
   phraseMap: Record<string, EmbeddedPhrase>
   wordCardMap?: Record<string, SavedWordDictionary | null>
 }
@@ -102,7 +104,8 @@ function firstText(nodes: ReactNode[]): string {
   return typeof head === 'string' ? head.trim() : ''
 }
 
-const markdownComponents: Components = {
+function buildComponents(terms: string[]): Components {
+  return {
   iframe: (props) => (
     <div className="not-prose my-6 aspect-video w-full overflow-hidden rounded-2xl border border-line">
       <iframe {...props} className="h-full w-full" />
@@ -113,33 +116,47 @@ const markdownComponents: Components = {
     // 2行以上あり、1行目が英文で始まるものだけを例文として扱う
     const isExample = lines.length >= 2 && /^["'(]?[A-Za-z]/.test(firstText(lines[0]))
     if (isExample) {
-      return <ExampleBlock lines={lines.map((line, i) => <Fragment key={i}>{line}</Fragment>)} />
+      return (
+        <ExampleBlock
+          terms={terms}
+          lines={lines.map((line, i) => <Fragment key={i}>{line}</Fragment>)}
+        />
+      )
     }
     return <p>{children}</p>
   },
+  // 練習問題などの番号付きリストも例なので、例文と同じ箱に載せる
+  ol: ({ children }) => (
+    <div className="not-prose my-4 rounded-2xl bg-gray-50 px-5 py-4">
+      <ol className="list-decimal space-y-2 pl-6 text-base leading-relaxed text-gray-950 marker:text-gray-600">
+        <HighlightedText terms={terms}>{children}</HighlightedText>
+      </ol>
+    </div>
+  ),
+  }
 }
 
-function MarkdownChunk({ text }: { text: string }) {
+function MarkdownChunk({ text, terms }: { text: string; terms: string[] }) {
   if (!text.trim()) return null
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeSlug]}
-      components={markdownComponents}
+      components={buildComponents(terms)}
     >
       {text}
     </ReactMarkdown>
   )
 }
 
-export default function BlogContent({ content, phraseMap, wordCardMap = {} }: Props) {
+export default function BlogContent({ content, phraseMap, wordCardMap = {}, highlightTerms = [] }: Props) {
   const tokens = tokenize(content)
 
   return (
     <>
       {tokens.map((t, i) => {
         if (t.kind === 'md') {
-          return <MarkdownChunk key={`md-${i}`} text={t.text} />
+          return <MarkdownChunk key={`md-${i}`} text={t.text} terms={highlightTerms} />
         }
         if (t.kind === 'phrase') {
           const phrase = phraseMap[t.id]
