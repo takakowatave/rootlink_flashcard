@@ -81,12 +81,14 @@ const JPY_FALLBACK_YEARLY: PaywallPlanInfo = {
   hasFreeTrial: false,
 }
 
-// storefrontCountry が JP 系 (JPN / JP) かどうか。RC は SDK バージョンにより
-// alpha-3 / alpha-2 のどちらかを返すので両方許容する。
-function isJapanStorefront(cc: string | null): boolean {
-  if (!cc) return false
-  const u = cc.toUpperCase()
-  return u === "JPN" || u === "JP"
+// RootLink はいまのところ日本マーケット単一。App Store Connect / Google Play で
+// 実際に販売しているのも JPY (¥500 / ¥4,800) だけ。Sandbox / TestFlight で
+// RC が USD 等の base 通貨を返すケースが実機で観測されているので、
+// currencyCode が JPY 以外のときは storefrontCountry に関係なく問答無用で
+// JPY フォールバックへ差し替える。US 展開等をやる時にここを再検討する。
+function shouldForceJpy(currencyCode: string | null): boolean {
+  if (!currencyCode) return false
+  return currencyCode.toUpperCase() !== "JPY"
 }
 
 export default function NativePaywall({ variant, onClose }: Props) {
@@ -112,18 +114,17 @@ export default function NativePaywall({ variant, onClose }: Props) {
           setOfferingError(true)
           return
         }
-        // JP ストアなのに RC の currencyCode が JPY 以外 (Sandbox / TestFlight で
-        // 稀に発生) のときは、その値を表示に使わず JPY フォールバックへ差し替える。
-        // 実 Apple 購入シートは常に JPY で表示されるので、UI とストアで齟齬が
-        // 出ないように保険をかける。本番 (JP Apple ID) では通常 JPY が来る
-        // ため no-op。
-        const jpStorefront = isJapanStorefront(summary.storefrontCountry)
-        const monthlyMismatch = jpStorefront && summary.monthly.currencyCode && summary.monthly.currencyCode !== "JPY"
-        const yearlyMismatch = jpStorefront && summary.yearly.currencyCode && summary.yearly.currencyCode !== "JPY"
-        setMonthly(monthlyMismatch
+        // RC の currencyCode が JPY 以外なら、Sandbox / TestFlight のキャッシュ不整合
+        // とみなして問答無用で JPY フォールバックに差し替える。実 Apple 購入シートは
+        // 常に JPY (実際に販売しているのが JPY のみのため) で表示されるので、UI と
+        // ストアの齟齬をここで潰す。storefrontCountry は Sandbox で null を返すことが
+        // あるため判定条件から外す (RootLink は JP マーケット単一なので副作用なし)。
+        const forceMonthlyJpy = shouldForceJpy(summary.monthly.currencyCode)
+        const forceYearlyJpy = shouldForceJpy(summary.yearly.currencyCode)
+        setMonthly(forceMonthlyJpy
           ? { ...JPY_FALLBACK_MONTHLY, hasFreeTrial: summary.monthly.hasFreeTrial }
           : summary.monthly)
-        setYearly(yearlyMismatch
+        setYearly(forceYearlyJpy
           ? { ...JPY_FALLBACK_YEARLY, hasFreeTrial: summary.yearly.hasFreeTrial }
           : summary.yearly)
       })
