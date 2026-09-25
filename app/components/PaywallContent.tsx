@@ -130,7 +130,7 @@ export default function PaywallContent({
       >
         <h2 className="text-lg font-semibold text-gray-900 mb-1">プランのアップグレード</h2>
         <p className="text-sm text-gray-500 mb-4">
-          有料デッキ・クイズ・辞書が使い放題。月額プランは14日間無料、いつでも解約できます。
+          有料デッキ・クイズ・辞書が使い放題。いつでも解約できます。
         </p>
 
         {offeringError ? (

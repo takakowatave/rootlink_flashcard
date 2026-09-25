@@ -74,18 +74,35 @@ export type PaywallPlanInfo = {
   priceString: string | null
   price: number | null
   currencyCode: string | null
+  /** RC SDK が返す「月あたり」の整形済み文字列 (年額プランなら price/12 相当を store 通貨で) */
+  pricePerMonthString: string | null
+  /** RC SDK が返す「月あたり」の数値 (JPY なら円、USD なら $ など store 通貨) */
+  pricePerMonth: number | null
+  /** RC SDK が返す「年あたり」の数値 (月額 × 12 相当。年間コスト比較に使う) */
+  pricePerYear: number | null
   hasFreeTrial: boolean
 }
 
 export type PaywallOfferingSummary = {
   monthly: PaywallPlanInfo
   yearly: PaywallPlanInfo
+  /**
+   * 現在のストア国コード (ISO 3166 alpha-3 / alpha-2 のどちらか — Store SDK 依存)。
+   * JPN のはずなのに priceString が USD 等になっているときは RC / Sandbox の
+   * キャッシュ不整合。NativePaywall で JPY フォールバックに落とす判定に使う。
+   */
+  storefrontCountry: string | null
 }
 
 type MaybeProduct = {
   price?: number
   priceString?: string
   currencyCode?: string
+  /** RC SDK が用意している「1 か月あたりの整形済み文字列」(iOS / Android 両方) */
+  pricePerMonthString?: string | null
+  pricePerMonth?: number | null
+  pricePerYearString?: string | null
+  pricePerYear?: number | null
   introPrice?: { price?: number; periodNumberOfUnits?: number } | null
   subscriptionOptions?: Array<{
     freePhase?: unknown
@@ -97,11 +114,19 @@ type MaybeProduct = {
   }
 }
 
+const emptyPlanInfo = (): PaywallPlanInfo => ({
+  priceString: null,
+  price: null,
+  currencyCode: null,
+  pricePerMonthString: null,
+  pricePerMonth: null,
+  pricePerYear: null,
+  hasFreeTrial: false,
+})
+
 function readPlanInfo(pkg: { product: MaybeProduct } | undefined | null): PaywallPlanInfo {
   const product = pkg?.product
-  if (!product) {
-    return { priceString: null, price: null, currencyCode: null, hasFreeTrial: false }
-  }
+  if (!product) return emptyPlanInfo()
   const iosTrial =
     product.introPrice?.price === 0 && (product.introPrice?.periodNumberOfUnits ?? 0) > 0
   const androidDefaultTrial = !!product.defaultOption?.freePhase
@@ -112,16 +137,35 @@ function readPlanInfo(pkg: { product: MaybeProduct } | undefined | null): Paywal
     priceString: product.priceString ?? null,
     price: typeof product.price === 'number' ? product.price : null,
     currencyCode: product.currencyCode ?? null,
+    pricePerMonthString: product.pricePerMonthString ?? null,
+    pricePerMonth: typeof product.pricePerMonth === 'number' ? product.pricePerMonth : null,
+    pricePerYear: typeof product.pricePerYear === 'number' ? product.pricePerYear : null,
     hasFreeTrial: iosTrial || androidDefaultTrial || androidAnyOptionTrial,
+  }
+}
+
+async function getStorefrontCountry(): Promise<string | null> {
+  if (!isNativePlatform()) return null
+  try {
+    const { Purchases } = await import('@revenuecat/purchases-capacitor')
+    // 型定義上 getStorefront が存在しない古い SDK バージョンでも落ちないように any 経由。
+    const p = Purchases as unknown as { getStorefront?: () => Promise<{ countryCode?: string }> }
+    if (typeof p.getStorefront !== 'function') return null
+    const sf = await p.getStorefront()
+    return sf?.countryCode ?? null
+  } catch {
+    return null
   }
 }
 
 export async function getPaywallOffering(): Promise<PaywallOfferingSummary | null> {
   const offering = await getCurrentOffering()
   if (offering) {
+    const [storefrontCountry] = await Promise.all([getStorefrontCountry()])
     return {
       monthly: readPlanInfo(offering.monthly as unknown as { product: MaybeProduct } | null),
       yearly: readPlanInfo(offering.annual as unknown as { product: MaybeProduct } | null),
+      storefrontCountry,
     }
   }
   // Web プレビュー (?preview=native) では実 offering が取れないので、
@@ -132,14 +176,21 @@ export async function getPaywallOffering(): Promise<PaywallOfferingSummary | nul
         priceString: '¥500',
         price: 500,
         currencyCode: 'JPY',
+        pricePerMonthString: '¥500',
+        pricePerMonth: 500,
+        pricePerYear: 6000,
         hasFreeTrial: true,
       },
       yearly: {
         priceString: '¥4,800',
         price: 4800,
         currencyCode: 'JPY',
+        pricePerMonthString: '¥400',
+        pricePerMonth: 400,
+        pricePerYear: 4800,
         hasFreeTrial: false,
       },
+      storefrontCountry: 'JPN',
     }
   }
   return null

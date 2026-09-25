@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import DeckCard from '@/components/DeckCard'
-import DeckLabelBadge from '@/components/DeckLabelBadge'
+import DeckScrollStrip from '@/components/DeckScrollStrip'
+import DeckRequestForm from '@/components/DeckRequestForm'
 import PageHeader from '@/components/PageHeader'
 import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
 
@@ -46,26 +46,25 @@ export default async function DecksPage() {
             const group = sortDecksByDifficulty(decks.filter(d => d.label === label))
             if (group.length === 0) return null
             return (
-              <section key={label}>
-                <DeckLabelBadge label={label} />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {group.map(deck => {
-                    const shortName = toShortName(deck.name, deck.label)
-                    return (
-                      <DeckCard
-                        key={deck.id}
-                        label={deck.label}
-                        title={shortName}
-                        imageSrc={getDeckImage(deck.label, shortName)}
-                        wordCount={deck.word_count}
-                        href={`/decks/${deck.slug ?? deck.id}`}
-                      />
-                    )
-                  })}
-                </div>
-              </section>
+              <DeckScrollStrip
+                key={label}
+                label={label}
+                items={group.map(deck => {
+                  const shortName = toShortName(deck.name, deck.label)
+                  return {
+                    key: deck.id,
+                    label: deck.label,
+                    title: shortName,
+                    imageSrc: getDeckImage(deck.label, shortName),
+                    wordCount: deck.word_count,
+                    href: `/decks/${deck.slug ?? deck.id}`,
+                  }
+                })}
+              />
             )
           })}
+
+          <DeckRequestForm />
         </div>
       </div>
     </div>
