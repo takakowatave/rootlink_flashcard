@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord } from '@/lib/blog'
+import { toShortName, sortDecksByDifficulty } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -85,6 +86,45 @@ const filterExistingWords = cache(async (candidates: string[]): Promise<string[]
     const rows = (await res.json()) as Array<{ word: string }>
     const found = new Set(rows.map((r) => r.word.toLowerCase()))
     return candidates.filter((d) => found.has(d.toLowerCase()))
+  } catch {
+    return []
+  }
+})
+
+/**
+ * その単語が収録されている公式デッキ (is_official=true) を返す。
+ * Notion issue 3d2d9703-…-7fcfc の「単語ページに試験レベルバッジとデッキ導線を追加」用。
+ * SSR で 1 回叩けば済むよう PostgREST の embed で 1 リクエストにまとめる。
+ * 該当なしなら空配列。全単語ページから公式デッキへの内部リンクが集まる。
+ */
+type WordDeckChip = { slug: string; label: string; shortName: string; is_premium: boolean; name: string }
+
+const getDecksContainingWord = cache(async (word: string): Promise<WordDeckChip[]> => {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/deck_words?select=decks(id,slug,name,label,is_official,is_premium)&word=eq.${encodeURIComponent(word)}&limit=200`,
+      { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+    )
+    if (!res.ok) return []
+    type Row = { decks: { id: string; slug: string | null; name: string; label: string; is_official: boolean; is_premium: boolean } | null }
+    const rows = (await res.json()) as Row[]
+    const seen = new Set<string>()
+    const result: WordDeckChip[] = []
+    for (const r of rows) {
+      const d = r.decks
+      if (!d || !d.is_official) continue
+      const slug = d.slug ?? d.id
+      if (seen.has(slug)) continue
+      seen.add(slug)
+      result.push({
+        slug,
+        label: d.label,
+        shortName: toShortName(d.name, d.label),
+        is_premium: !!d.is_premium,
+        name: d.name,
+      })
+    }
+    return sortDecksByDifficulty(result)
   } catch {
     return []
   }
@@ -196,9 +236,10 @@ export default async function Page({
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)
-    const [relatedPosts, initialExistingDerivatives] = await Promise.all([
+    const [relatedPosts, initialExistingDerivatives, containingDecks] = await Promise.all([
       getPostsReferencingWord(resolvedWord),
       filterExistingWords(rawDerivatives),
+      getDecksContainingWord(resolvedWord),
     ])
     return (
       <WordPageClient
@@ -208,6 +249,7 @@ export default async function Page({
         initialPinnedSenseId={pin}
         relatedPosts={relatedPosts}
         initialExistingDerivatives={initialExistingDerivatives}
+        containingDecks={containingDecks}
       />
     )
   }
