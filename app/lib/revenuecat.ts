@@ -211,9 +211,29 @@ export async function purchaseNativePlan(plan: NativePlanKey): Promise<{ ok: boo
     await Purchases.purchasePackage({ aPackage })
     return { ok: true }
   } catch (err) {
-    const e = err as { userCancelled?: boolean; message?: string }
-    if (e?.userCancelled) return { ok: false, cancelled: true }
-    return { ok: false, error: e?.message ?? 'purchase_failed' }
+    // RC SDK v6 以降は userCancelled が deprecated (null になることがある) で、
+    // 代わりに code === "1" (PURCHASE_CANCELLED_ERROR) を見るのが正。
+    // 実機で「Apple の購入シートでキャンセル→トースト『購入に失敗しました』」
+    // が出ていた原因は、userCancelled=null で分岐に入らず error として扱ってた。
+    // 3 条件 (userCancelled true / code=="1" / message に cancel 文字列) の
+    // いずれかを cancel と判定して黙って戻す。
+    const e = err as {
+      userCancelled?: boolean | null
+      code?: string | number
+      message?: string
+      readableErrorCode?: string
+      userInfo?: { readableErrorCode?: string }
+    }
+    const codeStr = e?.code != null ? String(e.code) : ''
+    const readable = e?.readableErrorCode ?? e?.userInfo?.readableErrorCode ?? ''
+    const msg = e?.message ?? ''
+    const isCancelled =
+      e?.userCancelled === true ||
+      codeStr === '1' ||
+      /purchase[_\s-]?cancelled/i.test(readable) ||
+      /cancel/i.test(msg)
+    if (isCancelled) return { ok: false, cancelled: true }
+    return { ok: false, error: msg || 'purchase_failed' }
   }
 }
 
