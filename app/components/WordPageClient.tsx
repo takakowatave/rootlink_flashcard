@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import { HiSearch } from 'react-icons/hi'
 import EntryCard from '@/components/EntryCard'
+import DeckScrollStrip from '@/components/DeckScrollStrip'
 import ReportContentLink from '@/components/ReportContentLink'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
@@ -664,8 +665,18 @@ export default function WordPageClient({
   noCard?: boolean
   relatedPosts?: Array<{ title: string; slug: string }>
   initialExistingDerivatives?: string[]
-  /** その単語が収録されている公式デッキ (Notion issue 3d2d…-7fcfc)。単語カード直下にチップ表示。 */
-  containingDecks?: Array<{ slug: string; label: string; shortName: string }>
+  /**
+   * その単語が収録されている公式デッキ (Notion issue 3d2d…-7fcfc)。
+   * 単語カード直下に DeckScrollStrip (Dashboard 等と共通) で表紙カルーセル表示。
+   */
+  containingDecks?: Array<{
+    slug: string
+    label: string
+    shortName: string
+    wordCount: number
+    imageSrc?: string
+    isPremium: boolean
+  }>
 }) {
   const router = useRouter()
 
@@ -1196,25 +1207,23 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       displayLocale={displayLocale}
       noCard={noCard}
     />
-    {/* 収録デッキチップ (単語カード直下)。該当なしなら何も出さない (フッターリンク集化を回避)。
-        SSR で内部リンクとして機能させるため。Notion issue 3d2d…-7fcfc */}
+    {/* 収録デッキカルーセル (単語カード直下)。該当なしなら何も出さない
+        (フッターリンク集化を回避)。DeckScrollStrip は Dashboard / /decks /
+        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc */}
     {containingDecks && containingDecks.length > 0 && (
-      <section
-        className="w-full mx-auto max-w-[600px] px-4 mt-3"
-        aria-label="この単語が収録されているデッキ"
-      >
-        <p className="text-xs font-semibold text-muted mb-2">収録デッキ</p>
-        <div className="flex flex-wrap gap-2">
-          {containingDecks.map((d) => (
-            <Link
-              key={d.slug}
-              href={`/decks/${d.slug}`}
-              className="inline-flex items-center h-7 px-3 rounded-full bg-primary-subtle text-primary text-xs font-semibold hover:bg-primary-light transition-colors"
-            >
-              {`${d.label} ${d.shortName}`.trim()}
-            </Link>
-          ))}
-        </div>
+      <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
+        <h2 className="text-xl font-bold text-gray-950 mb-3">この単語が収録されている単語帳</h2>
+        <DeckScrollStrip
+          items={containingDecks.map((d) => ({
+            key: d.slug,
+            label: d.label,
+            title: d.shortName,
+            imageSrc: d.imageSrc,
+            wordCount: d.wordCount,
+            isPremium: d.isPremium,
+            href: `/decks/${d.slug}`,
+          }))}
+        />
       </section>
     )}
 

@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord } from '@/lib/blog'
-import { toShortName, sortDecksByDifficulty } from '@/lib/deckDisplay'
+import { toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -97,34 +97,62 @@ const filterExistingWords = cache(async (candidates: string[]): Promise<string[]
  * SSR で 1 回叩けば済むよう PostgREST の embed で 1 リクエストにまとめる。
  * 該当なしなら空配列。全単語ページから公式デッキへの内部リンクが集まる。
  */
-type WordDeckChip = { slug: string; label: string; shortName: string; is_premium: boolean; name: string }
+export type WordDeckCard = {
+  slug: string
+  label: string
+  shortName: string
+  wordCount: number
+  imageSrc?: string
+  isPremium: boolean
+}
 
-const getDecksContainingWord = cache(async (word: string): Promise<WordDeckChip[]> => {
+// 内部シェイプ: sortDecksByDifficulty が name / label / is_premium を要求するので合わせる。
+type SortableRow = {
+  slug: string
+  name: string
+  label: string
+  shortName: string
+  wordCount: number
+  imageSrc?: string
+  is_premium: boolean
+}
+
+const getDecksContainingWord = cache(async (word: string): Promise<WordDeckCard[]> => {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/deck_words?select=decks(id,slug,name,label,is_official,is_premium)&word=eq.${encodeURIComponent(word)}&limit=200`,
+      `${SUPABASE_URL}/rest/v1/deck_words?select=decks(id,slug,name,label,is_official,is_premium,word_count)&word=eq.${encodeURIComponent(word)}&limit=200`,
       { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
     )
     if (!res.ok) return []
-    type Row = { decks: { id: string; slug: string | null; name: string; label: string; is_official: boolean; is_premium: boolean } | null }
+    type Row = { decks: { id: string; slug: string | null; name: string; label: string; is_official: boolean; is_premium: boolean; word_count: number | null } | null }
     const rows = (await res.json()) as Row[]
     const seen = new Set<string>()
-    const result: WordDeckChip[] = []
+    const sortable: SortableRow[] = []
     for (const r of rows) {
       const d = r.decks
       if (!d || !d.is_official) continue
       const slug = d.slug ?? d.id
       if (seen.has(slug)) continue
       seen.add(slug)
-      result.push({
+      const shortName = toShortName(d.name, d.label)
+      sortable.push({
         slug,
-        label: d.label,
-        shortName: toShortName(d.name, d.label),
-        is_premium: !!d.is_premium,
         name: d.name,
+        label: d.label,
+        shortName,
+        wordCount: d.word_count ?? 0,
+        imageSrc: getDeckImage(d.label, shortName),
+        is_premium: !!d.is_premium,
       })
     }
-    return sortDecksByDifficulty(result)
+    return sortDecksByDifficulty(sortable).map((r) => ({
+      slug: r.slug,
+      label: r.label,
+      shortName: r.shortName,
+      wordCount: r.wordCount,
+      imageSrc: r.imageSrc,
+      isPremium: r.is_premium,
+    }))
   } catch {
     return []
   }
