@@ -39,7 +39,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-async function shareOnNative({ cardUrl, filename, shareText }: Params) {
+async function shareOnNative({ cardUrl, filename, shareText, shareUrl }: Params) {
   const [{ Share }, { Filesystem, Directory }] = await Promise.all([
     import('@capacitor/share'),
     import('@capacitor/filesystem'),
@@ -50,7 +50,8 @@ async function shareOnNative({ cardUrl, filename, shareText }: Params) {
     ? cardUrl
     : new URL(cardUrl, 'https://www.rootlink.app').toString()
 
-  let stage: 'fetch' | 'encode' | 'write' | 'share' = 'fetch'
+  let stage: 'fetch' | 'encode' | 'write' | 'share' | 'share-fallback' = 'fetch'
+  let writtenUri: string | undefined
   try {
     const res = await fetch(absoluteUrl)
     if (!res.ok) {
@@ -66,13 +67,27 @@ async function shareOnNative({ cardUrl, filename, shareText }: Params) {
       data: base64,
       directory: Directory.Cache,
     })
+    writtenUri = uri
 
     stage = 'share'
-    await Share.share({ files: [uri], text: shareText })
+    try {
+      await Share.share({ files: [uri], text: shareText })
+      return
+    } catch (fileErr) {
+      const fileMsg = (fileErr as { message?: string })?.message ?? String(fileErr)
+      // ユーザーがシェアシートを閉じただけなら fallback しない
+      if (/cancel|abort|user\s*cancelled/i.test(fileMsg)) {
+        throw fileErr
+      }
+      // ファイル添付シェアが失敗した場合はテキスト+URL のみで再試行 (画像なしでも共有できるように)
+      console.warn(`[share] file share failed (uri=${uri}): ${fileMsg}. Falling back to text share.`)
+      stage = 'share-fallback'
+      await Share.share({ text: `${shareText}\n${shareUrl}`, url: shareUrl })
+    }
   } catch (err) {
     const message = (err as { message?: string })?.message ?? String(err)
-    console.error(`[share] native share failed at stage=${stage}: ${message}`, err)
-    throw new Error(`${stage}: ${message}`)
+    console.error(`[share] native share failed at stage=${stage} uri=${writtenUri ?? '(none)'}: ${message}`, err)
+    throw new Error(`${stage}: ${message}${writtenUri ? ` (uri=${writtenUri})` : ''}`)
   }
 }
 

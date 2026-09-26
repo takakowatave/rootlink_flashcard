@@ -179,7 +179,10 @@ function DetailModal({
     >
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[calc(100dvh-40px)] sm:max-h-[85dvh] mt-10 sm:mt-0 flex flex-col shadow-xl overflow-x-hidden"
+        // iOS notch / status bar と重ならないよう pt-[env(safe-area-inset-top)] で
+        // 上端を押し下げる (他モーダルの ModalShell と揃える)。sm+ は中央ダイアログ
+        // なので safe-area は不要。
+        className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[calc(100dvh-40px)] sm:max-h-[85dvh] mt-10 sm:mt-0 flex flex-col shadow-xl overflow-x-hidden pt-[env(safe-area-inset-top)] sm:pt-0"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
