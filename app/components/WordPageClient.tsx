@@ -1207,6 +1207,12 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       displayLocale={displayLocale}
       noCard={noCard}
     />
+    {/* 「この単語の内容を報告」は、EntryCard の直後・収録デッキ / 記事の前に
+        置いておく (誤りに気づいたユーザーがすぐ動けるように)。 */}
+    {!noCard && dictionary && (
+      <ReportContentLink kind="word" content={word} />
+    )}
+
     {/* 収録デッキカルーセル (単語カード直下)。該当なしなら何も出さない
         (フッターリンク集化を回避)。DeckScrollStrip は Dashboard / /decks /
         LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc */}
@@ -1243,10 +1249,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           ))}
         </ul>
       </section>
-    )}
-
-    {!noCard && dictionary && (
-      <ReportContentLink kind="word" content={word} />
     )}
 
     </div>
