@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { fetchDeckWords, getUserPlan, saveQuizResult, toggleSaveStatus, type DeckWordEntry } from '@/lib/supabaseApi'
+import { fetchDeckWords, fetchWordDictionaries, getUserPlan, saveQuizResult, toggleSaveStatus, type DeckWordEntry } from '@/lib/supabaseApi'
 import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from '@/lib/quizSettings'
 import Button from '@/components/Button'
 import PageHeader from '@/components/PageHeader'
@@ -297,10 +297,30 @@ export default function DeckClient({
     if (!isAuthed) { setShowSignupModal(true); return }
     if (isLocked) { await openPaywall(); return }
     const sourceEntries = scopeSource[quizScope]
+    if (sourceEntries.length === 0) return
     const take = Math.min(quizCount, sourceEntries.length)
-    const cards = shuffleCards(buildQuizCards(sourceEntries)).slice(0, take)
+
+    // デッキ画面 (chapter==null) は SSR で dictionary_cache を読まない軽量版を使っているので、
+    // 全 entries が dictionary=null で来る。ここで一旦シャッフルしてから、実際に出題候補になる
+    // ぶん (take*2 程度) だけ辞書を fetch して buildQuizCards に渡さないと 0 件になって
+    // QuizSession が空配列で落ちる (Notion issue 3e4d9703-…-338a0f)。章画面は SSR で
+    // その章の 50 語ぶんの dict が入っているので追加 fetch は要らない。
+    const shuffled = shuffleCards([...sourceEntries]).slice(0, Math.min(sourceEntries.length, take * 2))
+    const missingWords = shuffled.filter(e => !e.dictionary).map(e => e.word)
+    let enriched = shuffled
+    if (missingWords.length > 0) {
+      const fetched = await fetchWordDictionaries(missingWords)
+      enriched = shuffled.map(e => (
+        e.dictionary ? e : { ...e, dictionary: fetched.get(e.word) ?? null }
+      ))
+    }
+    const cards = buildQuizCards(enriched).slice(0, take)
+    if (cards.length === 0) {
+      toast.error('クイズできる単語がありませんでした')
+      return
+    }
     const sessionEntries: QuizEntry[] = cards.map(c =>
-      sourceEntries.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
+      enriched.find(e => e.word === c.word) ?? { word: c.word, dictionary: null }
     )
     setQuizEntries(sessionEntries)
   }, [isAuthed, isLocked, openPaywall, quizScope, scopeSource, quizCount])
