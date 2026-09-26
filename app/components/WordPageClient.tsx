@@ -1220,7 +1220,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
             title: d.shortName,
             imageSrc: d.imageSrc,
             wordCount: d.wordCount,
-            isPremium: d.isPremium,
+            // 章単位の課金へ移行済みなので王冠バッジは出さない (/decks 一覧と揃える)
             href: `/decks/${d.slug}`,
           }))}
         />
