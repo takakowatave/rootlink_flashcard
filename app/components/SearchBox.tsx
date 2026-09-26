@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { HiSearch } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { displayPhrase } from '@/lib/phraseDisplay'
@@ -34,6 +34,7 @@ export default function SearchBox({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const router = useRouter()
+  const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -69,7 +70,14 @@ export default function SearchBox({
   const navigate = (label: string) => {
     setShowSuggestions(false)
     setSuggestions([])
-    router.push(`/word/${label.replace(/\s+/g, '_')}`)
+    // 単語ページ上での検索は履歴を積まずに replace (連続検索の戻る先を dashboard に)。
+    // fresh=1 は SSR 側で Data Cache を bypass するフラグ (404 flash 回避)。
+    const url = `/word/${label.replace(/\s+/g, '_')}?fresh=1`
+    if (pathname.startsWith('/word/')) {
+      router.replace(url)
+    } else {
+      router.push(url)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -86,6 +94,13 @@ export default function SearchBox({
         <div className={`flex items-center gap-2 ${wrapperClassName?.includes('h-12') ? 'h-12' : 'h-8'} bg-white border rounded-full pl-4 pr-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
           <input
             ref={inputRef}
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={value}
             onChange={e => { onChange(e.target.value); setShowSuggestions(true); setActiveIndex(-1) }}
             onFocus={() => setShowSuggestions(true)}
@@ -103,6 +118,10 @@ export default function SearchBox({
             <HiSearch className="size-5 text-muted shrink-0" />
           )}
         </div>
+        {/* iOS Safari / Capacitor WebView は「submit 可能な button が form 内に居ないと
+            キーボードの Search/Go ボタンで submit が発火しない」ケースがある。
+            見せない submit を 1 個だけ置いて確実に submit 経路を確保する。 */}
+        <button type="submit" aria-hidden="true" tabIndex={-1} className="hidden" />
       </form>
 
       {showSuggestions && suggestions.length > 0 && (
@@ -111,7 +130,11 @@ export default function SearchBox({
             <button
               key={s.label}
               type="button"
-              onMouseDown={() => navigate(s.label)}
+              // mousedown で preventDefault し input の blur を抑止 → onClick が確実に発火する。
+              // iOS/Android WebView では以前 onMouseDown={navigate} だったが、ジェスチャによっては
+              // mousedown が発火せず tap が拾えないケースがあった (Bug: mim → mimic 候補タップ無反応)。
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => navigate(s.label)}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
             >
               <span className="text-gray-900">{s.type === 'phrase' ? displayPhrase(s.label) : s.label}</span>

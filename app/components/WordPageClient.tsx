@@ -680,6 +680,18 @@ export default function WordPageClient({
 }) {
   const router = useRouter()
 
+  // /word/xxx?fresh=1 で来た場合、SSR で Data Cache を bypass するためのフラグを付けてるだけ
+  // なので、レンダー確定後は URL からクリーンアップして共有時にゴミが残らないようにする。
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('fresh')) {
+      url.searchParams.delete('fresh')
+      const q = url.searchParams.toString()
+      window.history.replaceState(null, '', url.pathname + (q ? `?${q}` : '') + url.hash)
+    }
+  }, [word])
+
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
 
