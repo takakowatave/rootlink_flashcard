@@ -96,12 +96,20 @@ export function buildPronunciation(dictionary: SavedWordDictionary | null | unde
   }
 }
 
+/**
+ * displayLocale ('ja' | 'en') に応じて sense を組み立てる。
+ * - 'ja': payload.locales.ja.senses[senseId].meaning を優先 → 無ければ英語 definition にフォールバック
+ * - 'en': 英語 definition を優先 → 無ければ ja.meaning
+ * example (英文) は常に載せる。exampleTranslation (和訳) は JA のときだけ返す。
+ * DB 再生成なしで locales.ja が空だった単語も英語で読めるように英語フォールバックを残す。
+ */
 export function buildSenses(
   dictionary: SavedWordDictionary | null | undefined,
   locale: DisplayLocale = 'ja',
 ): Record<string, DisplaySense[]> {
   const senseGroups: SavedWordSenseGroup[] = dictionary?.senseGroups ?? []
-  const jaLocales = dictionary?.locales?.ja?.senses ?? {}
+  // locales.ja のみ実データが入る (DB スキーマ)。他 locale (en) は英語 definition を直接使う。
+  const localeSenses = locale === 'ja' ? (dictionary?.locales?.ja?.senses ?? {}) : {}
   const result: Record<string, DisplaySense[]> = {}
 
   for (const group of senseGroups) {
@@ -110,11 +118,23 @@ export function buildSenses(
     const rawSenses: DisplaySense[] = (group.senses ?? [])
       .map((sense) => {
         const senseId = String(sense.senseId ?? '')
-        const ja = jaLocales[senseId]
-        const meaning = locale === 'ja'
-          ? (ja?.meaning ?? sense.definition ?? '')
-          : (sense.definition ?? ja?.meaning ?? '')
-        return { senseId, meaning, example: sense.example ?? undefined, exampleTranslation: ja?.exampleTranslation ?? undefined }
+        const localized = localeSenses[senseId]
+        const localizedMeaning = typeof localized?.meaning === 'string' ? localized.meaning : ''
+        const englishMeaning = typeof sense.definition === 'string' ? sense.definition : ''
+        const meaning =
+          locale === 'ja'
+            ? (localizedMeaning || englishMeaning)
+            : (englishMeaning || localizedMeaning)
+        const exampleTranslation =
+          locale === 'ja'
+            ? (typeof localized?.exampleTranslation === 'string' ? localized.exampleTranslation : undefined)
+            : undefined
+        return {
+          senseId,
+          meaning,
+          example: sense.example ?? undefined,
+          exampleTranslation,
+        }
       })
       .filter((s) => s.senseId && s.meaning)
     const seenMeaning = new Set<string>()
