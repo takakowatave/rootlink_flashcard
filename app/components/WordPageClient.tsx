@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { MdIosShare, MdArrowBackIosNew } from 'react-icons/md'
 import { HiSearch } from 'react-icons/hi'
 import EntryCard from '@/components/EntryCard'
+import DeckScrollStrip from '@/components/DeckScrollStrip'
 import ReportContentLink from '@/components/ReportContentLink'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
@@ -653,6 +654,7 @@ export default function WordPageClient({
   noCard,
   relatedPosts,
   initialExistingDerivatives,
+  containingDecks,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -663,6 +665,18 @@ export default function WordPageClient({
   noCard?: boolean
   relatedPosts?: Array<{ title: string; slug: string }>
   initialExistingDerivatives?: string[]
+  /**
+   * その単語が収録されている公式デッキ (Notion issue 3d2d…-7fcfc)。
+   * 単語カード直下に DeckScrollStrip (Dashboard 等と共通) で表紙カルーセル表示。
+   */
+  containingDecks?: Array<{
+    slug: string
+    label: string
+    shortName: string
+    wordCount: number
+    imageSrc?: string
+    isPremium: boolean
+  }>
 }) {
   const router = useRouter()
 
@@ -1193,6 +1207,32 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       displayLocale={displayLocale}
       noCard={noCard}
     />
+    {/* 「この単語の内容を報告」は、EntryCard の直後・収録デッキ / 記事の前に
+        置いておく (誤りに気づいたユーザーがすぐ動けるように)。 */}
+    {!noCard && dictionary && (
+      <ReportContentLink kind="word" content={word} />
+    )}
+
+    {/* 収録デッキカルーセル (単語カード直下)。該当なしなら何も出さない
+        (フッターリンク集化を回避)。DeckScrollStrip は Dashboard / /decks /
+        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc */}
+    {containingDecks && containingDecks.length > 0 && (
+      <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
+        <h2 className="text-xl font-bold text-gray-950 mb-3">この単語が収録されている単語帳</h2>
+        <DeckScrollStrip
+          items={containingDecks.map((d) => ({
+            key: d.slug,
+            label: d.label,
+            title: d.shortName,
+            imageSrc: d.imageSrc,
+            wordCount: d.wordCount,
+            // 章単位の課金へ移行済みなので王冠バッジは出さない (/decks 一覧と揃える)
+            href: `/decks/${d.slug}`,
+          }))}
+        />
+      </section>
+    )}
+
     {relatedPosts && relatedPosts.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-3 mb-6">
         <h2 className="text-sm font-semibold text-muted mb-2">この単語を扱った記事</h2>
@@ -1209,10 +1249,6 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           ))}
         </ul>
       </section>
-    )}
-
-    {!noCard && dictionary && (
-      <ReportContentLink kind="word" content={word} />
     )}
 
     </div>
