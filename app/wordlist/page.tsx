@@ -12,7 +12,7 @@ import QuizProgressPanel from "@/components/QuizProgressPanel"
 import { fetchSavedWordsMeta, fetchWordDictionaries, fetchSavedPhrases, toggleSaveStatus, saveQuizResult, type SavedPhraseRow, type SavedWordMetaRow } from "@/lib/supabaseApi"
 import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from "@/lib/quizSettings"
 import { useTtsAudio } from "@/lib/useTtsAudio"
-import toast, { Toaster } from "react-hot-toast"
+import toast from "react-hot-toast"
 import { supabase } from "@/lib/supabaseClient"
 import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
@@ -343,7 +343,8 @@ export default function WordListPage() {
 
   return (
     <>
-      <Toaster position="top-center" />
+      {/* app/layout.tsx で共通 Toaster を出しているので不要。
+          残っていた二重描画を撤去 (position / safe-area / success 色は共通側に集約) */}
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
 
       {/* PageHeader はロゴのヘッダーと合わせて幅 100% の帯にしたいので

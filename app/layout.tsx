@@ -45,7 +45,19 @@ export default function RootLayout({
     return (
         <html lang="ja">
         <body>
-            <Toaster position="top-center" />
+            <Toaster
+                position="top-center"
+                // iOS notch / 時刻表示に被らないよう safe-area 分だけ下げる
+                containerStyle={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}
+                toastOptions={{
+                    style: { fontSize: '14px' },
+                    // success の check アイコンをブランドの primary に揃える。
+                    // ✕ (error) は視認性のため既存カラーを維持。
+                    success: {
+                        iconTheme: { primary: '#009689', secondary: '#ffffff' },
+                    },
+                }}
+            />
             <AppShell>
                 {children}
             </AppShell>
