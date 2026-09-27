@@ -365,7 +365,8 @@ export default function EtymologyBlock({
                                 <span className="text-[14px] font-medium text-primary-hover leading-4">{rw}</span>
                               )}
                             </button>
-                            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
+                            {/* hover tooltip は desktop 用。SP は tap で sticky になり出っぱなしになるので非表示。 */}
+                            <span className="hidden md:block pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
                               {displayLocale === 'ja' ? 'この単語を検索' : 'Search this word'}
                             </span>
                           </div>
