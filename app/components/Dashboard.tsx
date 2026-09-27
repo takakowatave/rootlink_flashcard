@@ -15,6 +15,7 @@ import { getPlantImageSrc, resolveGrowth } from '@/lib/plantGrowth'
 import SharedDeckCard from '@/components/DeckCard'
 import WordlistEmptyCard from '@/components/WordlistEmptyCard'
 import Button from '@/components/Button'
+import Footer from '@/components/Footer'
 import ShareMenu from '@/components/ShareMenu'
 import { shareViaClipboardAndX } from '@/lib/shareToX'
 import { isNativePlatform } from '@/lib/isNativePlatform'
@@ -737,6 +738,11 @@ export default function Dashboard() {
       >
         <HiSearch className="size-6" />
       </button>
+
+      {/* Dashboard は URL が / なので AppShell の isLP 判定 (pathname === '/') に
+          巻き込まれて Footer が出ない。Dashboard 側で明示的に Footer を持たせる。
+          未ログイン時に出る LPClient は自前で LPFooter を持っているので重複しない。 */}
+      <Footer />
     </>
   )
 }
