@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { PHRASES_PUBLIC } from '@/lib/featureFlags'
@@ -21,7 +21,34 @@ export default function MobileSearchOverlay() {
   const [value, setValue] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const wasNavigating = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // 遷移完了 (isPending が true → false) の瞬間にモーダルを閉じる。
+  // これで検索モーダルは「新しい単語ページが完全に描画されるまで」開いたままとなり、
+  // 遷移途中に直前のページ (例: meet) が一瞬見える不具合を防ぐ。
+  useEffect(() => {
+    if (wasNavigating.current && !isPending) {
+      wasNavigating.current = false
+      setOpen(false)
+      setValue('')
+      setSearchError(false)
+    }
+  }, [isPending])
+
+  // 万一 transition が完了しない (ネットワーク断など) 場合の safety net。
+  // 3 秒経ってもモーダルが開きっぱなしなら強制的に閉じる。
+  useEffect(() => {
+    if (!isPending) return
+    const t = setTimeout(() => {
+      if (wasNavigating.current) {
+        wasNavigating.current = false
+        setOpen(false)
+      }
+    }, 3000)
+    return () => clearTimeout(t)
+  }, [isPending])
 
   useEffect(() => {
     const handler = () => {
@@ -47,13 +74,18 @@ export default function MobileSearchOverlay() {
   // 単語ページから検索した場合は履歴を積まずに replace する
   // (連続検索で戻るを押したら dashboard に戻れるように)。fresh フラグは
   // 直近 /resolve 済みの語だと SSR に伝え、Data Cache の空応答を回避する。
+  // startTransition で包み、遷移完了 (新ページ描画完了) までモーダルを閉じない
+  // → 遷移途中に直前ページが見える bug を防ぐ。close は上の useEffect で行う。
   const navigateAfterResolve = (url: string) => {
     const withFresh = url.includes('?') ? `${url}&fresh=1` : `${url}?fresh=1`
-    if (pathname.startsWith('/word/')) {
-      router.replace(withFresh)
-    } else {
-      router.push(withFresh)
-    }
+    wasNavigating.current = true
+    startTransition(() => {
+      if (pathname.startsWith('/word/')) {
+        router.replace(withFresh)
+      } else {
+        router.push(withFresh)
+      }
+    })
   }
 
   const doSearch = async (query: string) => {
@@ -69,7 +101,6 @@ export default function MobileSearchOverlay() {
       if (!res.ok) { setSearchError(true); return }
       const r = await res.json()
       if (r?.ok === true && typeof r.redirectTo === 'string') {
-        setOpen(false)
         navigateAfterResolve(r.redirectTo)
         return
       }
@@ -78,7 +109,6 @@ export default function MobileSearchOverlay() {
             .from('phrase_cards').select('id').ilike('phrase', query).not('meaning_ja', 'is', null).is('skip_reason', null).limit(1).maybeSingle()
         : { data: null }
       if (phraseMatch) {
-        setOpen(false)
         navigateAfterResolve(`/word/${query.replace(/\s+/g, '_')}`)
       } else {
         setSearchError(true)
@@ -129,6 +159,11 @@ export default function MobileSearchOverlay() {
             inputRef={inputRef}
             inputClassName="text-base text-black"
             wrapperClassName="h-12"
+            onSelectSuggestion={label => {
+              // サジェストタップも startTransition で包む → 新ページ描画完了まで
+              // モーダルが閉じない (直前ページのちらつきを防ぐ)。
+              navigateAfterResolve(`/word/${label.replace(/\s+/g, '_')}`)
+            }}
           />
           {searchError && (
             <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>

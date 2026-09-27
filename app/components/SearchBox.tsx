@@ -18,6 +18,12 @@ export type SearchBoxProps = {
   inputRef?: React.RefObject<HTMLInputElement>
   inputClassName?: string
   wrapperClassName?: string
+  /**
+   * サジェストがタップされたときに親に委譲するコールバック。
+   * MobileSearchOverlay など「遷移完了までモーダルを閉じない」制御をしたい親が指定する。
+   * 未指定なら SearchBox が自前で router.replace/push する (Header desktop など)。
+   */
+  onSelectSuggestion?: (label: string) => void
 }
 
 export default function SearchBox({
@@ -29,6 +35,7 @@ export default function SearchBox({
   inputRef,
   inputClassName,
   wrapperClassName,
+  onSelectSuggestion,
 }: SearchBoxProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -70,6 +77,11 @@ export default function SearchBox({
   const navigate = (label: string) => {
     setShowSuggestions(false)
     setSuggestions([])
+    // 親から onSelectSuggestion が渡っていれば委譲 (親側で遷移完了までモーダル維持)。
+    if (onSelectSuggestion) {
+      onSelectSuggestion(label)
+      return
+    }
     // 単語ページ上での検索は履歴を積まずに replace (連続検索の戻る先を dashboard に)。
     // fresh=1 は SSR 側で Data Cache を bypass するフラグ (404 flash 回避)。
     const url = `/word/${label.replace(/\s+/g, '_')}?fresh=1`
