@@ -84,6 +84,9 @@ export default function SearchBox({
     setTimeout(() => { navigatingRef.current = false }, 1000)
     setShowSuggestions(false)
     setSuggestions([])
+    // 入力欄の value をタップしたサジェスト文言に揃える。
+    // 遷移中に入力欄が "je" のままだと「jeopardy を選んだのに je で検索が走ってる」ように見える。
+    onChange(label)
     // 親から onSelectSuggestion が渡っていれば委譲 (親側で遷移完了までモーダル維持)。
     if (onSelectSuggestion) {
       onSelectSuggestion(label)
