@@ -49,14 +49,26 @@ export default function SearchBox({
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return }
     const [wordsRes, phrasesRes] = await Promise.all([
-      supabase.from('words').select('word').ilike('word', `${q}%`).limit(4),
+      // DB に _ / - / space 混在の compound word 汚染が残っているので少し多めに取って dedup
+      supabase.from('words').select('word').ilike('word', `${q}%`).limit(12),
       PHRASES_PUBLIC
         ? supabase.from('phrase_cards').select('phrase').ilike('phrase', `${q}%`).not('meaning_ja', 'is', null).is('skip_reason', null).limit(4)
         : Promise.resolve({ data: [] as { phrase: string }[] }),
     ])
-    const wordItems: Suggestion[] = (wordsRes.data ?? []).map(r => ({ label: r.word, type: 'word' }))
+    // dedup key: 小文字化して _ を space に正規化 (take over / take_over を同一視)。
+    // hyphen (take-off) は別の語彙 (compound noun) として残す。
+    const dedupKey = (s: string) => s.toLowerCase().replace(/_/g, ' ')
+    const seen = new Set<string>()
+    const wordItems: Suggestion[] = []
+    for (const r of (wordsRes.data ?? [])) {
+      const key = dedupKey(r.word)
+      if (seen.has(key)) continue
+      seen.add(key)
+      // 表示は space 版に寄せる (URL 変換の副産物である _ を UI に出さない)
+      wordItems.push({ label: r.word.replace(/_/g, ' '), type: 'word' })
+    }
     const phraseItems: Suggestion[] = (phrasesRes.data ?? []).map(r => ({ label: r.phrase, type: 'phrase' }))
-    setSuggestions([...wordItems, ...phraseItems].slice(0, 6))
+    setSuggestions([...wordItems.slice(0, 4), ...phraseItems].slice(0, 6))
   }, [])
 
   useEffect(() => {
