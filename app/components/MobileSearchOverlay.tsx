@@ -51,11 +51,21 @@ export default function MobileSearchOverlay() {
   }, [isPending])
 
   useEffect(() => {
-    const handler = () => {
-      setValue('')
+    const handler = (e: Event) => {
+      // WordPageClient から「open-mobile-search」に initialValue (現在の単語) を
+      // detail で渡す。渡ってきたら pre-fill、無ければ空。
+      const detail = (e as CustomEvent<{ initialValue?: string }>).detail
+      const initial = typeof detail?.initialValue === 'string' ? detail.initialValue : ''
+      setValue(initial)
       setSearchError(false)
       setOpen(true)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => {
+        inputRef.current?.focus()
+        // pre-fill があるならカーソルを末尾に置く (or select all で置換しやすく)
+        if (initial && inputRef.current) {
+          inputRef.current.select()
+        }
+      }, 50)
     }
     window.addEventListener('open-mobile-search', handler)
     return () => window.removeEventListener('open-mobile-search', handler)

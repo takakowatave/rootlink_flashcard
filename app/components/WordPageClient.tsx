@@ -1139,11 +1139,12 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           </button>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search', { detail: { initialValue: word } }))}
             className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
             aria-label="検索を開く"
           >
-            <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
+            {/* 見ている単語をフォームに表示する (元仕様)。空検索窓には戻さない。 */}
+            <span className="flex-1 min-w-0 truncate text-sm text-black">{word}</span>
             <HiSearch className="size-5 text-muted shrink-0" />
           </button>
           <button

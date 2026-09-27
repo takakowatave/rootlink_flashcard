@@ -74,7 +74,13 @@ export default function SearchBox({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // pointerdown と click が両方発火するケースの重複遷移を防ぐ
+  const navigatingRef = useRef(false)
   const navigate = (label: string) => {
+    if (navigatingRef.current) return
+    navigatingRef.current = true
+    // 少し遅らせて解除 (次のサジェスト選択に備える)
+    setTimeout(() => { navigatingRef.current = false }, 1000)
     setShowSuggestions(false)
     setSuggestions([])
     // 親から onSelectSuggestion が渡っていれば委譲 (親側で遷移完了までモーダル維持)。
@@ -142,12 +148,16 @@ export default function SearchBox({
             <button
               key={s.label}
               type="button"
-              // mousedown で preventDefault し input の blur を抑止 → onClick が確実に発火する。
-              // iOS/Android WebView では以前 onMouseDown={navigate} だったが、ジェスチャによっては
-              // mousedown が発火せず tap が拾えないケースがあった (Bug: mim → mimic 候補タップ無反応)。
-              onMouseDown={e => e.preventDefault()}
+              // iOS Capacitor WebView 対策:
+              // - onPointerDown を primary handler にして、tap 開始で即 navigate。onClick / onMouseDown だと
+              //   input blur → 300ms delay → その間に他イベントが割り込みタップが迷子になるケースがあった。
+              // - preventDefault で input の blur を抑止し、ここで直接遷移する。
+              // - onClick も残しておく (desktop / keyboard 経由の click event 用)。
+              // - touch-manipulation で 300ms double-tap zoom 待ちを排除。
+              onPointerDown={e => { e.preventDefault(); navigate(s.label) }}
               onClick={() => navigate(s.label)}
-              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
+              style={{ touchAction: 'manipulation' }}
+              className={`w-full text-left px-4 py-4 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
             >
               <span className="text-gray-900">{s.type === 'phrase' ? displayPhrase(s.label) : s.label}</span>
               {s.type === 'phrase' && (
