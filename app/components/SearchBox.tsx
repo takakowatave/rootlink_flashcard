@@ -9,11 +9,11 @@ import { PHRASES_PUBLIC } from '@/lib/featureFlags'
 
 type Suggestion = { label: string; type: 'word' | 'phrase' }
 
-// 検索フォームで許可する文字: 英字 (a-z / A-Z)、ひらがな、長音符、スペース、
-// アポストロフィ (don't 用)、ハイフン (well-known 用)。
-// これ以外 (記号 / カタカナ / 漢字 / 数字 / 全角記号 等) は入力段階で strip する。
-// 過去に「metric:」等が /resolve にそのまま届いて DB 登録される事故があった (2026-09-27)。
-const SANITIZE_REGEX = /[^a-zA-Zぁ-ゖー\s'-]/g
+// 検索フォームで許可する文字: 英字 (a-z / A-Z)、スペース、アポストロフィ (don't 用)、
+// ハイフン (well-known 用) のみ。RootLink は英語辞書なので日本語 (ひらがな/カタカナ/漢字)
+// も記号 (: など) も数字も全角文字も入力段階で strip する。
+// 過去に「metric:」が /resolve にそのまま届いて DB 登録される事故があった (2026-09-27)。
+const SANITIZE_REGEX = /[^a-zA-Z\s'-]/g
 export const sanitizeSearchQuery = (v: string): string => v.replace(SANITIZE_REGEX, '')
 
 export type SearchBoxProps = {
