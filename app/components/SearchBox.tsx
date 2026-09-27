@@ -6,15 +6,9 @@ import { HiSearch } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { displayPhrase } from '@/lib/phraseDisplay'
 import { PHRASES_PUBLIC } from '@/lib/featureFlags'
+import { sanitizeSearchQuery, MAX_QUERY_LENGTH } from '@/lib/queryGuard'
 
 type Suggestion = { label: string; type: 'word' | 'phrase' }
-
-// 検索フォームで許可する文字: 英字 (a-z / A-Z)、スペース、アポストロフィ (don't 用)、
-// ハイフン (well-known 用) のみ。RootLink は英語辞書なので日本語 (ひらがな/カタカナ/漢字)
-// も記号 (: など) も数字も全角文字も入力段階で strip する。
-// 過去に「metric:」が /resolve にそのまま届いて DB 登録される事故があった (2026-09-27)。
-const SANITIZE_REGEX = /[^a-zA-Z\s'-]/g
-export const sanitizeSearchQuery = (v: string): string => v.replace(SANITIZE_REGEX, '')
 
 export type SearchBoxProps = {
   value: string
@@ -125,6 +119,7 @@ export default function SearchBox({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="none"
+            maxLength={MAX_QUERY_LENGTH}
             spellCheck={false}
             value={value}
             onChange={e => {
