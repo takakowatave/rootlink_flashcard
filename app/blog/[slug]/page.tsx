@@ -6,19 +6,28 @@ import { extractHeadings, type Post } from '@/lib/blog'
 import BlogArticle from '@/components/blog/BlogArticle'
 import BlogSidebar from '@/components/blog/BlogSidebar'
 import { getHighlightTerms } from '@/lib/blogHighlights'
-import { fetchAdjacentPosts, fetchPostEmbeds, fetchRelatedPosts, fetchTagCounts } from '@/lib/blogQueries'
+import {
+  applyPublishedFilter,
+  fetchAdjacentPosts,
+  fetchPostEmbeds,
+  fetchRelatedPosts,
+  fetchTagCounts,
+} from '@/lib/blogQueries'
 import { BLOG_AUTHOR } from '@/lib/blogAuthor'
 
 export const revalidate = 60
 
 type Params = { params: { slug: string } }
 
+// 未来日付 (予約投稿) は applyPublishedFilter で弾かれるので、直アクセス時も
+// 一致行が返らず notFound() に落ちる。
 async function fetchPost(slug: string): Promise<Post | null> {
-  const { data } = await supabase
-    .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
+  const { data } = await applyPublishedFilter(
+    supabase
+      .from('posts')
+      .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
+  )
     .eq('slug', slug)
-    .not('published_at', 'is', null)
     .maybeSingle()
   return (data as Post | null) ?? null
 }

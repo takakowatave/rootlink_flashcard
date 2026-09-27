@@ -7,6 +7,7 @@
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { publishedNowIso } from '@/lib/blogQueries'
 
 export const runtime = 'nodejs'
 
@@ -47,13 +48,14 @@ function loadLogoDataUrl(): Promise<string> {
   return logoPromise
 }
 
-type PostLite = { title: string; tags: string[] | null }
+type PostLite = { title: string; tags: string[] | null; published_at: string | null }
 
-// 下書きも描画する。公開ページは 404 になるが、プレビュー確認で必要になる。
+// 下書き (published_at=null) はプレビュー用途で描画を許すが、未来日付 (予約投稿)
+// は 404 で弾く。判定は GET 側で行う (fetchPost は生データのみ返す)。
 async function fetchPost(slug: string): Promise<PostLite | null> {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?select=title,tags&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/posts?select=title,tags,published_at&slug=eq.${encodeURIComponent(slug)}&limit=1`,
       {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         next: { revalidate: 300 },
@@ -65,6 +67,12 @@ async function fetchPost(slug: string): Promise<PostLite | null> {
   } catch {
     return null
   }
+}
+
+// 予約投稿 (published_at が未来) の判定
+function isScheduledFuture(post: PostLite | null): boolean {
+  if (!post?.published_at) return false
+  return post.published_at > publishedNowIso()
 }
 
 // 全角=1.0 / 半角=0.55 で概算した表示幅（em 単位）
@@ -103,6 +111,12 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     loadLogoDataUrl(),
     fetchPost(params.slug),
   ])
+
+  // 予約投稿 (未来日付) はカバー画像も 404 で返す (SEO・拡散のプレビューでヒットさせない)。
+  // 下書き (published_at=null) はプレビュー用途で従来通り描画を許す。
+  if (isScheduledFuture(post)) {
+    return new Response(null, { status: 404, headers: { 'Cache-Control': CACHE_FALLBACK } })
+  }
 
   const rawTitle = post?.title ?? '語源で覚える英単語'
   const [main, sub] = splitTitle(rawTitle)

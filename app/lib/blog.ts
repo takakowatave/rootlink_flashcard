@@ -1,4 +1,5 @@
 import { cache } from 'react'
+import { publishedFilterUrl } from '@/lib/blogQueries'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -80,9 +81,10 @@ export type RelatedPost = Pick<Post, 'title' | 'slug'>
 // 公開済み記事の本文をまとめて取得。同一リクエスト内で dedupe される。
 // supabase-js 内部 fetch は Next.js 14 の force-cache 既定で Data Cache に固定されるため、
 // REST を直叩きして revalidate を明示する（発行から最大5分で反映）。
+// 公開判定 (published_at not null かつ現在時刻以前) は blogQueries.publishedFilterUrl に集約。
 const fetchPublishedPostsWithContent = cache(async (): Promise<Array<Pick<Post, 'title' | 'slug' | 'content'>>> => {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/posts?select=title,slug,content&published_at=not.is.null&order=published_at.desc`,
+    `${SUPABASE_URL}/rest/v1/posts?select=title,slug,content&${publishedFilterUrl()}&order=published_at.desc`,
     {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       next: { revalidate: 300 },

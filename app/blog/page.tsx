@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
 import type { Post } from '@/lib/blog'
+import { applyPublishedFilter } from '@/lib/blogQueries'
 import { BlogDate, BlogTagList } from '@/components/blog/BlogMeta'
 import BlogThumb from '@/components/blog/BlogThumb'
 import type { Metadata } from 'next'
@@ -14,10 +15,11 @@ export const metadata: Metadata = {
 export const revalidate = 60
 
 export default async function BlogListPage() {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('id, title, slug, tags, published_at, created_at, hero_image_url')
-    .not('published_at', 'is', null)
+  const { data, error } = await applyPublishedFilter(
+    supabase
+      .from('posts')
+      .select('id, title, slug, tags, published_at, created_at, hero_image_url')
+  )
     .order('published_at', { ascending: false })
     .limit(5000)
 

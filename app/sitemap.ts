@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { applyPublishedFilter } from "@/lib/blogQueries"
 
 const BASE_URL = "https://www.rootlink.app"
 
@@ -97,10 +98,9 @@ async function buildWordsSitemap(
 async function buildBlogSitemap(
   supabase: SupabaseClient
 ): Promise<MetadataRoute.Sitemap> {
-  const { data: posts } = await supabase
-    .from("posts")
-    .select("slug, published_at, update_at")
-    .not("published_at", "is", null)
+  const { data: posts } = await applyPublishedFilter(
+    supabase.from("posts").select("slug, published_at, update_at")
+  )
     .order("published_at", { ascending: false })
     .limit(5000)
 
