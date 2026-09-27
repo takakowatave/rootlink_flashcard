@@ -97,7 +97,8 @@ export default function CardHeader({
             }
           </button>
           {saveTooltip && (
-            <span className="pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
+            // hover tooltip は desktop 用。SP は tap で hover が sticky になり出っぱなしになるので出さない。
+            <span className="hidden md:block pointer-events-none absolute top-full right-0 z-20 mt-2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/save:opacity-100">
               {isSaved ? saveTooltip.saved : saveTooltip.unsaved}
             </span>
           )}
