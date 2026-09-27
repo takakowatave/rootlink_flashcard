@@ -11,6 +11,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 import Button from "@/components/Button";
 import SearchBox from "@/components/SearchBox";
 import { PHRASES_PUBLIC } from "@/lib/featureFlags";
+import { guardQuery } from "@/lib/queryGuard";
 import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
 
 const API_BASE =
@@ -33,8 +34,26 @@ const Header = () => {
     setSearchValue(match ? decodeURIComponent(match[1]) : '')
   }, [pathname]);
 
-  const doSearch = async (query: string) => {
-    if (!query || isSearching) return;
+  // 単語ページ上での検索は replace (履歴を積まない = 戻るで dashboard に戻れる)。
+  // fresh=1 は直近 /resolve 済み単語だと SSR に伝える (Data Cache 空応答での 404 flash 回避)。
+  const navigateAfterResolve = (url: string) => {
+    const withFresh = url.includes('?') ? `${url}&fresh=1` : `${url}?fresh=1`;
+    if (pathname.startsWith('/word/')) {
+      router.replace(withFresh);
+    } else {
+      router.push(withFresh);
+    }
+  };
+
+  const doSearch = async (rawQuery: string) => {
+    if (isSearching) return;
+    // システムガード: 空 / 長すぎ / 許可外文字 (記号・カナ・漢字・数字・全角) を弾く
+    const guarded = guardQuery(rawQuery);
+    if (!guarded.ok) {
+      if (guarded.reason !== 'EMPTY') setSearchError(true);
+      return;
+    }
+    const query = guarded.normalized;
     setIsSearching(true);
     setSearchError(false);
     try {
@@ -46,7 +65,7 @@ const Header = () => {
       if (!res.ok) { setSearchError(true); return; }
       const r = await res.json();
       if (r?.ok === true && typeof r.redirectTo === 'string') {
-        router.push(r.redirectTo);
+        navigateAfterResolve(r.redirectTo);
         return;
       }
       const { data: phraseMatch } = PHRASES_PUBLIC
@@ -54,7 +73,7 @@ const Header = () => {
             .from('phrase_cards').select('id').ilike('phrase', query).not('meaning_ja', 'is', null).is('skip_reason', null).limit(1).maybeSingle()
         : { data: null };
       if (phraseMatch) {
-        router.push(`/word/${query.replace(/\s+/g, '_')}`);
+        navigateAfterResolve(`/word/${query.replace(/\s+/g, '_')}`);
       } else {
         setSearchError(true);
       }

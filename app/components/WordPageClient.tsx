@@ -680,6 +680,18 @@ export default function WordPageClient({
 }) {
   const router = useRouter()
 
+  // /word/xxx?fresh=1 で来た場合、SSR で Data Cache を bypass するためのフラグを付けてるだけ
+  // なので、レンダー確定後は URL からクリーンアップして共有時にゴミが残らないようにする。
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('fresh')) {
+      url.searchParams.delete('fresh')
+      const q = url.searchParams.toString()
+      window.history.replaceState(null, '', url.pathname + (q ? `?${q}` : '') + url.hash)
+    }
+  }, [word])
+
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
 
@@ -1127,11 +1139,12 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
           </button>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search', { detail: { initialValue: word } }))}
             className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
             aria-label="検索を開く"
           >
-            <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
+            {/* 見ている単語をフォームに表示する (元仕様)。空検索窓には戻さない。 */}
+            <span className="flex-1 min-w-0 truncate text-sm text-black">{word}</span>
             <HiSearch className="size-5 text-muted shrink-0" />
           </button>
           <button

@@ -34,12 +34,22 @@ const SUPABASE_HEADERS = {
 
 const DAY = 60 * 60 * 24
 
+/**
+ * 検索フローで来たときは fresh=1 が付く。その場合 Data Cache を bypass して
+ * (cache: 'no-store') 直前の /resolve で書き込まれた DB 内容を必ず読み込む。
+ * 以前は revalidate: DAY のせいで、他ユーザ/bot が同じ URL で先に空応答を
+ * cache してしまうと直後の検索が 404 に化けていた (Bug: 検索結果前に 404 flash)。
+ * bot / 直接アクセスは fresh 無しで従来通り DAY cache を使う (Oxford コスト保護維持)。
+ */
 const resolveWord = cache(
-  async (raw: string): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> => {
+  async (raw: string, fresh = false): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> => {
+    const cacheOpts = fresh
+      ? ({ cache: 'no-store' } as const)
+      : ({ next: { revalidate: DAY } } as const)
     try {
       const wordRes = await fetch(
         `${SUPABASE_URL}/rest/v1/words?select=id,word&word=eq.${encodeURIComponent(raw)}&limit=1`,
-        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+        { headers: SUPABASE_HEADERS, ...cacheOpts }
       )
       if (!wordRes.ok) return null
 
@@ -57,7 +67,7 @@ const resolveWord = cache(
         `${SUPABASE_URL}/rest/v1/dictionary_cache?select=payload&word_id=eq.${encodeURIComponent(
           String(wordId)
         )}&limit=1`,
-        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+        { headers: SUPABASE_HEADERS, ...cacheOpts }
       )
       if (!cacheRes.ok) return null
 
@@ -213,9 +223,16 @@ function buildDescription(word: string, dictionary: MetaDictionary | null): stri
   return `${word} の語源と意味を語根から解説します。RootLink で英単語を語源から理解しよう。`
 }
 
-export async function generateMetadata({ params }: { params: { word: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: { word: string }
+  searchParams?: { fresh?: string }
+}): Promise<Metadata> {
   const raw = decodeURIComponent(params.word).trim().toLowerCase()
-  const data = await resolveWord(raw)
+  const fresh = searchParams?.fresh === '1'
+  const data = await resolveWord(raw, fresh)
   const word = data?.resolved ?? raw
   const dictionary = (data?.dictionary ?? null) as MetaDictionary | null
   const title = buildTitle(word)
@@ -247,10 +264,11 @@ export default async function Page({
   searchParams,
 }: {
   params: { word: string }
-  searchParams?: { pin?: string }
+  searchParams?: { pin?: string; fresh?: string }
 }) {
   const raw = decodeURIComponent(params.word).replace(/_/g, ' ').trim().toLowerCase()
   const pin = searchParams?.pin ?? null
+  const fresh = searchParams?.fresh === '1'
 
   // 複数語はフレーズを優先して検索（語源ツリーを避ける）
   if (raw.includes(' ')) {
@@ -260,7 +278,7 @@ export default async function Page({
     }
   }
 
-  const data = await resolveWord(raw)
+  const data = await resolveWord(raw, fresh)
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)

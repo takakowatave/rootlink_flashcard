@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { PHRASES_PUBLIC } from '@/lib/featureFlags'
+import { guardQuery } from '@/lib/queryGuard'
 import SearchBox from './SearchBox'
 
 const API_BASE =
@@ -16,25 +17,97 @@ const API_BASE =
 // display:none になり反応しないので AppShell 直下に独立配置する。
 export default function MobileSearchOverlay() {
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const wasNavigating = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // 遷移完了 (isPending が true → false) の瞬間にモーダルを閉じる。
+  // これで検索モーダルは「新しい単語ページが完全に描画されるまで」開いたままとなり、
+  // 遷移途中に直前のページ (例: meet) が一瞬見える不具合を防ぐ。
   useEffect(() => {
-    const handler = () => {
+    if (wasNavigating.current && !isPending) {
+      wasNavigating.current = false
+      setOpen(false)
       setValue('')
       setSearchError(false)
+    }
+  }, [isPending])
+
+  // 万一 transition が完了しない (ネットワーク断など) 場合の safety net。
+  // 3 秒経ってもモーダルが開きっぱなしなら強制的に閉じる。
+  useEffect(() => {
+    if (!isPending) return
+    const t = setTimeout(() => {
+      if (wasNavigating.current) {
+        wasNavigating.current = false
+        setOpen(false)
+      }
+    }, 3000)
+    return () => clearTimeout(t)
+  }, [isPending])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      // WordPageClient から「open-mobile-search」に initialValue (現在の単語) を
+      // detail で渡す。渡ってきたら pre-fill、無ければ空。
+      const detail = (e as CustomEvent<{ initialValue?: string }>).detail
+      const initial = typeof detail?.initialValue === 'string' ? detail.initialValue : ''
+      setValue(initial)
+      setSearchError(false)
       setOpen(true)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => {
+        inputRef.current?.focus()
+        // pre-fill があるならカーソルを末尾に置く (or select all で置換しやすく)
+        if (initial && inputRef.current) {
+          inputRef.current.select()
+        }
+      }, 50)
     }
     window.addEventListener('open-mobile-search', handler)
     return () => window.removeEventListener('open-mobile-search', handler)
   }, [])
 
-  const doSearch = async (query: string) => {
-    if (!query || isSearching) return
+  // 検索中は Escape で明示キャンセルできるようにしておく (Web でのみ意味あり)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  // 単語ページから検索した場合は履歴を積まずに replace する
+  // (連続検索で戻るを押したら dashboard に戻れるように)。fresh フラグは
+  // 直近 /resolve 済みの語だと SSR に伝え、Data Cache の空応答を回避する。
+  // startTransition で包み、遷移完了 (新ページ描画完了) までモーダルを閉じない
+  // → 遷移途中に直前ページが見える bug を防ぐ。close は上の useEffect で行う。
+  const navigateAfterResolve = (url: string) => {
+    const withFresh = url.includes('?') ? `${url}&fresh=1` : `${url}?fresh=1`
+    wasNavigating.current = true
+    startTransition(() => {
+      if (pathname.startsWith('/word/')) {
+        router.replace(withFresh)
+      } else {
+        router.push(withFresh)
+      }
+    })
+  }
+
+  const doSearch = async (rawQuery: string) => {
+    if (isSearching) return
+    // システムガード: 空 / 長すぎ / 許可外文字 (記号・カナ・漢字・数字・全角) を弾く
+    const guarded = guardQuery(rawQuery)
+    if (!guarded.ok) {
+      if (guarded.reason !== 'EMPTY') setSearchError(true)
+      return
+    }
+    const query = guarded.normalized
     setIsSearching(true)
     setSearchError(false)
     try {
@@ -46,8 +119,7 @@ export default function MobileSearchOverlay() {
       if (!res.ok) { setSearchError(true); return }
       const r = await res.json()
       if (r?.ok === true && typeof r.redirectTo === 'string') {
-        setOpen(false)
-        router.push(r.redirectTo)
+        navigateAfterResolve(r.redirectTo)
         return
       }
       const { data: phraseMatch } = PHRASES_PUBLIC
@@ -55,8 +127,7 @@ export default function MobileSearchOverlay() {
             .from('phrase_cards').select('id').ilike('phrase', query).not('meaning_ja', 'is', null).is('skip_reason', null).limit(1).maybeSingle()
         : { data: null }
       if (phraseMatch) {
-        setOpen(false)
-        router.push(`/word/${query.replace(/\s+/g, '_')}`)
+        navigateAfterResolve(`/word/${query.replace(/\s+/g, '_')}`)
       } else {
         setSearchError(true)
       }
@@ -76,14 +147,15 @@ export default function MobileSearchOverlay() {
 
   return (
     <>
+      {/* 背景。以前は onClick で自動 close していたが、iOS で意図せず検索モードが
+          解除される事故があったため close トリガを外す (Bug: 検索中にダッシュボードが
+          チラ見えする)。閉じるは「閉じる」ボタン / Escape / 成功遷移のみ経由。 */}
       <div
         className="fixed inset-0 z-50 bg-white md:bg-black/40"
-        onClick={() => setOpen(false)}
-        aria-label="閉じる"
+        aria-hidden="true"
       />
       <div
         className="fixed z-50 inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] md:max-w-[90vw] md:h-auto md:rounded-2xl md:shadow-xl md:bg-white flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0"
-        onClick={e => e.stopPropagation()}
       >
         <div className="px-4 pt-3 pb-6 md:p-6">
           <div className="flex items-center justify-between mb-3">
@@ -100,11 +172,18 @@ export default function MobileSearchOverlay() {
             value={value}
             onChange={v => { setValue(v); setSearchError(false) }}
             onSubmit={handleSubmit}
-            isSearching={isSearching}
+            // resolve が返っただけでスピナーを消すと、遷移中に検索アイコンに戻って見える。
+            // モーダルが閉じるまで (=遷移完了まで) スピナーを継続表示する。
+            isSearching={isSearching || isPending}
             searchError={searchError}
             inputRef={inputRef}
             inputClassName="text-base text-black"
             wrapperClassName="h-12"
+            onSelectSuggestion={label => {
+              // サジェストタップも startTransition で包む → 新ページ描画完了まで
+              // モーダルが閉じない (直前ページのちらつきを防ぐ)。
+              navigateAfterResolve(`/word/${label.replace(/\s+/g, '_')}`)
+            }}
           />
           {searchError && (
             <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>

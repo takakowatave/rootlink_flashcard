@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { HiSearch } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { displayPhrase } from '@/lib/phraseDisplay'
 import { PHRASES_PUBLIC } from '@/lib/featureFlags'
+import { sanitizeSearchQuery, MAX_QUERY_LENGTH } from '@/lib/queryGuard'
 
 type Suggestion = { label: string; type: 'word' | 'phrase' }
 
@@ -18,6 +19,12 @@ export type SearchBoxProps = {
   inputRef?: React.RefObject<HTMLInputElement>
   inputClassName?: string
   wrapperClassName?: string
+  /**
+   * サジェストがタップされたときに親に委譲するコールバック。
+   * MobileSearchOverlay など「遷移完了までモーダルを閉じない」制御をしたい親が指定する。
+   * 未指定なら SearchBox が自前で router.replace/push する (Header desktop など)。
+   */
+  onSelectSuggestion?: (label: string) => void
 }
 
 export default function SearchBox({
@@ -29,25 +36,39 @@ export default function SearchBox({
   inputRef,
   inputClassName,
   wrapperClassName,
+  onSelectSuggestion,
 }: SearchBoxProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const router = useRouter()
+  const pathname = usePathname()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return }
     const [wordsRes, phrasesRes] = await Promise.all([
-      supabase.from('words').select('word').ilike('word', `${q}%`).limit(4),
+      // DB に _ / - / space 混在の compound word 汚染が残っているので少し多めに取って dedup
+      supabase.from('words').select('word').ilike('word', `${q}%`).limit(12),
       PHRASES_PUBLIC
         ? supabase.from('phrase_cards').select('phrase').ilike('phrase', `${q}%`).not('meaning_ja', 'is', null).is('skip_reason', null).limit(4)
         : Promise.resolve({ data: [] as { phrase: string }[] }),
     ])
-    const wordItems: Suggestion[] = (wordsRes.data ?? []).map(r => ({ label: r.word, type: 'word' }))
+    // dedup key: 小文字化して _ を space に正規化 (take over / take_over を同一視)。
+    // hyphen (take-off) は別の語彙 (compound noun) として残す。
+    const dedupKey = (s: string) => s.toLowerCase().replace(/_/g, ' ')
+    const seen = new Set<string>()
+    const wordItems: Suggestion[] = []
+    for (const r of (wordsRes.data ?? [])) {
+      const key = dedupKey(r.word)
+      if (seen.has(key)) continue
+      seen.add(key)
+      // 表示は space 版に寄せる (URL 変換の副産物である _ を UI に出さない)
+      wordItems.push({ label: r.word.replace(/_/g, ' '), type: 'word' })
+    }
     const phraseItems: Suggestion[] = (phrasesRes.data ?? []).map(r => ({ label: r.phrase, type: 'phrase' }))
-    setSuggestions([...wordItems, ...phraseItems].slice(0, 6))
+    setSuggestions([...wordItems.slice(0, 4), ...phraseItems].slice(0, 6))
   }, [])
 
   useEffect(() => {
@@ -66,10 +87,31 @@ export default function SearchBox({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // pointerdown と click が両方発火するケースの重複遷移を防ぐ
+  const navigatingRef = useRef(false)
   const navigate = (label: string) => {
+    if (navigatingRef.current) return
+    navigatingRef.current = true
+    // 少し遅らせて解除 (次のサジェスト選択に備える)
+    setTimeout(() => { navigatingRef.current = false }, 1000)
     setShowSuggestions(false)
     setSuggestions([])
-    router.push(`/word/${label.replace(/\s+/g, '_')}`)
+    // 入力欄の value をタップしたサジェスト文言に揃える。
+    // 遷移中に入力欄が "je" のままだと「jeopardy を選んだのに je で検索が走ってる」ように見える。
+    onChange(label)
+    // 親から onSelectSuggestion が渡っていれば委譲 (親側で遷移完了までモーダル維持)。
+    if (onSelectSuggestion) {
+      onSelectSuggestion(label)
+      return
+    }
+    // 単語ページ上での検索は履歴を積まずに replace (連続検索の戻る先を dashboard に)。
+    // fresh=1 は SSR 側で Data Cache を bypass するフラグ (404 flash 回避)。
+    const url = `/word/${label.replace(/\s+/g, '_')}?fresh=1`
+    if (pathname.startsWith('/word/')) {
+      router.replace(url)
+    } else {
+      router.push(url)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -86,8 +128,21 @@ export default function SearchBox({
         <div className={`flex items-center gap-2 ${wrapperClassName?.includes('h-12') ? 'h-12' : 'h-8'} bg-white border rounded-full pl-4 pr-2 ${searchError ? 'border-red-400' : 'border-line'}`}>
           <input
             ref={inputRef}
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            maxLength={MAX_QUERY_LENGTH}
+            spellCheck={false}
             value={value}
-            onChange={e => { onChange(e.target.value); setShowSuggestions(true); setActiveIndex(-1) }}
+            onChange={e => {
+              // 記号やカナ・漢字・数字などを入力段階で除去 (フォーム経由で /resolve に流れないように)
+              onChange(sanitizeSearchQuery(e.target.value))
+              setShowSuggestions(true)
+              setActiveIndex(-1)
+            }}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder="Search a word or phrase..."
@@ -103,6 +158,10 @@ export default function SearchBox({
             <HiSearch className="size-5 text-muted shrink-0" />
           )}
         </div>
+        {/* iOS Safari / Capacitor WebView は「submit 可能な button が form 内に居ないと
+            キーボードの Search/Go ボタンで submit が発火しない」ケースがある。
+            見せない submit を 1 個だけ置いて確実に submit 経路を確保する。 */}
+        <button type="submit" aria-hidden="true" tabIndex={-1} className="hidden" />
       </form>
 
       {showSuggestions && suggestions.length > 0 && (
@@ -111,8 +170,16 @@ export default function SearchBox({
             <button
               key={s.label}
               type="button"
-              onMouseDown={() => navigate(s.label)}
-              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
+              // iOS Capacitor WebView 対策:
+              // - onPointerDown を primary handler にして、tap 開始で即 navigate。onClick / onMouseDown だと
+              //   input blur → 300ms delay → その間に他イベントが割り込みタップが迷子になるケースがあった。
+              // - preventDefault で input の blur を抑止し、ここで直接遷移する。
+              // - onClick も残しておく (desktop / keyboard 経由の click event 用)。
+              // - touch-manipulation で 300ms double-tap zoom 待ちを排除。
+              onPointerDown={e => { e.preventDefault(); navigate(s.label) }}
+              onClick={() => navigate(s.label)}
+              style={{ touchAction: 'manipulation' }}
+              className={`w-full text-left px-4 py-4 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
             >
               <span className="text-gray-900">{s.type === 'phrase' ? displayPhrase(s.label) : s.label}</span>
               {s.type === 'phrase' && (

@@ -58,7 +58,10 @@ export default function EtymologyBlock({
   const wordDetail = useWordDetail()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
   const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
-  const [wordMeaningJa, setWordMeaningJa] = useState<Record<string, string>>({})
+  // 関連語チップ横に出すグロス。JA/EN 両方をキャッシュしておいて displayLocale で切り替える。
+  // 以前は wordMeaningJa 一本だったため、EN モードでも日本語訳が出てしまっていた (Bug: EN 表示で
+  // unwilling → 「嫌がる」、willing → 「喜んで〜する」が残る)。
+  const [wordMeaning, setWordMeaning] = useState<Record<string, { ja?: string; en?: string }>>({})
   const [inheritedParts, setInheritedParts] = useState<EtymologyPart[]>([])
   const [inheritedDescription, setInheritedDescription] = useState<{ en: string; ja: string } | null>(null)
   const [expandedParts, setExpandedParts] = useState<boolean[]>([])
@@ -160,11 +163,11 @@ export default function EtymologyBlock({
     })
   }, [parts, headword])
 
-  // 関連語チップ横に出す日本語訳を dictionary_cache から取得
+  // 関連語チップ横に出すグロスを dictionary_cache から取得 (JA/EN 両方)
   useEffect(() => {
     const allWords = new Set<string>()
     Object.values(partWordMap).forEach(list => list.forEach(w => allWords.add(w)))
-    const missing = Array.from(allWords).filter(w => !(w in wordMeaningJa))
+    const missing = Array.from(allWords).filter(w => !(w in wordMeaning))
     if (missing.length === 0) return
     let cancelled = false
     ;(async () => {
@@ -182,24 +185,27 @@ export default function EtymologyBlock({
         .select('word_id, payload')
         .in('word_id', ids)
         .limit(ids.length)
-      const next: Record<string, string> = {}
+      const next: Record<string, { ja?: string; en?: string }> = {}
       for (const c of (cacheRows ?? []) as { word_id: string; payload: RewrittenPayload }[]) {
         const w = idToWord.get(c.word_id)
         if (!w) continue
         const firstGroup = c.payload?.senseGroups?.[0]
         const senseId = firstGroup?.senses?.[0]?.senseId ?? ''
-        const meaning =
-          c.payload?.locales?.ja?.senses?.[senseId]?.meaning?.trim() ||
-          firstGroup?.senses?.[0]?.definition?.trim() ||
-          ''
-        if (meaning) next[w] = meaning
+        const ja = c.payload?.locales?.ja?.senses?.[senseId]?.meaning?.trim() || ''
+        const en = firstGroup?.senses?.[0]?.definition?.trim() || ''
+        if (ja || en) {
+          next[w] = {
+            ja: ja || undefined,
+            en: en || undefined,
+          }
+        }
       }
       if (!cancelled && Object.keys(next).length > 0) {
-        setWordMeaningJa(prev => ({ ...prev, ...next }))
+        setWordMeaning(prev => ({ ...prev, ...next }))
       }
     })()
     return () => { cancelled = true }
-  }, [partWordMap, wordMeaningJa])
+  }, [partWordMap, wordMeaning])
 
   const hasParts = parts.length > 0
 
@@ -310,10 +316,14 @@ export default function EtymologyBlock({
                       })}
                     </svg>
                     {filteredWords.map((rw, wi) => {
+                      const wm = wordMeaning[rw.toLowerCase()]
+                      // displayLocale に合わせてグロス言語を選ぶ。
+                      // relatedWordMeanings は fetchWordsByEtymologyPart 由来で常に EN 定義。
+                      // JA モードで JA 訳が引けなかったら EN 定義を最後の砦にする (無表示より情報がある方が良い)。
                       const meaning =
-                        wordMeaningJa[rw.toLowerCase()] ||
-                        part.relatedWordMeanings?.[rw] ||
-                        ''
+                        displayLocale === 'ja'
+                          ? (wm?.ja || part.relatedWordMeanings?.[rw] || '')
+                          : (wm?.en || part.relatedWordMeanings?.[rw] || '')
                       return (
                         <div key={wi} className="flex items-center gap-2 min-w-0" style={{ height: ITEM_H }}>
                           <div className="group/chip relative shrink-0">
