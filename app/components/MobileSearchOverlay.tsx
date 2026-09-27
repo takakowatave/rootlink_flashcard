@@ -154,7 +154,9 @@ export default function MobileSearchOverlay() {
             value={value}
             onChange={v => { setValue(v); setSearchError(false) }}
             onSubmit={handleSubmit}
-            isSearching={isSearching}
+            // resolve が返っただけでスピナーを消すと、遷移中に検索アイコンに戻って見える。
+            // モーダルが閉じるまで (=遷移完了まで) スピナーを継続表示する。
+            isSearching={isSearching || isPending}
             searchError={searchError}
             inputRef={inputRef}
             inputClassName="text-base text-black"
