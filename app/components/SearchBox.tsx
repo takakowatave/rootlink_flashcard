@@ -9,6 +9,13 @@ import { PHRASES_PUBLIC } from '@/lib/featureFlags'
 
 type Suggestion = { label: string; type: 'word' | 'phrase' }
 
+// 検索フォームで許可する文字: 英字 (a-z / A-Z)、ひらがな、長音符、スペース、
+// アポストロフィ (don't 用)、ハイフン (well-known 用)。
+// これ以外 (記号 / カタカナ / 漢字 / 数字 / 全角記号 等) は入力段階で strip する。
+// 過去に「metric:」等が /resolve にそのまま届いて DB 登録される事故があった (2026-09-27)。
+const SANITIZE_REGEX = /[^a-zA-Zぁ-ゖー\s'-]/g
+export const sanitizeSearchQuery = (v: string): string => v.replace(SANITIZE_REGEX, '')
+
 export type SearchBoxProps = {
   value: string
   onChange: (v: string) => void
@@ -120,7 +127,12 @@ export default function SearchBox({
             autoCapitalize="none"
             spellCheck={false}
             value={value}
-            onChange={e => { onChange(e.target.value); setShowSuggestions(true); setActiveIndex(-1) }}
+            onChange={e => {
+              // 記号やカナ・漢字・数字などを入力段階で除去 (フォーム経由で /resolve に流れないように)
+              onChange(sanitizeSearchQuery(e.target.value))
+              setShowSuggestions(true)
+              setActiveIndex(-1)
+            }}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder="Search a word or phrase..."

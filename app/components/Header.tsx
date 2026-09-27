@@ -9,7 +9,7 @@ import { FaUserCircle } from "react-icons/fa";
 import type { Profile } from "@/types/Profile";
 import EditProfileModal from "@/components/EditProfileModal";
 import Button from "@/components/Button";
-import SearchBox from "@/components/SearchBox";
+import SearchBox, { sanitizeSearchQuery } from "@/components/SearchBox";
 import { PHRASES_PUBLIC } from "@/lib/featureFlags";
 import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
 
@@ -44,7 +44,9 @@ const Header = () => {
     }
   };
 
-  const doSearch = async (query: string) => {
+  const doSearch = async (rawQuery: string) => {
+    // 念のため submit 直前でも sanitize (paste など経由で invalid 文字が残ってないか防ぐ)
+    const query = sanitizeSearchQuery(rawQuery).trim();
     if (!query || isSearching) return;
     setIsSearching(true);
     setSearchError(false);

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { PHRASES_PUBLIC } from '@/lib/featureFlags'
-import SearchBox from './SearchBox'
+import SearchBox, { sanitizeSearchQuery } from './SearchBox'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -98,7 +98,9 @@ export default function MobileSearchOverlay() {
     })
   }
 
-  const doSearch = async (query: string) => {
+  const doSearch = async (rawQuery: string) => {
+    // 念のため submit 直前でも sanitize (paste など onChange 経由でない値が来ても防げるように)
+    const query = sanitizeSearchQuery(rawQuery).trim()
     if (!query || isSearching) return
     setIsSearching(true)
     setSearchError(false)
