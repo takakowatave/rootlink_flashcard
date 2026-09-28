@@ -7,7 +7,7 @@ import BlogArticle from '@/components/blog/BlogArticle'
 import BlogSidebar from '@/components/blog/BlogSidebar'
 import { getHighlightTerms } from '@/lib/blogHighlights'
 import { fetchAdjacentPosts, fetchPostEmbeds, fetchRelatedPosts, fetchTagCounts } from '@/lib/blogQueries'
-import { BLOG_AUTHOR } from '@/lib/blogAuthor'
+import { getAuthorByKey } from '@/lib/blogAuthor'
 
 // プレビュー: 下書き含めて slug で1件取得。SSR キャッシュしない
 export const dynamic = 'force-dynamic'
@@ -25,7 +25,7 @@ type Params = { params: { slug: string } }
 async function fetchPostAnyStatus(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description, author_key, cta_deck_slug')
     .eq('slug', slug)
     .maybeSingle()
   return (data as Post | null) ?? null
@@ -72,7 +72,8 @@ export default async function BlogPreviewPage({ params }: Params) {
           headings={headings}
           phraseMap={phraseMap}
           wordCardMap={wordCardMap}
-          author={BLOG_AUTHOR}
+          author={getAuthorByKey(post.author_key)}
+          ctaDeckSlug={post.cta_deck_slug}
           prev={prev}
           next={next}
           highlightTerms={getHighlightTerms(params.slug)}

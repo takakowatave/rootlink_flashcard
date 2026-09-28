@@ -14,6 +14,10 @@ export type Post = {
   created_at: string
   hero_image_url: string | null
   meta_description: string | null
+  // 記事ごとの著者キー (app/lib/blogAuthor.ts の BLOG_AUTHORS を引く)。null なら Yui。
+  author_key: string | null
+  // 記事末尾で誘導するデッキ slug。指定があれば「デッキを見る」CTA、null なら従来の登録誘導。
+  cta_deck_slug: string | null
 }
 
 export type Heading = { id: string; level: number; text: string }

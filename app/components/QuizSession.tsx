@@ -41,7 +41,7 @@ export type QuizEntry = {
   word: string
   dictionary: SavedWordDictionary | null
   pinned_sense_id?: string | null
-  phrase_card_id?: string
+  phrase_card_id?: string | null
   phrase_meaning_ja?: string | null
   phrase_meaning_en?: string | null
   phrase_example_en?: string | null

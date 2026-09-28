@@ -25,15 +25,15 @@ export function publishedNowIso(): string {
   return new Date().toISOString()
 }
 
-// supabase-js の query builder chain に .not(...).lte(...) を差し込む
-type PublishedFilterableQuery<Q> = Q & {
-  not: (column: string, operator: 'is', value: null) => Q
-  lte: (column: string, value: string) => Q
-}
-export function applyPublishedFilter<Q>(q: PublishedFilterableQuery<Q>): Q {
-  return q
+// supabase-js の query builder chain に .not(...).lte(...) を差し込む。
+// generic Q は select() が返す PostgrestFilterBuilder<...> だが、型引数の細部を
+// 縛ると .contains / .overlaps などのチェーンで型汚染するので、ここでは any 経由に。
+export function applyPublishedFilter<Q>(q: Q): Q {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyQ = q as any
+  return anyQ
     .not('published_at', 'is', null)
-    .lte('published_at', publishedNowIso()) as unknown as Q
+    .lte('published_at', publishedNowIso()) as Q
 }
 
 // REST 直叩き経路 (fetch(`${SUPABASE_URL}/rest/v1/posts?...`)) に付ける URL クエリ文字列。

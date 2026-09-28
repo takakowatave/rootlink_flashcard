@@ -666,6 +666,14 @@ export type DeckWordEntry = {
   rank: string | null
   pinned_sense_id: string | null
   dictionary: SavedWordDictionary | null
+  // フレーズデッキ用。phrase_card_id が set の行は phrase_cards から中身を引く
+  // (dictionary_cache / Oxford は参照しない)。
+  phrase_card_id?: string | null
+  phrase_meaning_ja?: string | null
+  phrase_meaning_en?: string | null
+  phrase_example_en?: string | null
+  phrase_example_ja?: string | null
+  phrase_type?: string | null
 }
 
 type DeckWordRow = {
@@ -676,6 +684,17 @@ type DeckWordRow = {
   example_translation: string | null
   rank: string | null
   pinned_sense_id: string | null
+  phrase_card_id: string | null
+}
+
+type PhraseCardsRow = {
+  id: string
+  phrase: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  example_en: string | null
+  example_ja: string | null
+  type: string | null
 }
 
 // 2,000 語超のデッキ (英検 1 級 ≈ 2,200 語) にも耐えられるよう、
@@ -688,7 +707,7 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
 
   const first = await supabase
     .from('deck_words')
-    .select('word, position, meaning, example, example_translation, rank, pinned_sense_id', {
+    .select('word, position, meaning, example, example_translation, rank, pinned_sense_id, phrase_card_id', {
       count: 'exact',
     })
     .eq('deck_id', deckId)
@@ -708,7 +727,7 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
       restRanges.map(async ([a, b]) => {
         const { data } = await supabase
           .from('deck_words')
-          .select('word, position, meaning, example, example_translation, rank, pinned_sense_id')
+          .select('word, position, meaning, example, example_translation, rank, pinned_sense_id, phrase_card_id')
           .eq('deck_id', deckId)
           .order('position', { ascending: true })
           .range(a, b)
@@ -718,7 +737,13 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
   ).flat()
   const deckRows = [...firstRows, ...restRows]
 
-  const wordTexts = deckRows.map(r => r.word)
+  // 単語エントリ (phrase_card_id が null) は従来通り dictionary_cache を引く。
+  // フレーズエントリ (phrase_card_id が set) は phrase_cards から中身を引く。
+  // Oxford / /resolve は経路として存在しない。
+  const wordEntries = deckRows.filter(r => !r.phrase_card_id)
+  const phraseIds = deckRows.map(r => r.phrase_card_id).filter((id): id is string => !!id)
+
+  const wordTexts = wordEntries.map(r => r.word)
   const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
   for (let i = 0; i < wordTexts.length; i += WORDS_CHUNK) {
     const slice = wordTexts.slice(i, i + WORDS_CHUNK)
@@ -732,8 +757,19 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
       })()
     )
   }
-  const wordRows = (await Promise.all(wordChunkPromises)).flat()
+  const [wordRows, phraseCardsData] = await Promise.all([
+    Promise.all(wordChunkPromises).then(rr => rr.flat()),
+    phraseIds.length > 0
+      ? supabase
+          .from('phrase_cards')
+          .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type')
+          .in('id', phraseIds)
+          .limit(phraseIds.length)
+          .then(({ data }) => (data ?? []) as PhraseCardsRow[])
+      : Promise.resolve([] as PhraseCardsRow[]),
+  ])
   const wordIdByWord = new Map<string, string>(wordRows.map(r => [r.word, r.id]))
+  const phraseCardById = new Map<string, PhraseCardsRow>(phraseCardsData.map(p => [p.id, p]))
 
   const wordIds = [...wordIdByWord.values()]
   const dictChunkPromises: Array<Promise<Array<{ word_id: string; payload: unknown }>>> = []
@@ -755,6 +791,25 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
   )
 
   return deckRows.map(row => {
+    if (row.phrase_card_id) {
+      const p = phraseCardById.get(row.phrase_card_id)
+      return {
+        word: row.word,
+        position: row.position,
+        meaning: row.meaning ?? null,
+        example: row.example ?? null,
+        example_translation: row.example_translation ?? null,
+        rank: row.rank ?? null,
+        pinned_sense_id: null,
+        dictionary: null,
+        phrase_card_id: row.phrase_card_id,
+        phrase_meaning_ja: p?.meaning_ja ?? null,
+        phrase_meaning_en: p?.meaning_en ?? null,
+        phrase_example_en: p?.example_en ?? null,
+        phrase_example_ja: p?.example_ja ?? null,
+        phrase_type: p?.type ?? null,
+      }
+    }
     const rawDictionary = cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null
     const dictionary = applyDeckOverridesToDictionary(rawDictionary, {
       pinnedSenseId: row.pinned_sense_id ?? null,

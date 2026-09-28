@@ -13,7 +13,7 @@ import {
   fetchRelatedPosts,
   fetchTagCounts,
 } from '@/lib/blogQueries'
-import { BLOG_AUTHOR } from '@/lib/blogAuthor'
+import { getAuthorByKey } from '@/lib/blogAuthor'
 
 export const revalidate = 60
 
@@ -25,7 +25,7 @@ async function fetchPost(slug: string): Promise<Post | null> {
   const { data } = await applyPublishedFilter(
     supabase
       .from('posts')
-      .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description')
+      .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description, author_key, cta_deck_slug')
   )
     .eq('slug', slug)
     .maybeSingle()
@@ -81,7 +81,8 @@ export default async function BlogPostPage({ params }: Params) {
           headings={headings}
           phraseMap={phraseMap}
           wordCardMap={wordCardMap}
-          author={BLOG_AUTHOR}
+          author={getAuthorByKey(post.author_key)}
+          ctaDeckSlug={post.cta_deck_slug}
           prev={prev}
           next={next}
           highlightTerms={getHighlightTerms(params.slug)}
