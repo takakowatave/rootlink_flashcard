@@ -27,6 +27,10 @@ type Props = {
   coverSrc?: string
   // 日付の横に出す注記（プレビューの「下書き・未公開」など）
   dateNote?: ReactNode
+  // 記事末尾 CTA でリンクさせるデッキ slug。指定があると
+  // 「この記事の表現が入ったデッキで勉強しよう」+「デッキを見る」→ /decks/[slug] に切り替わる。
+  // null / undefined なら従来の登録誘導 CTA を出す。枠 / 色 は共通。
+  ctaDeckSlug?: string | null
 }
 
 // 記事ページとプレビューページの共通レイアウト
@@ -42,6 +46,7 @@ export default function BlogArticle({
   highlightTerms = [],
   coverSrc,
   dateNote,
+  ctaDeckSlug,
 }: Props) {
   const heroSrc = post.hero_image_url ?? coverSrc ?? null
   return (
@@ -89,14 +94,29 @@ export default function BlogArticle({
         </div>
       </div>
 
-      {/* 末尾 CTA */}
+      {/* 末尾 CTA
+          ctaDeckSlug 指定があればデッキ誘導に切り替える。枠・色・ボタンサイズは共通で、
+          文言と遷移先のみ変更 (kiko 指示: 見た目は変えない、表示するかしないかのロジックだけ)。 */}
       <div className="mt-10 rounded-2xl border border-line bg-primary-subtle px-5 py-6 text-center">
-        <p className="mb-3 text-base text-gray-800">気に入った表現は、RootLink に保存して復習しよう。</p>
-        <Link href="/signup">
-          <Button variant="primary" size="md" radius="lg">
-            無料で始める
-          </Button>
-        </Link>
+        {ctaDeckSlug ? (
+          <>
+            <p className="mb-3 text-base text-gray-800">この記事の表現が入ったデッキで勉強しよう</p>
+            <Link href={`/decks/${ctaDeckSlug}`}>
+              <Button variant="primary" size="md" radius="lg">
+                デッキを見る
+              </Button>
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mb-3 text-base text-gray-800">気に入った表現は、RootLink に保存して復習しよう。</p>
+            <Link href="/signup">
+              <Button variant="primary" size="md" radius="lg">
+                無料で始める
+              </Button>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* 前後ナビ */}

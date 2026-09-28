@@ -8,6 +8,7 @@ import { fetchQuizSettings, saveQuizSettings, QUIZ_SETTINGS_DEFAULTS } from '@/l
 import Button from '@/components/Button'
 import PageHeader from '@/components/PageHeader'
 import EntryCard from '@/components/EntryCard'
+import PhraseCard from '@/components/PhraseCard'
 import WordDetailModal from '@/components/WordDetailModal'
 import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
 import type { DisplayLocale } from '@/types/DisplayLocale'
@@ -248,9 +249,11 @@ export default function DeckClient({
 
   // 章画面はクイズ開始があるので dictionary_cache が入ってる語だけを quiz 対象にする。
   // デッキ画面も 「全章を解く」でクイズを開始するので dictionary を持つ語のみ。
+  // フレーズエントリ (phrase_card_id set) は dictionary=null でも phrase_cards の
+  // 中身で出題できるので対象に含める。
   const availableEntries = chapter == null
     ? scopedEntries
-    : scopedEntries.filter(e => !!e.dictionary)
+    : scopedEntries.filter(e => !!e.dictionary || !!e.phrase_card_id)
   const availableCount = availableEntries.length
 
   const hardWords = availableEntries.filter(e => (wrongCounts.get(e.word) ?? 0) >= 2)
@@ -306,12 +309,14 @@ export default function DeckClient({
     // QuizSession が空配列で落ちる (Notion issue 3e4d9703-…-338a0f)。章画面は SSR で
     // その章の 50 語ぶんの dict が入っているので追加 fetch は要らない。
     const shuffled = shuffleCards([...sourceEntries]).slice(0, Math.min(sourceEntries.length, take * 2))
-    const missingWords = shuffled.filter(e => !e.dictionary).map(e => e.word)
+    // フレーズエントリは phrase_cards から中身が入るので dictionary_cache を追加取得しない
+    // (words 経由の解決も走らないので Oxford 経路には触れない)。
+    const missingWords = shuffled.filter(e => !e.dictionary && !e.phrase_card_id).map(e => e.word)
     let enriched = shuffled
     if (missingWords.length > 0) {
       const fetched = await fetchWordDictionaries(missingWords)
       enriched = shuffled.map(e => (
-        e.dictionary ? e : { ...e, dictionary: fetched.get(e.word) ?? null }
+        e.dictionary || e.phrase_card_id ? e : { ...e, dictionary: fetched.get(e.word) ?? null }
       ))
     }
     const cards = buildQuizCards(enriched).slice(0, take)
@@ -548,11 +553,12 @@ export default function DeckClient({
 
       {/* 章一覧は QuizProgressPanel の afterSettings slot に差し込んでいる (CTA spacer より前に置くため) */}
 
-      {/* ── SSR-only internal links for crawlers ── */}
+      {/* ── SSR-only internal links for crawlers ──
+          フレーズエントリ (phrase_card_id set) は /word/[word] に個別ページが無いので出さない。 */}
       {chapter == null && entries.length > 0 && (
         <nav aria-hidden="true" className="sr-only">
           <ul>
-            {entries.map((entry) => (
+            {entries.filter(e => !e.phrase_card_id).map((entry) => (
               <li key={`ssr-${entry.word}`}>
                 <a href={`/word/${encodeURIComponent(entry.word)}`} tabIndex={-1}>
                   {entry.word}
@@ -563,11 +569,35 @@ export default function DeckClient({
         </nav>
       )}
 
-      {/* 章画面: 単語一覧プレビュー (Web のみ、SEO のため) */}
+      {/* 章画面: 単語 / フレーズ一覧プレビュー (Web のみ、SEO のため) */}
       {showWordPreview && availableEntries.length > 0 && (
         <section>
           <div className="flex flex-col gap-3">
             {availableEntries.slice(0, visibleCount).map((entry) => {
+              // フレーズエントリは phrase_cards の中身で PhraseCard を描く
+              // (Oxford / 辞書検索経路には触れない)。
+              if (entry.phrase_card_id) {
+                return (
+                  <PhraseCard
+                    key={entry.phrase_card_id}
+                    card={{
+                      id: entry.phrase_card_id,
+                      phrase: entry.word,
+                      meaning_ja: entry.phrase_meaning_ja ?? null,
+                      meaning_en: entry.phrase_meaning_en ?? null,
+                      example_en: entry.phrase_example_en ?? null,
+                      example_ja: entry.phrase_example_ja ?? null,
+                      type: entry.phrase_type ?? null,
+                      register: null,
+                      locale: null,
+                      senses: null,
+                    }}
+                    isSaved={false}
+                    onSave={() => {}}
+                    displayLocale={displayLocale}
+                  />
+                )
+              }
               const d = entry.dictionary
               const pronunciation = buildPronunciation(d)
               const senses = buildSenses(d, displayLocale)

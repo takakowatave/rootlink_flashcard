@@ -12,6 +12,36 @@ export type PostCard = {
   hero_image_url?: string | null
 }
 
+// ─────────────────────────────────────────────────────────────
+// 公開判定の中央フィルタ (予約投稿対応)
+//
+// 「公開済み」= published_at が null でない かつ 現在時刻 (UTC ISO) 以前。
+// これで下書き (null) と未来日付 (予約投稿) の両方を弾く。
+// ブログ一覧 / [slug] / タグ / sitemap / cover.png など全経路がここを通す。
+// 個別に .lte を書き散らさないこと (kiko 指示)。
+// ─────────────────────────────────────────────────────────────
+
+export function publishedNowIso(): string {
+  return new Date().toISOString()
+}
+
+// supabase-js の query builder chain に .not(...).lte(...) を差し込む。
+// generic Q は select() が返す PostgrestFilterBuilder<...> だが、型引数の細部を
+// 縛ると .contains / .overlaps などのチェーンで型汚染するので、ここでは any 経由に。
+export function applyPublishedFilter<Q>(q: Q): Q {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyQ = q as any
+  return anyQ
+    .not('published_at', 'is', null)
+    .lte('published_at', publishedNowIso()) as Q
+}
+
+// REST 直叩き経路 (fetch(`${SUPABASE_URL}/rest/v1/posts?...`)) に付ける URL クエリ文字列。
+// & プレフィックスは付けないので、呼び出し側で `&` か `?` の後に連結する。
+export function publishedFilterUrl(): string {
+  return `published_at=not.is.null&published_at=lte.${encodeURIComponent(publishedNowIso())}`
+}
+
 // 本文に埋め込まれた phrase-card / word-card をまとめて取得する。
 // 記事ページとプレビューページで同じ処理を使う。
 export async function fetchPostEmbeds(content: string): Promise<{
@@ -58,20 +88,19 @@ export async function fetchPostEmbeds(content: string): Promise<{
 }
 
 // 公開日を基準にした前後の記事。下書きのプレビューでも日付を渡せば前後が出る。
+// 公開判定は applyPublishedFilter に集約 (下書き / 予約投稿を除外)。
 export async function fetchAdjacentPosts(date: string): Promise<{ prev: PostLink | null; next: PostLink | null }> {
   const [{ data: prev }, { data: next }] = await Promise.all([
-    supabase
-      .from('posts')
-      .select('slug, title')
-      .not('published_at', 'is', null)
+    applyPublishedFilter(
+      supabase.from('posts').select('slug, title')
+    )
       .lt('published_at', date)
       .order('published_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from('posts')
-      .select('slug, title')
-      .not('published_at', 'is', null)
+    applyPublishedFilter(
+      supabase.from('posts').select('slug, title')
+    )
       .gt('published_at', date)
       .order('published_at', { ascending: true })
       .limit(1)
@@ -84,11 +113,9 @@ export type TagCount = { tag: string; count: number }
 
 // 公開記事のタグを数えて多い順に返す。サイドカラムのカテゴリー欄で使う。
 export async function fetchTagCounts(): Promise<TagCount[]> {
-  const { data } = await supabase
-    .from('posts')
-    .select('tags')
-    .not('published_at', 'is', null)
-    .limit(5000)
+  const { data } = await applyPublishedFilter(
+    supabase.from('posts').select('tags')
+  ).limit(5000)
 
   const counts = new Map<string, number>()
   ;((data as { tags: string[] | null }[] | null) ?? []).forEach((row) => {
@@ -102,10 +129,9 @@ export async function fetchTagCounts(): Promise<TagCount[]> {
 
 // タグで絞った公開記事の一覧。
 export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
-  const { data } = await supabase
-    .from('posts')
-    .select('slug, title, tags, published_at, hero_image_url')
-    .not('published_at', 'is', null)
+  const { data } = await applyPublishedFilter(
+    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url')
+  )
     .contains('tags', [tag])
     .order('published_at', { ascending: false })
     .limit(200)
@@ -119,10 +145,9 @@ export async function fetchRelatedPosts(current: Pick<Post, 'slug' | 'tags'>): P
   const tags = current.tags ?? []
   if (tags.length === 0) return { related: [] }
 
-  const { data } = await supabase
-    .from('posts')
-    .select('slug, title, tags, published_at')
-    .not('published_at', 'is', null)
+  const { data } = await applyPublishedFilter(
+    supabase.from('posts').select('slug, title, tags, published_at')
+  )
     .neq('slug', current.slug)
     .overlaps('tags', tags)
     .order('published_at', { ascending: false })

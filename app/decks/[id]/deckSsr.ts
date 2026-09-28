@@ -58,10 +58,20 @@ type SsrDeckWordRow = {
   example_translation: string | null
   rank: string | null
   pinned_sense_id: string | null
+  phrase_card_id: string | null
+}
+
+type SsrPhraseCardRow = {
+  id: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  example_en: string | null
+  example_ja: string | null
+  type: string | null
 }
 
 const deckWordsUrl = (deckId: string) =>
-  `${SUPABASE_URL}/rest/v1/deck_words?select=word,position,meaning,example,example_translation,rank,pinned_sense_id&deck_id=eq.${encodeURIComponent(deckId)}&order=position.asc`
+  `${SUPABASE_URL}/rest/v1/deck_words?select=word,position,meaning,example,example_translation,rank,pinned_sense_id,phrase_card_id&deck_id=eq.${encodeURIComponent(deckId)}&order=position.asc`
 
 // 内部 helper: deck_words 全件を position 順で取得 (辞書は含まない)。
 // 先頭 range を Prefer: count=exact で叩いて総件数を Content-Range から得て、
@@ -104,7 +114,7 @@ async function fetchDeckWordRows(deckId: string): Promise<SsrDeckWordRow[]> {
 }
 
 function rowToLightEntry(row: SsrDeckWordRow): DeckWordEntry {
-  return {
+  const base: DeckWordEntry = {
     word: row.word,
     position: row.position,
     meaning: row.meaning ?? null,
@@ -114,6 +124,48 @@ function rowToLightEntry(row: SsrDeckWordRow): DeckWordEntry {
     pinned_sense_id: row.pinned_sense_id ?? null,
     dictionary: null,
   }
+  if (row.phrase_card_id) {
+    base.phrase_card_id = row.phrase_card_id
+    base.pinned_sense_id = null
+  }
+  return base
+}
+
+// フレーズデッキ用: phrase_cards.id[] を受けて (id → phrase 内容) のマップを返す。
+// SSR での Data Cache に載せて tags で invalidate 可能にする (deck_words と同じ)。
+async function fetchPhraseCardsFor(
+  phraseIds: string[],
+  tags: string[],
+): Promise<Map<string, SsrPhraseCardRow>> {
+  if (phraseIds.length === 0) return new Map()
+  const inList = phraseIds.map((id) => `"${id}"`).join(',')
+  const url =
+    `${SUPABASE_URL}/rest/v1/phrase_cards` +
+    `?select=id,meaning_ja,meaning_en,example_en,example_ja,type` +
+    `&id=in.(${encodeURIComponent(inList)})`
+  const res = await fetch(url, { headers: SUPABASE_HEADERS, next: { revalidate: DAY, tags } })
+  if (!res.ok) return new Map()
+  const rows = (await res.json()) as SsrPhraseCardRow[]
+  return new Map(rows.map((r) => [r.id, r]))
+}
+
+// フレーズエントリに phrase_cards のデータを流し込む。
+function applyPhraseData(
+  entries: DeckWordEntry[],
+  phraseCards: Map<string, SsrPhraseCardRow>,
+): DeckWordEntry[] {
+  return entries.map((e) => {
+    if (!e.phrase_card_id) return e
+    const p = phraseCards.get(e.phrase_card_id)
+    return {
+      ...e,
+      phrase_meaning_ja: p?.meaning_ja ?? null,
+      phrase_meaning_en: p?.meaning_en ?? null,
+      phrase_example_en: p?.example_en ?? null,
+      phrase_example_ja: p?.example_ja ?? null,
+      phrase_type: p?.type ?? null,
+    }
+  })
 }
 
 type WordsWithDict = {
@@ -161,11 +213,18 @@ async function fetchDictionariesFor(
  * dictionary は常に null。scope カウント・章一覧・「前回の続き」計算に十分。
  * SSR HTML から dictionary payload (per-word 数 KB) が抜けるため、
  * 2,200 語のデッキで HTML サイズが劇的に縮む。
+ *
+ * フレーズデッキの行 (phrase_card_id set) は phrase_cards から本文を引く。
+ * dictionary_cache / words 経由の解決は起きず、Oxford API 経路には触れない。
  */
 export const getDeckWordsMetaSSR = cache(async (deckId: string): Promise<DeckWordEntry[]> => {
   try {
     const rows = await fetchDeckWordRows(deckId)
-    return rows.map(rowToLightEntry)
+    const light = rows.map(rowToLightEntry)
+    const phraseIds = rows.map(r => r.phrase_card_id).filter((id): id is string => !!id)
+    if (phraseIds.length === 0) return light
+    const phraseCards = await fetchPhraseCardsFor(phraseIds, [deckMetaTag(deckId), 'deck-phrases'])
+    return applyPhraseData(light, phraseCards)
   } catch {
     return []
   }
@@ -190,10 +249,11 @@ export const getChapterEntriesSSR = cache(
       const [allRows, chapterDict] = await Promise.all([
         fetchDeckWordRows(deckId),
         // 該当章の word[] は allRows を待たずに、position 範囲を DB 側で filter → words 経由で dict 取得
+        // フレーズ行 (phrase_card_id set) は word で辞書検索しないので除外する。
         (async () => {
           const url =
             `${SUPABASE_URL}/rest/v1/deck_words` +
-            `?select=word` +
+            `?select=word,phrase_card_id` +
             `&deck_id=eq.${encodeURIComponent(deckId)}` +
             `&position=gte.${from}&position=lte.${to}`
           const res = await fetch(url, {
@@ -201,8 +261,8 @@ export const getChapterEntriesSSR = cache(
             next: { revalidate: DAY, tags: [deckMetaTag(deckId), 'deck-words'] },
           })
           if (!res.ok) return new Map<string, SavedWordDictionary | null>()
-          const rows = (await res.json()) as Array<{ word: string }>
-          const words = rows.map((r) => r.word)
+          const rows = (await res.json()) as Array<{ word: string; phrase_card_id: string | null }>
+          const words = rows.filter((r) => !r.phrase_card_id).map((r) => r.word)
           return fetchDictionariesFor(words, [
             deckMetaTag(deckId),
             chapterDictTag(deckId, chapterNo),
@@ -212,9 +272,31 @@ export const getChapterEntriesSSR = cache(
       ])
       if (allRows.length === 0) return { chapterEntries: [], totalWords: 0 }
 
+      // フレーズ行の中身は phrase_cards から取る (Oxford / dictionary_cache を触らない)。
+      // 章内のフレーズだけに絞って引く: 章外の phrase_card_id はここでは要らない。
+      const phraseIdsInChapter = allRows
+        .filter((r) => r.position >= from && r.position <= to && r.phrase_card_id)
+        .map((r) => r.phrase_card_id as string)
+      const phraseCards = await fetchPhraseCardsFor(phraseIdsInChapter, [
+        deckMetaTag(deckId),
+        chapterDictTag(deckId, chapterNo),
+        'deck-phrases',
+      ])
+
       const chapterEntries: DeckWordEntry[] = allRows.map((row) => {
         const light = rowToLightEntry(row)
         if (row.position < from || row.position > to) return light
+        if (row.phrase_card_id) {
+          const p = phraseCards.get(row.phrase_card_id)
+          return {
+            ...light,
+            phrase_meaning_ja: p?.meaning_ja ?? null,
+            phrase_meaning_en: p?.meaning_en ?? null,
+            phrase_example_en: p?.example_en ?? null,
+            phrase_example_ja: p?.example_ja ?? null,
+            phrase_type: p?.type ?? null,
+          }
+        }
         const raw = chapterDict.get(row.word) ?? null
         const dictionary = applyDeckOverridesToDictionary(raw, {
           pinnedSenseId: row.pinned_sense_id ?? null,
