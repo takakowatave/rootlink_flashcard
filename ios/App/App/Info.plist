@@ -56,6 +56,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>プロフィール画像の撮影にカメラを使用します。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>プロフィール画像を選択するために写真ライブラリを使用します。</string>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>毎日の学習リマインダーをお届けするために通知を使用します。</string>
 </dict>
