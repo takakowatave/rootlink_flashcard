@@ -257,19 +257,21 @@ export default function PaywallContent({
                       <li key={line}>{line}</li>
                     ))}
                   </ul>
-                  <div className="flex gap-3 pt-1">
-                    <button type="button" onClick={() => setOpenDoc("terms")} className="underline">
-                      利用規約
-                    </button>
-                    <button type="button" onClick={() => setOpenDoc("privacy")} className="underline">
-                      プライバシーポリシー
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
           </>
         )}
+
+        {/* 利用規約・プライバシーポリシー (App Store 審査 3.1.2 対応: トグル内に隠さず常に表示) */}
+        <div className="flex justify-center gap-4 text-xs text-gray-500 mb-3">
+          <button type="button" onClick={() => setOpenDoc("terms")} className="underline">
+            利用規約
+          </button>
+          <button type="button" onClick={() => setOpenDoc("privacy")} className="underline">
+            プライバシーポリシー
+          </button>
+        </div>
 
         <Button onClick={onClose} variant="secondary" size="md" radius="lg" fullWidth>
           閉じる
