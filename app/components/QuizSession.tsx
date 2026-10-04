@@ -673,7 +673,7 @@ export default function QuizSession({
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
               <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-                単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
+                単語や例文を見て意味を思い出したら「もう覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>
               <button onClick={finishTutorial}
                 className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors">
