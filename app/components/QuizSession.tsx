@@ -348,9 +348,10 @@ function CardView({
           </p>
         </div>
         <div className="flex-1 min-h-0 relative flex flex-col md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
-          {/* SP: 回答ボタンが画面下に fixed で居るので、スクロール最下部まで見えるように
-              下部余白を広めに取る。PC は従来通りカード内 pb-5 相当。 */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5">
+          {/* SP: 回答ボタンと解説ボタンが画面下に fixed で居るので、スクロール最下部まで
+              見えるように下部余白を広めに取る (解説ボタン h-10 + 回答ボタン lg + 境界 + safe-area)。
+              PC は下部に静的配置なので最低限の余白のみ。 */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-5">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
@@ -405,26 +406,26 @@ function CardView({
                 />
               </div>
             )}
-            {/* カード最下部の「解説を見る / 解説を閉じる」。幅いっぱいの secondary (薄い枠線)。
-                従来は右下の丸い FAB (「解説」) だったが、FAB を廃止してインライン展開に変更。 */}
-            <div className="mt-5">
-              <Button
-                onClick={() => setRevealed(r => !r)}
-                variant="secondary"
-                size="md"
-                radius="lg"
-                fullWidth
-              >
-                {revealed ? '解説を閉じる' : '解説を見る'}
-              </Button>
-            </div>
           </div>
         </div>
-        {/* 回答ボタン。SP では画面下部に fixed、PC はカード直下に静的配置。
-            SP では safe-area-inset-bottom 分の余白と、カード/固定バーの境界線を入れる。 */}
-        <div className="fixed md:static bottom-0 left-0 right-0 z-30 bg-white border-t border-line md:border-t-0 md:bg-transparent px-4 pt-3 md:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 flex gap-3 shrink-0">
-          <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">まだ</Button>
-          <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">もう覚えた</Button>
+        {/* 下部固定バンドル。SP では画面下部に fixed、PC はカード直下に静的配置。
+            「解説を見る / 解説を閉じる」+「まだ / 覚えた」が常に見える状態 (スクロールが
+            長くなっても解説を閉じられる)。SP では safe-area-inset-bottom 分の余白と、
+            カード/固定バーの境界線を入れる。 */}
+        <div className="fixed md:static bottom-0 left-0 right-0 z-30 bg-white border-t border-line md:border-t-0 md:bg-transparent px-4 pt-3 md:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 shrink-0">
+          {/* 解説を見る / 閉じる (Figma 2421:9702 準拠)
+              bg-primary-subtle + text-primary + rounded-full + h-10、text-sm 中央寄せ。
+              回答ボタンに「ベッタリ」付けるため mb-2 のみ。 */}
+          <button
+            onClick={() => setRevealed(r => !r)}
+            className="w-full h-10 rounded-full bg-primary-subtle text-primary text-sm font-medium px-6 mb-2 transition-colors active:scale-[0.98]"
+          >
+            {revealed ? '解説を閉じる' : '解説を見る'}
+          </button>
+          <div className="flex gap-3">
+            <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">まだ</Button>
+            <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">覚えた</Button>
+          </div>
         </div>
       </div>
     </div>
@@ -673,7 +674,7 @@ export default function QuizSession({
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
               <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-                単語や例文を見て意味を思い出したら「もう覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。
+                単語や例文を見て意味を思い出したら「覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>
               <button onClick={finishTutorial}
                 className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors">
