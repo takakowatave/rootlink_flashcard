@@ -1,8 +1,5 @@
 'use client'
 
-import { HiSparkles, HiBookOpen, HiArrowPath, HiFire, HiClock } from 'react-icons/hi2'
-import type { ReactNode } from 'react'
-
 export type QuizScope = 'all' | 'unseen' | 'review' | 'hard' | 'recent'
 
 export type QuizScopeItem = {
@@ -10,12 +7,13 @@ export type QuizScopeItem = {
   count: number
 }
 
-const META: Record<QuizScope, { label: string; icon: ReactNode }> = {
-  all:    { label: 'ランダム', icon: <HiSparkles className="size-5" /> },
-  recent: { label: 'まとめて', icon: <HiClock className="size-5" /> },
-  unseen: { label: '未習得',   icon: <HiBookOpen className="size-5" /> },
-  review: { label: '要復習',   icon: <HiArrowPath className="size-5" /> },
-  hard:   { label: '苦手',     icon: <HiFire className="size-5" /> },
+// アイコンは廃止 (ラベル＋問数の 2 段のみ)。選択枠色・背景色は従来維持。
+const META: Record<QuizScope, { label: string }> = {
+  all:    { label: 'ランダム' },
+  recent: { label: 'まとめて' },
+  unseen: { label: '未習得' },
+  review: { label: '要復習' },
+  hard:   { label: '苦手' },
 }
 
 export default function QuizScopeSelector({
@@ -41,7 +39,6 @@ export default function QuizScopeSelector({
               isSelected ? 'border-primary bg-primary-subtle' : 'border-line bg-white'
             }`}
           >
-            <div className={`flex justify-center mb-1.5 ${isSelected ? 'text-primary' : 'text-gray-400'}`}>{meta.icon}</div>
             <p className={`font-semibold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{meta.label}</p>
             <p className="text-xs mt-0.5 text-gray-500">{item.count}問</p>
           </button>

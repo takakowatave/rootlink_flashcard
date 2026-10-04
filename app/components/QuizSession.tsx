@@ -273,7 +273,7 @@ function CardView({
     return (
       <>
         {ja.split(hiRegex).map((p, i) =>
-          matches.includes(p) ? <span key={i} className="text-orange-400">{p}</span> : p
+          matches.includes(p) ? <span key={i} className="text-quiz-review">{p}</span> : p
         )}
       </>
     )
@@ -299,7 +299,7 @@ function CardView({
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
             isMatch(part)
-              ? <span key={i} className="text-orange-400">{part}</span>
+              ? <span key={i} className="text-quiz-review">{part}</span>
               : part
           )}
         </p>
@@ -348,7 +348,9 @@ function CardView({
           </p>
         </div>
         <div className="flex-1 min-h-0 relative flex flex-col md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-20">
+          {/* SP: 回答ボタンが画面下に fixed で居るので、スクロール最下部まで見えるように
+              下部余白を広めに取る。PC は従来通りカード内 pb-5 相当。 */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
@@ -379,7 +381,15 @@ function CardView({
             )}
             {revealed && mode === 'word' && (
               <div className="mt-5 pt-4 border-t border-line">
+                {/* 既存の意味・例文 (従来の解説内容)。この順を保ったまま下に etymology を続ける */}
                 <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
+                {card.example && (
+                  <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
+                    <p className="text-gray-700 leading-relaxed">{card.example}</p>
+                    {card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
+                  </div>
+                )}
+                {/* 1. 語源パーツ + 2. 語源の説明文 (どちらも EtymologyBlock) */}
                 <EtymologyBlock
                   headword={card.word}
                   etymologyData={card.etymologyData ?? null}
@@ -388,27 +398,33 @@ function CardView({
                   displayLocale="ja"
                   withTutorialAttr={false}
                 />
+                {/* 3. 「過去に学習した同パーツを持つ単語」(該当なしなら自動で非表示) */}
                 <LearnedPartWords
                   headword={card.word}
                   etymologyData={card.etymologyData ?? null}
                 />
-                {card.example && (
-                  <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
-                    <p className="text-gray-700 leading-relaxed">{card.example}</p>
-                    {card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
-                  </div>
-                )}
               </div>
             )}
+            {/* カード最下部の「解説を見る / 解説を閉じる」。幅いっぱいの secondary (薄い枠線)。
+                従来は右下の丸い FAB (「解説」) だったが、FAB を廃止してインライン展開に変更。 */}
+            <div className="mt-5">
+              <Button
+                onClick={() => setRevealed(r => !r)}
+                variant="secondary"
+                size="md"
+                radius="lg"
+                fullWidth
+              >
+                {revealed ? '解説を閉じる' : '解説を見る'}
+              </Button>
+            </div>
           </div>
-          <button onClick={() => setRevealed(r => !r)}
-            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white text-sm font-medium shadow-md hover:bg-primary-hover active:scale-95 transition-all">
-            解説
-          </button>
         </div>
-        <div className="flex gap-3 px-4 pb-6 shrink-0">
-          <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">わからない</Button>
-          <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">わかる</Button>
+        {/* 回答ボタン。SP では画面下部に fixed、PC はカード直下に静的配置。
+            SP では safe-area-inset-bottom 分の余白と、カード/固定バーの境界線を入れる。 */}
+        <div className="fixed md:static bottom-0 left-0 right-0 z-30 bg-white border-t border-line md:border-t-0 md:bg-transparent px-4 pt-3 md:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 flex gap-3 shrink-0">
+          <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">まだ</Button>
+          <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">もう覚えた</Button>
         </div>
       </div>
     </div>
