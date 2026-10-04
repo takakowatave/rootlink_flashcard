@@ -273,7 +273,7 @@ function CardView({
     return (
       <>
         {ja.split(hiRegex).map((p, i) =>
-          matches.includes(p) ? <span key={i} className="text-orange-400">{p}</span> : p
+          matches.includes(p) ? <span key={i} className="text-quiz-review">{p}</span> : p
         )}
       </>
     )
@@ -299,7 +299,7 @@ function CardView({
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">
           {parts.map((part, i) =>
             isMatch(part)
-              ? <span key={i} className="text-orange-400">{part}</span>
+              ? <span key={i} className="text-quiz-review">{part}</span>
               : part
           )}
         </p>
@@ -348,7 +348,10 @@ function CardView({
           </p>
         </div>
         <div className="flex-1 min-h-0 relative flex flex-col md:mx-4 md:mt-3 md:mb-3 md:rounded-2xl md:shadow-sm md:border md:border-line bg-white overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-20">
+          {/* SP: 回答ボタンと解説ボタンが画面下に fixed で居るので、スクロール最下部まで
+              見えるように下部余白を広めに取る (解説ボタン h-10 + 回答ボタン lg + 境界 + safe-area)。
+              PC は下部に静的配置なので最低限の余白のみ。 */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-5">
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
@@ -379,7 +382,15 @@ function CardView({
             )}
             {revealed && mode === 'word' && (
               <div className="mt-5 pt-4 border-t border-line">
+                {/* 既存の意味・例文 (従来の解説内容)。この順を保ったまま下に etymology を続ける */}
                 <p className="text-xl font-semibold text-gray-800">{card.meaning}</p>
+                {card.example && (
+                  <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
+                    <p className="text-gray-700 leading-relaxed">{card.example}</p>
+                    {card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
+                  </div>
+                )}
+                {/* 1. 語源パーツ + 2. 語源の説明文 (どちらも EtymologyBlock) */}
                 <EtymologyBlock
                   headword={card.word}
                   etymologyData={card.etymologyData ?? null}
@@ -388,27 +399,33 @@ function CardView({
                   displayLocale="ja"
                   withTutorialAttr={false}
                 />
+                {/* 3. 「過去に学習した同パーツを持つ単語」(該当なしなら自動で非表示) */}
                 <LearnedPartWords
                   headword={card.word}
                   etymologyData={card.etymologyData ?? null}
                 />
-                {card.example && (
-                  <div className="mt-3 bg-gray-50 rounded-xl p-3 text-base">
-                    <p className="text-gray-700 leading-relaxed">{card.example}</p>
-                    {card.exampleJa && <p className="text-gray-400 mt-1.5 leading-relaxed">{card.exampleJa}</p>}
-                  </div>
-                )}
               </div>
             )}
           </div>
-          <button onClick={() => setRevealed(r => !r)}
-            className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-primary text-white text-sm font-medium shadow-md hover:bg-primary-hover active:scale-95 transition-all">
-            解説
-          </button>
         </div>
-        <div className="flex gap-3 px-4 pb-6 shrink-0">
-          <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">わからない</Button>
-          <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">わかる</Button>
+        {/* 下部固定バンドル。SP では画面下部に fixed、PC はカード直下に静的配置。
+            「解説を見る / 解説を閉じる」+「まだ / 覚えた」が常に見える状態 (スクロールが
+            長くなっても解説を閉じられる)。SP では safe-area-inset-bottom 分の余白と、
+            カード/固定バーの境界線を入れる。 */}
+        <div className="fixed md:static bottom-0 left-0 right-0 z-30 bg-white border-t border-line md:border-t-0 md:bg-transparent px-4 pt-3 md:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 shrink-0">
+          {/* 解説を見る / 閉じる (Figma 2421:9702 準拠)
+              bg-primary-subtle + text-primary + rounded-full + h-10、text-sm 中央寄せ。
+              回答ボタンに「ベッタリ」付けるため mb-2 のみ。 */}
+          <button
+            onClick={() => setRevealed(r => !r)}
+            className="w-full h-10 rounded-full bg-primary-subtle text-primary text-sm font-medium px-6 mb-2 transition-colors active:scale-[0.98]"
+          >
+            {revealed ? '解説を閉じる' : '解説を見る'}
+          </button>
+          <div className="flex gap-3">
+            <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">まだ</Button>
+            <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">覚えた</Button>
+          </div>
         </div>
       </div>
     </div>
@@ -657,7 +674,7 @@ export default function QuizSession({
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
               <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-                単語や例文を見て意味を思い出したら「わかる」、思い出せなかったら「わからない」を押しましょう。間違えた単語だけ再挑戦することもできます。
+                単語や例文を見て意味を思い出したら「覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。
               </p>
               <button onClick={finishTutorial}
                 className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors">
