@@ -928,6 +928,13 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [resolvedSavedId, setResolvedSavedId] = useState<string | null>(savedId ?? null)
   const [resolvedPinnedSenseId, setResolvedPinnedSenseId] = useState<string | null>(initialPinnedSenseId ?? null)
+  // 認証状態キャッシュ (handleSave で毎回 auth.getUser() を await しないため)
+  const [isAuthed, setIsAuthed] = useState(false)
+  const authedUserIdRef = useRef<string | null>(null)
+  // 「このセッションでユーザーが明示的に押した保存状態」。
+  // mount 直後の fetchWordlists が DB の古いスナップショットを返して
+  // 楽観更新を上書きする race condition を防ぐ (true=保存した / false=外した)。
+  const saveIntentRef = useRef<Map<string, boolean>>(new Map())
 
   const firstSenseId = useMemo(() => {
     const firstGroup = Object.values(displaySenses)[0] ?? []
@@ -1016,12 +1023,24 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   // マウント時と、後からログイン・ログアウトしたときに saved 状態を再取得。
   useAuthReload(async (userId, event) => {
     if (event === 'SIGNED_OUT' || !userId) {
+      setIsAuthed(false)
+      authedUserIdRef.current = null
+      saveIntentRef.current.clear()
       setSavedWords([])
       setResolvedSavedId(null)
       return
     }
+    setIsAuthed(true)
+    authedUserIdRef.current = userId
     const list = (await fetchWordlists(userId)) as WordlistItem[]
-    setSavedWords(list.map((item) => item.word))
+    // DB スナップショットに対し、ユーザーがこのセッションで明示的に押した保存状態を上書き適用。
+    // mount 時の非同期取得がタップ後に遅れて返ったときの保存ちらつきを防ぐ。
+    const serverSet = new Set(list.map((item) => item.word))
+    for (const [w, saved] of saveIntentRef.current) {
+      if (saved) serverSet.add(w)
+      else serverSet.delete(w)
+    }
+    setSavedWords([...serverSet])
     const thisItem = list.find((item) => item.word === word)
     if (thisItem) {
       setResolvedSavedId(thisItem.saved_id ?? null)
@@ -1032,12 +1051,17 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     }
   })
 
-  // 単語の保存状態切り替え担当
+  // 単語の保存状態切り替え担当。
+  // 以前は毎タップで supabase.auth.getUser() を await していたため体感 500ms〜 遅延していた。
+  // 認証は useAuthReload でキャッシュしているので handleSave はネットワーク同期を挟まず即時 UI 反映する。
   const handleSave = async () => {
-    const { data } = await supabase.auth.getUser()
-    if (!data.user) { setShowSignupModal(true); return }
+    if (!isAuthed || !authedUserIdRef.current) { setShowSignupModal(true); return }
 
     const isSaved = savedWords.includes(word)
+    const nextSaved = !isSaved
+
+    // ユーザーの意図を記録 (後続の fetchWordlists に上書きさせない)
+    saveIntentRef.current.set(word, nextSaved)
 
     // 楽観的更新：API応答を待たずに即時UI反映
     setSavedWords((prev) =>
@@ -1054,13 +1078,14 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
         toast.success('単語を保存しました！', { position: 'top-center' })
       }
     } else {
-      // 失敗したらロールバック
+      // 失敗したらロールバック (intent も戻す)
+      saveIntentRef.current.set(word, isSaved)
       setSavedWords((prev) =>
         isSaved ? [...prev, word] : prev.filter((w) => w !== word)
       )
       if (result.limitReached) {
         if (isNativePlatform()) {
-          const variant = await decidePaywallVariant(data.user.id)
+          const variant = await decidePaywallVariant(authedUserIdRef.current)
           if (variant !== 'none') setPaywallVariant(variant)
         } else {
           setShowUpgradeModal(true)

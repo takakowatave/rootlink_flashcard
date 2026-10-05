@@ -89,7 +89,8 @@ export default function CardHeader({
             onClick={handleSaveClick}
             {...(tutorialAttr ? { 'data-tutorial': 'save-button' } : {})}
             aria-label={isSaved ? '保存済み' : '保存'}
-            className="p-2 -mr-2 -mt-1"
+            // touch-manipulation: iOS WebView の 300ms タップ遅延を排除
+            className="p-2 -mr-2 -mt-1 touch-manipulation"
           >
             {isSaved
               ? <HiBookmark className="size-6 text-muted" />
