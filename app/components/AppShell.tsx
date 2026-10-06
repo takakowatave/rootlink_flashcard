@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Header from './Header'
 import Footer from './Footer'
 import MobileSearchOverlay from './MobileSearchOverlay'
@@ -28,6 +28,23 @@ const processedAuthTokens = new Set<string>()
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  // パスワード再設定リンクを踏むと Supabase が recovery セッションを張り、
+  // SDK が onAuthStateChange(PASSWORD_RECOVERY) を発火する。
+  // 従来は /reset-password 側でだけ listen していたため、Supabase hosted verify
+  // → Site URL (= www.rootlink.app ホーム) に 302 で戻された場合、listener が
+  // 存在せず「ログイン済みホーム画面」として描画されて再設定フォームが出なかった
+  // (2026-10-07 kiko 報告)。グローバルに受けて /reset-password に遷移させる。
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'PASSWORD_RECOVERY') return
+      // 既に /reset-password に居るなら触らない (無限 reload 回避)
+      if (window.location.pathname === '/reset-password') return
+      router.push('/reset-password')
+    })
+    return () => data.subscription.unsubscribe()
+  }, [router])
 
   useEffect(() => {
     let cancelled = false
@@ -121,7 +138,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         const { App } = await import('@capacitor/app')
         const { Browser } = await import('@capacitor/browser')
         handle = await App.addListener('appUrlOpen', async (event: { url: string }) => {
-          if (!event.url.startsWith('com.rootlink.app://auth-callback')) return
+          // 受け入れる URL:
+          //   1) com.rootlink.app://auth-callback?...        (/auth/app-return から Chrome 経由で deeplink)
+          //   2) https://www.rootlink.app/auth/app-return?...  (iOS Mail → Universal Link で native が直接起動)
+          //   3) https://www.rootlink.app/callback?...         (同上。Supabase hosted verify の redirect 先)
+          //      Universal Links の apple-app-site-association が paths:['*'] なので、
+          //      www.rootlink.app のあらゆる URL が native app で開く。auth 系以外は無視。
+          const isCustomScheme = event.url.startsWith('com.rootlink.app://auth-callback')
+          const isUniversalAuth =
+            event.url.startsWith('https://www.rootlink.app/auth/app-return') ||
+            event.url.startsWith('https://www.rootlink.app/callback')
+          if (!isCustomScheme && !isUniversalAuth) return
           await Browser.close().catch(() => {})
 
           const query = event.url.includes('?') ? event.url.split('?')[1].split('#')[0] : ''
