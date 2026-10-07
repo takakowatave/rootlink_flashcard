@@ -49,7 +49,9 @@ export default function GoogleAuthButton({
       }
       if (native) {
         const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: data.url, presentationStyle: "popover" });
+        // presentationStyle 未指定 = fullscreen。popover 指定時は iPad で表示破綻する
+        // (AppleAuthButton と同じ事故。2026-10 App Review 却下)。
+        await Browser.open({ url: data.url });
       } else {
         window.location.href = data.url;
       }

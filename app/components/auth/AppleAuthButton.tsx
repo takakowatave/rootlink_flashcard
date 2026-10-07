@@ -62,7 +62,11 @@ export default function AppleAuthButton({
       }
       if (native) {
         const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: data.url, presentationStyle: "popover" });
+        // presentationStyle 未指定 = fullscreen (= UIModalPresentationFullScreen)。
+        // 以前は "popover" を指定していたが、iPad では preferredContentSize 無し popover が
+        // iPadOS 17+ で表示破綻し (ほぼ透明 / 空枠) 審査担当に「blank page」と見える不具合
+        // につながっていた (2026-10 App Review 却下)。
+        await Browser.open({ url: data.url });
       } else {
         window.location.href = data.url;
       }
