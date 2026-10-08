@@ -179,6 +179,22 @@ RootLink は Web + iOS + Android の 3 プラットフォームで動く単一 c
   - 例: Android 署名鍵は `~/keys/rootlink/rootlink-release-key.jks`
 - **`.gitignore` に足したことを「対処完了」と報告しない**。`.gitignore` は「git に入れない」だけで、既にローカルに残っているファイルや、シェル履歴・許可リスト・ログには効かない
 - **秘密情報の露出を見つけたら、その場で直さず必ず kiko に報告する**。何を優先するかは kiko が決める
+- **環境変数・シークレットの「値」を標準出力に出さない**。ターミナル・履歴・ログに残る
+
+### 禁止コマンドと安全な代わり
+
+以下は PreToolUse フック (`block-secrets.sh`) で自動ブロックされる。意図を理解した上で守ること。
+
+| 禁止 (値を出す) | 安全な代わり (名前・一覧だけ) |
+|---|---|
+| `gcloud run services describe <svc>` / `gcloud run revisions describe <rev>` | `gcloud run services describe <svc> --region <region> --format="value(spec.template.spec.containers[0].env[].name)"` |
+| `gcloud secrets versions access <ver> --secret=<name>` | `gcloud secrets list` / `gcloud secrets versions list <name>` |
+| `printenv` / `printenv VAR` | `compgen -e` (名前だけ列挙) |
+| 引数なしの `env` / `set` / `export` | `compgen -e` |
+| `cat .env` / `head .env.production` / `less .env.*` 等 | `ls -la .env*` (存在だけ確認) |
+| `vercel env pull` | `vercel env ls` (名前・環境だけ) |
+
+値そのものが必要なときは、kiko が手で実行する。Claude 側からは絶対に取りに行かない。
 
 ### 仕組みで守る（多層）
 
