@@ -12,6 +12,8 @@ import SenseExample from '@/components/SenseExample'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
 import { useWordDetail } from '@/lib/wordDetailStack'
+import { resolveWord } from '@/lib/resolveClient'
+import { emitQuotaExceeded } from '@/lib/quotaExceeded'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -105,13 +107,18 @@ export default function EntryCard({
     if (navigatingDerivative) return
     setNavigatingDerivative(d)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: d }),
-      })
-      if (!res.ok) return
-      const data = await res.json()
+      const result = await resolveWord(d)
+      if (result.status === 429 && (result.data as { reason?: string } | null)?.reason === 'QUOTA_EXCEEDED') {
+        emitQuotaExceeded()
+        return
+      }
+      if (!result.ok) return
+      const data = result.data as {
+        ok?: boolean
+        resolved?: string
+        dictionary?: unknown
+        raw?: unknown
+      } | null
       if (!data?.ok) return
       wordDetail.open({
         word: typeof data.resolved === 'string' ? data.resolved : d,

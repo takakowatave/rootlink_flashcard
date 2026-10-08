@@ -7,6 +7,7 @@ import Footer from './Footer'
 import MobileSearchOverlay from './MobileSearchOverlay'
 import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
+import QuotaExceededListener from './QuotaExceededListener'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
@@ -45,6 +46,58 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
     return () => data.subscription.unsubscribe()
   }, [router])
+
+  // Supabase email template が {{ .SiteURL }}?token_hash={{ .TokenHash }}&type={{ .Type }}
+  // 形式のとき、クリック先は https://www.rootlink.app?token_hash=XXX&type=YYY という
+  // 「ルートのクエリパラメータ」で届く。
+  // Supabase JS SDK の detectSessionInUrl は fragment (#access_token=) か ?code= しか
+  // 自動処理せず、?token_hash= は無視するため、明示的に verifyOtp を呼ばないと
+  // session が張られず PASSWORD_RECOVERY event も発火しない (2026-10-08 kiko 本番再現)。
+  // どのページで landing しても拾えるようグローバルに処理する。
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    const tokenHash = url.searchParams.get('token_hash')
+    const type = url.searchParams.get('type')
+    if (!tokenHash || !type) return
+    // 既に /callback や /auth/app-return に居るならそちらが処理するので触らない
+    if (
+      window.location.pathname.startsWith('/callback') ||
+      window.location.pathname.startsWith('/auth/app-return')
+    ) return
+
+    const key = `token:${type}:${tokenHash}`
+    if (processedAuthTokens.has(key)) return
+    processedAuthTokens.add(key)
+
+    // URL からクエリを削除 (ブラウザ戻る等で二度 verify されないように、かつ
+    // ログインセッションの token が履歴に残らないように)
+    const cleanUrl = url.pathname + url.hash
+    window.history.replaceState(null, '', cleanUrl)
+
+    void (async () => {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: type as 'signup' | 'recovery' | 'email_change' | 'magiclink' | 'invite',
+      })
+      if (error) {
+        // 失敗時: 既にセッションが張られていれば救う。無ければ callback に流して
+        // /callback?state=confirmed で「リンク無効/使用済み」画面を出す。
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) {
+          window.location.href = '/callback?state=confirmed'
+          return
+        }
+      }
+      // 成功時: recovery は PASSWORD_RECOVERY event がグローバル listener で
+      // 拾われて /reset-password に飛ぶ。それ以外 (signup / email_change /
+      // magiclink / invite) は callback で profile 補完 + sign_up_complete 計測を通す。
+      if (type !== 'recovery') {
+        window.location.href = '/callback'
+      }
+      // type=recovery は event listener 側に任せる (ここで router.push しない)
+    })()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -110,6 +163,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [pathname])
+
+  // App が前面に戻ったとき (iOS/Android の appStateChange) に、Supabase の
+  // access_token を refresh する。native WebView を長時間 background に置くと
+  // auto refresh の setTimeout が走らず、戻ってきたときに expired のまま fetch
+  // して 401 → signOut 経路に落ちることがある (ゲスト運用ではデータ消失になる)。
+  // 診断強化: SIGNED_OUT / TOKEN_REFRESHED をログに出して外れ経路を特定する。
+  useEffect(() => {
+    if (!isNativePlatform()) return
+    let handle: PluginListenerHandle | null = null
+    ;(async () => {
+      try {
+        const { App } = await import('@capacitor/app')
+        handle = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+          if (!isActive) return
+          void supabase.auth.refreshSession().then(({ error }) => {
+            if (error) console.warn('[auth] refreshSession on resume failed:', error.message)
+          })
+        })
+      } catch {
+        // plugin unavailable; ignore
+      }
+    })()
+    return () => { void handle?.remove() }
+  }, [])
+
+  useEffect(() => {
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        console.log('[auth]', event, { hasSession: !!session?.user, userId: session?.user?.id })
+      }
+    })
+    return () => authSub.subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (!isNativePlatform()) return
@@ -282,6 +368,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {!hideChrome && <OnboardingQuestions />}
       {!hideChrome && <TutorialOverlay />}
       {!hideChrome && <MobileSearchOverlay />}
+      <QuotaExceededListener />
       {children}
       {!isLP && !hideChrome && (
         <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>
