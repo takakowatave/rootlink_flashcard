@@ -7,6 +7,7 @@ import Footer from './Footer'
 import MobileSearchOverlay from './MobileSearchOverlay'
 import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
+import QuotaExceededListener from './QuotaExceededListener'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
@@ -162,6 +163,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [pathname])
+
+  // App が前面に戻ったとき (iOS/Android の appStateChange) に、Supabase の
+  // access_token を refresh する。native WebView を長時間 background に置くと
+  // auto refresh の setTimeout が走らず、戻ってきたときに expired のまま fetch
+  // して 401 → signOut 経路に落ちることがある (ゲスト運用ではデータ消失になる)。
+  // 診断強化: SIGNED_OUT / TOKEN_REFRESHED をログに出して外れ経路を特定する。
+  useEffect(() => {
+    if (!isNativePlatform()) return
+    let handle: PluginListenerHandle | null = null
+    ;(async () => {
+      try {
+        const { App } = await import('@capacitor/app')
+        handle = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+          if (!isActive) return
+          void supabase.auth.refreshSession().then(({ error }) => {
+            if (error) console.warn('[auth] refreshSession on resume failed:', error.message)
+          })
+        })
+      } catch {
+        // plugin unavailable; ignore
+      }
+    })()
+    return () => { void handle?.remove() }
+  }, [])
+
+  useEffect(() => {
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        console.log('[auth]', event, { hasSession: !!session?.user, userId: session?.user?.id })
+      }
+    })
+    return () => authSub.subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (!isNativePlatform()) return
@@ -334,6 +368,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {!hideChrome && <OnboardingQuestions />}
       {!hideChrome && <TutorialOverlay />}
       {!hideChrome && <MobileSearchOverlay />}
+      <QuotaExceededListener />
       {children}
       {!isLP && !hideChrome && (
         <div className={isWordDetail ? 'hidden md:contents' : 'contents'}>

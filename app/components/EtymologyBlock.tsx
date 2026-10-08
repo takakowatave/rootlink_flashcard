@@ -6,6 +6,8 @@ import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { supabase } from '@/lib/supabaseClient'
 import { readLocalizedEtymologyJa, isRedundantEtymologyDescription } from '@/lib/etymologyDisplay'
 import { useWordDetail } from '@/lib/wordDetailStack'
+import { resolveWord } from '@/lib/resolveClient'
+import { emitQuotaExceeded } from '@/lib/quotaExceeded'
 import type { EtymologyData, EtymologyPart, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import type { RewrittenPayload } from '@/types/Dictionary'
@@ -333,13 +335,19 @@ export default function EtymologyBlock({
                               onClick={async () => {
                                 setNavigatingWord(rw)
                                 try {
-                                  const res = await fetch(`${process.env.NEXT_PUBLIC_CLOUDRUN_API_URL}/resolve`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ query: rw }),
-                                  })
-                                  if (!res.ok) return
-                                  const data = await res.json()
+                                  const result = await resolveWord(rw)
+                                  if (result.status === 429 && (result.data as { reason?: string } | null)?.reason === 'QUOTA_EXCEEDED') {
+                                    emitQuotaExceeded()
+                                    return
+                                  }
+                                  if (!result.ok) return
+                                  const data = result.data as {
+                                    ok?: boolean
+                                    resolved?: string
+                                    dictionary?: unknown
+                                    raw?: unknown
+                                    redirectTo?: string
+                                  } | null
                                   if (!data?.ok) return
                                   if (wordDetail) {
                                     wordDetail.open({

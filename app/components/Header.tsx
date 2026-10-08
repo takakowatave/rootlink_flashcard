@@ -13,10 +13,8 @@ import SearchBox from "@/components/SearchBox";
 import { PHRASES_PUBLIC } from "@/lib/featureFlags";
 import { guardQuery } from "@/lib/queryGuard";
 import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
-  'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
+import { resolveWord } from "@/lib/resolveClient";
+import { emitQuotaExceeded } from "@/lib/quotaExceeded";
 
 const Header = () => {
   const router = useRouter();
@@ -57,13 +55,13 @@ const Header = () => {
     setIsSearching(true);
     setSearchError(false);
     try {
-      const res = await fetch(`${API_BASE}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      if (!res.ok) { setSearchError(true); return; }
-      const r = await res.json();
+      const result = await resolveWord(query);
+      if (result.status === 429 && (result.data as { reason?: string } | null)?.reason === 'QUOTA_EXCEEDED') {
+        emitQuotaExceeded();
+        return;
+      }
+      if (!result.ok) { setSearchError(true); return; }
+      const r = result.data as { ok?: boolean; redirectTo?: string } | null;
       if (r?.ok === true && typeof r.redirectTo === 'string') {
         navigateAfterResolve(r.redirectTo);
         return;

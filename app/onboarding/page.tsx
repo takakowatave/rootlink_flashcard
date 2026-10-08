@@ -21,6 +21,37 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
+  const [starting, setStarting] = useState(false)
+
+  // App Store Guideline 5.1.1(v) 対応: native は購入前の登録を必須にできない。
+  // 「同意してはじめる」で裏で anonymous sign-in して / に飛ばす。
+  // 失敗したら従来どおり /signup にフォールバックする。
+  // Web は signInAnonymously を使わず従来どおり /signup（Web 側は変えない）。
+  async function handleStart() {
+    if (starting) return
+    setStarting(true)
+    try {
+      if (!isNativePlatform()) {
+        router.replace('/signup')
+        return
+      }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        router.replace('/')
+        return
+      }
+      const { error } = await supabase.auth.signInAnonymously()
+      if (error) {
+        router.replace('/signup')
+        return
+      }
+      router.replace('/')
+    } catch {
+      router.replace('/signup')
+    } finally {
+      setStarting(false)
+    }
+  }
 
   useEffect(() => {
     // Web プレビューで ?preview=native が付いていれば /onboarding を表示する。
@@ -127,7 +158,8 @@ export default function OnboardingPage() {
           {' '}に同意ください。
         </p>
         <Button
-          onClick={() => router.replace('/signup')}
+          onClick={handleStart}
+          disabled={starting}
           variant="primary"
           fullWidth
           radius="full"
