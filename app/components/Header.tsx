@@ -20,6 +20,7 @@ const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,6 +110,7 @@ const Header = () => {
     const loadProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setAuthed(!!user);
+      setIsAnonymous(user?.is_anonymous === true);
       if (!user) { setProfile(null); return; }
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle<Profile>();
       if (data) setProfile(data);
@@ -163,7 +165,9 @@ const Header = () => {
                 </span>
               )}
               <button onClick={() => setIsModalOpen(true)}>
-                {profile?.avatar_url
+                {/* ゲスト (匿名ユーザー) は avatar_url があっても常にデフォルト人型アイコンを出す。
+                    匿名ユーザー向けの Figma デザインに合わせる (登録前はアバターを設定させない)。 */}
+                {!isAnonymous && profile?.avatar_url
                   ? <img src={profile.avatar_url} className="size-8 rounded-full object-cover" alt="avatar" />
                   : <FaUserCircle className="size-8 text-muted" />
                 }

@@ -27,22 +27,35 @@ export default function GoogleAuthButton({
   onError?: (message: string) => void;
 }) {
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAnonymous(user?.is_anonymous === true);
+    });
   }, []);
 
   const handleClick = async () => {
     if (inAppBrowser) return;
     const native = isNativePlatform();
+    const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: native ? NATIVE_REDIRECT : `${window.location.origin}/callback`,
-          skipBrowserRedirect: true,
-        },
-      });
+      // 匿名 (ゲスト) ユーザー時は linkIdentity で現 user に Google identity を紐付ける。
+      // 成功すれば user.id を維持したまま OAuth identity が追加され、ゲストで保存した
+      // 単語・学習記録・購入 (RevenueCat は Supabase user.id に紐付け済み) が引き継がれる。
+      // 既存の Google アカウントが別ユーザーとして登録されていた場合は OAuth callback
+      // 側で identity_already_exists エラーになる (そのケースの UI は次段で対応)。
+      const call = isAnonymous
+        ? supabase.auth.linkIdentity({
+            provider: "google",
+            options: { redirectTo, skipBrowserRedirect: true },
+          })
+        : supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: { redirectTo, skipBrowserRedirect: true },
+          });
+      const { data, error } = await call;
       if (error || !data?.url) {
         onError?.(ERROR_MESSAGE[variant]);
         return;

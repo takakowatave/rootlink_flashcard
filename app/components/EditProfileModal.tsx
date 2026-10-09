@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserPlan } from "@/lib/supabaseApi";
 import { useAuthProvider } from "@/lib/useAuthProvider";
@@ -137,8 +138,12 @@ export default function EditProfileModal({
   profile,
   onUpdated,
 }: Props) {
+  const router = useRouter();
   const provider = useAuthProvider();
   const [plan, setPlan] = useState<"premium" | "free" | null>(null);
+  // ゲスト (匿名ユーザー) のときは Figma のゲスト設定画面 (登録カード + 表示名 + Free プラン) に
+  // 絞り、ログアウト・メール/パスワード・通知・退会・辞書表示言語は出さない。
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [subscriptionStore, setSubscriptionStore] = useState<
     "stripe" | "app_store" | "play_store" | null
   >(null);
@@ -302,6 +307,7 @@ export default function EditProfileModal({
     getUserPlan().then(setPlan);
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
+      setIsAnonymous(user.is_anonymous === true);
       setEmail(user.email ?? "");
       supabase
         .from("subscriptions")
@@ -521,50 +527,96 @@ export default function EditProfileModal({
         {/* pb-2: 外側 .fixed.inset-0 が safe-area-inset-bottom を padding として噛んでいる (globals.css) ため、
             さらに pb-8 を積むと iOS で余白が二重計算になる。中身側は最小限だけ。 */}
         <div className="px-5 md:px-6 pt-4 pb-2 flex flex-col gap-8">
-            {profile && (
-              <>
-                {/* アバター */}
-                <div className="flex justify-center pt-2">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
-                      {profile.avatar_url ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <FaUserCircle className="w-full h-full text-gray-400" />
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                      aria-label="アイコン変更"
-                    >
-                      <BsPencil size={14} />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept={AVATAR_ALLOWED_MIME_TYPES.join(",")}
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                    />
+            {isAnonymous ? (
+              // ゲスト (匿名ユーザー) 向け: Figma `3136:400` 準拠。
+              // 登録カード (アバター + 促し文 + "ログイン / 新規登録") を上部に出し、
+              // アバター単独編集 UI・メール/パスワード・ログアウト・退会は出さない。
+              <div className="flex flex-col gap-4 pt-2">
+                <div className="bg-[#f8f9fa] rounded-[18px] px-3 py-4 flex flex-col items-center gap-4">
+                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                    <FaUserCircle className="w-full h-full" />
                   </div>
+                  <p className="text-base font-bold text-gray-950 text-center">
+                    アカウントをつくるとマイページが使えます
+                  </p>
+                  <p className="text-xs text-gray-950 text-center leading-5">
+                    学習データがバックアップされ、
+                    <br />
+                    ほかの端末やWebでも続きから学習できます。
+                  </p>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    radius="lg"
+                    className="h-[50px] text-sm font-medium"
+                    onClick={() => {
+                      onClose();
+                      router.push("/login");
+                    }}
+                  >
+                    ログイン / 新規登録
+                  </Button>
                 </div>
 
-                <SettingsSection title="プロフィール">
-                  <EditableField
-                    label="表示名"
-                    value={profile.username ?? ""}
-                    placeholder="表示名を入力"
-                    emptyLabel="未設定"
-                    onSave={handleSaveDisplayName}
-                  />
-                </SettingsSection>
-              </>
+                {profile && (
+                  <SettingsSection title="プロフィール">
+                    <EditableField
+                      label="表示名"
+                      value={profile.username ?? ""}
+                      placeholder="ゲスト"
+                      emptyLabel="ゲスト"
+                      onSave={handleSaveDisplayName}
+                    />
+                  </SettingsSection>
+                )}
+              </div>
+            ) : (
+              profile && (
+                <>
+                  {/* アバター */}
+                  <div className="flex justify-center pt-2">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden flex items-center justify-center">
+                        {profile.avatar_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <FaUserCircle className="w-full h-full text-gray-400" />
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        aria-label="アイコン変更"
+                      >
+                        <BsPencil size={14} />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={AVATAR_ALLOWED_MIME_TYPES.join(",")}
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                    </div>
+                  </div>
+
+                  <SettingsSection title="プロフィール">
+                    <EditableField
+                      label="表示名"
+                      value={profile.username ?? ""}
+                      placeholder="表示名を入力"
+                      emptyLabel="未設定"
+                      onSave={handleSaveDisplayName}
+                    />
+                  </SettingsSection>
+                </>
+              )
             )}
 
+            {!isAnonymous && (
             <SettingsSection title="アカウント">
               <SettingsRow
                 label={
@@ -610,6 +662,7 @@ export default function EditProfileModal({
                 </SettingsRow>
               )}
             </SettingsSection>
+            )}
 
             <SettingsSection title="設定">
               <SettingsRow
@@ -650,15 +703,17 @@ export default function EditProfileModal({
                 )}
               </SettingsRow>
 
-              <SettingsRow
-                label="辞書の表示言語"
-                helperText="英英モードと和英モードの切り替えができます。"
-              >
-                <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
-              </SettingsRow>
+              {!isAnonymous && (
+                <SettingsRow
+                  label="辞書の表示言語"
+                  helperText="英英モードと和英モードの切り替えができます。"
+                >
+                  <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
+                </SettingsRow>
+              )}
             </SettingsSection>
 
-            {isNativeOrPreview(isNativePlatform()) && (
+            {!isAnonymous && isNativeOrPreview(isNativePlatform()) && (
               <SettingsSection title="通知">
                 {(notifPermission === "denied" || notifPermission === "prompt") && (
                   <div className="pt-4 pb-2 flex flex-col gap-3">
@@ -756,31 +811,35 @@ export default function EditProfileModal({
               </SettingsSection>
             )}
 
-            <SettingsSection title="アカウント削除">
-              <SettingsRow
-                label="退会する"
-                helperText="すべての学習データが削除されます。Premium加入中の場合は自動的に解約されます。"
-              >
+            {!isAnonymous && (
+              <SettingsSection title="アカウント削除">
+                <SettingsRow
+                  label="退会する"
+                  helperText="すべての学習データが削除されます。Premium加入中の場合は自動的に解約されます。"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteAccount(true)}
+                    className="text-sm font-bold text-red-600 hover:underline whitespace-nowrap"
+                  >
+                    退会手続きへ
+                  </button>
+                </SettingsRow>
+              </SettingsSection>
+            )}
+
+            {/* ログアウト (ゲストは出さない) */}
+            {!isAnonymous && (
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowDeleteAccount(true)}
-                  className="text-sm font-bold text-red-600 hover:underline whitespace-nowrap"
+                  onClick={handleLogout}
+                  className="px-8 h-11 rounded-full bg-gray-100 text-sm font-bold text-gray-700 hover:bg-gray-200"
                 >
-                  退会手続きへ
+                  ログアウト
                 </button>
-              </SettingsRow>
-            </SettingsSection>
-
-            {/* ログアウト */}
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-8 h-11 rounded-full bg-gray-100 text-sm font-bold text-gray-700 hover:bg-gray-200"
-              >
-                ログアウト
-              </button>
-            </div>
+              </div>
+            )}
         </div>
       </ModalShell>
 

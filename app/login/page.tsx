@@ -14,7 +14,9 @@ import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
+import NativeAuthForm from "@/components/auth/NativeAuthForm";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
+import { isNativePlatform } from "@/lib/isNativePlatform";
 
 interface FormData {
   email: string;
@@ -25,8 +27,10 @@ export default function AuthLogin() {
   const router = useRouter();
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
+  const [isNative, setIsNative] = useState(false);
   const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
+  useEffect(() => setIsNative(isNativePlatform()), []);
 
   const {
     register,
@@ -56,6 +60,10 @@ export default function AuthLogin() {
     router.push("/");
     router.refresh();
   };
+
+  // native (iOS / Android) は Figma 準拠の NativeAuthForm に差し替える。
+  // Web は従来のレイアウト (AuthPage + AuthCard) を維持する ("Web は変えない" 方針)。
+  if (isNative) return <NativeAuthForm mode="login" />;
 
   return (
     <AuthPage>
