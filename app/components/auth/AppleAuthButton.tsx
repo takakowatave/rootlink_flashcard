@@ -55,8 +55,13 @@ export default function AppleAuthButton({
     const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
       // 匿名 (ゲスト) ユーザー時は linkIdentity で既存 user に Apple identity を紐付け、
-      // 単語・学習記録・購入を引き継ぐ。既存の Apple ID が別ユーザーとして登録済みなら
-      // OAuth callback で identity_already_exists になる (次段で UI 対応予定)。
+      // 単語・学習記録を引き継ぐ。既存の Apple ID が別ユーザーとして登録済みなら
+      // OAuth callback で identity_already_exists エラーになり、/callback が
+      // GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
+      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
+      if (isAnonymous) {
+        try { sessionStorage.setItem("rootlink_pending_oauth_link", "apple"); } catch {}
+      }
       const { data, error } = isAnonymous
         ? await supabase.auth.linkIdentity({
             provider: "apple",

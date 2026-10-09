@@ -4,14 +4,74 @@ import { useEffect, useState } from "react";
 import Button from "@/components/Button";
 import AuthPage from "@/components/auth/AuthPage";
 import AuthCard from "@/components/auth/AuthCard";
+import GuestLinkConfirmDialog from "@/components/auth/GuestLinkConfirmDialog";
 import { supabase } from "../lib/supabaseClient";
 import { sendEvent } from "@/lib/ga";
+import { isNativePlatform } from "@/lib/isNativePlatform";
+import { hasAnyGuestLearningData } from "@/lib/guestData";
 
 const SIGNUP_TRIGGER_KEY = "signup_trigger";
+const PENDING_OAUTH_LINK_KEY = "rootlink_pending_oauth_link";
 // 「新規ユーザー」とみなす signup 直後の窓
 const NEW_USER_WINDOW_MS = 10 * 60 * 1000;
 
-type State = "loading" | "confirmed";
+type State = "loading" | "confirmed" | "identity_conflict";
+type OAuthProvider = "google" | "apple";
+
+const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
+
+/**
+ * OAuth linkIdentity で既存アカウントと衝突したときに Supabase SDK が返す error.code。
+ * Supabase の error-codes.ts 由来 (identity_already_exists / email_exists /
+ * user_already_exists)。実機で確認した経路は identity_already_exists (Apple)。
+ * email_exists / user_already_exists は保険として併記。
+ */
+const IDENTITY_CONFLICT_CODES = new Set([
+  "identity_already_exists",
+  "email_exists",
+  "user_already_exists",
+]);
+
+function readErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const e = error as { code?: unknown; details?: { code?: unknown } };
+  if (typeof e.code === "string") return e.code;
+  if (e.details && typeof e.details.code === "string") return e.details.code;
+  return null;
+}
+
+function readErrorMessage(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const m = (error as { message?: unknown }).message;
+  return typeof m === "string" ? m : "";
+}
+
+function isIdentityConflict(error: unknown): boolean {
+  const code = readErrorCode(error);
+  if (code && IDENTITY_CONFLICT_CODES.has(code)) return true;
+  // code が無い旧バージョン / 想定外形式の保険として message の文字列判定も残す
+  const msg = readErrorMessage(error).toLowerCase();
+  return /identity.*already|already.*(linked|exists)|user.*already.*exists/.test(msg);
+}
+
+async function startSignInWithOAuth(provider: OAuthProvider): Promise<void> {
+  const native = isNativePlatform();
+  const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error || !data?.url) {
+    window.location.href = "/callback?state=confirmed";
+    return;
+  }
+  if (native) {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.open({ url: data.url });
+  } else {
+    window.location.href = data.url;
+  }
+}
 
 // メール認証 (signup / recovery / email_change) のリンクを踏んだ Web ユーザーが
 // たどり着くページ。
@@ -32,6 +92,8 @@ type State = "loading" | "confirmed";
 // 画面は AuthPage / AuthCard を流用してログイン・新規登録画面と同じ枠にする。
 export default function AuthCallback() {
   const [state, setState] = useState<State>("loading");
+  const [conflictProvider, setConflictProvider] = useState<OAuthProvider | null>(null);
+  const [conflictLoading, setConflictLoading] = useState(false);
   // 失敗画面 (「リンクの有効期限が切れているか、すでに使われています」) は
   // 認証が実際に成功して window.location.href = "/" で即遷移するケースで
   // 1 フレームだけ描画されて「失敗が一瞬出る」フラッシュになる。
@@ -46,8 +108,46 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const run = async () => {
+      // OAuth linkIdentity が既存アカウントと衝突したときに
+      // GuestLinkConfirmDialog を発火するためのヘルパー。provider は
+      // Google/AppleAuthButton が OAuth 開始前に sessionStorage に書いている。
+      const handleIdentityConflict = async () => {
+        let pending: string | null = null;
+        try {
+          pending = sessionStorage.getItem(PENDING_OAUTH_LINK_KEY);
+          sessionStorage.removeItem(PENDING_OAUTH_LINK_KEY);
+        } catch {
+          // ignore
+        }
+        const provider: OAuthProvider | null =
+          pending === "google" || pending === "apple" ? pending : null;
+        if (!provider) {
+          // provider 不明なら通常の失敗画面に落とす
+          setState("confirmed");
+          return;
+        }
+        // ゲストが現時点で学習データを持っていなければモーダルなしで即切替
+        const {
+          data: { user: anonUser },
+        } = await supabase.auth.getUser();
+        if (anonUser && !(await hasAnyGuestLearningData(anonUser.id))) {
+          await startSignInWithOAuth(provider);
+          return;
+        }
+        setConflictProvider(provider);
+        setState("identity_conflict");
+      };
+
       try {
         const url = new URL(window.location.href);
+
+        // AppShell.appUrlOpen が identity 衝突を検出したときに付与する query。
+        // 匿名 ゲストが Google / Apple の linkIdentity を叩いた → 既存アカウントと衝突 →
+        // /callback?identity_conflict=1 に到着。ここで学習データ有無を見てモーダル分岐する。
+        if (url.searchParams.get("identity_conflict") === "1") {
+          await handleIdentityConflict();
+          return;
+        }
 
         // 先に session を取る。以下の全ての失敗フォールバックは
         // 「session が無い」ときだけ発動させる。deeplink 二重発火 (AppShell
@@ -115,6 +215,12 @@ export default function AuthCallback() {
             if (code) {
               const { error } = await supabase.auth.exchangeCodeForSession(code);
               if (error) {
+                // identity_already_exists なら GuestLinkConfirmDialog を出して
+                // 「ログインする/キャンセル」に分岐する (匿名ユーザー + 学習データあり)。
+                if (isIdentityConflict(error)) {
+                  await handleIdentityConflict();
+                  return;
+                }
                 // 別ブラウザで開いた / code_verifier 無し / 使用済み 等。
                 // ただしその間に別経路でセッションが張られていれば救う。
                 const {
@@ -255,6 +361,39 @@ export default function AuthCallback() {
 
     run();
   }, []);
+
+  if (state === "identity_conflict" && conflictProvider) {
+    return (
+      <>
+        <AuthPage>
+          <AuthCard title="認証しています">
+            <p className="text-base text-muted text-center">
+              しばらくお待ちください。
+            </p>
+          </AuthCard>
+        </AuthPage>
+        <GuestLinkConfirmDialog
+          open
+          loading={conflictLoading}
+          onCancel={() => {
+            // ゲストセッションのまま戻す。匿名 user は破棄せず / に遷移。
+            setState("loading");
+            setConflictProvider(null);
+            window.location.href = "/";
+          }}
+          onConfirm={async () => {
+            if (!conflictProvider) return;
+            setConflictLoading(true);
+            try {
+              await startSignInWithOAuth(conflictProvider);
+            } finally {
+              // Browser.open 後はこの画面は離れるため false にしない。
+            }
+          }}
+        />
+      </>
+    );
+  }
 
   if (state === "confirmed" && mayShowError) {
     return (

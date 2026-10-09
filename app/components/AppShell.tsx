@@ -279,7 +279,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             return
           }
 
-          // 旧 PKCE 方式のフォールバック。既存メールがまだ届いていない期間の互換用。
+          // 旧 PKCE 方式のフォールバック (および OAuth deeplink)。
+          // Google / Apple の linkIdentity 完了後もこの経路に ?code= で入ってくる。
           const code = params.get('code')
           if (code) {
             const key = `code:${code}`
@@ -296,6 +297,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             if (session?.user) {
               const flow = consumePendingAuthFlow()
               window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              return
+            }
+            // identity_already_exists / email_exists / user_already_exists 等の
+            // 衝突エラーは、/callback が sessionStorage の PENDING_OAUTH_LINK_KEY を
+            // 読んで GuestLinkConfirmDialog を出す経路に流す。state=confirmed に
+            // 落とすと「リンクの有効期限が切れています」の失敗画面に行ってしまう
+            // ので、ここでは code / message を URL params で引き継いで /callback に送る。
+            const err = error as { code?: string; details?: { code?: string }; message?: string } | null
+            const errCode = err?.code ?? err?.details?.code ?? ''
+            const errMsg = (err?.message ?? '').toLowerCase()
+            const conflict =
+              errCode === 'identity_already_exists' ||
+              errCode === 'email_exists' ||
+              errCode === 'user_already_exists' ||
+              /identity.*already|already.*(linked|exists)|user.*already.*exists/.test(errMsg)
+            if (conflict) {
+              window.location.href = '/callback?identity_conflict=1'
               return
             }
             window.location.href = '/callback?state=confirmed'

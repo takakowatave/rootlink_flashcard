@@ -43,9 +43,13 @@ export default function GoogleAuthButton({
     try {
       // 匿名 (ゲスト) ユーザー時は linkIdentity で現 user に Google identity を紐付ける。
       // 成功すれば user.id を維持したまま OAuth identity が追加され、ゲストで保存した
-      // 単語・学習記録・購入 (RevenueCat は Supabase user.id に紐付け済み) が引き継がれる。
-      // 既存の Google アカウントが別ユーザーとして登録されていた場合は OAuth callback
-      // 側で identity_already_exists エラーになる (そのケースの UI は次段で対応)。
+      // 単語・学習記録が引き継がれる。既存の Google アカウントが別ユーザーとして登録
+      // されていた場合は OAuth callback で identity_already_exists エラーになり、
+      // /callback が GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
+      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
+      if (isAnonymous) {
+        try { sessionStorage.setItem("rootlink_pending_oauth_link", "google"); } catch {}
+      }
       const call = isAnonymous
         ? supabase.auth.linkIdentity({
             provider: "google",
