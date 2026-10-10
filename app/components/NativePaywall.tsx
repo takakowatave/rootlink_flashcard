@@ -6,7 +6,6 @@ import PaywallContent, { type PaywallPlatform, type PaywallPlanDisplay } from "@
 import type { PaywallVariant } from "@/lib/paywall"
 import {
   getPaywallOffering,
-  hasAnyPurchaseHistory,
   purchaseNativePlan,
   restoreNativePurchases,
   type PaywallPlanInfo,
@@ -99,9 +98,11 @@ export default function NativePaywall({ variant, onClose }: Props) {
   const [purchasingPlan, setPurchasingPlan] = useState<"monthly" | "yearly" | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
   const [offeringError, setOfferingError] = useState(false)
-  // 過去に購入履歴のあるユーザーだけ「購入を復元」を表示する。
-  // 履歴ゼロのユーザーには押しても意味が無いので UI からも消す。
-  const [showRestore, setShowRestore] = useState(false)
+  // Guideline 3.1.1 対応で「購入を復元」は全員に出す。アプリを入れ直した / 機種変
+  // 直後のユーザーは新しい匿名セッションから始まり、起動時点では購入履歴を
+  // アプリ側で判定できないため「履歴あり」判定を外して常時表示する。
+  // 履歴ゼロで押されたときは「復元できる購入はありません」を handleRestore で表示する。
+  const showRestore = true
 
   const platform = useMemo<PaywallPlatform>(() => detectNativePlatform(), [])
 
@@ -134,9 +135,6 @@ export default function NativePaywall({ variant, onClose }: Props) {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
-    hasAnyPurchaseHistory().then((v) => {
-      if (!cancelled) setShowRestore(v)
-    })
     return () => {
       cancelled = true
     }
@@ -173,7 +171,7 @@ export default function NativePaywall({ variant, onClose }: Props) {
         return
       }
       if (!result.hasActiveEntitlement) {
-        toast.error("復元できる購入が見つかりませんでした")
+        toast.error("復元できる購入はありません")
         return
       }
       toast.success("購入を復元しました")

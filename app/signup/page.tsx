@@ -17,6 +17,7 @@ import AppleAuthButton from "@/components/auth/AppleAuthButton";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
+import NativeAuthForm from "@/components/auth/NativeAuthForm";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
@@ -86,6 +87,10 @@ export default function AuthSignup() {
     setSentEmail(data.email);
     setDone(true);
   };
+
+  // native は Figma 準拠の NativeAuthForm に差し替える。匿名ユーザーには updateUser で
+  // 現ゲストに紐付ける (NativeAuthForm 内で処理)。Web は従来のレイアウトを維持。
+  if (isNative) return <NativeAuthForm mode="signup" />;
 
   return (
     <AuthPage>

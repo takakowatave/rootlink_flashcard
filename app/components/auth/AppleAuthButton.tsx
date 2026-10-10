@@ -35,11 +35,15 @@ export default function AppleAuthButton({
   // ため、mounted になるまでは描画しない。マウント後に platform を判定する。
   const [mounted, setMounted] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
     setIsAndroid(isAndroidPlatform());
     setMounted(true);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAnonymous(user?.is_anonymous === true);
+    });
   }, []);
 
   // Android アプリでは Apple ボタン自体を出さない (Web / iOS は今までどおり)。
@@ -48,14 +52,25 @@ export default function AppleAuthButton({
   const handleClick = async () => {
     if (APPLE_DISABLED || inAppBrowser) return;
     const native = isNativePlatform();
+    const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "apple",
-        options: {
-          redirectTo: native ? NATIVE_REDIRECT : `${window.location.origin}/callback`,
-          skipBrowserRedirect: true,
-        },
-      });
+      // 匿名 (ゲスト) ユーザー時は linkIdentity で既存 user に Apple identity を紐付け、
+      // 単語・学習記録を引き継ぐ。既存の Apple ID が別ユーザーとして登録済みなら
+      // OAuth callback で identity_already_exists エラーになり、/callback が
+      // GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
+      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
+      if (isAnonymous) {
+        try { sessionStorage.setItem("rootlink_pending_oauth_link", "apple"); } catch {}
+      }
+      const { data, error } = isAnonymous
+        ? await supabase.auth.linkIdentity({
+            provider: "apple",
+            options: { redirectTo, skipBrowserRedirect: true },
+          })
+        : await supabase.auth.signInWithOAuth({
+            provider: "apple",
+            options: { redirectTo, skipBrowserRedirect: true },
+          });
       if (error || !data?.url) {
         onError?.(ERROR_MESSAGE[variant]);
         return;

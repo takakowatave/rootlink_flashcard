@@ -27,22 +27,39 @@ export default function GoogleAuthButton({
   onError?: (message: string) => void;
 }) {
   const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAnonymous(user?.is_anonymous === true);
+    });
   }, []);
 
   const handleClick = async () => {
     if (inAppBrowser) return;
     const native = isNativePlatform();
+    const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: native ? NATIVE_REDIRECT : `${window.location.origin}/callback`,
-          skipBrowserRedirect: true,
-        },
-      });
+      // 匿名 (ゲスト) ユーザー時は linkIdentity で現 user に Google identity を紐付ける。
+      // 成功すれば user.id を維持したまま OAuth identity が追加され、ゲストで保存した
+      // 単語・学習記録が引き継がれる。既存の Google アカウントが別ユーザーとして登録
+      // されていた場合は OAuth callback で identity_already_exists エラーになり、
+      // /callback が GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
+      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
+      if (isAnonymous) {
+        try { sessionStorage.setItem("rootlink_pending_oauth_link", "google"); } catch {}
+      }
+      const call = isAnonymous
+        ? supabase.auth.linkIdentity({
+            provider: "google",
+            options: { redirectTo, skipBrowserRedirect: true },
+          })
+        : supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: { redirectTo, skipBrowserRedirect: true },
+          });
+      const { data, error } = await call;
       if (error || !data?.url) {
         onError?.(ERROR_MESSAGE[variant]);
         return;
