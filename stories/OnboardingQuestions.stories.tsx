@@ -63,6 +63,15 @@ function Interactive({
   )
 }
 
+// OnboardingQuestions は overlay 内の 1..5 を step として受け取るが、
+// 進捗バーに出る数字はオンボーディング全体の通し番号 (4..8) に変換される
+// (lib/onboardingSteps.ts / toGlobalOnboardingStep)。
+//   step=1 (Level)       → 進捗 4 / 8
+//   step=2 (Expectation) → 進捗 5 / 8
+//   step=3 (Source)      → 進捗 6 / 8
+//   step=4 (Reminders)   → 進捗 7 / 8  (showReminders=true のみ)
+//   step=5 (Complete)    → 進捗 8 / 8  (showReminders=false なら step=4 で 8)
+
 // Web (4-step: Level → Expectation → Source → Complete)
 export const Step1Level: Story = { render: () => <Interactive initialStep={1} /> }
 export const Step2Expectation: Story = {
@@ -71,13 +80,14 @@ export const Step2Expectation: Story = {
 export const Step3Source: Story = {
   render: () => <Interactive initialStep={3} initialLevel="b2" initialExpectation="dictionary" />,
 }
+// Web 版の Complete は overlay 内 step=4 (showReminders=false のため Reminders を飛ばす)
 export const Step4Complete: Story = {
   render: () => (
     <Interactive initialStep={4} initialLevel="b2" initialSource="search" initialExpectation="dictionary" />
   ),
 }
 
-// Native (5-step: adds Reminders as step 4)
+// Native (5-step: adds Reminders as step 4, Complete は step 5)
 export const NativeStep4Reminders: Story = {
   render: () => (
     <Interactive

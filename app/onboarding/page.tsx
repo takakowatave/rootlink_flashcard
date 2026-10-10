@@ -7,10 +7,15 @@ import toast from 'react-hot-toast'
 import Button from '@/components/Button'
 import { TextInput } from '@/components/TextInput'
 import TermsContent from '@/components/TermsContent'
+import OnboardingProgressBar from '@/components/OnboardingProgressBar'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { isNativeOrPreview } from '@/lib/isPreviewNative'
 import { supabase } from '@/lib/supabaseClient'
 import { PROFILE_CREATED_EVENT } from '@/components/AppShell'
+import {
+  ONBOARDING_STEP,
+  ONBOARDING_TOTAL_STEPS,
+} from '@/lib/onboardingSteps'
 
 // Figma 2613:6938 (native app) の 3 ステップ:
 //   step 1  2609:6530  ウェルカム (ロゴ + ヒーロー)
@@ -141,6 +146,7 @@ export default function OnboardingPage() {
           value={accountName}
           onChange={setAccountName}
           onNext={handleSaveName}
+          onBack={() => setStep(2)}
           saving={savingName}
         />
       )}
@@ -211,6 +217,7 @@ function TermsStep({
   onAgree: () => void
   agreeing: boolean
 }) {
+  // Figma 2609:6552: 利用規約画面は header に arrow のみで progress bar は無い。
   return (
     <div className="flex flex-col flex-1 bg-slate-50 min-h-0">
       <div className="h-14 flex items-center border-b border-line px-2">
@@ -251,21 +258,24 @@ function AccountNameStep({
   value,
   onChange,
   onNext,
+  onBack,
   saving,
 }: {
   value: string
   onChange: (v: string) => void
   onNext: () => void
+  onBack: () => void
   saving: boolean
 }) {
   const trimmed = value.trim()
   const canProceed = trimmed.length > 0 && trimmed.length <= NAME_MAX
   return (
     <div className="flex flex-col flex-1 bg-primary-subtle min-h-0">
-      <div className="h-14 flex items-center border-b border-line px-2">
-        <div className="w-10" />
-        <div className="flex-1" />
-      </div>
+      <OnboardingProgressBar
+        step={ONBOARDING_STEP.accountName}
+        totalSteps={ONBOARDING_TOTAL_STEPS}
+        onBack={onBack}
+      />
       <div className="flex-1 overflow-y-auto px-4 pt-6">
         <h2 className="text-xl font-semibold text-center text-gray-950">
           アカウント名を教えてください
