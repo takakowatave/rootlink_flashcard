@@ -13,10 +13,13 @@ const APPLE_DISABLED = false;
 
 type Variant = "signup" | "login";
 
-const LABEL: Record<Variant, string> = {
+// Web (/login /signup) は従来どおり signup / login で分けるが、
+// ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Apple" とだけ出す。
+const LABEL_WEB: Record<Variant, string> = {
   signup: "Appleで登録",
   login: "Appleでログイン",
 };
+const LABEL_NATIVE = "Apple";
 
 const ERROR_MESSAGE: Record<Variant, string> = {
   signup: "Apple登録に失敗しました。時間をおいて再試行してください",
@@ -54,15 +57,17 @@ export default function AppleAuthButton({
     const native = isNativePlatform();
     const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
-      // 匿名 (ゲスト) ユーザー時は linkIdentity で既存 user に Apple identity を紐付け、
-      // 単語・学習記録を引き継ぐ。既存の Apple ID が別ユーザーとして登録済みなら
-      // OAuth callback で identity_already_exists エラーになり、/callback が
-      // GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
-      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
-      if (isAnonymous) {
+      // ゲスト学習データを引き継ぐための linkIdentity は signup 導線のときだけ。
+      // 「ログイン」は既存アカウントへの切替なので、ゲストでも signInWithOAuth に揃える。
+      // ログインから linkIdentity を呼ぶと、既存の別アカウントと email が衝突したとき
+      // Supabase 側で email_exists が返るだけでユーザーには何も伝わらない事故につながる。
+      // signup から linkIdentity → 衝突時は /callback の GuestLinkConfirmDialog 経路に流す
+      // ため、provider を sessionStorage に残しておく (callback 側で読む)。
+      const shouldLinkIdentity = isAnonymous && variant === "signup";
+      if (shouldLinkIdentity) {
         try { sessionStorage.setItem("rootlink_pending_oauth_link", "apple"); } catch {}
       }
-      const { data, error } = isAnonymous
+      const { data, error } = shouldLinkIdentity
         ? await supabase.auth.linkIdentity({
             provider: "apple",
             options: { redirectTo, skipBrowserRedirect: true },
@@ -98,7 +103,9 @@ export default function AppleAuthButton({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
-      {APPLE_DISABLED ? `${LABEL[variant]}（テスト中につき不可）` : LABEL[variant]}
+      {APPLE_DISABLED
+        ? `${isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant]}（テスト中につき不可）`
+        : (isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant])}
     </button>
   );
 }

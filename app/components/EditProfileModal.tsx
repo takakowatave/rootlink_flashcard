@@ -529,7 +529,7 @@ export default function EditProfileModal({
         <div className="px-5 md:px-6 pt-4 pb-2 flex flex-col gap-8">
             {isAnonymous ? (
               // ゲスト (匿名ユーザー) 向け: Figma `3136:400` 準拠。
-              // 登録カード (アバター + 促し文 + "ログイン / 新規登録") を上部に出し、
+              // 登録カード (アバター + 促し文 + "アカウント作成") を上部に出し、
               // アバター単独編集 UI・メール/パスワード・ログアウト・退会は出さない。
               <div className="flex flex-col gap-4 pt-2">
                 <div className="bg-[#f8f9fa] rounded-[18px] px-3 py-4 flex flex-col items-center gap-4">
@@ -551,22 +551,33 @@ export default function EditProfileModal({
                     className="h-[50px] text-sm font-medium"
                     onClick={() => {
                       onClose();
-                      router.push("/login");
+                      router.push("/signup");
                     }}
                   >
-                    ログイン / 新規登録
+                    アカウント作成
                   </Button>
                 </div>
 
                 {profile && (
                   <SettingsSection title="プロフィール">
-                    <EditableField
-                      label="表示名"
-                      value={profile.username ?? ""}
-                      placeholder="ゲスト"
-                      emptyLabel="ゲスト"
-                      onSave={handleSaveDisplayName}
-                    />
+                    <div className="flex items-center gap-3 py-3">
+                      {/* Figma 3187:6410: 木レベル画像 (ゲストは Lv1 固定) */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/plant/lv1.png"
+                        alt=""
+                        className="size-[66px] shrink-0 object-contain"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <EditableField
+                          label="表示名"
+                          value={profile.username ?? ""}
+                          placeholder="ゲスト"
+                          emptyLabel="ゲスト"
+                          onSave={handleSaveDisplayName}
+                        />
+                      </div>
+                    </div>
                   </SettingsSection>
                 )}
               </div>

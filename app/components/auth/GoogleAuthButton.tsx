@@ -9,10 +9,13 @@ const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
 type Variant = "signup" | "login";
 
-const LABEL: Record<Variant, string> = {
+// Web (/login /signup) は従来どおり signup / login で文言を分けるが、
+// ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Google" とだけ出す。
+const LABEL_WEB: Record<Variant, string> = {
   signup: "Googleで登録",
   login: "Googleでログイン",
 };
+const LABEL_NATIVE = "Google";
 
 const ERROR_MESSAGE: Record<Variant, string> = {
   signup: "Google登録に失敗しました。時間をおいて再試行してください",
@@ -28,9 +31,11 @@ export default function GoogleAuthButton({
 }) {
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
+    setIsNative(isNativePlatform());
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAnonymous(user?.is_anonymous === true);
     });
@@ -41,16 +46,17 @@ export default function GoogleAuthButton({
     const native = isNativePlatform();
     const redirectTo = native ? NATIVE_REDIRECT : `${window.location.origin}/callback`;
     try {
-      // 匿名 (ゲスト) ユーザー時は linkIdentity で現 user に Google identity を紐付ける。
-      // 成功すれば user.id を維持したまま OAuth identity が追加され、ゲストで保存した
-      // 単語・学習記録が引き継がれる。既存の Google アカウントが別ユーザーとして登録
-      // されていた場合は OAuth callback で identity_already_exists エラーになり、
-      // /callback が GuestLinkConfirmDialog を出して「ログインする/キャンセル」に分岐する。
-      // そのために provider を sessionStorage に残しておく (callback 側で読む)。
-      if (isAnonymous) {
+      // ゲスト学習データを引き継ぐための linkIdentity は signup 導線のときだけ。
+      // 「ログイン」は既存アカウントへの切替なので、ゲストでも signInWithOAuth に揃える。
+      // ログインから linkIdentity を呼ぶと、既存の別アカウントと email が衝突したとき
+      // Supabase 側で email_exists が返るだけでユーザーには何も伝わらない事故につながる。
+      // signup から linkIdentity → 衝突時は /callback の GuestLinkConfirmDialog 経路に流す
+      // ため、provider を sessionStorage に残しておく (callback 側で読む)。
+      const shouldLinkIdentity = isAnonymous && variant === "signup";
+      if (shouldLinkIdentity) {
         try { sessionStorage.setItem("rootlink_pending_oauth_link", "google"); } catch {}
       }
-      const call = isAnonymous
+      const call = shouldLinkIdentity
         ? supabase.auth.linkIdentity({
             provider: "google",
             options: { redirectTo, skipBrowserRedirect: true },
@@ -85,7 +91,7 @@ export default function GoogleAuthButton({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
-      {LABEL[variant]}
+      {isNative ? LABEL_NATIVE : LABEL_WEB[variant]}
     </button>
   );
 }

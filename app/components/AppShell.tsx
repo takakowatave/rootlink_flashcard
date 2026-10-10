@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 import { recordActivity } from '@/lib/supabaseApi'
 import { consumePendingAuthFlow } from '@/lib/pendingAuthFlow'
+import { isIdentityConflictError } from '@/lib/isIdentityConflictError'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
 
@@ -240,6 +241,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const query = event.url.includes('?') ? event.url.split('?')[1].split('#')[0] : ''
           const params = new URLSearchParams(query)
 
+          // deeplink が ?error= / ?error_code= / ?error_description= の形で戻る経路。
+          // Supabase の OAuth callback が verify 失敗を返したとき、code / token_hash
+          // ではなくエラークエリとして戻ることがある (特に linkIdentity の email_exists)。
+          // code / token_hash / fragment の処理より前に拾い、衝突なら /callback の
+          // GuestLinkConfirmDialog 経路、衝突以外のエラーなら「リンク無効/使用済み」画面へ流す。
+          const errorCodeParam = params.get('error_code')
+          const errorDescParam = params.get('error_description')
+          const errorParam = params.get('error')
+          if (errorCodeParam || errorDescParam || errorParam) {
+            const conflict = isIdentityConflictError({
+              code: errorCodeParam ?? undefined,
+              message: errorDescParam ?? errorParam ?? undefined,
+            })
+            window.location.href = conflict
+              ? '/callback?identity_conflict=1'
+              : '/callback?state=confirmed'
+            return
+          }
+
           // token_hash 方式 (新, PKCE の code_verifier 依存を回避)
           // Supabase テンプレートの {{ .ConfirmationURL }} を
           //   {{ .SiteURL }}/auth/app-return?token_hash={{ .TokenHash }}&type={{ .Type }}
@@ -293,27 +313,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
               return
             }
+            // error があるとき: まず衝突かどうか判定する。衝突なら匿名セッションが
+            // 残っていても /callback の GuestLinkConfirmDialog 経路に流す必要があるので、
+            // session の有無で成功扱いにしてしまう経路より先に判定しなければならない。
+            // identity_already_exists / email_exists / user_already_exists および
+            // "already registered" 等 message 文字列もまとめて拾う。
+            if (isIdentityConflictError(error)) {
+              window.location.href = '/callback?identity_conflict=1'
+              return
+            }
+            // 衝突でないエラー: 別経路で既にセッションが張られていれば成功扱い
+            // (別窓 / AppShell 側で既に verify 済みで、これは 2 回目の deeplink 等)。
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               const flow = consumePendingAuthFlow()
               window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
-              return
-            }
-            // identity_already_exists / email_exists / user_already_exists 等の
-            // 衝突エラーは、/callback が sessionStorage の PENDING_OAUTH_LINK_KEY を
-            // 読んで GuestLinkConfirmDialog を出す経路に流す。state=confirmed に
-            // 落とすと「リンクの有効期限が切れています」の失敗画面に行ってしまう
-            // ので、ここでは code / message を URL params で引き継いで /callback に送る。
-            const err = error as { code?: string; details?: { code?: string }; message?: string } | null
-            const errCode = err?.code ?? err?.details?.code ?? ''
-            const errMsg = (err?.message ?? '').toLowerCase()
-            const conflict =
-              errCode === 'identity_already_exists' ||
-              errCode === 'email_exists' ||
-              errCode === 'user_already_exists' ||
-              /identity.*already|already.*(linked|exists)|user.*already.*exists/.test(errMsg)
-            if (conflict) {
-              window.location.href = '/callback?identity_conflict=1'
               return
             }
             window.location.href = '/callback?state=confirmed'

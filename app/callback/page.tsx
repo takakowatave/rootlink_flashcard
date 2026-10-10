@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 import { sendEvent } from "@/lib/ga";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { hasAnyGuestLearningData } from "@/lib/guestData";
+import { isIdentityConflictError } from "@/lib/isIdentityConflictError";
 
 const SIGNUP_TRIGGER_KEY = "signup_trigger";
 const PENDING_OAUTH_LINK_KEY = "rootlink_pending_oauth_link";
@@ -19,40 +20,6 @@ type State = "loading" | "confirmed" | "identity_conflict";
 type OAuthProvider = "google" | "apple";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
-
-/**
- * OAuth linkIdentity で既存アカウントと衝突したときに Supabase SDK が返す error.code。
- * Supabase の error-codes.ts 由来 (identity_already_exists / email_exists /
- * user_already_exists)。実機で確認した経路は identity_already_exists (Apple)。
- * email_exists / user_already_exists は保険として併記。
- */
-const IDENTITY_CONFLICT_CODES = new Set([
-  "identity_already_exists",
-  "email_exists",
-  "user_already_exists",
-]);
-
-function readErrorCode(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const e = error as { code?: unknown; details?: { code?: unknown } };
-  if (typeof e.code === "string") return e.code;
-  if (e.details && typeof e.details.code === "string") return e.details.code;
-  return null;
-}
-
-function readErrorMessage(error: unknown): string {
-  if (!error || typeof error !== "object") return "";
-  const m = (error as { message?: unknown }).message;
-  return typeof m === "string" ? m : "";
-}
-
-function isIdentityConflict(error: unknown): boolean {
-  const code = readErrorCode(error);
-  if (code && IDENTITY_CONFLICT_CODES.has(code)) return true;
-  // code が無い旧バージョン / 想定外形式の保険として message の文字列判定も残す
-  const msg = readErrorMessage(error).toLowerCase();
-  return /identity.*already|already.*(linked|exists)|user.*already.*exists/.test(msg);
-}
 
 async function startSignInWithOAuth(provider: OAuthProvider): Promise<void> {
   const native = isNativePlatform();
@@ -217,7 +184,7 @@ export default function AuthCallback() {
               if (error) {
                 // identity_already_exists なら GuestLinkConfirmDialog を出して
                 // 「ログインする/キャンセル」に分岐する (匿名ユーザー + 学習データあり)。
-                if (isIdentityConflict(error)) {
+                if (isIdentityConflictError(error)) {
                   await handleIdentityConflict();
                   return;
                 }

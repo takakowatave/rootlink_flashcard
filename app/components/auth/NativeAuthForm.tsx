@@ -150,8 +150,8 @@ export default function NativeAuthForm({ mode }: Props) {
 
   const onSubmit = mode === 'login' ? onLogin : onSignup
 
-  const primaryLabel = mode === 'login' ? 'ログイン' : '新規登録'
-  const submittingLabel = mode === 'login' ? 'ログイン中...' : '登録中...'
+  const primaryLabel = mode === 'login' ? 'ログイン' : 'アカウント作成'
+  const submittingLabel = mode === 'login' ? 'ログイン中...' : '作成中...'
 
   return (
     <div className="flex flex-col min-h-screen bg-white pt-[env(safe-area-inset-top)]">
