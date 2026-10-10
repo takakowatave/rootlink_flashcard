@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { HiOutlineArrowLeft } from 'react-icons/hi2'
 import { MdAddCircle } from 'react-icons/md'
 import { HiOutlineTrash } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
@@ -23,6 +22,11 @@ import { PROFILE_CREATED_EVENT } from './AppShell'
 import Button from './Button'
 import Toggle from './Toggle'
 import PlantGrowthAnimation from './PlantGrowthAnimation'
+import OnboardingProgressBar from './OnboardingProgressBar'
+import {
+  ONBOARDING_STEP,
+  ONBOARDING_TOTAL_STEPS,
+} from '@/lib/onboardingSteps'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
 //   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
@@ -98,41 +102,13 @@ type ViewProps = {
   onSubmit: () => void
 }
 
-function ProgressHeader({
-  step,
-  totalSteps,
-  onBack,
-}: {
-  step: Step
-  totalSteps: number
-  onBack: () => void
-}) {
-  const pct = (step / totalSteps) * 100
-  const canBack = step > 1
-  return (
-    <div className="flex items-center gap-3 h-14 px-2 border-b border-line">
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={!canBack}
-        aria-label="戻る"
-        className="size-6 flex items-center justify-center disabled:opacity-30"
-      >
-        <HiOutlineArrowLeft className="size-5 text-gray-700" />
-      </button>
-      <div className="flex-1 flex items-center gap-2">
-        <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary rounded-full transition-[width] duration-300"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span className="text-sm text-gray-400 tabular-nums whitespace-nowrap">
-          {step} / {totalSteps}
-        </span>
-      </div>
-    </div>
-  )
+// overlay 内の相対 step (1..5) をオンボーディング全体の通し番号 (4..8) にマップする。
+// non-native (showReminders=false) のときは Reminders (通し 7) を飛ばして
+// complete を 8 に揃える。
+export function toGlobalOnboardingStep(step: Step, showReminders: boolean): number {
+  if (showReminders) return step + 3
+  if (step === 4) return ONBOARDING_STEP.complete
+  return step + 3
 }
 
 function Radio({ selected }: { selected: boolean }) {
@@ -176,7 +152,11 @@ export function OnboardingQuestionsView({
     <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
       <div className="absolute inset-0 bg-black/40 hidden md:block" />
       <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden">
-      <ProgressHeader step={step} totalSteps={totalSteps} onBack={onBack} />
+      <OnboardingProgressBar
+        step={toGlobalOnboardingStep(step, showReminders)}
+        totalSteps={ONBOARDING_TOTAL_STEPS}
+        onBack={step > 1 ? onBack : null}
+      />
 
       <div className="flex-1 overflow-y-auto pb-32">
         {step === 1 && (
