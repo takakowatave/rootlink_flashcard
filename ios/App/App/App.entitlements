@@ -7,5 +7,9 @@
 		<string>applinks:www.rootlink.app</string>
 		<string>applinks:rootlink.app</string>
 	</array>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>
