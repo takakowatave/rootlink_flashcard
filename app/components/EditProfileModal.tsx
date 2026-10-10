@@ -21,6 +21,8 @@ import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
 import UpgradeModal from "@/components/UpgradeModal";
 import NativePaywall from "@/components/NativePaywall";
+import { getPlantImageSrc } from "@/lib/plantGrowth";
+import { getActivityLog } from "@/lib/supabaseApi";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { isNativeOrPreview } from "@/lib/isPreviewNative";
 import { openNativeManageSubscriptions, signOutRevenueCat } from "@/lib/revenuecat";
@@ -144,6 +146,8 @@ export default function EditProfileModal({
   // ゲスト (匿名ユーザー) のときは Figma のゲスト設定画面 (登録カード + 表示名 + Free プラン) に
   // 絞り、ログアウト・メール/パスワード・通知・退会・辞書表示言語は出さない。
   const [isAnonymous, setIsAnonymous] = useState(false);
+  // ゲストでも Dashboard と同じ plantGrowth ロジックで実レベルの木アイコンを出す。
+  const [plantSrc, setPlantSrc] = useState<string>("/plant/lv1.png");
   const [subscriptionStore, setSubscriptionStore] = useState<
     "stripe" | "app_store" | "play_store" | null
   >(null);
@@ -309,6 +313,19 @@ export default function EditProfileModal({
       if (!user) return;
       setIsAnonymous(user.is_anonymous === true);
       setEmail(user.email ?? "");
+      // Dashboard の PlantStatus と同じ計算 (quizCount + loginDays × 3)
+      // でゲストでも実レベルの木を出す。
+      Promise.all([
+        supabase
+          .from("quiz_results")
+          .select("word", { count: "exact", head: true })
+          .eq("user_id", user.id),
+        getActivityLog(user.id),
+      ]).then(([quizRes, dates]) => {
+        const quizCount = quizRes.count ?? 0;
+        const loginDays = Array.isArray(dates) ? dates.length : 0;
+        setPlantSrc(getPlantImageSrc(quizCount, loginDays));
+      });
       supabase
         .from("subscriptions")
         .select("store, status, expires_at, will_renew")
@@ -561,10 +578,11 @@ export default function EditProfileModal({
                 {profile && (
                   <SettingsSection title="プロフィール">
                     <div className="flex items-center gap-3 py-3">
-                      {/* Figma 3187:6410: 木レベル画像 (ゲストは Lv1 固定) */}
+                      {/* Figma 3187:6410 の木レベル画像。plantGrowth.ts の
+                          実スコア (quiz 回答数 + ログイン日数×3) で決定。 */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/plant/lv1.png"
+                        src={plantSrc}
                         alt=""
                         className="size-[66px] shrink-0 object-contain"
                       />
