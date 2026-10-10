@@ -13,10 +13,13 @@ const APPLE_DISABLED = false;
 
 type Variant = "signup" | "login";
 
-const LABEL: Record<Variant, string> = {
+// Web (/login /signup) は従来どおり signup / login で分けるが、
+// ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Apple" とだけ出す。
+const LABEL_WEB: Record<Variant, string> = {
   signup: "Appleで登録",
   login: "Appleでログイン",
 };
+const LABEL_NATIVE = "Apple";
 
 const ERROR_MESSAGE: Record<Variant, string> = {
   signup: "Apple登録に失敗しました。時間をおいて再試行してください",
@@ -98,7 +101,9 @@ export default function AppleAuthButton({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
-      {APPLE_DISABLED ? `${LABEL[variant]}（テスト中につき不可）` : LABEL[variant]}
+      {APPLE_DISABLED
+        ? `${isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant]}（テスト中につき不可）`
+        : (isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant])}
     </button>
   );
 }

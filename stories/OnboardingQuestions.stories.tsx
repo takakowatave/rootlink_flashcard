@@ -17,7 +17,7 @@ export default meta
 
 type Story = StoryObj<typeof OnboardingQuestionsView>
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5
 
 const DEFAULT_REMINDERS: ReminderSlot[] = [
   { key: 'morning', label: '起床時', time: '07:00', enabled: true },
@@ -32,7 +32,7 @@ function Interactive({
   initialExpectation = null as Expectation | null,
   showReminders = false,
 }) {
-  const totalSteps = showReminders ? 6 : 5
+  const totalSteps = showReminders ? 5 : 4
   const [step, setStep] = useState<Step>(initialStep)
   const [level, setLevel] = useState<EnglishLevel | null>(initialLevel)
   const [source, setSource] = useState<AcquisitionSource | null>(initialSource)
@@ -63,24 +63,25 @@ function Interactive({
   )
 }
 
-// Web (5-step: Welcome → Level → Source → Expectation → Complete)
-export const Step1Welcome: Story = { render: () => <Interactive initialStep={1} /> }
-export const Step2Level: Story = { render: () => <Interactive initialStep={2} /> }
-export const Step3Source: Story = { render: () => <Interactive initialStep={3} initialLevel="b2" /> }
-export const Step4Expectation: Story = {
-  render: () => <Interactive initialStep={4} initialLevel="b2" initialSource="search" />,
+// Web (4-step: Level → Expectation → Source → Complete)
+export const Step1Level: Story = { render: () => <Interactive initialStep={1} /> }
+export const Step2Expectation: Story = {
+  render: () => <Interactive initialStep={2} initialLevel="b2" />,
 }
-export const Step5Complete: Story = {
+export const Step3Source: Story = {
+  render: () => <Interactive initialStep={3} initialLevel="b2" initialExpectation="dictionary" />,
+}
+export const Step4Complete: Story = {
   render: () => (
-    <Interactive initialStep={5} initialLevel="b2" initialSource="search" initialExpectation="dictionary" />
+    <Interactive initialStep={4} initialLevel="b2" initialSource="search" initialExpectation="dictionary" />
   ),
 }
 
-// Native (6-step: adds Reminders as step 5)
-export const NativeStep5Reminders: Story = {
+// Native (5-step: adds Reminders as step 4)
+export const NativeStep4Reminders: Story = {
   render: () => (
     <Interactive
-      initialStep={5}
+      initialStep={4}
       initialLevel="b2"
       initialSource="search"
       initialExpectation="dictionary"
@@ -88,10 +89,10 @@ export const NativeStep5Reminders: Story = {
     />
   ),
 }
-export const NativeStep6Complete: Story = {
+export const NativeStep5Complete: Story = {
   render: () => (
     <Interactive
-      initialStep={6}
+      initialStep={5}
       initialLevel="b2"
       initialSource="search"
       initialExpectation="dictionary"

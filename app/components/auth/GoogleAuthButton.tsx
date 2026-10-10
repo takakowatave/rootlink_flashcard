@@ -9,10 +9,13 @@ const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
 type Variant = "signup" | "login";
 
-const LABEL: Record<Variant, string> = {
+// Web (/login /signup) は従来どおり signup / login で文言を分けるが、
+// ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Google" とだけ出す。
+const LABEL_WEB: Record<Variant, string> = {
   signup: "Googleで登録",
   login: "Googleでログイン",
 };
+const LABEL_NATIVE = "Google";
 
 const ERROR_MESSAGE: Record<Variant, string> = {
   signup: "Google登録に失敗しました。時間をおいて再試行してください",
@@ -28,9 +31,11 @@ export default function GoogleAuthButton({
 }) {
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     setInAppBrowser(isInAppBrowser());
+    setIsNative(isNativePlatform());
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAnonymous(user?.is_anonymous === true);
     });
@@ -85,7 +90,7 @@ export default function GoogleAuthButton({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
-      {LABEL[variant]}
+      {isNative ? LABEL_NATIVE : LABEL_WEB[variant]}
     </button>
   );
 }

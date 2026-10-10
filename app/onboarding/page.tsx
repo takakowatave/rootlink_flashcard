@@ -3,85 +3,58 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { HiX } from 'react-icons/hi'
+import toast from 'react-hot-toast'
 import Button from '@/components/Button'
-import ModalShell from '@/components/ModalShell'
+import { TextInput } from '@/components/TextInput'
 import TermsContent from '@/components/TermsContent'
-import PrivacyContent from '@/components/PrivacyContent'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { isNativeOrPreview } from '@/lib/isPreviewNative'
 import { supabase } from '@/lib/supabaseClient'
+import { PROFILE_CREATED_EVENT } from '@/components/AppShell'
 
-// Figma: xe5UwVx38JWu5doqwXczQu / 2609:6530 (native only splash)
-// 通知許可はサインアップ後の OnboardingQuestions 側で聞く。
+// Figma 2613:6938 (native app) の 3 ステップ:
+//   step 1  2609:6530  ウェルカム (ロゴ + ヒーロー)
+//   step 2  2609:6552  利用規約 (スクロール本文 + 「同意してはじめる」で signInAnonymously)
+//   step 3  3136:5694  アカウント名 (TextInput + 「次へ」で profiles.username 保存)
+// その後 '/' に遷移し、AppShell 配下の OnboardingQuestions overlay が
+// 英語レベル → 用途 → きっかけ → リマインダー → スタート の 5 ステップを続ける。
 
-type LegalDoc = 'terms' | 'privacy' | null
+type Step = 1 | 2 | 3
+
+const NAME_MAX = 20
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
-  const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
+  const [step, setStep] = useState<Step>(1)
   const [starting, setStarting] = useState(false)
-
-  // App Store Guideline 5.1.1(v) 対応: native は購入前の登録を必須にできない。
-  // 「同意してはじめる」で裏で anonymous sign-in して / に飛ばす。
-  // 失敗したら従来どおり /signup にフォールバックする。
-  // Web は signInAnonymously を使わず従来どおり /signup（Web 側は変えない）。
-  async function handleStart() {
-    if (starting) return
-    setStarting(true)
-    try {
-      if (!isNativePlatform()) {
-        router.replace('/signup')
-        return
-      }
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        router.replace('/')
-        return
-      }
-      const { error } = await supabase.auth.signInAnonymously()
-      if (error) {
-        router.replace('/signup')
-        return
-      }
-      router.replace('/')
-    } catch {
-      router.replace('/signup')
-    } finally {
-      setStarting(false)
-    }
-  }
+  const [savingName, setSavingName] = useState(false)
+  const [accountName, setAccountName] = useState('')
 
   useEffect(() => {
-    // Web プレビューで ?preview=native が付いていれば /onboarding を表示する。
-    // 本番 Web ではこの条件が false になり従来どおり /login に飛ばす。
     if (!isNativeOrPreview(isNativePlatform())) {
       router.replace('/login')
       return
     }
-
-    // 起動時にログイン済みかを確認する。ログイン済みなら同意画面には残さない。
-    //
-    // 判定はここでは acquisition_source を見に行かず、ログイン済みなら一律に
-    // '/' に飛ばす。'/' に着いたところで AppShell 配下の OnboardingQuestions
-    // overlay が、既存の判定 (profiles.acquisition_source が null なら質問を
-    // 出す / 既に埋まっていれば何も出さない) をそのまま実行する。
-    //
-    // つまり:
-    //   未ログイン           → 同意画面 (ここ)
-    //   ログイン済み・質問未 → '/' に遷移 → OnboardingQuestions が質問モーダル
-    //   ログイン済み・質問済 → '/' に遷移 → Dashboard がそのまま表示
-    //
-    // session 確認が終わるまでは setReady(false) のまま返し、画面のちらつきを
-    // 出さない (Capacitor の SplashScreen は最後に hide する)。
     let cancelled = false
     ;(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
         if (session?.user) {
-          router.replace('/')
+          // ゲストサインイン済みで戻ってきたらアカウント名ステップへ復帰
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', session.user.id)
+            .maybeSingle()
+          if (cancelled) return
+          if (profile?.username) {
+            router.replace('/')
+            return
+          }
+          setStep(3)
+          setReady(true)
           return
         }
         setReady(true)
@@ -99,25 +72,89 @@ export default function OnboardingPage() {
     }
   }, [router])
 
+  // step 2 の「同意してはじめる」= 匿名サインイン。成功したら step 3 (アカウント名) へ。
+  async function handleAgree() {
+    if (starting) return
+    setStarting(true)
+    try {
+      if (!isNativePlatform()) {
+        router.replace('/signup')
+        return
+      }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        const { error } = await supabase.auth.signInAnonymously()
+        if (error) {
+          toast.error('はじめるのに失敗しました。しばらくしてもう一度お試しください')
+          return
+        }
+      }
+      setStep(3)
+    } catch {
+      toast.error('はじめるのに失敗しました。しばらくしてもう一度お試しください')
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  // step 3 の「次へ」= profiles.username を保存して '/' へ。
+  async function handleSaveName() {
+    const trimmed = accountName.trim()
+    if (!trimmed || savingName) return
+    setSavingName(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('セッションが切れました。もう一度お試しください')
+        setStep(1)
+        return
+      }
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: trimmed })
+        .eq('id', user.id)
+      if (error) {
+        toast.error('名前の保存に失敗しました')
+        return
+      }
+      window.dispatchEvent(new CustomEvent(PROFILE_CREATED_EVENT))
+      router.replace('/')
+    } finally {
+      setSavingName(false)
+    }
+  }
+
   if (!ready) return null
 
   return (
-    <div
-      className="fixed inset-0 bg-primary-subtle flex flex-col"
-      style={{ paddingBottom: 0 }}
-    >
-      {/* 中央領域: ロゴ・テキスト・モック（Figma xe5UwVx38JWu5doqwXczQu / 2862:6037 準拠）。
-          縦は justify-center + gap で束ね、モックは w/h いずれも min() で
-          ビューポートに合わせて縮尺する。360×640 の小さいスマホでも下の同意ボタンが
-          切れないよう、モック側の高さを 40vh に丸めておく。 */}
+    <div className="fixed inset-0 bg-primary-subtle flex flex-col pt-[env(safe-area-inset-top)]">
+      {step === 1 && <WelcomeStep onNext={() => setStep(2)} />}
+      {step === 2 && (
+        <TermsStep
+          onBack={() => setStep(1)}
+          onAgree={handleAgree}
+          agreeing={starting}
+        />
+      )}
+      {step === 3 && (
+        <AccountNameStep
+          value={accountName}
+          onChange={setAccountName}
+          onNext={handleSaveName}
+          saving={savingName}
+        />
+      )}
+    </div>
+  )
+}
+
+function WelcomeStep({ onNext }: { onNext: () => void }) {
+  return (
+    <>
       <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-12 pt-6 pb-3 px-6">
         <div className="flex flex-col items-center gap-4 sm:gap-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.svg"
-            alt="RootLink"
-            className="h-[38px] sm:h-[68px] w-auto"
-          />
+          <img src="/logo.svg" alt="RootLink" className="h-[38px] sm:h-[68px] w-auto" />
           <div className="flex flex-col items-center gap-3 sm:gap-4">
             <div className="flex items-baseline gap-2 sm:gap-3">
               <span className="inline-flex items-center rounded-[10px] sm:rounded-[14px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] sm:border-t-[3px] sm:border-l-[3px] sm:border-r-[7px] sm:border-b-[8px] border-solid border-[#ffb86a] px-2 sm:px-3 pt-1.5 pb-2.5 sm:pt-2 sm:pb-3 leading-none">
@@ -151,43 +188,118 @@ export default function OnboardingPage() {
         className="w-full bg-white flex flex-col items-center gap-6 px-6 pt-8"
         style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
       >
-        <p className="text-sm leading-5 text-gray-950 text-center">
-          <button type="button" onClick={() => setOpenDoc('terms')} className="text-primary underline">利用規約</button>
-          {' '}と{' '}
-          <button type="button" onClick={() => setOpenDoc('privacy')} className="text-primary underline">プライバシーポリシー</button>
-          {' '}に同意ください。
-        </p>
         <Button
-          onClick={handleStart}
-          disabled={starting}
+          onClick={onNext}
           variant="primary"
           fullWidth
           radius="full"
           className="h-[50px] text-base font-medium"
         >
-          同意してはじめる
+          次へ
         </Button>
       </div>
+    </>
+  )
+}
 
-      <ModalShell
-        open={openDoc !== null}
-        onClose={() => setOpenDoc(null)}
-        headerRight={
-          <button
-            type="button"
-            onClick={() => setOpenDoc(null)}
-            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
-            aria-label="閉じる"
-          >
-            <HiX className="size-5" />
-          </button>
-        }
+function TermsStep({
+  onBack,
+  onAgree,
+  agreeing,
+}: {
+  onBack: () => void
+  onAgree: () => void
+  agreeing: boolean
+}) {
+  return (
+    <div className="flex flex-col flex-1 bg-slate-50 min-h-0">
+      <div className="h-14 flex items-center border-b border-line px-2">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="戻る"
+          className="p-2 rounded-full text-gray-700 hover:bg-gray-100"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        <TermsContent />
+      </div>
+      <div
+        className="w-full bg-white flex items-center px-6 pt-6"
+        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
       >
-        <div className="px-6 py-8">
-          {openDoc === 'terms' && <TermsContent />}
-          {openDoc === 'privacy' && <PrivacyContent />}
+        <Button
+          onClick={onAgree}
+          disabled={agreeing}
+          variant="primary"
+          fullWidth
+          radius="full"
+          className="h-[50px] text-base font-medium"
+        >
+          {agreeing ? 'はじめています...' : '同意してはじめる'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function AccountNameStep({
+  value,
+  onChange,
+  onNext,
+  saving,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onNext: () => void
+  saving: boolean
+}) {
+  const trimmed = value.trim()
+  const canProceed = trimmed.length > 0 && trimmed.length <= NAME_MAX
+  return (
+    <div className="flex flex-col flex-1 bg-primary-subtle min-h-0">
+      <div className="h-14 flex items-center border-b border-line px-2">
+        <div className="w-10" />
+        <div className="flex-1" />
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pt-6">
+        <h2 className="text-xl font-semibold text-center text-gray-950">
+          アカウント名を教えてください
+        </h2>
+        <div className="pt-6">
+          <TextInput
+            type="text"
+            placeholder="ゲスト"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            maxLength={NAME_MAX}
+            autoFocus
+          />
+          <div className="flex justify-between text-sm text-gray-950 pt-1">
+            <span>{NAME_MAX} 文字以内で設定してください</span>
+            <span className="tabular-nums">{trimmed.length} / {NAME_MAX}</span>
+          </div>
         </div>
-      </ModalShell>
+      </div>
+      <div
+        className="w-full flex items-center px-6 pt-6"
+        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
+      >
+        <Button
+          onClick={onNext}
+          disabled={!canProceed || saving}
+          variant="primary"
+          fullWidth
+          radius="full"
+          className="h-[50px] text-base font-medium"
+        >
+          {saving ? '保存中...' : '次へ'}
+        </Button>
+      </div>
     </div>
   )
 }
