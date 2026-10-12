@@ -1,121 +1,187 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Supabase JS が localStorage/Cookie 用に生成するキーと同じ命名規則で揃える。
-// Preferences 版 (ネイティブ) と Cookie 版 (Web) で同じ key を使うことで、
-// 既存ユーザーのセッションを Cookie → Preferences へ透過的に移行できる。
-function getAuthStorageKey(url: string): string {
-  try {
-    const host = new URL(url).hostname;
-    const ref = host.split(".")[0];
-    return `sb-${ref}-auth-token`;
-  } catch {
-    return "sb-auth-token";
-  }
-}
-const AUTH_TOKEN_KEY = getAuthStorageKey(supabaseUrl);
-
-// SSR 中は window が無いので必ず false。ブラウザでも Capacitor WebView でなければ false。
-function isCapacitorNative(): boolean {
+// ネイティブ (iOS WKWebView / Android WebView) では JS が書いた Cookie が
+// ITP でアプリ再起動時に消え、ログアウトされてしまう (iOS は JS Cookie を
+// 最長 7 日に制限)。Capacitor Preferences を正本にして、Cookie はミラーに
+// してしまえば、Cookie が消えても Preferences からセッションを復元できる。
+//
+// 既にログイン中のユーザーが更新で突然ログアウトされないよう、getAll は
+// document.cookie と Preferences を両方読み、Preferences 側を上書き優先に
+// する。Cookie だけに session がある旧ユーザーは最初の token refresh で
+// setAll 経由で Preferences に同期される (= 透過マイグレーション)。
+//
+// ただし Preferences プラグインが同梱されていない旧バイナリ (Play ストア配布中の
+// 旧 Android / App Store にアップロード済みの iOS ビルド 4 以前) で新しい Web が
+// 走ったとき、Preferences 版の cookies アダプタに切り替えてしまうと内部で
+// 「Plugin not available」で落ちてログインが壊れる。
+// Capacitor.isPluginAvailable('Preferences') が true のときだけ native 版に切り替え、
+// それ以外は従来通り素の createBrowserClient (document.cookie) を使う。
+function isPreferencesAvailable(): boolean {
   if (typeof window === "undefined") return false;
-  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  return typeof cap?.isNativePlatform === "function" ? cap.isNativePlatform() : false;
-}
-
-// @supabase/ssr が document.cookie に書いた値を復元する。
-//   - 非 chunked: "<name>=<value>"
-//   - chunked:    "<name>.0=<v>", "<name>.1=<v>", ...
-//   - value が "base64-" で始まるときは base64url エンコードされた JSON
-// 既存の Cookie セッション (Web → ネイティブ移行で消したくないケース) を
-// Preferences に取り込むためだけに使う。
-function readSupabaseCookieChunks(key: string): string | null {
-  if (typeof document === "undefined") return null;
-  const map = new Map<string, string>();
-  for (const raw of document.cookie.split(";")) {
-    const trimmed = raw.trim();
-    if (!trimmed) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq < 0) continue;
-    map.set(trimmed.slice(0, eq), trimmed.slice(eq + 1));
-  }
-  const direct = map.get(key);
-  let raw: string | null = direct ?? null;
-  if (!raw) {
-    const chunks: string[] = [];
-    for (let i = 0; ; i++) {
-      const v = map.get(`${key}.${i}`);
-      if (!v) break;
-      chunks.push(v);
-    }
-    if (chunks.length === 0) return null;
-    raw = chunks.join("");
-  }
-  const decoded = decodeURIComponent(raw);
-  if (!decoded.startsWith("base64-")) return decoded;
+  const cap = (window as {
+    Capacitor?: {
+      isNativePlatform?: () => boolean;
+      isPluginAvailable?: (name: string) => boolean;
+    };
+  }).Capacitor;
+  if (typeof cap?.isNativePlatform !== "function") return false;
+  if (!cap.isNativePlatform()) return false;
+  if (typeof cap.isPluginAvailable !== "function") return false;
   try {
-    const b64 = decoded.slice("base64-".length);
-    const norm = b64.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = norm + "=".repeat((4 - (norm.length % 4)) % 4);
-    const bin = atob(pad);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
+    return cap.isPluginAvailable("Preferences");
   } catch {
-    return decoded;
+    return false;
   }
 }
 
-// Capacitor Preferences をラップした Supabase の auth.storage アダプタ。
-// 読みは Preferences 最優先。Preferences に無く、かつ auth token key のときだけ
-// Cookie から救済読みして Preferences に書き戻す (= 初回起動時の移行)。
-const PreferencesStorage = {
-  async getItem(key: string): Promise<string | null> {
-    const { Preferences } = await import("@capacitor/preferences");
-    const got = await Preferences.get({ key });
-    if (got.value) return got.value;
-    if (key === AUTH_TOKEN_KEY) {
-      const fromCookie = readSupabaseCookieChunks(key);
-      if (fromCookie) {
-        await Preferences.set({ key, value: fromCookie });
-        return fromCookie;
-      }
-    }
-    return null;
-  },
-  async setItem(key: string, value: string): Promise<void> {
-    const { Preferences } = await import("@capacitor/preferences");
-    await Preferences.set({ key, value });
-  },
-  async removeItem(key: string): Promise<void> {
-    const { Preferences } = await import("@capacitor/preferences");
-    await Preferences.remove({ key });
-  },
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: {
+    path?: string;
+    domain?: string;
+    maxAge?: number;
+    expires?: Date | string | number;
+    sameSite?: boolean | "lax" | "strict" | "none";
+    secure?: boolean;
+    httpOnly?: boolean;
+  };
 };
 
-let cachedNativeClient: SupabaseClient | null = null;
-function getNativeClient(): SupabaseClient {
-  if (cachedNativeClient) return cachedNativeClient;
-  cachedNativeClient = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      storage: PreferencesStorage,
-      storageKey: AUTH_TOKEN_KEY,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: "pkce",
-    },
-  });
-  return cachedNativeClient;
+async function readPreferencesCookies(): Promise<{ name: string; value: string }[]> {
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    const { keys } = await Preferences.keys();
+    const out: { name: string; value: string }[] = [];
+    for (const key of keys) {
+      if (!key.startsWith("sb-")) continue;
+      const { value } = await Preferences.get({ key });
+      if (value !== null && value !== undefined) out.push({ name: key, value });
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
-// ネイティブ (Capacitor WebView): createClient + Preferences で永続化。
-// iOS WKWebView / Android WebView の Cookie が ITP やアプリ再起動で消える問題を回避する。
-// それ以外 (Web ブラウザ / SSR): 従来通り @supabase/ssr の createBrowserClient (Cookie 保存)。
-// isCapacitorNative() が SSR で false を返すので、サーバー側は browser client の
-// no-op パスを通る (SSR の auth 判定は supabaseServer.ts 側を使う)。
-export const supabase: SupabaseClient = isCapacitorNative()
-  ? getNativeClient()
+async function writePreferencesCookies(cookies: CookieToSet[]) {
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    for (const c of cookies) {
+      if (!c.name.startsWith("sb-")) continue;
+      const expired = c.options?.maxAge === 0 || c.value === "";
+      if (expired) {
+        await Preferences.remove({ key: c.name });
+      } else {
+        await Preferences.set({ key: c.name, value: c.value });
+      }
+    }
+  } catch {
+    // noop
+  }
+}
+
+function readDocumentCookies(): { name: string; value: string }[] {
+  if (typeof document === "undefined" || !document.cookie) return [];
+  const out: { name: string; value: string }[] = [];
+  for (const part of document.cookie.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    const name = part.slice(0, eq).trim();
+    const rawValue = part.slice(eq + 1).trim();
+    if (!name) continue;
+    try {
+      out.push({ name, value: decodeURIComponent(rawValue) });
+    } catch {
+      out.push({ name, value: rawValue });
+    }
+  }
+  return out;
+}
+
+function writeDocumentCookies(cookies: CookieToSet[]) {
+  if (typeof document === "undefined") return;
+  for (const c of cookies) {
+    const o = c.options ?? {};
+    const parts = [`${c.name}=${encodeURIComponent(c.value)}`];
+    parts.push(`path=${o.path ?? "/"}`);
+    if (o.domain) parts.push(`domain=${o.domain}`);
+    if (typeof o.maxAge === "number") parts.push(`max-age=${o.maxAge}`);
+    if (o.expires) {
+      const d =
+        o.expires instanceof Date ? o.expires : new Date(o.expires);
+      parts.push(`expires=${d.toUTCString()}`);
+    }
+    if (o.sameSite) {
+      const v = typeof o.sameSite === "string" ? o.sameSite : "lax";
+      parts.push(`SameSite=${v}`);
+    }
+    if (o.secure) parts.push("Secure");
+    document.cookie = parts.join("; ");
+  }
+}
+
+// Cookie と Preferences の内容が食い違っていたら両方向に揃える。
+// - Cookie だけに session が残っている旧ユーザー (更新前にログイン済み) → Preferences に書き込む
+// - Preferences だけに session がある (Cookie は ITP で purge) → Cookie に書き戻して SSR も通す
+function mirrorMissing(
+  prefs: { name: string; value: string }[],
+  browser: { name: string; value: string }[],
+) {
+  const prefMap = new Map(prefs.map((c) => [c.name, c.value]));
+  const browserMap = new Map(browser.map((c) => [c.name, c.value]));
+  const toCookie: CookieToSet[] = [];
+  const toPrefs: CookieToSet[] = [];
+  for (const [name, value] of prefMap) {
+    if (browserMap.get(name) !== value) {
+      toCookie.push({
+        name,
+        value,
+        options: {
+          path: "/",
+          sameSite: "lax",
+          secure: true,
+          maxAge: 60 * 60 * 24 * 365,
+        },
+      });
+    }
+  }
+  for (const [name, value] of browserMap) {
+    if (!name.startsWith("sb-")) continue;
+    if (prefMap.get(name) !== value) {
+      toPrefs.push({ name, value });
+    }
+  }
+  if (toCookie.length) writeDocumentCookies(toCookie);
+  if (toPrefs.length) void writePreferencesCookies(toPrefs);
+}
+
+function createNativeClient(): SupabaseClient {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      async getAll() {
+        const [prefs, browser] = await Promise.all([
+          readPreferencesCookies(),
+          Promise.resolve(readDocumentCookies()),
+        ]);
+        mirrorMissing(prefs, browser);
+        const merged = new Map<string, string>();
+        for (const c of browser) merged.set(c.name, c.value);
+        for (const c of prefs) merged.set(c.name, c.value);
+        return Array.from(merged, ([name, value]) => ({ name, value }));
+      },
+      async setAll(cookies) {
+        writeDocumentCookies(cookies);
+        await writePreferencesCookies(cookies);
+      },
+    },
+  });
+}
+
+export const supabase: SupabaseClient = isPreferencesAvailable()
+  ? createNativeClient()
   : createBrowserClient(supabaseUrl, supabaseAnonKey);

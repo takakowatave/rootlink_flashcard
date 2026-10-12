@@ -39,10 +39,15 @@ export default function AuthSignup() {
   const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   // native は /onboarding のスプラッシュで規約・プライバシーへの同意動線を
   // 通しているので、signup の checkbox は重複。ここでは Web だけ出す。
-  // hydration mismatch を避けるため mount 後に判定する。
+  // hydration mismatch と、native で Web フォームが 1 フレーム見えるのを
+  // 避けるため、platformResolved になるまで何も描画しない。
   const [isNative, setIsNative] = useState(false);
+  const [platformResolved, setPlatformResolved] = useState(false);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
-  useEffect(() => setIsNative(isNativePlatform()), []);
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+    setPlatformResolved(true);
+  }, []);
 
   const {
     register,
@@ -88,6 +93,9 @@ export default function AuthSignup() {
     setDone(true);
   };
 
+  // platform 判定が終わるまでは何も描画しない。初回ペイントで Web フォームが
+  // 一瞬見えてから NativeAuthForm に差し替わるのを避ける。
+  if (!platformResolved) return null;
   // native は Figma 準拠の NativeAuthForm に差し替える。匿名ユーザーには updateUser で
   // 現ゲストに紐付ける (NativeAuthForm 内で処理)。Web は従来のレイアウトを維持。
   if (isNative) return <NativeAuthForm mode="signup" />;

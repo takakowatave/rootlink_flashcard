@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import Button from '@/components/Button'
@@ -13,8 +13,9 @@ import { isNativeOrPreview } from '@/lib/isPreviewNative'
 import { supabase } from '@/lib/supabaseClient'
 import { PROFILE_CREATED_EVENT } from '@/components/AppShell'
 import {
-  ONBOARDING_STEP,
-  ONBOARDING_TOTAL_STEPS,
+  getOnboardingStepIndex,
+  getOnboardingTotalSteps,
+  type OnboardingStepId,
 } from '@/lib/onboardingSteps'
 
 // Figma 2613:6938 (native app) の 3 ステップ:
@@ -23,21 +24,36 @@ import {
 //   step 3  3136:5694  アカウント名 (TextInput + 「次へ」で profiles.username 保存)
 // その後 '/' に遷移し、AppShell 配下の OnboardingQuestions overlay が
 // 英語レベル → 用途 → きっかけ → リマインダー → スタート の 5 ステップを続ける。
+// 進捗バー・戻る・進むの通し番号は app/lib/onboardingSteps.ts に集約。
 
-type Step = 1 | 2 | 3
+type SplashStep = Extract<OnboardingStepId, 'welcome' | 'terms' | 'accountName'>
 
 const NAME_MAX = 20
 
 export default function OnboardingPage() {
+  // useSearchParams を使うため、ビルド時の prerender エラー (CSR bailout) を
+  // 避けるために Suspense で囲む。
+  return (
+    <Suspense fallback={null}>
+      <OnboardingPageInner />
+    </Suspense>
+  )
+}
+
+function OnboardingPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const resume = searchParams?.get('resume')
   const [ready, setReady] = useState(false)
-  const [step, setStep] = useState<Step>(1)
+  const [step, setStep] = useState<SplashStep>('welcome')
   const [starting, setStarting] = useState(false)
   const [savingName, setSavingName] = useState(false)
   const [accountName, setAccountName] = useState('')
+  const isNative = useMemo(() => isNativePlatform(), [])
+  const totalSteps = getOnboardingTotalSteps(isNative)
 
   useEffect(() => {
-    if (!isNativeOrPreview(isNativePlatform())) {
+    if (!isNativeOrPreview(isNative)) {
       router.replace('/login')
       return
     }
@@ -47,18 +63,25 @@ export default function OnboardingPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
         if (session?.user) {
-          // ゲストサインイン済みで戻ってきたらアカウント名ステップへ復帰
           const { data: profile } = await supabase
             .from('profiles')
             .select('username')
             .eq('id', session.user.id)
             .maybeSingle()
           if (cancelled) return
+          // overlay (step 4=englishLevel) の「←」で戻ってきたときは、
+          // 既にアカウント名が保存されていてもアカウント名ステップを再表示する。
+          if (resume === 'accountName') {
+            if (profile?.username) setAccountName(profile.username)
+            setStep('accountName')
+            setReady(true)
+            return
+          }
           if (profile?.username) {
             router.replace('/')
             return
           }
-          setStep(3)
+          setStep('accountName')
           setReady(true)
           return
         }
@@ -75,14 +98,14 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, resume, isNative])
 
   // step 2 の「同意してはじめる」= 匿名サインイン。成功したら step 3 (アカウント名) へ。
   async function handleAgree() {
     if (starting) return
     setStarting(true)
     try {
-      if (!isNativePlatform()) {
+      if (!isNative) {
         router.replace('/signup')
         return
       }
@@ -94,7 +117,7 @@ export default function OnboardingPage() {
           return
         }
       }
-      setStep(3)
+      setStep('accountName')
     } catch {
       toast.error('はじめるのに失敗しました。しばらくしてもう一度お試しください')
     } finally {
@@ -111,7 +134,7 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('セッションが切れました。もう一度お試しください')
-        setStep(1)
+        setStep('welcome')
         return
       }
       const { error } = await supabase
@@ -133,21 +156,23 @@ export default function OnboardingPage() {
 
   return (
     <div className="fixed inset-0 bg-primary-subtle flex flex-col pt-[env(safe-area-inset-top)]">
-      {step === 1 && <WelcomeStep onNext={() => setStep(2)} />}
-      {step === 2 && (
+      {step === 'welcome' && <WelcomeStep onNext={() => setStep('terms')} />}
+      {step === 'terms' && (
         <TermsStep
-          onBack={() => setStep(1)}
+          onBack={() => setStep('welcome')}
           onAgree={handleAgree}
           agreeing={starting}
         />
       )}
-      {step === 3 && (
+      {step === 'accountName' && (
         <AccountNameStep
           value={accountName}
           onChange={setAccountName}
           onNext={handleSaveName}
-          onBack={() => setStep(2)}
+          onBack={() => setStep('terms')}
           saving={savingName}
+          stepIndex={getOnboardingStepIndex('accountName', isNative)}
+          totalSteps={totalSteps}
         />
       )}
     </div>
@@ -260,20 +285,24 @@ function AccountNameStep({
   onNext,
   onBack,
   saving,
+  stepIndex,
+  totalSteps,
 }: {
   value: string
   onChange: (v: string) => void
   onNext: () => void
   onBack: () => void
   saving: boolean
+  stepIndex: number
+  totalSteps: number
 }) {
   const trimmed = value.trim()
   const canProceed = trimmed.length > 0 && trimmed.length <= NAME_MAX
   return (
     <div className="flex flex-col flex-1 bg-primary-subtle min-h-0">
       <OnboardingProgressBar
-        step={ONBOARDING_STEP.accountName}
-        totalSteps={ONBOARDING_TOTAL_STEPS}
+        step={stepIndex}
+        totalSteps={totalSteps}
         onBack={onBack}
       />
       <div className="flex-1 overflow-y-auto px-4 pt-6">

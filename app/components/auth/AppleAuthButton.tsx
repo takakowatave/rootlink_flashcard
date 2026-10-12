@@ -192,17 +192,36 @@ export default function AppleAuthButton({
     }
   };
 
+  const native = isNativePlatform();
+
   return (
     <button
       onClick={handleClick}
       disabled={APPLE_DISABLED || inAppBrowser}
       className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
+      {native ? (
+        // ネイティブの黒ボタンでは <img> だと SVG の currentColor が親の text-white を
+        // 拾えず黒いままで消えてしまう。Apple HIG が Sign in with Apple ボタンに
+        // Apple ロゴを必須としているので、ここは inline SVG で白く描画する。
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+          className="w-5 h-5 text-white"
+        >
+          <path d="M14.94 10.62c-.02-2.14 1.75-3.17 1.83-3.22-1-1.46-2.55-1.66-3.1-1.68-1.32-.13-2.58.78-3.25.78-.68 0-1.71-.76-2.81-.74-1.44.02-2.78.84-3.52 2.13-1.5 2.6-.38 6.44 1.08 8.56.71 1.03 1.56 2.19 2.66 2.15 1.07-.04 1.48-.69 2.77-.69 1.29 0 1.65.69 2.78.67 1.15-.02 1.88-1.05 2.58-2.09.81-1.2 1.15-2.36 1.17-2.42-.03-.01-2.24-.86-2.26-3.41zM12.83 4.32c.59-.71 1-1.7.89-2.68-.86.03-1.9.57-2.51 1.28-.55.63-1.03 1.63-.9 2.6.96.07 1.93-.48 2.52-1.2z" />
+        </svg>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
+      )}
       {APPLE_DISABLED
-        ? `${isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant]}（テスト中につき不可）`
-        : (isNativePlatform() ? LABEL_NATIVE : LABEL_WEB[variant])}
+        ? `${native ? LABEL_NATIVE : LABEL_WEB[variant]}（テスト中につき不可）`
+        : (native ? LABEL_NATIVE : LABEL_WEB[variant])}
     </button>
   );
 }
