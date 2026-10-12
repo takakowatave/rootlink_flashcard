@@ -5,8 +5,14 @@ import {
   type EnglishLevel,
   type AcquisitionSource,
   type Expectation,
+  type QuestionStepId,
   type ReminderSlot,
 } from '../app/components/OnboardingQuestions'
+import {
+  getNextOnboardingStepId,
+  getPreviousOnboardingStepId,
+  QUESTION_STEPS,
+} from '../app/lib/onboardingSteps'
 
 const meta: Meta<typeof OnboardingQuestionsView> = {
   title: 'Onboarding/OnboardingQuestions',
@@ -17,8 +23,6 @@ export default meta
 
 type Story = StoryObj<typeof OnboardingQuestionsView>
 
-type Step = 1 | 2 | 3 | 4 | 5
-
 const DEFAULT_REMINDERS: ReminderSlot[] = [
   { key: 'morning', label: '起床時', time: '07:00', enabled: true },
   { key: 'lunch', label: 'お昼休み', time: '12:00', enabled: false },
@@ -26,14 +30,13 @@ const DEFAULT_REMINDERS: ReminderSlot[] = [
 ]
 
 function Interactive({
-  initialStep = 1 as Step,
+  initialStep = 'englishLevel' as QuestionStepId,
   initialLevel = null as EnglishLevel | null,
   initialSource = null as AcquisitionSource | null,
   initialExpectation = null as Expectation | null,
-  showReminders = false,
+  isNative = false,
 }) {
-  const totalSteps = showReminders ? 5 : 4
-  const [step, setStep] = useState<Step>(initialStep)
+  const [stepId, setStepId] = useState<QuestionStepId>(initialStep)
   const [level, setLevel] = useState<EnglishLevel | null>(initialLevel)
   const [source, setSource] = useState<AcquisitionSource | null>(initialSource)
   const [expectation, setExpectation] = useState<Expectation | null>(initialExpectation)
@@ -41,9 +44,8 @@ function Interactive({
 
   return (
     <OnboardingQuestionsView
-      step={step}
-      totalSteps={totalSteps}
-      showReminders={showReminders}
+      stepId={stepId}
+      isNative={isNative}
       level={level}
       source={source}
       expectation={expectation}
@@ -56,66 +58,70 @@ function Interactive({
       }
       onReminderAdd={() => alert('スロット追加 (story では実装なし)')}
       onReminderDelete={() => alert('スロット削除 (story では実装なし)')}
-      onNext={() => setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))}
-      onBack={() => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))}
+      onNext={() => {
+        const next = getNextOnboardingStepId(stepId, isNative)
+        if (next && QUESTION_STEPS.includes(next as QuestionStepId)) {
+          setStepId(next as QuestionStepId)
+        }
+      }}
+      onBack={() => {
+        const prev = getPreviousOnboardingStepId(stepId, isNative)
+        if (prev && QUESTION_STEPS.includes(prev as QuestionStepId)) {
+          setStepId(prev as QuestionStepId)
+        }
+      }}
       onSubmit={() => alert(`保存: level=${level} source=${source} expectation=${expectation}`)}
     />
   )
 }
 
-// OnboardingQuestions は overlay 内の 1..5 を step として受け取るが、
-// 進捗バーに出る数字はオンボーディング全体の通し番号 (4..8) に変換される
-// (lib/onboardingSteps.ts / toGlobalOnboardingStep)。
-//   step=1 (Level)       → 進捗 4 / 8
-//   step=2 (Expectation) → 進捗 5 / 8
-//   step=3 (Source)      → 進捗 6 / 8
-//   step=4 (Reminders)   → 進捗 7 / 8  (showReminders=true のみ)
-//   step=5 (Complete)    → 進捗 8 / 8  (showReminders=false なら step=4 で 8)
+// オンボーディング全体の通し番号 (onboardingSteps.ts) で進捗バーが決まる:
+//   englishLevel → 4 / 8 (native) または 4 / 7 (web)
+//   expectation  → 5 / 8 (native) または 5 / 7 (web)
+//   source       → 6 / 8 (native) または 6 / 7 (web)
+//   reminders    → 7 / 8 (native のみ)
+//   complete     → 8 / 8 (native) または 7 / 7 (web)
 
-// Web (4-step: Level → Expectation → Source → Complete)
-export const Step1Level: Story = { render: () => <Interactive initialStep={1} /> }
+export const Step1Level: Story = { render: () => <Interactive initialStep="englishLevel" /> }
 export const Step2Expectation: Story = {
-  render: () => <Interactive initialStep={2} initialLevel="b2" />,
+  render: () => <Interactive initialStep="expectation" initialLevel="b2" />,
 }
 export const Step3Source: Story = {
-  render: () => <Interactive initialStep={3} initialLevel="b2" initialExpectation="dictionary" />,
+  render: () => <Interactive initialStep="source" initialLevel="b2" initialExpectation="dictionary" />,
 }
-// Web 版の Complete は overlay 内 step=4 (showReminders=false のため Reminders を飛ばす)
 export const Step4Complete: Story = {
   render: () => (
-    <Interactive initialStep={4} initialLevel="b2" initialSource="search" initialExpectation="dictionary" />
+    <Interactive initialStep="complete" initialLevel="b2" initialSource="search" initialExpectation="dictionary" />
   ),
 }
 
-// Native (5-step: adds Reminders as step 4, Complete は step 5)
 export const NativeStep4Reminders: Story = {
   render: () => (
     <Interactive
-      initialStep={4}
+      initialStep="reminders"
       initialLevel="b2"
       initialSource="search"
       initialExpectation="dictionary"
-      showReminders
+      isNative
     />
   ),
 }
 export const NativeStep5Complete: Story = {
   render: () => (
     <Interactive
-      initialStep={5}
+      initialStep="complete"
       initialLevel="b2"
       initialSource="search"
       initialExpectation="dictionary"
-      showReminders
+      isNative
     />
   ),
 }
 
 export const Saving: Story = {
   args: {
-    step: 5,
-    totalSteps: 5,
-    showReminders: false,
+    stepId: 'complete',
+    isNative: false,
     level: 'b2',
     source: 'search',
     expectation: 'dictionary',

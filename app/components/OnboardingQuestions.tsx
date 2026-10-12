@@ -24,15 +24,20 @@ import Toggle from './Toggle'
 import PlantGrowthAnimation from './PlantGrowthAnimation'
 import OnboardingProgressBar from './OnboardingProgressBar'
 import {
-  ONBOARDING_STEP,
-  ONBOARDING_TOTAL_STEPS,
+  getNextOnboardingStepId,
+  getOnboardingStepIndex,
+  getOnboardingTotalSteps,
+  getPreviousOnboardingStepId,
+  QUESTION_STEPS,
+  SPLASH_STEPS,
+  type OnboardingStepId,
 } from '@/lib/onboardingSteps'
 
 // Figma: xe5UwVx38JWu5doqwXczQu
-//   Web  : 2613:6938 (4画面: Level → Source → Expectation → Complete)
-//   Native: 上記 + 2609:6594 (学習時間帯) を Expectation の後に挿入 (5画面)
-// Splash と 利用規約 は /onboarding (ネイティブのみ) に分離。
-// リマインダーは OS のローカル通知のみ (DB 永続化なし)。追加ボタンは OS 通知設定を開く。
+//   Web  : 2613:6938 (4画面: Level → Expectation → Source → Complete)
+//   Native: 上記 + 2609:6594 (学習時間帯) を Source の後に挿入 (5画面)
+// Welcome・利用規約・アカウント名は /onboarding/page.tsx で済ませている。
+// 進捗バー・戻る・進むの通し番号は app/lib/onboardingSteps.ts に集約。
 
 export type EnglishLevel = 'a1_a2' | 'b1' | 'b2' | 'c1' | 'c2'
 export type AcquisitionSource = 'search' | 'appstore' | 'sns' | 'blog' | 'wom' | 'other'
@@ -73,16 +78,11 @@ const EXPECTATION_OPTIONS: ExpectationOption[] = [
 
 const DEFAULT_REMINDERS: ReminderSlot[] = DEFAULT_REMINDER_SLOTS
 
-// Figma 2613:6938 (native app) に合わせた overlay の 5 ステップ:
-//   step 1: 英語レベル / step 2: 用途 / step 3: きっかけ
-//   step 4 (native): 学習時間帯 / step 5 or 4: スタート (完了)
-// Welcome と利用規約とアカウント名は /onboarding/page.tsx で済ませている。
-type Step = 1 | 2 | 3 | 4 | 5
+export type QuestionStepId = (typeof QUESTION_STEPS)[number]
 
 type ViewProps = {
-  step: Step
-  totalSteps: number
-  showReminders: boolean
+  stepId: QuestionStepId
+  isNative: boolean
   level: EnglishLevel | null
   source: AcquisitionSource | null
   expectation: Expectation | null
@@ -102,15 +102,6 @@ type ViewProps = {
   onSubmit: () => void
 }
 
-// overlay 内の相対 step (1..5) をオンボーディング全体の通し番号 (4..8) にマップする。
-// non-native (showReminders=false) のときは Reminders (通し 7) を飛ばして
-// complete を 8 に揃える。
-export function toGlobalOnboardingStep(step: Step, showReminders: boolean): number {
-  if (showReminders) return step + 3
-  if (step === 4) return ONBOARDING_STEP.complete
-  return step + 3
-}
-
 function Radio({ selected }: { selected: boolean }) {
   return (
     <span
@@ -124,9 +115,8 @@ function Radio({ selected }: { selected: boolean }) {
 }
 
 export function OnboardingQuestionsView({
-  step,
-  totalSteps,
-  showReminders,
+  stepId,
+  isNative,
   level,
   source,
   expectation,
@@ -145,21 +135,21 @@ export function OnboardingQuestionsView({
   const canProceedLevel = level !== null
   const canProceedSource = source !== null
   const canProceedExpectation = expectation !== null
-  // step 1=Level / 2=Expectation / 3=Source / 4=Reminders(native) / 5 or 4=Complete。
-  const completeStep: Step = showReminders ? 5 : 4
+  const totalSteps = getOnboardingTotalSteps(isNative)
+  const progressStep = getOnboardingStepIndex(stepId, isNative)
 
   return (
     <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
       <div className="absolute inset-0 bg-black/40 hidden md:block" />
       <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden">
       <OnboardingProgressBar
-        step={toGlobalOnboardingStep(step, showReminders)}
-        totalSteps={ONBOARDING_TOTAL_STEPS}
-        onBack={step > 1 ? onBack : null}
+        step={progressStep}
+        totalSteps={totalSteps}
+        onBack={onBack}
       />
 
       <div className="flex-1 overflow-y-auto pb-32">
-        {step === 1 && (
+        {stepId === 'englishLevel' && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               現在の英語レベルを<br />教えてください
@@ -194,7 +184,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 3 && (
+        {stepId === 'source' && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               RootLink を<br />何で知ったか教えてください
@@ -226,7 +216,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 2 && (
+        {stepId === 'expectation' && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               RootLink に<br />何を期待していますか
@@ -258,7 +248,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === 4 && showReminders && (
+        {stepId === 'reminders' && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               学習する時間帯を決めて<br />習慣化しましょう
@@ -318,7 +308,7 @@ export function OnboardingQuestionsView({
           </div>
         )}
 
-        {step === completeStep && (
+        {stepId === 'complete' && (
           <div className="flex flex-col gap-6 pt-6">
             <h2 className="text-xl font-semibold text-center leading-7 text-gray-950">
               毎日ログインして<br />木を育てましょう
@@ -336,27 +326,27 @@ export function OnboardingQuestionsView({
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-32 flex items-center justify-center px-6 bg-teal-50">
-        {step === 1 && (
+        {stepId === 'englishLevel' && (
           <Button onClick={onNext} disabled={!canProceedLevel} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === 2 && (
+        {stepId === 'expectation' && (
           <Button onClick={onNext} disabled={!canProceedExpectation} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === 3 && (
+        {stepId === 'source' && (
           <Button onClick={onNext} disabled={!canProceedSource} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === 4 && showReminders && (
+        {stepId === 'reminders' && (
           <Button onClick={onNext} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             次へ
           </Button>
         )}
-        {step === completeStep && (
+        {stepId === 'complete' && (
           <Button onClick={onSubmit} disabled={saving} variant="primary" fullWidth radius="full" className="h-[50px] text-base font-medium">
             {saving ? '保存中...' : 'はじめる'}
           </Button>
@@ -371,18 +361,18 @@ export default function OnboardingQuestions() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const [visible, setVisible] = useState(false)
-  const [step, setStep] = useState<Step>(1)
+  const isNative = useMemo(() => isNativeOrPreview(isNativePlatform()), [])
+  // 一覧の中で overlay が担当する範囲 (englishLevel 〜 complete) をフィルタして保持。
+  const questionSteps = useMemo(
+    () => QUESTION_STEPS.filter((id) => isNative || id !== 'reminders'),
+    [isNative],
+  )
+  const [stepId, setStepId] = useState<QuestionStepId>('englishLevel')
   const [level, setLevel] = useState<EnglishLevel | null>(null)
   const [source, setSource] = useState<AcquisitionSource | null>(null)
   const [expectation, setExpectation] = useState<Expectation | null>(null)
   const [reminders, setReminders] = useState<ReminderSlot[]>(DEFAULT_REMINDERS)
   const [saving, setSaving] = useState(false)
-
-  // native の他、Web プレビューで ?preview=native が付いていれば学習時間帯
-  // ステップ (step 4) を表示する。実 native では isNativePlatform() が
-  // 生きるので今までどおり。本番 Web では false。
-  const showReminders = useMemo(() => isNativeOrPreview(isNativePlatform()), [])
-  const totalSteps = showReminders ? 5 : 4
 
   useEffect(() => {
     let cancelled = false
@@ -413,17 +403,13 @@ export default function OnboardingQuestions() {
     }
   }, [])
 
-  // 学習時間帯ステップ (step 4) では、トグル ON / OFF も時刻の変更も
+  // 学習時間帯ステップでは、トグル ON / OFF も時刻の変更も
   // 許可ダイアログを出さずに自由に触れるようにする。実際の許可ダイアログは
-  // step 4 の「次へ」を押したタイミング (goNext) で初めて出す。
+  // reminders の「次へ」を押したタイミングで初めて出す。
   const goNext = async () => {
-    if (step === 4 && showReminders) {
-      // ON にした枠が 1 つも無ければ、許可ダイアログを出さずそのまま次へ。
+    if (stepId === 'reminders') {
       const hasAnyEnabled = reminders.some((r) => r.enabled)
       if (hasAnyEnabled) {
-        // 許可されたらこの後の persistAndApplyReminders が予約する。
-        // 拒否されてもモーダルやエラーは出さず、設定は保存だけしてそのまま次へ進む
-        // (後から設定画面で許可を戻したときに、その設定が引き継がれる)。
         await ensureReminderPermission()
         await persistAndApplyReminders({
           version: 1,
@@ -432,9 +418,24 @@ export default function OnboardingQuestions() {
         })
       }
     }
-    setStep((s) => (s < totalSteps ? ((s + 1) as Step) : s))
+    const next = getNextOnboardingStepId(stepId, isNative)
+    if (next && (next === 'reminders' || QUESTION_STEPS.includes(next))) {
+      setStepId(next as QuestionStepId)
+    }
   }
-  const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
+
+  // englishLevel (overlay の先頭) の「←」は overlay を抜けてアカウント名
+  // ステップ (page.tsx) に戻る。それ以外は一覧上の 1 つ前のステップに戻る。
+  const goBack = () => {
+    const prev = getPreviousOnboardingStepId(stepId, isNative)
+    if (!prev) return
+    if (SPLASH_STEPS.includes(prev)) {
+      setVisible(false)
+      router.push(`/onboarding?resume=${prev}`)
+      return
+    }
+    setStepId(prev as QuestionStepId)
+  }
 
   const patchReminder = (
     key: ReminderSlot['key'],
@@ -442,10 +443,6 @@ export default function OnboardingQuestions() {
   ) => {
     const current = reminders.find((r) => r.key === key)
     if (!current) return
-    // 時刻を触ったら「この時刻に通知したい」という意思とみなして、その枠を ON にする
-    // (以前は time だけ更新して OFF のままだと通知が予約されず、トグルが上がらない
-    // バグになっていた)。許可ダイアログは step 5 の「次へ」でまとめて出すので、
-    // ここでは state 更新だけ行う。
     const wantsOn = patch.enabled === true || patch.time !== undefined
     const nextEnabled = patch.enabled === false
       ? false
@@ -497,20 +494,26 @@ export default function OnboardingQuestions() {
       toast.error('保存に失敗しました')
       return
     }
-    // 通知の許可要求と予約は step 5 の「次へ」で完了済み。ここでは追加処理なし。
     setSaving(false)
     window.dispatchEvent(new CustomEvent(ONBOARDING_COMPLETE_EVENT))
     setVisible(false)
     router.push('/')
   }
 
+  // 現在の stepId が overlay 側 (questionSteps) に属していなければ何もしない。
+  // Native/Web の切替で中間ステップが外れたときの保険。
+  useEffect(() => {
+    if (!questionSteps.includes(stepId)) {
+      setStepId('englishLevel')
+    }
+  }, [questionSteps, stepId])
+
   if (!visible) return null
 
   return (
     <OnboardingQuestionsView
-      step={step}
-      totalSteps={totalSteps}
-      showReminders={showReminders}
+      stepId={stepId}
+      isNative={isNative}
       level={level}
       source={source}
       expectation={expectation}

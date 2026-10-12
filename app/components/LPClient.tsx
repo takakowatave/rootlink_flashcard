@@ -9,27 +9,21 @@ import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { HiSearch } from 'react-icons/hi'
-import { isNativePlatform } from '@/lib/isNativePlatform'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
   'https://rootlink-server-v2-774622345521.asia-northeast1.run.app'
 
+// ネイティブ (Capacitor WebView) 経路での「ゲストなら /onboarding、
+// セッションあれば Dashboard」の判定は HomePageClientFallback に移した。
+// LPClient は純粋に Web ランディング描画だけを担当する。
 export default function LPClient() {
   const router = useRouter()
   const [value, setValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showStickySearch, setShowStickySearch] = useState(false)
-  const [isNative, setIsNative] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (isNativePlatform()) {
-      setIsNative(true)
-      router.replace('/onboarding')
-    }
-  }, [router])
 
   useEffect(() => {
     const el = heroRef.current
@@ -70,8 +64,6 @@ export default function LPClient() {
       setIsLoading(false)
     }
   }
-
-  if (isNative) return null
 
   return (
     <main>

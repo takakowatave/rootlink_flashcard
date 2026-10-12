@@ -28,9 +28,13 @@ export default function AuthLogin() {
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [isNative, setIsNative] = useState(false);
+  const [platformResolved, setPlatformResolved] = useState(false);
   const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
-  useEffect(() => setIsNative(isNativePlatform()), []);
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+    setPlatformResolved(true);
+  }, []);
 
   const {
     register,
@@ -61,6 +65,9 @@ export default function AuthLogin() {
     router.refresh();
   };
 
+  // platform 判定が終わるまでは何も描画しない。初回ペイントで Web フォームが
+  // 一瞬見えてから NativeAuthForm に差し替わるのを避ける。
+  if (!platformResolved) return null;
   // native (iOS / Android) は Figma 準拠の NativeAuthForm に差し替える。
   // Web は従来のレイアウト (AuthPage + AuthCard) を維持する ("Web は変えない" 方針)。
   if (isNative) return <NativeAuthForm mode="login" />;

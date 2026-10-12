@@ -567,7 +567,9 @@ export default function EditProfileModal({
                     radius="lg"
                     className="h-[50px] text-sm font-medium"
                     onClick={() => {
-                      onClose();
+                      // onClose() を先にすると設定モーダルが閉じて背後のダッシュボードが
+                      // 一瞬見えてしまう。先に遷移を発火して、モーダルは遷移先がマウント
+                      // した後にアンマウントされるタイミングに任せる。
                       router.push("/signup");
                     }}
                   >
