@@ -125,39 +125,116 @@ function writeDocumentCookies(cookies: CookieToSet[]) {
   }
 }
 
-// Cookie と Preferences の内容が食い違っていたら両方向に揃える。
-// - Cookie だけに session が残っている旧ユーザー (更新前にログイン済み) → Preferences に書き込む
-// - Preferences だけに session がある (Cookie は ITP で purge) → Cookie に書き戻して SSR も通す
-function mirrorMissing(
-  prefs: { name: string; value: string }[],
-  browser: { name: string; value: string }[],
-) {
-  const prefMap = new Map(prefs.map((c) => [c.name, c.value]));
-  const browserMap = new Map(browser.map((c) => [c.name, c.value]));
+// Supabase の auth cookie は chunked されることがある:
+//   sb-<ref>-auth-token            (非 chunked)
+//   sb-<ref>-auth-token.0, .1, ... (chunked)
+// どちらの形式も「同じ base name のまとまり」として扱わないと、chunk の一部だけ
+// 新旧混在する事故 (Preferences の .2 が残って Cookie の .0 .1 と混ざる等) が起きる。
+function baseKeyOf(name: string): string {
+  const m = name.match(/^(sb-.+?)\.(\d+)$/);
+  return m ? m[1] : name;
+}
+
+type Entry = { name: string; value: string };
+
+function groupAuthEntries(entries: Entry[]) {
+  const groups = new Map<string, Entry[]>();
+  const nonAuth: Entry[] = [];
+  for (const e of entries) {
+    if (!e.name.startsWith("sb-")) {
+      nonAuth.push(e);
+      continue;
+    }
+    const base = baseKeyOf(e.name);
+    const g = groups.get(base) ?? [];
+    g.push(e);
+    groups.set(base, g);
+  }
+  return { groups, nonAuth };
+}
+
+// Cookie を「正」、Preferences は「Cookie が消えたときの予備」として扱う。
+//   - base name 単位 (= 同じ `sb-<ref>-auth-token` の chunk 一式) で判定する。
+//   - Cookie 側にその base の値が 1 つでも有れば → Cookie を使い、Preferences を
+//     その base について Cookie の内容へ揃える (Pref にしかない旧 chunk は削除)。
+//   - Cookie 側に無く Preferences にだけ有れば (ITP やアプリ再起動で Cookie が消えた
+//     ケース) → Preferences の値を使い、Cookie に書き戻して SSR / middleware にも
+//     見えるようにする。
+// 「Preferences 優先」にしてしまうと、/verify や SSR のルートがサーバー側で Cookie
+// だけに新しい session を書き込んだとき、Preferences の古いゲスト session で
+// 上書きされて確認直後にゲストに戻る事故が起きるため、必ず Cookie 側を正にする。
+async function reconcileAndReadAll(
+  prefs: Entry[],
+  browser: Entry[],
+): Promise<Entry[]> {
+  const prefInfo = groupAuthEntries(prefs);
+  const browserInfo = groupAuthEntries(browser);
+  const result: Entry[] = [...browserInfo.nonAuth];
+
   const toCookie: CookieToSet[] = [];
-  const toPrefs: CookieToSet[] = [];
-  for (const [name, value] of prefMap) {
-    if (browserMap.get(name) !== value) {
-      toCookie.push({
-        name,
-        value,
-        options: {
-          path: "/",
-          sameSite: "lax",
-          secure: true,
-          maxAge: 60 * 60 * 24 * 365,
-        },
-      });
+  const toPrefsSet: Entry[] = [];
+  const toPrefsDelete: string[] = [];
+
+  const allBases = new Set<string>([
+    ...browserInfo.groups.keys(),
+    ...prefInfo.groups.keys(),
+  ]);
+
+  for (const base of allBases) {
+    const cookieGroup = browserInfo.groups.get(base) ?? [];
+    const prefGroup = prefInfo.groups.get(base) ?? [];
+    if (cookieGroup.length > 0) {
+      // Cookie が authoritative。Preferences をこの base の cookie 内容へ揃える。
+      result.push(...cookieGroup);
+      const cookieByName = new Map(cookieGroup.map((e) => [e.name, e.value]));
+      const prefByName = new Map(prefGroup.map((e) => [e.name, e.value]));
+      // Pref にしか無い chunk は削除 (= この base の過去の chunk 残骸)
+      for (const [name] of prefByName) {
+        if (!cookieByName.has(name)) toPrefsDelete.push(name);
+      }
+      // Cookie の値を Pref へ反映
+      for (const [name, value] of cookieByName) {
+        if (prefByName.get(name) !== value) {
+          toPrefsSet.push({ name, value });
+        }
+      }
+    } else if (prefGroup.length > 0) {
+      // Cookie に無く Preferences だけに有る → Pref を使い、Cookie に書き戻す。
+      result.push(...prefGroup);
+      for (const p of prefGroup) {
+        toCookie.push({
+          name: p.name,
+          value: p.value,
+          options: {
+            path: "/",
+            sameSite: "lax",
+            secure: true,
+            maxAge: 60 * 60 * 24 * 365,
+          },
+        });
+      }
     }
   }
-  for (const [name, value] of browserMap) {
-    if (!name.startsWith("sb-")) continue;
-    if (prefMap.get(name) !== value) {
-      toPrefs.push({ name, value });
-    }
-  }
+
   if (toCookie.length) writeDocumentCookies(toCookie);
-  if (toPrefs.length) void writePreferencesCookies(toPrefs);
+  if (toPrefsSet.length || toPrefsDelete.length) {
+    void (async () => {
+      try {
+        const { Preferences } = await import("@capacitor/preferences");
+        for (const key of toPrefsDelete) {
+          await Preferences.remove({ key });
+        }
+        for (const e of toPrefsSet) {
+          await Preferences.set({ key: e.name, value: e.value });
+        }
+      } catch {
+        // Preferences が無い旧バイナリでは isPreferencesAvailable で弾かれる想定だが、
+        // 万一の import 失敗はログインを壊さないよう黙って無視する。
+      }
+    })();
+  }
+
+  return result;
 }
 
 function createNativeClient(): SupabaseClient {
@@ -168,11 +245,7 @@ function createNativeClient(): SupabaseClient {
           readPreferencesCookies(),
           Promise.resolve(readDocumentCookies()),
         ]);
-        mirrorMissing(prefs, browser);
-        const merged = new Map<string, string>();
-        for (const c of browser) merged.set(c.name, c.value);
-        for (const c of prefs) merged.set(c.name, c.value);
-        return Array.from(merged, ([name, value]) => ({ name, value }));
+        return reconcileAndReadAll(prefs, browser);
       },
       async setAll(cookies) {
         writeDocumentCookies(cookies);
