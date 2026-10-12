@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Button from '@/components/Button'
 import { TextInput } from '@/components/TextInput'
@@ -228,6 +229,9 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         >
           次へ
         </Button>
+        <Link href="/login" className="text-sm text-primary underline">
+          すでにアカウントをお持ちの方はログイン
+        </Link>
       </div>
     </>
   )
