@@ -12,7 +12,6 @@ import { isNativePlatform } from '@/lib/isNativePlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 import { recordActivity } from '@/lib/supabaseApi'
-import { consumePendingAuthFlow } from '@/lib/pendingAuthFlow'
 import { isIdentityConflictError } from '@/lib/isIdentityConflictError'
 
 type PluginListenerHandle = { remove: () => Promise<void> }
@@ -21,11 +20,10 @@ type PluginListenerHandle = { remove: () => Promise<void> }
 // 過去の壊れた /callback で auth ユーザーだけ作られて profiles 行が無いユーザーを救う
 export const PROFILE_CREATED_EVENT = 'rootlink-profile-created'
 
-// 同じ token_hash / code で二度 verifyOtp / exchangeCodeForSession が
-// 走るのを防ぐキャッシュ。app-return の自動遷移 + ボタンで deeplink が
-// 二度発火した場合、2 回目は「使用済み」で失敗して失敗画面に落ちるため。
-// module スコープに置くのは AppShell の再マウント (fast refresh 等) をまたいで
-// 同一ドキュメントの間は覚えておくため。
+// 同じ OAuth code で二度 exchangeCodeForSession が走るのを防ぐキャッシュ。
+// Google / Apple の deeplink が二重発火した場合に 2 回目が「使用済み」で
+// 失敗するのを防ぐ。module スコープに置くのは AppShell の再マウント
+// (fast refresh 等) をまたいで同一ドキュメントの間は覚えておくため。
 const processedAuthTokens = new Set<string>()
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -47,58 +45,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
     return () => data.subscription.unsubscribe()
   }, [router])
-
-  // Supabase email template が {{ .SiteURL }}?token_hash={{ .TokenHash }}&type={{ .Type }}
-  // 形式のとき、クリック先は https://www.rootlink.app?token_hash=XXX&type=YYY という
-  // 「ルートのクエリパラメータ」で届く。
-  // Supabase JS SDK の detectSessionInUrl は fragment (#access_token=) か ?code= しか
-  // 自動処理せず、?token_hash= は無視するため、明示的に verifyOtp を呼ばないと
-  // session が張られず PASSWORD_RECOVERY event も発火しない (2026-10-08 kiko 本番再現)。
-  // どのページで landing しても拾えるようグローバルに処理する。
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const url = new URL(window.location.href)
-    const tokenHash = url.searchParams.get('token_hash')
-    const type = url.searchParams.get('type')
-    if (!tokenHash || !type) return
-    // 既に /callback や /auth/app-return に居るならそちらが処理するので触らない
-    if (
-      window.location.pathname.startsWith('/callback') ||
-      window.location.pathname.startsWith('/auth/app-return')
-    ) return
-
-    const key = `token:${type}:${tokenHash}`
-    if (processedAuthTokens.has(key)) return
-    processedAuthTokens.add(key)
-
-    // URL からクエリを削除 (ブラウザ戻る等で二度 verify されないように、かつ
-    // ログインセッションの token が履歴に残らないように)
-    const cleanUrl = url.pathname + url.hash
-    window.history.replaceState(null, '', cleanUrl)
-
-    void (async () => {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: type as 'signup' | 'recovery' | 'email_change' | 'magiclink' | 'invite',
-      })
-      if (error) {
-        // 失敗時: 既にセッションが張られていれば救う。無ければ callback に流して
-        // /callback?state=confirmed で「リンク無効/使用済み」画面を出す。
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) {
-          window.location.href = '/callback?state=confirmed'
-          return
-        }
-      }
-      // 成功時: recovery は PASSWORD_RECOVERY event がグローバル listener で
-      // 拾われて /reset-password に飛ぶ。それ以外 (signup / email_change /
-      // magiclink / invite) は callback で profile 補完 + sign_up_complete 計測を通す。
-      if (type !== 'recovery') {
-        window.location.href = '/callback'
-      }
-      // type=recovery は event listener 側に任せる (ここで router.push しない)
-    })()
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -226,15 +172,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         const { Browser } = await import('@capacitor/browser')
         handle = await App.addListener('appUrlOpen', async (event: { url: string }) => {
           // 受け入れる URL:
-          //   1) com.rootlink.app://auth-callback?...        (/auth/app-return から Chrome 経由で deeplink)
-          //   2) https://www.rootlink.app/auth/app-return?...  (iOS Mail → Universal Link で native が直接起動)
-          //   3) https://www.rootlink.app/callback?...         (同上。Supabase hosted verify の redirect 先)
+          //   1) com.rootlink.app://auth-callback?...        (Google / Apple OAuth の deeplink)
+          //   2) https://www.rootlink.app/callback?...        (Universal Link で iOS が直接起動)
           //      Universal Links の apple-app-site-association が paths:['*'] なので、
           //      www.rootlink.app のあらゆる URL が native app で開く。auth 系以外は無視。
           const isCustomScheme = event.url.startsWith('com.rootlink.app://auth-callback')
-          const isUniversalAuth =
-            event.url.startsWith('https://www.rootlink.app/auth/app-return') ||
-            event.url.startsWith('https://www.rootlink.app/callback')
+          const isUniversalAuth = event.url.startsWith('https://www.rootlink.app/callback')
           if (!isCustomScheme && !isUniversalAuth) return
           await Browser.close().catch(() => {})
 
@@ -242,10 +185,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           const params = new URLSearchParams(query)
 
           // deeplink が ?error= / ?error_code= / ?error_description= の形で戻る経路。
-          // Supabase の OAuth callback が verify 失敗を返したとき、code / token_hash
-          // ではなくエラークエリとして戻ることがある (特に linkIdentity の email_exists)。
-          // code / token_hash / fragment の処理より前に拾い、衝突なら /callback の
-          // GuestLinkConfirmDialog 経路、衝突以外のエラーなら「リンク無効/使用済み」画面へ流す。
+          // Supabase の OAuth callback が verify 失敗を返したとき、code ではなく
+          // エラークエリとして戻ることがある (特に linkIdentity の email_exists)。
+          // code の処理より前に拾い、衝突なら /callback の GuestLinkConfirmDialog
+          // 経路、衝突以外のエラーなら「リンク無効/使用済み」画面へ流す。
           const errorCodeParam = params.get('error_code')
           const errorDescParam = params.get('error_description')
           const errorParam = params.get('error')
@@ -260,47 +203,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             return
           }
 
-          // token_hash 方式 (新, PKCE の code_verifier 依存を回避)
-          // Supabase テンプレートの {{ .ConfirmationURL }} を
-          //   {{ .SiteURL }}/auth/app-return?token_hash={{ .TokenHash }}&type={{ .Type }}
-          // に切り替えたときにここが走る。type は signup / recovery / email_change。
-          const tokenHash = params.get('token_hash')
-          const type = params.get('type')
-          if (tokenHash && type) {
-            // 同一 token を二度検証しない。1回目で成功 → 2回目は「使用済み」で
-            // 失敗して失敗画面に落ちる問題を防ぐ。
-            const key = `token:${type}:${tokenHash}`
-            if (processedAuthTokens.has(key)) return
-            processedAuthTokens.add(key)
-
-            const { error } = await supabase.auth.verifyOtp({
-              token_hash: tokenHash,
-              // Supabase の EmailOtpType: 'signup' | 'recovery' | 'email_change' 等
-              type: type as 'signup' | 'recovery' | 'email_change' | 'magiclink' | 'invite',
-            })
-            if (!error) {
-              // type=recovery だけ reset-password 画面へ、それ以外は callback。
-              // pendingAuthFlow に頼らず deeplink の type で判定するのがポイント
-              // (別ブラウザで開いた場合でも取り違えない)。
-              consumePendingAuthFlow()
-              window.location.href = type === 'recovery' ? '/reset-password' : '/callback'
-              return
-            }
-            // 失敗時: 期限切れ / 使用済み / bad_code_verifier を含む。
-            // ただし別窓 / 前回で verify 済みで既にセッションが張られている
-            // ケースがあるので、セッションがあれば失敗画面ではなく通常経路へ。
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session?.user) {
-              consumePendingAuthFlow()
-              window.location.href = type === 'recovery' ? '/reset-password' : '/callback'
-              return
-            }
-            window.location.href = '/callback?state=confirmed'
-            return
-          }
-
-          // 旧 PKCE 方式のフォールバック (および OAuth deeplink)。
-          // Google / Apple の linkIdentity 完了後もこの経路に ?code= で入ってくる。
+          // OAuth (Google / Apple) の PKCE code。メール認証は OTP 方式に切り替えた
+          // ため、deeplink で届く code はこの経路だけ。
           const code = params.get('code')
           if (code) {
             const key = `code:${code}`
@@ -309,44 +213,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             const { error } = await supabase.auth.exchangeCodeForSession(code)
             if (!error) {
-              const flow = consumePendingAuthFlow()
-              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              window.location.href = '/callback'
               return
             }
             // error があるとき: まず衝突かどうか判定する。衝突なら匿名セッションが
             // 残っていても /callback の GuestLinkConfirmDialog 経路に流す必要があるので、
             // session の有無で成功扱いにしてしまう経路より先に判定しなければならない。
-            // identity_already_exists / email_exists / user_already_exists および
-            // "already registered" 等 message 文字列もまとめて拾う。
             if (isIdentityConflictError(error)) {
               window.location.href = '/callback?identity_conflict=1'
               return
             }
-            // 衝突でないエラー: 別経路で既にセッションが張られていれば成功扱い
-            // (別窓 / AppShell 側で既に verify 済みで、これは 2 回目の deeplink 等)。
+            // 衝突でないエラー: 別経路で既にセッションが張られていれば成功扱い。
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
-              const flow = consumePendingAuthFlow()
-              window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
+              window.location.href = '/callback'
               return
             }
             window.location.href = '/callback?state=confirmed'
-            return
-          }
-
-          // hash fragment (#access_token=...) は magic link の別形式で来る場合の保険。
-          const fragment = event.url.split('#')[1] ?? ''
-          const hashParams = new URLSearchParams(fragment)
-          const access_token = hashParams.get('access_token')
-          const refresh_token = hashParams.get('refresh_token')
-          if (access_token && refresh_token) {
-            const key = `access:${access_token}`
-            if (processedAuthTokens.has(key)) return
-            processedAuthTokens.add(key)
-
-            await supabase.auth.setSession({ access_token, refresh_token })
-            const flow = consumePendingAuthFlow()
-            window.location.href = flow === 'recovery' ? '/reset-password' : '/callback'
           }
         })
       } catch {
@@ -375,8 +258,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/reset-password' ||
-    pathname === '/callback' ||
-    pathname === '/auth/app-return'
+    pathname === '/callback'
   const isQuiz = pathname === '/quiz'
   const isWordDetail = pathname?.startsWith('/word/') ?? false
   const isOnboarding = pathname === '/onboarding'

@@ -9,35 +9,54 @@ import { TextInput } from "@/components/TextInput";
 import AuthPage from "@/components/auth/AuthPage";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
+import OtpVerifyStep from "@/components/auth/OtpVerifyStep";
 
 interface FormData {
   password: string;
   confirmPassword: string;
 }
 
-type State = "checking" | "ready" | "invalid" | "done";
+interface EmailFormData {
+  email: string;
+}
 
+type Step =
+  | "checking"
+  | "email" // メール入力 (未ログイン時のエントリ)
+  | "otp" // コード入力
+  | "ready" // 新パスワード入力
+  | "done";
+
+/**
+ * パスワード再設定ページ。
+ *
+ * 旧: メールのリンクを踏むと recovery セッションが張られ、このページが
+ *     'ready' で描画される。
+ * 新: ログアウト時はこのページで email → OTP → 新パスワードまで完結する。
+ *     ログイン済みから PasswordResetConfirmModal 経由で verifyOtp 済みで
+ *     来たときは getSession() で session が見えるので 'ready' に直行する。
+ *     どちらにしても最後の updateUser({ password }) は共通。
+ */
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [state, setState] = useState<State>("checking");
+  const [step, setStep] = useState<Step>("checking");
+  const [email, setEmail] = useState("");
+  const [sendError, setSendError] = useState<string | undefined>();
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-    setError,
-  } = useForm<FormData>();
+  const emailForm = useForm<EmailFormData>();
+  const passwordForm = useForm<FormData>();
 
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!active) return;
-      setState(session ? "ready" : "invalid");
+      setStep(session ? "ready" : "email");
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setState("ready");
+      if (event === "PASSWORD_RECOVERY") setStep("ready");
     });
 
     return () => {
@@ -46,13 +65,57 @@ export default function ResetPasswordPage() {
     };
   }, []);
 
-  const onSubmit = async ({ password }: FormData) => {
-    const { error } = await supabase.auth.updateUser({ password });
+  const onSendEmail = async ({ email: inputEmail }: EmailFormData) => {
+    setSendError(undefined);
+    const { error } = await supabase.auth.resetPasswordForEmail(inputEmail);
     if (error) {
-      setError("password", { message: error.message });
+      setSendError("送信に失敗しました。時間をおいて再試行してください");
       return;
     }
-    setState("done");
+    setEmail(inputEmail);
+    setStep("otp");
+  };
+
+  const handleVerify = async (code: string) => {
+    setOtpSubmitting(true);
+    setOtpError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "recovery",
+    });
+    setOtpSubmitting(false);
+    if (error) {
+      setOtpError(
+        /expired|invalid/i.test(error.message)
+          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          : error.message,
+      );
+      return;
+    }
+    setStep("ready");
+  };
+
+  const handleResend = async () => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+    }
+  };
+
+  const handleEditEmail = () => {
+    setEmail("");
+    setOtpError(null);
+    setStep("email");
+  };
+
+  const onSubmitPassword = async ({ password }: FormData) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      passwordForm.setError("password", { message: error.message });
+      return;
+    }
+    setStep("done");
     setTimeout(() => {
       router.push("/");
       router.refresh();
@@ -62,35 +125,74 @@ export default function ResetPasswordPage() {
   return (
     <AuthPage>
       <AuthCard title="パスワードの再設定">
-        {state === "checking" && (
+        {step === "checking" && (
           <p className="text-sm text-gray-500 text-center py-6">読み込み中...</p>
         )}
 
-        {state === "invalid" && (
-          <div className="flex flex-col gap-3 py-4 text-center">
-            <p className="text-sm text-gray-900">
-              リンクの有効期限が切れているか、無効なリンクです。
+        {step === "email" && (
+          <form
+            onSubmit={emailForm.handleSubmit(onSendEmail)}
+            className="flex flex-col gap-4"
+          >
+            <p className="text-sm text-gray-700 leading-relaxed">
+              登録されているメールアドレスに確認コードを送ります。
             </p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              設定画面から再度パスワード再設定リクエストを送信してください。
-            </p>
+            <TextInput
+              label="メールアドレス"
+              type="email"
+              placeholder="email@example.com"
+              autoFocus
+              error={emailForm.formState.errors.email}
+              {...emailForm.register("email", {
+                required: "メールアドレスは必須です",
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "メールアドレスの形式が正しくありません",
+                },
+              })}
+            />
+            {sendError && <p className="text-xs text-red-500">{sendError}</p>}
+            <Button
+              type="submit"
+              disabled={emailForm.formState.isSubmitting}
+              variant="primary"
+              size="md"
+              radius="lg"
+              fullWidth
+            >
+              {emailForm.formState.isSubmitting ? "送信中..." : "コードを送る"}
+            </Button>
             <AuthBottomLink
               prefix="アカウントをお持ちの方は"
               linkText="ログイン"
               href="/login"
             />
-          </div>
+          </form>
         )}
 
-        {state === "ready" && (
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {step === "otp" && (
+          <OtpVerifyStep
+            email={email}
+            onVerify={handleVerify}
+            onResend={handleResend}
+            onEditEmail={handleEditEmail}
+            submitting={otpSubmitting}
+            error={otpError}
+          />
+        )}
+
+        {step === "ready" && (
+          <form
+            onSubmit={passwordForm.handleSubmit(onSubmitPassword)}
+            className="flex flex-col gap-4"
+          >
             <TextInput
               label="新しいパスワード"
               type="password"
               placeholder="••••••••"
               helperText="8文字以上で設定してください"
-              error={errors.password}
-              {...register("password", {
+              error={passwordForm.formState.errors.password}
+              {...passwordForm.register("password", {
                 required: "パスワードは必須です",
                 minLength: { value: 8, message: "8文字以上で設定してください" },
               })}
@@ -99,26 +201,27 @@ export default function ResetPasswordPage() {
               label="パスワード (確認)"
               type="password"
               placeholder="••••••••"
-              error={errors.confirmPassword}
-              {...register("confirmPassword", {
+              error={passwordForm.formState.errors.confirmPassword}
+              {...passwordForm.register("confirmPassword", {
                 required: "確認用パスワードを入力してください",
-                validate: (v) => v === watch("password") || "パスワードが一致しません",
+                validate: (v) =>
+                  v === passwordForm.watch("password") || "パスワードが一致しません",
               })}
             />
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={passwordForm.formState.isSubmitting}
               variant="primary"
               size="md"
               radius="lg"
               fullWidth
             >
-              {isSubmitting ? "設定中..." : "パスワードを再設定"}
+              {passwordForm.formState.isSubmitting ? "設定中..." : "パスワードを再設定"}
             </Button>
           </form>
         )}
 
-        {state === "done" && (
+        {step === "done" && (
           <div className="flex flex-col gap-3 py-4 text-center">
             <p className="text-sm text-primary font-medium">
               パスワードを再設定しました

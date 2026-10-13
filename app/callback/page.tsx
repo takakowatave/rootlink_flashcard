@@ -40,20 +40,16 @@ async function startSignInWithOAuth(provider: OAuthProvider): Promise<void> {
   }
 }
 
-// メール認証 (signup / recovery / email_change) のリンクを踏んだ Web ユーザーが
-// たどり着くページ。
+// Google / Apple OAuth の PKCE callback 着地点。
 //
-// 対応する 2 経路:
-//   - token_hash 方式 (新, 推奨):
-//       /callback?token_hash=XXX&type=signup|recovery|email_change
-//     Supabase の email template を {{ .TokenHash }} 方式に切り替えたときに走る。
-//     verifyOtp でセッションを張る。type=recovery の場合は /reset-password に飛ばす。
-//   - PKCE code 方式 (旧, 互換用):
-//       /callback?code=XXX
+//   - /callback?code=XXX
 //     @supabase/ssr の createBrowserClient は detectSessionInUrl でこれを自動 exchange
 //     するので、既存 session があればそのまま進む。無ければ手動 exchange。
 //
-// 失敗時 (期限切れ / 使用済み / bad_code_verifier など) はメール認証は済んでいる
+// メール認証 (signup / recovery / email_change) は OTP 方式に切り替えたので
+// このページは経由しない (各画面で verifyOtp を直接呼ぶ)。
+//
+// 失敗時 (期限切れ / 使用済み / bad_code_verifier など) は認証は済んでいる
 // 可能性があるので、confirmed 状態で「ログイン画面へ」だけ出す。
 //
 // 画面は AuthPage / AuthCard を流用してログイン・新規登録画面と同じ枠にする。
@@ -141,86 +137,28 @@ export default function AuthCallback() {
           return;
         }
 
-        const tokenHash = url.searchParams.get("token_hash");
-        const type = url.searchParams.get("type");
-        if (tokenHash && type && !preSession) {
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: type as
-              | "signup"
-              | "recovery"
-              | "email_change"
-              | "magiclink"
-              | "invite",
-          });
-          if (error) {
-            // 失敗しても、既にセッションが張られていれば成功として扱う
-            // (別窓 / AppShell 側で既に verify 済みで、これは 2 回目)。
-            const {
-              data: { session: afterErr },
-            } = await supabase.auth.getSession();
-            if (!afterErr?.user) {
-              setState("confirmed");
-              return;
-            }
-          }
-          if (type === "recovery") {
-            window.location.href = "/reset-password";
-            return;
-          }
-          // signup / email_change / magic link 等はこの下の profile 補完 &
-          // sign_up_complete 計測を通す。
-        } else if (tokenHash && type === "recovery" && preSession) {
-          // 既にセッション張り済み + recovery → verify を叩き直さず直接遷移。
-          window.location.href = "/reset-password";
-          return;
-        } else if (!tokenHash) {
-          // 旧 PKCE 経路。@supabase/ssr は detectSessionInUrl で自動 exchange
-          // するので、既にセッションが張られている可能性がある。
-          if (!preSession) {
-            const code = url.searchParams.get("code");
-            if (code) {
-              const { error } = await supabase.auth.exchangeCodeForSession(code);
-              if (error) {
-                // identity_already_exists なら GuestLinkConfirmDialog を出して
-                // 「ログインする/キャンセル」に分岐する (匿名ユーザー + 学習データあり)。
-                if (isIdentityConflictError(error)) {
-                  await handleIdentityConflict();
-                  return;
-                }
-                // 別ブラウザで開いた / code_verifier 無し / 使用済み 等。
-                // ただしその間に別経路でセッションが張られていれば救う。
-                const {
-                  data: { session: afterErr },
-                } = await supabase.auth.getSession();
-                if (!afterErr?.user) {
-                  setState("confirmed");
-                  return;
-                }
+        // Google / Apple OAuth の PKCE code。@supabase/ssr は
+        // detectSessionInUrl で自動 exchange するので、既にセッションが
+        // 張られている可能性がある。無ければ手動 exchange。
+        if (!preSession) {
+          const code = url.searchParams.get("code");
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+              // identity_already_exists なら GuestLinkConfirmDialog を出して
+              // 「ログインする/キャンセル」に分岐する (匿名ユーザー + 学習データあり)。
+              if (isIdentityConflictError(error)) {
+                await handleIdentityConflict();
+                return;
               }
-            } else {
-              const fragment = window.location.hash.startsWith("#")
-                ? window.location.hash.slice(1)
-                : "";
-              if (fragment) {
-                const params = new URLSearchParams(fragment);
-                const access_token = params.get("access_token");
-                const refresh_token = params.get("refresh_token");
-                if (access_token && refresh_token) {
-                  const { error } = await supabase.auth.setSession({
-                    access_token,
-                    refresh_token,
-                  });
-                  if (error) {
-                    const {
-                      data: { session: afterErr },
-                    } = await supabase.auth.getSession();
-                    if (!afterErr?.user) {
-                      setState("confirmed");
-                      return;
-                    }
-                  }
-                }
+              // 別ブラウザで開いた / code_verifier 無し / 使用済み 等。
+              // ただしその間に別経路でセッションが張られていれば救う。
+              const {
+                data: { session: afterErr },
+              } = await supabase.auth.getSession();
+              if (!afterErr?.user) {
+                setState("confirmed");
+                return;
               }
             }
           }
