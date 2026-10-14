@@ -17,10 +17,13 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 // 保存先を Preferences だけにすれば、Cookie の書き戻しも reconcile もなくなり
 // 短時間連打の経路が消える。document.cookie への読み書きは一切しない。
 //
-// SSR / middleware は native の HTTP には届かない (WebView は server.url で
-// 本番 Web をそのまま読む) ので、サーバー側の auth cookie 依存を失うことで
-// 壊れる経路はない。app/page.tsx の server-side getUser() が null になる場合は
-// HomePageClientFallback が client 側で復元する既存フォールバックで吸収される。
+// Capacitor WebView は server.url で本番 www.rootlink.app を読むため、
+// Vercel の middleware / server component は従来どおり走る。ただし Cookie に
+// セッションが乗らなくなるので、サーバー側 (middleware.ts / app/page.tsx の
+// `supabase.auth.getUser()`) からは常に未ログイン扱いに見える。実害は無く、
+// app/page.tsx の server-side getUser() が null になる場合は
+// HomePageClientFallback が client 側で session を復元する既存フォールバック
+// で吸収される。
 //
 // Preferences プラグインが同梱されていない旧バイナリ (ビルド 4 以前) で新しい
 // Web が走ったときに Preferences 版の adapter を使うと import で落ちるので、
