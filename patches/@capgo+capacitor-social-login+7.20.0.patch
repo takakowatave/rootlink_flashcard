@@ -1,0 +1,46 @@
+diff --git a/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/AppleProvider.swift b/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/AppleProvider.swift
+index 87e76b9..328d783 100644
+--- a/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/AppleProvider.swift
++++ b/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/AppleProvider.swift
+@@ -598,7 +598,19 @@ class AppleProvider: NSObject, ASAuthorizationControllerDelegate, ASAuthorizatio
+     // MARK: - ASAuthorizationControllerPresentationContextProviding
+ 
+     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+-        return UIApplication.shared.windows.first!
++        // iOS 15.0 で UIApplication.shared.windows は deprecated。
++        // iPad の multi-scene / Slide Over / Split View、新しい iPadOS で
++        // windows.first が空 / 非 key window になり .first! でクラッシュしたり
++        // ASAuthorizationController が anchor を取れずに throw する。
++        // scene 対応にして keyWindow を優先する。
++        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
++        if let keyWindow = scenes.flatMap({ $0.windows }).first(where: { $0.isKeyWindow }) {
++            return keyWindow
++        }
++        if let anyWindow = scenes.flatMap({ $0.windows }).first {
++            return anyWindow
++        }
++        return ASPresentationAnchor()
+     }
+ 
+     private func persistName(userId: String, givenName: String?, familyName: String?) {
+@@ -646,7 +658,19 @@ class AppleProvider: NSObject, ASAuthorizationControllerDelegate, ASAuthorizatio
+     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {}
+     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {}
+     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+-        return UIApplication.shared.windows.first!
++        // iOS 15.0 で UIApplication.shared.windows は deprecated。
++        // iPad の multi-scene / Slide Over / Split View、新しい iPadOS で
++        // windows.first が空 / 非 key window になり .first! でクラッシュしたり
++        // ASAuthorizationController が anchor を取れずに throw する。
++        // scene 対応にして keyWindow を優先する。
++        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
++        if let keyWindow = scenes.flatMap({ $0.windows }).first(where: { $0.isKeyWindow }) {
++            return keyWindow
++        }
++        if let anyWindow = scenes.flatMap({ $0.windows }).first {
++            return anyWindow
++        }
++        return ASPresentationAnchor()
+     }
+ }
+ #endif

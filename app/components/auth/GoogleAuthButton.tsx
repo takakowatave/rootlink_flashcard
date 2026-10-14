@@ -85,6 +85,7 @@ export default function GoogleAuthButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={inAppBrowser}
       className="w-full h-12 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"

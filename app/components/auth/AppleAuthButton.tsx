@@ -230,6 +230,7 @@ export default function AppleAuthButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={APPLE_DISABLED || inAppBrowser}
       className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
