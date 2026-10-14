@@ -7,12 +7,12 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { MdArrowBackIosNew } from 'react-icons/md'
 import { supabase } from '@/lib/supabaseClient'
-import { isNativePlatform } from '@/lib/isNativePlatform'
 import Button from '@/components/Button'
 import { TextInput } from '@/components/TextInput'
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton'
 import AppleAuthButton from '@/components/auth/AppleAuthButton'
 import TurnstileWidget from '@/components/auth/TurnstileWidget'
+import OtpVerifyStep from '@/components/auth/OtpVerifyStep'
 import GuestLinkConfirmDialog from '@/components/auth/GuestLinkConfirmDialog'
 import { hasAnyGuestLearningData } from '@/lib/guestData'
 
@@ -22,6 +22,11 @@ type FormData = {
   email: string
   password: string
 }
+
+// signup 時にメール認証をどの OTP type で確認するか。
+//  - 匿名ユーザーの updateUser({ email }) 経路: email_change
+//  - それ以外 (ログアウト後に /signup 直接): email
+type SignupOtpType = 'email' | 'email_change'
 
 type Props = {
   mode: Mode
@@ -40,6 +45,7 @@ type Props = {
  *    AppShell の確認モーダル経路に流す (GoogleAuthButton / AppleAuthButton 側で処理)。
  *  - 既存アカウント切替時に「ゲストで保存した単語と学習記録は引き継がれません」モーダルは、
  *    ゲストに学習データが1件でもあるときだけ出す。
+ *  - signup 成功後は OTP コード入力ステップに切り替え、verifyOtp で確認する。
  */
 export default function NativeAuthForm({ mode }: Props) {
   const router = useRouter()
@@ -51,6 +57,11 @@ export default function NativeAuthForm({ mode }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [pendingLogin, setPendingLogin] = useState<FormData | null>(null)
+  // signup 用 OTP ステップ state
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpType, setOtpType] = useState<SignupOtpType>('email')
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [otpSubmitting, setOtpSubmitting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -116,21 +127,17 @@ export default function NativeAuthForm({ mode }: Props) {
         setError('email', { message: error.message || '登録に失敗しました' })
         return
       }
-      toast.success('アカウントを作成しました')
-      router.push('/')
-      router.refresh()
+      // 匿名ユーザーの updateUser はメール確認が必要。確認 OTP の type は email_change。
+      setOtpEmail(data.email)
+      setOtpType('email_change')
       return
     }
 
     // 非匿名 (ログアウト後に /signup を直接開いたケース等): 従来どおり signUp。
-    const emailRedirectTo = isNativePlatform()
-      ? 'https://www.rootlink.app/auth/app-return'
-      : `${window.location.origin}/callback`
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo,
         captchaToken: captchaToken || undefined,
       },
     })
@@ -144,14 +151,84 @@ export default function NativeAuthForm({ mode }: Props) {
       setError('email', { message: 'このメールアドレスはすでに登録されています' })
       return
     }
-    toast.success('確認メールを送信しました')
-    router.push('/callback?state=sent')
+    setOtpEmail(data.email)
+    setOtpType('email')
   }
 
   const onSubmit = mode === 'login' ? onLogin : onSignup
 
+  const handleOtpVerify = async (code: string) => {
+    setOtpSubmitting(true)
+    setOtpError(null)
+    const { error } = await supabase.auth.verifyOtp({
+      email: otpEmail,
+      token: code,
+      type: otpType,
+    })
+    setOtpSubmitting(false)
+    if (error) {
+      setOtpError(
+        /expired|invalid/i.test(error.message)
+          ? 'コードが違うか期限切れです。もう一度ご確認ください'
+          : error.message,
+      )
+      return
+    }
+    toast.success('アカウントを作成しました')
+    router.push('/')
+    router.refresh()
+  }
+
+  const handleOtpResend = async () => {
+    const resendType = otpType === 'email' ? 'signup' : 'email_change'
+    const { error } = await supabase.auth.resend({
+      type: resendType,
+      email: otpEmail,
+    })
+    if (error) {
+      setOtpError('再送に失敗しました。時間をおいて再試行してください')
+    }
+  }
+
+  const handleOtpEditEmail = () => {
+    setOtpEmail('')
+    setOtpError(null)
+  }
+
   const primaryLabel = mode === 'login' ? 'ログイン' : 'アカウント作成'
   const submittingLabel = mode === 'login' ? 'ログイン中...' : '作成中...'
+
+  // signup 完了後の OTP 入力ステップ
+  if (mode === 'signup' && otpEmail) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white pt-[env(safe-area-inset-top)]">
+        <div className="h-14 flex items-center border-b border-line pl-4 pr-2">
+          <button
+            type="button"
+            onClick={handleOtpEditEmail}
+            aria-label="戻る"
+            className="p-2 rounded-full text-gray-700 hover:bg-gray-100"
+          >
+            <MdArrowBackIosNew className="size-5" />
+          </button>
+        </div>
+        <div className="flex justify-center py-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="RootLink" className="h-[30px] w-auto" />
+        </div>
+        <div className="px-4 py-4">
+          <OtpVerifyStep
+            email={otpEmail}
+            onVerify={handleOtpVerify}
+            onResend={handleOtpResend}
+            onEditEmail={handleOtpEditEmail}
+            submitting={otpSubmitting}
+            error={otpError}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-white pt-[env(safe-area-inset-top)]">

@@ -17,6 +17,7 @@ import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import ShareMenu from '@/components/ShareMenu'
 import { buildShareText } from '@/lib/shareText'
 import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
@@ -1055,7 +1056,15 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   // 以前は毎タップで supabase.auth.getUser() を await していたため体感 500ms〜 遅延していた。
   // 認証は useAuthReload でキャッシュしているので handleSave はネットワーク同期を挟まず即時 UI 反映する。
   const handleSave = async () => {
-    if (!isAuthed || !authedUserIdRef.current) { setShowSignupModal(true); return }
+    if (!isAuthed || !authedUserIdRef.current) {
+      // native では匿名で開始してから続行。Web は従来どおり modal。
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      // ensureNativeGuestSession 後は useAuthReload の SIGNED_IN で
+      // isAuthed / authedUserIdRef が追従する。即時 UI 反映はせず、
+      // 次タップで通常経路に乗る。
+      return
+    }
 
     const isSaved = savedWords.includes(word)
     const nextSaved = !isSaved

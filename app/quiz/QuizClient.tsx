@@ -19,6 +19,7 @@ import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSess
 import type { QuizEntry } from '@/components/QuizSession'
 import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
 import { useAuthReload } from '@/lib/useAuthReload'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import {
   fetchReviewCandidates,
@@ -55,6 +56,8 @@ export default function QuizClient() {
 
   const loadCards = useCallback(async (quizMode: QuizMode = 'all') => {
     setLoading(true)
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); setLoading(false); return }
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); setLoading(false); return }
     const userId = data.user.id
@@ -151,6 +154,8 @@ export default function QuizClient() {
 
   const loadPeriodQuiz = useCallback(async (period: ReviewPeriod) => {
     setLoading(true)
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); setLoading(false); return }
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); setLoading(false); return }
     const userId = data.user.id

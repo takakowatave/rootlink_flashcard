@@ -21,6 +21,7 @@ import QuizProgressPanel from '@/components/QuizProgressPanel'
 import ChapterListItem from '@/components/ChapterListItem'
 import CardShell from '@/components/CardShell'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
@@ -212,7 +213,13 @@ export default function DeckClient({
   }, [reload])
 
   const handleToggleSave = async (entry: DeckWordEntry) => {
-    if (!isAuthed) { setShowSignupModal(true); return }
+    if (!isAuthed) {
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      // ensureNativeGuestSession 後は useAuthReload の SIGNED_IN で isAuthed が追従する。
+      // 直後のタップで通常経路に乗る。
+      return
+    }
     const result = await toggleSaveStatus({ word: entry.word, dictionary: entry.dictionary ?? undefined })
     if (!result.success) { toast.error('処理に失敗しました'); return }
     setSavedWords(prev => {
@@ -297,7 +304,11 @@ export default function DeckClient({
   }, [userId])
 
   const startQuiz = useCallback(async () => {
-    if (!isAuthed) { setShowSignupModal(true); return }
+    if (!isAuthed) {
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      return
+    }
     if (isLocked) { await openPaywall(); return }
     const sourceEntries = scopeSource[quizScope]
     if (sourceEntries.length === 0) return
@@ -347,7 +358,11 @@ export default function DeckClient({
   const slugForUrl = deck.slug ?? deck.id
 
   const handleResumeChapter = useCallback(async () => {
-    if (!isAuthed) { setShowSignupModal(true); return }
+    if (!isAuthed) {
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      return
+    }
     if (resumeChapter == null) return
     const locked = isChapterLocked(resumeChapter, deck.is_premium, totalChapters, plan)
     if (locked) { await openPaywall(); return }
@@ -357,7 +372,11 @@ export default function DeckClient({
   const handleChapterTap = useCallback(async (n: number) => {
     const locked = isChapterLocked(n, deck.is_premium, totalChapters, plan)
     if (locked) {
-      if (!isAuthed) { setShowSignupModal(true); return }
+      if (!isAuthed) {
+        const ok = await ensureNativeGuestSession()
+        if (!ok) { setShowSignupModal(true); return }
+        return
+      }
       await openPaywall()
       return
     }

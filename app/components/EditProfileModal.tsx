@@ -15,7 +15,6 @@ import SettingsRow from "@/components/SettingsRow";
 import EmailChangeModal from "@/components/EmailChangeModal";
 import PasswordResetConfirmModal from "@/components/PasswordResetConfirmModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
-import EmailSentDialog, { type EmailSentVariant } from "@/components/EmailSentDialog";
 import toast from "react-hot-toast";
 import type { Profile } from "@/types/Profile";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -168,9 +167,6 @@ export default function EditProfileModal({
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [emailSent, setEmailSent] = useState<{ variant: EmailSentVariant; sentTo: string } | null>(
-    null,
-  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>(
@@ -880,7 +876,8 @@ export default function EditProfileModal({
         currentEmail={email}
         onSent={(newEmail) => {
           setShowEmailChange(false);
-          setEmailSent({ variant: "email-change", sentTo: newEmail });
+          setEmail(newEmail);
+          toast.success("メールアドレスを変更しました");
         }}
       />
 
@@ -890,7 +887,6 @@ export default function EditProfileModal({
         email={email}
         onSent={() => {
           setShowPasswordReset(false);
-          setEmailSent({ variant: "password-reset", sentTo: email });
         }}
       />
 
@@ -903,15 +899,6 @@ export default function EditProfileModal({
           window.location.href = "/goodbye";
         }}
       />
-
-      {emailSent && (
-        <EmailSentDialog
-          open
-          sentTo={emailSent.sentTo}
-          variant={emailSent.variant}
-          onClose={() => setEmailSent(null)}
-        />
-      )}
 
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="upgrade" />

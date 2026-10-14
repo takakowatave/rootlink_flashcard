@@ -23,6 +23,7 @@ import CardShell from "@/components/CardShell"
 import WordDetailModal from "@/components/WordDetailModal"
 import { buildPronunciation, buildSenses } from "@/lib/dictionaryRender"
 import { useAuthReload } from "@/lib/useAuthReload"
+import { ensureNativeGuestSession } from "@/lib/ensureNativeGuestSession"
 
 export type SavedWordRow = {
   word_id: string
@@ -121,6 +122,8 @@ export default function WordListPage() {
   }
 
   const load = async () => {
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); return }
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setShowSignupModal(true); return }
     setUserId(data.user.id)
@@ -171,8 +174,9 @@ export default function WordListPage() {
     if (userId) {
       void load()
     } else {
-      // mount 時に未ログイン
-      setShowSignupModal(true)
+      // mount 時に未ログイン: native では ensureNativeGuestSession で匿名開始、
+      // Web では SignupRequiredModal。
+      void load()
     }
   })
 

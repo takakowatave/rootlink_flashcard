@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import Link from 'next/link'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 import SenseRow from '@/components/SenseRow'
@@ -141,27 +142,35 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
   }
 
   const handleSave = async () => {
-    if (!userId) { setShowSignupModal(true); return }
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); return }
+    const { data } = await supabase.auth.getUser()
+    const uid = data.user?.id ?? userId
+    if (!uid) { setShowSignupModal(true); return }
     if (isSaved) {
-      await supabase.from('saved_phrase_cards').delete().eq('user_id', userId).eq('phrase_card_id', card.id)
+      await supabase.from('saved_phrase_cards').delete().eq('user_id', uid).eq('phrase_card_id', card.id)
       setIsSaved(false)
     } else {
-      await supabase.from('saved_phrase_cards').insert({ user_id: userId, phrase_card_id: card.id })
+      await supabase.from('saved_phrase_cards').insert({ user_id: uid, phrase_card_id: card.id })
       setIsSaved(true)
     }
   }
 
   const togglePin = async (senseId: string) => {
-    if (!userId) { setShowSignupModal(true); return }
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); return }
+    const { data } = await supabase.auth.getUser()
+    const uid = data.user?.id ?? userId
+    if (!uid) { setShowSignupModal(true); return }
     const next = pinnedSenseId === senseId ? null : senseId
     setPinnedSenseId(next)
     if (isSaved) {
       await supabase.from('saved_phrase_cards')
         .update({ pinned_sense_id: next })
-        .eq('user_id', userId).eq('phrase_card_id', card.id)
+        .eq('user_id', uid).eq('phrase_card_id', card.id)
     } else {
       await supabase.from('saved_phrase_cards')
-        .insert({ user_id: userId, phrase_card_id: card.id, pinned_sense_id: next })
+        .insert({ user_id: uid, phrase_card_id: card.id, pinned_sense_id: next })
       setIsSaved(true)
     }
   }

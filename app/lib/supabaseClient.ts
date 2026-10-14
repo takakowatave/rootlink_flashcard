@@ -4,22 +4,30 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// ネイティブ (iOS WKWebView / Android WebView) では JS が書いた Cookie が
-// ITP でアプリ再起動時に消え、ログアウトされてしまう (iOS は JS Cookie を
-// 最長 7 日に制限)。Capacitor Preferences を正本にして、Cookie はミラーに
-// してしまえば、Cookie が消えても Preferences からセッションを復元できる。
+// ネイティブ (iOS WKWebView / Android WebView) ではセッションの保存先を
+// Capacitor Preferences 一本にする。
 //
-// 既にログイン中のユーザーが更新で突然ログアウトされないよう、getAll は
-// document.cookie と Preferences を両方読み、Preferences 側を上書き優先に
-// する。Cookie だけに session がある旧ユーザーは最初の token refresh で
-// setAll 経由で Preferences に同期される (= 透過マイグレーション)。
+// 旧実装は document.cookie と Preferences の二重保存 + 毎 getAll() で
+// reconcileAndReadAll していた。iOS ITP で cookie が chunk 単位でサイレント
+// 失効すると「Pref に揃っている / Cookie に欠けがある」判定で毎回 Cookie を
+// 書き戻し、@supabase/ssr がその書き換えを「セッション差し替え」と見て
+// refreshSession を連打 → /token が1秒3〜4回で 429 に到達する事故があった
+// (App Store 審査 2026-10-13、iPad Air 11-inch M3 / iPadOS 27.0)。
 //
-// ただし Preferences プラグインが同梱されていない旧バイナリ (Play ストア配布中の
-// 旧 Android / App Store にアップロード済みの iOS ビルド 4 以前) で新しい Web が
-// 走ったとき、Preferences 版の cookies アダプタに切り替えてしまうと内部で
-// 「Plugin not available」で落ちてログインが壊れる。
-// Capacitor.isPluginAvailable('Preferences') が true のときだけ native 版に切り替え、
-// それ以外は従来通り素の createBrowserClient (document.cookie) を使う。
+// 保存先を Preferences だけにすれば、Cookie の書き戻しも reconcile もなくなり
+// 短時間連打の経路が消える。document.cookie への読み書きは一切しない。
+//
+// Capacitor WebView は server.url で本番 www.rootlink.app を読むため、
+// Vercel の middleware / server component は従来どおり走る。ただし Cookie に
+// セッションが乗らなくなるので、サーバー側 (middleware.ts / app/page.tsx の
+// `supabase.auth.getUser()`) からは常に未ログイン扱いに見える。実害は無く、
+// app/page.tsx の server-side getUser() が null になる場合は
+// HomePageClientFallback が client 側で session を復元する既存フォールバック
+// で吸収される。
+//
+// Preferences プラグインが同梱されていない旧バイナリ (ビルド 4 以前) で新しい
+// Web が走ったときに Preferences 版の adapter を使うと import で落ちるので、
+// Capacitor.isPluginAvailable('Preferences') が true のときだけ切り替える。
 function isPreferencesAvailable(): boolean {
   if (typeof window === "undefined") return false;
   const cap = (window as {
@@ -42,13 +50,7 @@ type CookieToSet = {
   name: string;
   value: string;
   options?: {
-    path?: string;
-    domain?: string;
     maxAge?: number;
-    expires?: Date | string | number;
-    sameSite?: boolean | "lax" | "strict" | "none";
-    secure?: boolean;
-    httpOnly?: boolean;
   };
 };
 
@@ -85,170 +87,52 @@ async function writePreferencesCookies(cookies: CookieToSet[]) {
   }
 }
 
-function readDocumentCookies(): { name: string; value: string }[] {
-  if (typeof document === "undefined" || !document.cookie) return [];
-  const out: { name: string; value: string }[] = [];
-  for (const part of document.cookie.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq < 0) continue;
-    const name = part.slice(0, eq).trim();
-    const rawValue = part.slice(eq + 1).trim();
-    if (!name) continue;
-    try {
-      out.push({ name, value: decodeURIComponent(rawValue) });
-    } catch {
-      out.push({ name, value: rawValue });
-    }
-  }
-  return out;
-}
+// 旧バイナリ (ビルド 4 以前) でサインイン済みのユーザーが新バイナリに更新した
+// ときに document.cookie から Preferences へ一度だけコピーする。移行完了は
+// `rootlink-cookies-migrated` キーで印を打ち、次回以降は走らせない。
+// Cookie→Pref の片道一回だけ。Pref を書いたあとは Cookie に戻さない。
+const MIGRATION_FLAG_KEY = "rootlink-cookies-migrated";
 
-function writeDocumentCookies(cookies: CookieToSet[]) {
-  if (typeof document === "undefined") return;
-  for (const c of cookies) {
-    const o = c.options ?? {};
-    const parts = [`${c.name}=${encodeURIComponent(c.value)}`];
-    parts.push(`path=${o.path ?? "/"}`);
-    if (o.domain) parts.push(`domain=${o.domain}`);
-    if (typeof o.maxAge === "number") parts.push(`max-age=${o.maxAge}`);
-    if (o.expires) {
-      const d =
-        o.expires instanceof Date ? o.expires : new Date(o.expires);
-      parts.push(`expires=${d.toUTCString()}`);
-    }
-    if (o.sameSite) {
-      const v = typeof o.sameSite === "string" ? o.sameSite : "lax";
-      parts.push(`SameSite=${v}`);
-    }
-    if (o.secure) parts.push("Secure");
-    document.cookie = parts.join("; ");
-  }
-}
-
-// Supabase の auth cookie は chunked されることがある:
-//   sb-<ref>-auth-token            (非 chunked)
-//   sb-<ref>-auth-token.0, .1, ... (chunked)
-// どちらの形式も「同じ base name のまとまり」として扱わないと、chunk の一部だけ
-// 新旧混在する事故 (Preferences の .2 が残って Cookie の .0 .1 と混ざる等) が起きる。
-function baseKeyOf(name: string): string {
-  const m = name.match(/^(sb-.+?)\.(\d+)$/);
-  return m ? m[1] : name;
-}
-
-type Entry = { name: string; value: string };
-
-function groupAuthEntries(entries: Entry[]) {
-  const groups = new Map<string, Entry[]>();
-  const nonAuth: Entry[] = [];
-  for (const e of entries) {
-    if (!e.name.startsWith("sb-")) {
-      nonAuth.push(e);
-      continue;
-    }
-    const base = baseKeyOf(e.name);
-    const g = groups.get(base) ?? [];
-    g.push(e);
-    groups.set(base, g);
-  }
-  return { groups, nonAuth };
-}
-
-// Cookie を「正」、Preferences は「Cookie が消えたときの予備」として扱う。
-//   - base name 単位 (= 同じ `sb-<ref>-auth-token` の chunk 一式) で判定する。
-//   - Cookie 側にその base の値が 1 つでも有れば → Cookie を使い、Preferences を
-//     その base について Cookie の内容へ揃える (Pref にしかない旧 chunk は削除)。
-//   - Cookie 側に無く Preferences にだけ有れば (ITP やアプリ再起動で Cookie が消えた
-//     ケース) → Preferences の値を使い、Cookie に書き戻して SSR / middleware にも
-//     見えるようにする。
-// 「Preferences 優先」にしてしまうと、/verify や SSR のルートがサーバー側で Cookie
-// だけに新しい session を書き込んだとき、Preferences の古いゲスト session で
-// 上書きされて確認直後にゲストに戻る事故が起きるため、必ず Cookie 側を正にする。
-async function reconcileAndReadAll(
-  prefs: Entry[],
-  browser: Entry[],
-): Promise<Entry[]> {
-  const prefInfo = groupAuthEntries(prefs);
-  const browserInfo = groupAuthEntries(browser);
-  const result: Entry[] = [...browserInfo.nonAuth];
-
-  const toCookie: CookieToSet[] = [];
-  const toPrefsSet: Entry[] = [];
-  const toPrefsDelete: string[] = [];
-
-  const allBases = new Set<string>([
-    ...browserInfo.groups.keys(),
-    ...prefInfo.groups.keys(),
-  ]);
-
-  for (const base of allBases) {
-    const cookieGroup = browserInfo.groups.get(base) ?? [];
-    const prefGroup = prefInfo.groups.get(base) ?? [];
-    if (cookieGroup.length > 0) {
-      // Cookie が authoritative。Preferences をこの base の cookie 内容へ揃える。
-      result.push(...cookieGroup);
-      const cookieByName = new Map(cookieGroup.map((e) => [e.name, e.value]));
-      const prefByName = new Map(prefGroup.map((e) => [e.name, e.value]));
-      // Pref にしか無い chunk は削除 (= この base の過去の chunk 残骸)
-      for (const [name] of prefByName) {
-        if (!cookieByName.has(name)) toPrefsDelete.push(name);
-      }
-      // Cookie の値を Pref へ反映
-      for (const [name, value] of cookieByName) {
-        if (prefByName.get(name) !== value) {
-          toPrefsSet.push({ name, value });
-        }
-      }
-    } else if (prefGroup.length > 0) {
-      // Cookie に無く Preferences だけに有る → Pref を使い、Cookie に書き戻す。
-      result.push(...prefGroup);
-      for (const p of prefGroup) {
-        toCookie.push({
-          name: p.name,
-          value: p.value,
-          options: {
-            path: "/",
-            sameSite: "lax",
-            secure: true,
-            maxAge: 60 * 60 * 24 * 365,
-          },
-        });
-      }
-    }
-  }
-
-  if (toCookie.length) writeDocumentCookies(toCookie);
-  if (toPrefsSet.length || toPrefsDelete.length) {
-    void (async () => {
+async function migrateCookiesToPreferencesOnce(): Promise<{ name: string; value: string }[]> {
+  if (typeof document === "undefined") return [];
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    const flag = await Preferences.get({ key: MIGRATION_FLAG_KEY });
+    if (flag.value) return [];
+    const picked: { name: string; value: string }[] = [];
+    for (const part of document.cookie.split(";")) {
+      const eq = part.indexOf("=");
+      if (eq < 0) continue;
+      const name = part.slice(0, eq).trim();
+      if (!name.startsWith("sb-")) continue;
+      const rawValue = part.slice(eq + 1).trim();
+      let value = rawValue;
       try {
-        const { Preferences } = await import("@capacitor/preferences");
-        for (const key of toPrefsDelete) {
-          await Preferences.remove({ key });
-        }
-        for (const e of toPrefsSet) {
-          await Preferences.set({ key: e.name, value: e.value });
-        }
+        value = decodeURIComponent(rawValue);
       } catch {
-        // Preferences が無い旧バイナリでは isPreferencesAvailable で弾かれる想定だが、
-        // 万一の import 失敗はログインを壊さないよう黙って無視する。
+        // noop
       }
-    })();
+      await Preferences.set({ key: name, value });
+      picked.push({ name, value });
+    }
+    await Preferences.set({ key: MIGRATION_FLAG_KEY, value: "1" });
+    return picked;
+  } catch {
+    return [];
   }
-
-  return result;
 }
 
 function createNativeClient(): SupabaseClient {
   return createBrowserClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       async getAll() {
-        const [prefs, browser] = await Promise.all([
-          readPreferencesCookies(),
-          Promise.resolve(readDocumentCookies()),
-        ]);
-        return reconcileAndReadAll(prefs, browser);
+        const prefs = await readPreferencesCookies();
+        if (prefs.length > 0) return prefs;
+        // Preferences が空 → 一度だけ Cookie から拾って移行する。
+        // 2 回目以降は MIGRATION_FLAG_KEY があるので空配列で返る。
+        return migrateCookiesToPreferencesOnce();
       },
       async setAll(cookies) {
-        writeDocumentCookies(cookies);
         await writePreferencesCookies(cookies);
       },
     },

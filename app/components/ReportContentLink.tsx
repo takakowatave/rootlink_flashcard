@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { HiOutlineFlag } from 'react-icons/hi2'
 import { supabase } from '@/lib/supabaseClient'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import ReportContentModal from './ReportContentModal'
 import SignupRequiredModal from './SignupRequiredModal'
 
@@ -22,8 +23,11 @@ export default function ReportContentLink({ kind, content }: Props) {
   const handleClick = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) {
-      setSignupOpen(true)
-      return
+      const ok = await ensureNativeGuestSession()
+      if (!ok) {
+        setSignupOpen(true)
+        return
+      }
     }
     setReportOpen(true)
   }

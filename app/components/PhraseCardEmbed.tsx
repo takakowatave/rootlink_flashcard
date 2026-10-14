@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { stripPhraseParens } from '@/lib/phraseDisplay'
 
@@ -43,16 +44,20 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
   }, [phrase.id])
 
   const handleSave = async () => {
-    if (!userId) { setShowModal(true); return }
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowModal(true); return }
+    const { data } = await supabase.auth.getUser()
+    const uid = data.user?.id ?? userId
+    if (!uid) { setShowModal(true); return }
     if (isSaved) {
       await supabase.from('saved_phrase_cards')
         .delete()
-        .eq('user_id', userId)
+        .eq('user_id', uid)
         .eq('phrase_card_id', phrase.id)
       setIsSaved(false)
     } else {
       await supabase.from('saved_phrase_cards')
-        .insert({ user_id: userId, phrase_card_id: phrase.id })
+        .insert({ user_id: uid, phrase_card_id: phrase.id })
       setIsSaved(true)
     }
   }

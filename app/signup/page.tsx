@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
-import { HiOutlineEnvelope } from "react-icons/hi2";
 import { HiX } from "react-icons/hi";
 import Button from "@/components/Button";
 import { TextInput } from "@/components/TextInput";
@@ -18,6 +18,7 @@ import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import InAppBrowserNotice from "@/components/auth/InAppBrowserNotice";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import NativeAuthForm from "@/components/auth/NativeAuthForm";
+import OtpVerifyStep from "@/components/auth/OtpVerifyStep";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
@@ -30,17 +31,15 @@ interface FormData {
 }
 
 export default function AuthSignup() {
-  const [done, setDone] = useState(false);
+  const router = useRouter();
   const [sentEmail, setSentEmail] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [existingAccount, setExistingAccount] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
-  // native は /onboarding のスプラッシュで規約・プライバシーへの同意動線を
-  // 通しているので、signup の checkbox は重複。ここでは Web だけ出す。
-  // hydration mismatch と、native で Web フォームが 1 フレーム見えるのを
-  // 避けるため、platformResolved になるまで何も描画しない。
   const [isNative, setIsNative] = useState(false);
   const [platformResolved, setPlatformResolved] = useState(false);
   useEffect(() => setInAppBrowser(isInAppBrowser()), []);
@@ -58,17 +57,10 @@ export default function AuthSignup() {
 
   const onSubmit = async (data: FormData) => {
     setExistingAccount(false);
-    // native はメール本文のリンクを Chrome が開くため、Supabase の 303 で
-    // カスタムスキームを起こせない。一旦 https の中継ページに戻し、そこで
-    // ユーザー操作の遷移として com.rootlink.app://auth-callback を叩かせる。
-    const emailRedirectTo = isNativePlatform()
-      ? "https://www.rootlink.app/auth/app-return"
-      : `${window.location.origin}/callback`;
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo,
         // 未配布時は空文字。Supabase Dashboard 側で captcha protection が有効
         // なら 400 で弾かれる (段階導入前提)。無効なら captchaToken は無視される。
         captchaToken: captchaToken || undefined,
@@ -80,8 +72,6 @@ export default function AuthSignup() {
     }
     // Supabase は確認済みの既存メールで signUp すると error を返さず
     // user.identities を空配列にする（なりすまし対策）。
-    // 未確認で残っているだけのメールは identities が付いてくるので、
-    // その場合は今まで通り確認メール送信の完了画面へ進める。
     if (signUpData.user && signUpData.user.identities?.length === 0) {
       setExistingAccount(true);
       setError("email", {
@@ -90,39 +80,62 @@ export default function AuthSignup() {
       return;
     }
     setSentEmail(data.email);
-    setDone(true);
   };
 
-  // platform 判定が終わるまでは何も描画しない。初回ペイントで Web フォームが
-  // 一瞬見えてから NativeAuthForm に差し替わるのを避ける。
+  const handleVerify = async (code: string) => {
+    setOtpSubmitting(true);
+    setOtpError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: sentEmail,
+      token: code,
+      type: "email",
+    });
+    setOtpSubmitting(false);
+    if (error) {
+      setOtpError(
+        /expired|invalid/i.test(error.message)
+          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          : error.message,
+      );
+      return;
+    }
+    router.push("/callback");
+    router.refresh();
+  };
+
+  const handleResend = async () => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: sentEmail,
+    });
+    if (error) {
+      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+    }
+  };
+
+  const handleEditEmail = () => {
+    setSentEmail("");
+    setOtpError(null);
+  };
+
+  // platform 判定が終わるまでは何も描画しない。
   if (!platformResolved) return null;
-  // native は Figma 準拠の NativeAuthForm に差し替える。匿名ユーザーには updateUser で
-  // 現ゲストに紐付ける (NativeAuthForm 内で処理)。Web は従来のレイアウトを維持。
   if (isNative) return <NativeAuthForm mode="signup" />;
+
+  const inOtpStep = sentEmail.length > 0;
 
   return (
     <AuthPage>
-      <AuthCard title={done ? "メールアドレスをご確認ください" : "アカウント新規作成"}>
-        {done ? (
-          <div className="flex flex-col items-center gap-5 py-4 text-center">
-            <HiOutlineEnvelope className="text-primary" size={72} strokeWidth={1.2} />
-            <p className="text-gray-900 font-medium break-all leading-relaxed">
-              <span className="text-primary font-semibold">{sentEmail}</span>
-              <br />
-              宛に確認メールを送信しました
-            </p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              メール内のリンクをクリックして<br />
-              登録を完了してください。
-            </p>
-            <p className="text-xs text-gray-500 leading-relaxed mt-1">
-              数分待っても届かない場合、迷惑メールフォルダをご確認ください。
-              <br />
-              既にご登録済みの場合は{" "}
-              <Link href="/login" className="text-primary underline">ログイン</Link>
-              {" "}をお試しください。
-            </p>
-          </div>
+      <AuthCard title={inOtpStep ? "確認コードを入力" : "アカウント新規作成"}>
+        {inOtpStep ? (
+          <OtpVerifyStep
+            email={sentEmail}
+            onVerify={handleVerify}
+            onResend={handleResend}
+            onEditEmail={handleEditEmail}
+            submitting={otpSubmitting}
+            error={otpError}
+          />
         ) : (
           <>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">

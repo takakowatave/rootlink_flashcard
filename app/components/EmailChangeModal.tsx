@@ -3,14 +3,9 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabaseClient";
-import { isNativePlatform } from "@/lib/isNativePlatform";
-import { setPendingAuthFlow } from "@/lib/pendingAuthFlow";
 import { TextInput } from "./TextInput";
 import Button from "./Button";
-
-// native は中継ページ経由で戻す。Chrome は 303 でカスタムスキームを起こせないため、
-// 一度 https の /auth/app-return を踏み、そこでユーザー操作として deeplink を叩く。
-const NATIVE_REDIRECT_URL = "https://www.rootlink.app/auth/app-return";
+import OtpVerifyStep from "./auth/OtpVerifyStep";
 
 interface FormData {
   email: string;
@@ -23,6 +18,16 @@ interface Props {
   onSent: (newEmail: string) => void;
 }
 
+type Step = "input" | "otp";
+
+/**
+ * メールアドレス変更モーダル。
+ *
+ * 旧: updateUser({ email }) で新しいメールアドレスにリンクを送信 →
+ *     ユーザーがリンクをタップ → 変更完了。
+ * 新: updateUser({ email }) でコード送信 → 同じモーダル内で OTP 入力 →
+ *     verifyOtp({ email: 新しいメール, type: 'email_change' }) → 変更完了。
+ */
 export default function EmailChangeModal({ open, onClose, currentEmail, onSent }: Props) {
   const {
     register,
@@ -31,16 +36,10 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
     formState: { errors, isSubmitting },
     setError,
   } = useForm<FormData>();
-  const [redirect, setRedirect] = useState<string>("");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    // アプリで始めた場合は deeplink で戻して AppShell 側で /callback に飛ばす。
-    // Web は今までどおり origin の /callback を直接開かせる。
-    setRedirect(
-      isNativePlatform() ? NATIVE_REDIRECT_URL : `${window.location.origin}/callback`,
-    );
-  }, []);
+  const [step, setStep] = useState<Step>("input");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +52,10 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
       reset();
+      setStep("input");
+      setPendingEmail("");
+      setOtpError(null);
+      setOtpSubmitting(false);
     };
   }, [open, onClose, reset]);
 
@@ -63,17 +66,52 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
       setError("email", { message: "現在のメールアドレスと同じです" });
       return;
     }
-    if (isNativePlatform()) setPendingAuthFlow("email_change");
-    const { error } = await supabase.auth.updateUser(
-      { email },
-      { emailRedirectTo: redirect || undefined },
-    );
+    const { error } = await supabase.auth.updateUser({ email });
     if (error) {
       setError("email", { message: error.message });
       return;
     }
-    onSent(email);
+    setPendingEmail(email);
+    setStep("otp");
+  };
+
+  const handleVerify = async (code: string) => {
+    setOtpSubmitting(true);
+    setOtpError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: pendingEmail,
+      token: code,
+      type: "email_change",
+    });
+    setOtpSubmitting(false);
+    if (error) {
+      setOtpError(
+        /expired|invalid/i.test(error.message)
+          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          : error.message,
+      );
+      return;
+    }
+    onSent(pendingEmail);
     reset();
+    setStep("input");
+    setPendingEmail("");
+  };
+
+  const handleResend = async () => {
+    const { error } = await supabase.auth.resend({
+      type: "email_change",
+      email: pendingEmail,
+    });
+    if (error) {
+      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+    }
+  };
+
+  const handleEditEmail = () => {
+    setStep("input");
+    setPendingEmail("");
+    setOtpError(null);
   };
 
   return (
@@ -88,49 +126,65 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
         className="relative z-10 bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-gray-950">メールアドレスの変更</h3>
-        <p className="text-xs text-gray-600 leading-relaxed">
-          現在: <span className="font-medium text-gray-900 break-all">{currentEmail}</span>
-          <br />
-          新しいメールアドレスに確認リンクを送信します。リンクをクリックするまで変更は完了しません。
-        </p>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <TextInput
-            label="新しいメールアドレス"
-            type="email"
-            placeholder="new@example.com"
-            autoFocus
-            error={errors.email}
-            {...register("email", {
-              required: "メールアドレスは必須です",
-              pattern: {
-                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: "メールアドレスの形式が正しくありません",
-              },
-            })}
+        {step === "input" ? (
+          <>
+            <h3 className="text-base font-semibold text-gray-950">
+              メールアドレスの変更
+            </h3>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              現在:{" "}
+              <span className="font-medium text-gray-900 break-all">{currentEmail}</span>
+              <br />
+              新しいメールアドレスに確認コードを送信します。
+            </p>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <TextInput
+                label="新しいメールアドレス"
+                type="email"
+                placeholder="new@example.com"
+                autoFocus
+                error={errors.email}
+                {...register("email", {
+                  required: "メールアドレスは必須です",
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "メールアドレスの形式が正しくありません",
+                  },
+                })}
+              />
+              <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
+                <Button
+                  type="button"
+                  variant="tertiary"
+                  size="md"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="w-full md:w-auto"
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={isSubmitting}
+                  className="w-full md:w-auto"
+                >
+                  {isSubmitting ? "送信中..." : "確認コードを送信"}
+                </Button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <OtpVerifyStep
+            email={pendingEmail}
+            onVerify={handleVerify}
+            onResend={handleResend}
+            onEditEmail={handleEditEmail}
+            submitting={otpSubmitting}
+            error={otpError}
           />
-          <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
-            <Button
-              type="button"
-              variant="tertiary"
-              size="md"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="w-full md:w-auto"
-            >
-              キャンセル
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              disabled={isSubmitting}
-              className="w-full md:w-auto"
-            >
-              {isSubmitting ? "送信中..." : "確認メールを送信"}
-            </Button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );

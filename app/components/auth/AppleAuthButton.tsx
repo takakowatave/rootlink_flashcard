@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { isAndroidPlatform } from "@/lib/isAndroidPlatform";
+
+// DevBadge と同じ判定: 本番ドメインでは出さない、それ以外 (localhost / Vercel
+// preview / Capacitor WebView の server.url が preview のとき) では原文トーストを出す。
+const PROD_HOSTS = new Set(["www.rootlink.app", "rootlink.app"]);
+function isDevEnvironment(): boolean {
+  if (typeof window === "undefined") return false;
+  return !PROD_HOSTS.has(window.location.hostname);
+}
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
@@ -83,14 +92,19 @@ function generatePlainNonce(): string {
 }
 
 // Apple ネイティブサインインのキャンセル判定。
-// ASAuthorizationError.canceled は code=1001。plugin が code をそのまま載せる場合と、
-// message に "cancel" を含める場合の両方を拾う。
+// ASAuthorizationError.canceled は code=1001。@capgo/capacitor-social-login が
+// code を数値 / 文字列でそのまま載せる場合、message に "cancel" を含める場合、
+// そして NSError の localizedDescription "...AuthorizationError error 1001." の
+// 形で message にだけ番号が出てくる場合 (2026-10-14 sim 確認) もキャンセル扱いにする。
 function isNativeAppleCancel(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { code?: unknown; message?: unknown };
   if (e.code === "1001" || e.code === 1001) return true;
   const msg = typeof e.message === "string" ? e.message.toLowerCase() : "";
-  return /cancel/.test(msg);
+  if (/cancel/.test(msg)) return true;
+  // "...AuthorizationError error 1001." パターンを拾う
+  if (/\berror\s+1001\b/.test(msg)) return true;
+  return false;
 }
 
 export default function AppleAuthButton({
@@ -145,11 +159,22 @@ export default function AppleAuthButton({
           },
         });
         if (loginRes.provider !== "apple") {
+          console.error("[apple] loginRes.provider mismatch:", loginRes);
+          if (isDevEnvironment()) {
+            toast.error(
+              `[apple] provider mismatch: ${loginRes.provider}`,
+              { duration: 15000 },
+            );
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
         const idToken = loginRes.result.idToken;
         if (!idToken) {
+          console.error("[apple] no idToken in loginRes:", loginRes);
+          if (isDevEnvironment()) {
+            toast.error("[apple] no idToken returned", { duration: 15000 });
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
@@ -159,6 +184,13 @@ export default function AppleAuthButton({
           nonce: plainNonce,
         });
         if (supaErr) {
+          console.error("[apple] signInWithIdToken error:", supaErr);
+          if (isDevEnvironment()) {
+            toast.error(
+              `[apple] supabase: ${supaErr.message ?? String(supaErr)}`,
+              { duration: 15000 },
+            );
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
@@ -169,6 +201,13 @@ export default function AppleAuthButton({
         if (isNativeAppleCancel(err)) {
           // キャンセルは静かに戻す (トーストもエラー表示も出さない)
           return;
+        }
+        console.error("[apple] native sign-in threw:", err);
+        if (isDevEnvironment()) {
+          const e = err as { code?: unknown; message?: unknown };
+          const code = e?.code !== undefined ? String(e.code) : "?";
+          const msg = typeof e?.message === "string" ? e.message : String(err);
+          toast.error(`[apple] code=${code} msg=${msg}`, { duration: 15000 });
         }
         onError?.(ERROR_MESSAGE[variant]);
       }
@@ -196,6 +235,7 @@ export default function AppleAuthButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={APPLE_DISABLED || inAppBrowser}
       className="w-full h-12 px-4 bg-black border border-black rounded-md hover:bg-gray-900 flex items-center justify-center gap-2 text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed"
