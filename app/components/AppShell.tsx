@@ -111,30 +111,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [pathname])
 
-  // App が前面に戻ったとき (iOS/Android の appStateChange) に、Supabase の
-  // access_token を refresh する。native WebView を長時間 background に置くと
-  // auto refresh の setTimeout が走らず、戻ってきたときに expired のまま fetch
-  // して 401 → signOut 経路に落ちることがある (ゲスト運用ではデータ消失になる)。
-  // 診断強化: SIGNED_OUT / TOKEN_REFRESHED をログに出して外れ経路を特定する。
-  useEffect(() => {
-    if (!isNativePlatform()) return
-    let handle: PluginListenerHandle | null = null
-    ;(async () => {
-      try {
-        const { App } = await import('@capacitor/app')
-        handle = await App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
-          if (!isActive) return
-          void supabase.auth.refreshSession().then(({ error }) => {
-            if (error) console.warn('[auth] refreshSession on resume failed:', error.message)
-          })
-        })
-      } catch {
-        // plugin unavailable; ignore
-      }
-    })()
-    return () => { void handle?.remove() }
-  }, [])
-
+  // 旧実装は appStateChange で refreshSession() を明示的に叩いていたが、
+  // supabase-js の auto-refresh (visibilitychange + 期限前タイマー) と
+  // 二重発火して /token を短時間に連打する経路になっていた
+  // (App Store 審査 2026-10-13 の 1 秒 3〜4 回 → 429 の原因)。
+  // supabase-js 内蔵の auto-refresh に任せて明示的な refreshSession は
+  // 外す。期限切れでも次の API 呼び出し時に自動で refresh される。
   useEffect(() => {
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {

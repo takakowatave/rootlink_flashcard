@@ -9,6 +9,7 @@ import EtymologyBlock from '@/components/EtymologyBlock'
 import SenseExample from '@/components/SenseExample'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { supabase } from '@/lib/supabaseClient'
+import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import { toggleSaveStatus } from '@/lib/supabaseApi'
 import { useAuthReload } from '@/lib/useAuthReload'
 import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
@@ -131,7 +132,13 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
   const handleBookmark = async () => {
     sendEvent('word_card_save', { word, logged_in: userId ? 'yes' : 'no' })
     if (!userId) {
-      setShowSignupModal(true)
+      const ok = await ensureNativeGuestSession()
+      if (!ok) {
+        setShowSignupModal(true)
+        return
+      }
+      // ensureNativeGuestSession 後は useAuthReload の SIGNED_IN で userId が追従する。
+      // 直後のタップで通常経路に乗る。
       return
     }
     if (!dictionary) return

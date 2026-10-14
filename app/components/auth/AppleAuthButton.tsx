@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { isAndroidPlatform } from "@/lib/isAndroidPlatform";
+
+// DevBadge と同じ判定: 本番ドメインでは出さない、それ以外 (localhost / Vercel
+// preview / Capacitor WebView の server.url が preview のとき) では原文トーストを出す。
+const PROD_HOSTS = new Set(["www.rootlink.app", "rootlink.app"]);
+function isDevEnvironment(): boolean {
+  if (typeof window === "undefined") return false;
+  return !PROD_HOSTS.has(window.location.hostname);
+}
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
@@ -145,11 +154,22 @@ export default function AppleAuthButton({
           },
         });
         if (loginRes.provider !== "apple") {
+          console.error("[apple] loginRes.provider mismatch:", loginRes);
+          if (isDevEnvironment()) {
+            toast.error(
+              `[apple] provider mismatch: ${loginRes.provider}`,
+              { duration: 15000 },
+            );
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
         const idToken = loginRes.result.idToken;
         if (!idToken) {
+          console.error("[apple] no idToken in loginRes:", loginRes);
+          if (isDevEnvironment()) {
+            toast.error("[apple] no idToken returned", { duration: 15000 });
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
@@ -159,6 +179,13 @@ export default function AppleAuthButton({
           nonce: plainNonce,
         });
         if (supaErr) {
+          console.error("[apple] signInWithIdToken error:", supaErr);
+          if (isDevEnvironment()) {
+            toast.error(
+              `[apple] supabase: ${supaErr.message ?? String(supaErr)}`,
+              { duration: 15000 },
+            );
+          }
           onError?.(ERROR_MESSAGE[variant]);
           return;
         }
@@ -169,6 +196,13 @@ export default function AppleAuthButton({
         if (isNativeAppleCancel(err)) {
           // キャンセルは静かに戻す (トーストもエラー表示も出さない)
           return;
+        }
+        console.error("[apple] native sign-in threw:", err);
+        if (isDevEnvironment()) {
+          const e = err as { code?: unknown; message?: unknown };
+          const code = e?.code !== undefined ? String(e.code) : "?";
+          const msg = typeof e?.message === "string" ? e.message : String(err);
+          toast.error(`[apple] code=${code} msg=${msg}`, { duration: 15000 });
         }
         onError?.(ERROR_MESSAGE[variant]);
       }
