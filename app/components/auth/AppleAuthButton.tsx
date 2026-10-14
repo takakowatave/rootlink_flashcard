@@ -92,14 +92,19 @@ function generatePlainNonce(): string {
 }
 
 // Apple ネイティブサインインのキャンセル判定。
-// ASAuthorizationError.canceled は code=1001。plugin が code をそのまま載せる場合と、
-// message に "cancel" を含める場合の両方を拾う。
+// ASAuthorizationError.canceled は code=1001。@capgo/capacitor-social-login が
+// code を数値 / 文字列でそのまま載せる場合、message に "cancel" を含める場合、
+// そして NSError の localizedDescription "...AuthorizationError error 1001." の
+// 形で message にだけ番号が出てくる場合 (2026-10-14 sim 確認) もキャンセル扱いにする。
 function isNativeAppleCancel(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { code?: unknown; message?: unknown };
   if (e.code === "1001" || e.code === 1001) return true;
   const msg = typeof e.message === "string" ? e.message.toLowerCase() : "";
-  return /cancel/.test(msg);
+  if (/cancel/.test(msg)) return true;
+  // "...AuthorizationError error 1001." パターンを拾う
+  if (/\berror\s+1001\b/.test(msg)) return true;
+  return false;
 }
 
 export default function AppleAuthButton({
