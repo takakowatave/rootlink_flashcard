@@ -71,8 +71,16 @@ export default function EtymologyBlock({
   // type: 'origin' の単語は wordFamily の他語から parts を継承する。
   // 継承元は「parts に同族語が含まれていないもの」に限定する
   // (継承元の分解が同族語を部品として含んでいると根本まで辿れないため)。
+  // description は type に関係なく、自分の説明文が壊れている ("from ethical" 等の
+  // 自己参照テンプレ) ときだけ同族語から借りる。parts 型の旧データ 7,384 件対策。
+  const ownDescEn = etymology
+  const ownDescJa = localizedEtymologyJa?.description ?? null
   useEffect(() => {
-    if (etymologyData?.structure.type !== 'origin') {
+    const needsParts = etymologyData?.structure.type === 'origin'
+    const needsDesc = Boolean(etymologyData) && (
+      isBrokenDescription(ownDescEn, headword) || isBrokenDescription(ownDescJa, headword)
+    )
+    if (!etymologyData || (!needsParts && !needsDesc)) {
       setInheritedParts([])
       setInheritedDescription(null)
       return
@@ -87,6 +95,9 @@ export default function EtymologyBlock({
     }
     const familySet = new Set(family)
     let cancelled = false
+    // 単語切替時に前の単語の継承結果が残らないよう先にリセット
+    setInheritedParts([])
+    setInheritedDescription(null)
     ;(async () => {
       const { data: wordRows } = await supabase
         .from('words')
@@ -122,7 +133,7 @@ export default function EtymologyBlock({
         if (enOk || jaOk) descCandidates.push({ word: w, en: enOk, ja: jaOk })
       }
       if (cancelled) return
-      if (partsCandidates.length > 0) {
+      if (needsParts && partsCandidates.length > 0) {
         const preferred = family.map(f => partsCandidates.find(c => c.word === f)).find(Boolean)
         setInheritedParts((preferred ?? partsCandidates[0])!.parts)
       }
@@ -133,7 +144,7 @@ export default function EtymologyBlock({
       }
     })()
     return () => { cancelled = true }
-  }, [etymologyData, headword])
+  }, [etymologyData, headword, ownDescEn, ownDescJa])
 
   const parts = ownParts.length > 0 ? ownParts : inheritedParts
   useEffect(() => { setExpandedParts(parts.map(() => false)) }, [parts])
