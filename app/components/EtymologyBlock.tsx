@@ -31,6 +31,16 @@ function isBrokenDescription(desc: string | undefined | null, word: string): boo
   return false
 }
 
+// 語根の英語の意味 ("circle, ring") を照合用トークンに分解する。
+const MEANING_STOPWORDS = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'that', 'something', 'someone', 'one'])
+function meaningTokens(meaning: string | undefined | null): string[] {
+  if (!meaning) return []
+  return meaning
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(t => t.length >= 3 && !MEANING_STOPWORDS.has(t))
+}
+
 type Props = {
   headword: string
   etymologyData?: EtymologyData | null
@@ -88,12 +98,31 @@ export default function EtymologyBlock({
     const family = (etymologyData.wordFamily ?? [])
       .map(w => w.toLowerCase())
       .filter(w => w && w !== headword.toLowerCase())
-    if (family.length === 0) {
+    const familySet = new Set(family)
+    // 同族語が全部壊れている語 (recycle → recycling / recycled ...) 向けに、
+    // 自分の語根 (cycle) の語からも由来文を借りる。ただし語根の意味 (circle) が
+    // 借用先の英語由来文に含まれるときだけ採用する (export の port=運ぶ に
+    // 港の port の由来文を出す、のような同綴異語の誤りを防ぐ)。
+    const rootCandidates = needsDesc && etymologyData.structure.type === 'parts'
+      ? etymologyData.structure.parts
+          .filter(p => p.partType === 'root')
+          .map(p => ({
+            word: (p.text ?? '').toLowerCase(),
+            tokens: meaningTokens(p.meaning),
+          }))
+          .filter(r =>
+            /^[a-z]{3,}$/.test(r.word) &&
+            r.word !== headword.toLowerCase() &&
+            !familySet.has(r.word) &&
+            r.tokens.length > 0,
+          )
+      : []
+    const lookupWords = [...family, ...rootCandidates.map(r => r.word)]
+    if (lookupWords.length === 0) {
       setInheritedParts([])
       setInheritedDescription(null)
       return
     }
-    const familySet = new Set(family)
     let cancelled = false
     // 単語切替時に前の単語の継承結果が残らないよう先にリセット
     setInheritedParts([])
@@ -102,8 +131,8 @@ export default function EtymologyBlock({
       const { data: wordRows } = await supabase
         .from('words')
         .select('id, word')
-        .in('word', family)
-        .limit(family.length)
+        .in('word', lookupWords)
+        .limit(lookupWords.length)
       const rows = (wordRows ?? []) as { id: string; word: string }[]
       if (rows.length === 0) return
       const idToWord = new Map(rows.map(r => [r.id, r.word.toLowerCase()]))
@@ -115,9 +144,22 @@ export default function EtymologyBlock({
         .limit(ids.length)
       const partsCandidates: { word: string; parts: EtymologyPart[] }[] = []
       const descCandidates: { word: string; en: string; ja: string }[] = []
+      const rootDescCandidates: { word: string; en: string; ja: string }[] = []
       for (const c of (cacheRows ?? []) as { word_id: string; payload: RewrittenPayload }[]) {
         const w = idToWord.get(c.word_id)
         if (!w) continue
+        if (!familySet.has(w)) {
+          const root = rootCandidates.find(r => r.word === w)
+          if (!root) continue
+          const enRaw = c.payload?.etymology?.trim() ?? ''
+          const jaRaw = c.payload?.locales?.ja?.etymology?.description?.trim() ?? ''
+          if (!enRaw || isBrokenDescription(enRaw, w)) continue
+          const enLower = enRaw.toLowerCase()
+          if (!root.tokens.some(t => enLower.includes(t))) continue
+          const jaOk = jaRaw && !isBrokenDescription(jaRaw, w) ? jaRaw : ''
+          rootDescCandidates.push({ word: w, en: enRaw, ja: jaOk })
+          continue
+        }
         const structure = c.payload?.etymologyData?.structure
         if (structure && structure.type === 'parts') {
           const parts = structure.parts.filter(p => p.text || p.meaning)
@@ -140,6 +182,10 @@ export default function EtymologyBlock({
       if (descCandidates.length > 0) {
         const preferred = family.map(f => descCandidates.find(c => c.word === f)).find(Boolean)
         const chosen = preferred ?? descCandidates[0]
+        setInheritedDescription({ en: chosen.en, ja: chosen.ja })
+      } else if (rootDescCandidates.length > 0) {
+        const preferred = rootCandidates.map(r => rootDescCandidates.find(c => c.word === r.word)).find(Boolean)
+        const chosen = preferred ?? rootDescCandidates[0]
         setInheritedDescription({ en: chosen.en, ja: chosen.ja })
       }
     })()
