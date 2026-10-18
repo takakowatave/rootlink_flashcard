@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MdRemoveCircle, MdAddCircle } from 'react-icons/md'
 import { supabase } from '@/lib/supabaseClient'
@@ -49,6 +49,16 @@ type Props = {
   displayLocale?: DisplayLocale
   /** TutorialOverlay が拾うマーカー。ページ内で二重に描かれるケース (Quiz など) では false にする */
   withTutorialAttr?: boolean
+  /**
+   * 語源ツリーの仲間の単語を SSR で先に渡す (part_text 小文字 → 単語)。
+   * 渡された語根はクライアントで引き直さない。/word/[word] だけが渡す。
+   */
+  initialRelatedWords?: Record<string, string[]>
+  /**
+   * <a href="/word/..."> にしてよい語 (dictionary_cache あり)。
+   * クローラーが単語ページ同士を辿れるようにするため。ここに無い語は従来どおり button。
+   */
+  linkableWords?: string[]
 }
 
 export default function EtymologyBlock({
@@ -58,6 +68,8 @@ export default function EtymologyBlock({
   etymology = '',
   displayLocale = 'en',
   withTutorialAttr = true,
+  initialRelatedWords,
+  linkableWords,
 }: Props) {
   const ownParts = useMemo(
     () => etymologyData?.structure.type === 'parts'
@@ -69,7 +81,13 @@ export default function EtymologyBlock({
   const router = useRouter()
   const wordDetail = useWordDetail()
   const [navigatingWord, setNavigatingWord] = useState<string | null>(null)
-  const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>({})
+  const [partWordMap, setPartWordMap] = useState<Record<string, string[]>>(() => initialRelatedWords ?? {})
+  // SSR で受け取った語根はクライアントで引き直さない (表示が入れ替わらないように)
+  const ssrPartKeys = useRef<Set<string>>(new Set(Object.keys(initialRelatedWords ?? {})))
+  const linkableSet = useMemo(
+    () => new Set((linkableWords ?? []).map(w => w.toLowerCase())),
+    [linkableWords],
+  )
   // 関連語チップ横に出すグロス。JA/EN 両方をキャッシュしておいて displayLocale で切り替える。
   // 以前は wordMeaningJa 一本だったため、EN モードでも日本語訳が出てしまっていた (Bug: EN 表示で
   // unwilling → 「嫌がる」、willing → 「喜んで〜する」が残る)。
@@ -200,6 +218,7 @@ export default function EtymologyBlock({
     parts.forEach(part => {
       if (!part?.text) return
       const partText = part.text.toLowerCase()
+      if (ssrPartKeys.current.has(partText)) return
       const meaningJa = part.meaningJa?.trim() ?? null
       const meaningEn = part.meaning?.trim() ?? null
       // 意味が空のパーツは絞りようがないのでスペル一致のみ（従来通り）
@@ -331,6 +350,15 @@ export default function EtymologyBlock({
                 <span className="text-sm font-medium text-primary-hover leading-[28px]">{gloss}</span>
               </div>
 
+              {/* 閉じている間も、リンクできる仲間の単語は HTML に置いておく (クローラー用。見た目は変えない) */}
+              {!expandedParts[idx] && filteredWords.some(w => linkableSet.has(w.toLowerCase())) && (
+                <ul hidden>
+                  {filteredWords.filter(w => linkableSet.has(w.toLowerCase())).map(w => (
+                    <li key={w}><a href={`/word/${encodeURIComponent(w)}`}>{w}</a></li>
+                  ))}
+                </ul>
+              )}
+
               {/* Related words tree */}
               {expandedParts[idx] && filteredWords.length > 0 && (() => {
                 const ITEM_H = 36
@@ -386,10 +414,8 @@ export default function EtymologyBlock({
                       return (
                         <div key={wi} className="flex items-center gap-2 min-w-0" style={{ height: ITEM_H }}>
                           <div className="group/chip relative shrink-0">
-                            <button
-                              type="button"
-                              disabled={navigatingWord !== null}
-                              onClick={async () => {
+                            {(() => {
+                              const openRelated = async () => {
                                 setNavigatingWord(rw)
                                 try {
                                   const result = await resolveWord(rw)
@@ -418,9 +444,10 @@ export default function EtymologyBlock({
                                 } finally {
                                   setNavigatingWord(null)
                                 }
-                              }}
-                              className="bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity disabled:opacity-50"
-                            >
+                              }
+                              const chipClass = "bg-primary-subtle px-[8px] py-[4px] rounded-[24px] transition-opacity"
+                              const chipInner = (
+                                <>
                               {navigatingWord === rw ? (
                                 <svg className="size-4 animate-spin text-primary-hover" fill="none" viewBox="0 0 24 24">
                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -429,7 +456,38 @@ export default function EtymologyBlock({
                               ) : (
                                 <span className="text-[14px] font-medium text-primary-hover leading-4">{rw}</span>
                               )}
-                            </button>
+                                </>
+                              )
+                              if (linkableSet.has(rw.toLowerCase())) {
+                                // クローラー向けに本物のリンク。人が押したときは従来どおり詳細を開く。
+                                // 修飾キー付き (新しいタブ等) はブラウザに任せる。
+                                return (
+                                  <a
+                                    href={`/word/${encodeURIComponent(rw)}`}
+                                    aria-disabled={navigatingWord !== null}
+                                    onClick={(e) => {
+                                      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                                      e.preventDefault()
+                                      if (navigatingWord !== null) return
+                                      void openRelated()
+                                    }}
+                                    className={`inline-block ${chipClass} ${navigatingWord !== null ? 'opacity-50' : ''}`}
+                                  >
+                                    {chipInner}
+                                  </a>
+                                )
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  disabled={navigatingWord !== null}
+                                  onClick={() => { void openRelated() }}
+                                  className={`${chipClass} disabled:opacity-50`}
+                                >
+                                  {chipInner}
+                                </button>
+                              )
+                            })()}
                             {/* hover tooltip は desktop 用。SP は tap で sticky になり出っぱなしになるので非表示。 */}
                             <span className="hidden md:block pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-700 px-3 py-2 text-xs text-white opacity-0 shadow-md transition-opacity group-hover/chip:opacity-100">
                               {displayLocale === 'ja' ? 'この単語を検索' : 'Search this word'}

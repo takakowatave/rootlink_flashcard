@@ -50,6 +50,8 @@ type Props = {
   displayLocale?: DisplayLocale
   compact?: boolean
   noCard?: boolean
+  initialEtymologyRelatedWords?: Record<string, string[]>
+  etymologyLinkableWords?: string[]
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -87,6 +89,8 @@ export default function EntryCard({
   shareBtnRef,
   compact = false,
   noCard = false,
+  initialEtymologyRelatedWords,
+  etymologyLinkableWords,
 }: Props) {
   // 見出し音声: Oxford 実録音があればそれを初期URLに、なければ TTS フォールバック
   const headwordAudio = useTtsAudio({
@@ -191,6 +195,8 @@ export default function EntryCard({
             localizedEtymologyJa={localizedEtymologyJa}
             etymology={etymology}
             displayLocale={displayLocale}
+            initialRelatedWords={initialEtymologyRelatedWords}
+            linkableWords={etymologyLinkableWords}
           />
         )}
 

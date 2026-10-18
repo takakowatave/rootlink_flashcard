@@ -656,6 +656,8 @@ export default function WordPageClient({
   relatedPosts,
   initialExistingDerivatives,
   containingDecks,
+  initialEtymologyRelatedWords,
+  etymologyLinkableWords,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -678,6 +680,10 @@ export default function WordPageClient({
     imageSrc?: string
     isPremium: boolean
   }>
+  /** 語源ツリーの仲間の単語 (SSR で取得。part_text 小文字 → 単語) */
+  initialEtymologyRelatedWords?: Record<string, string[]>
+  /** そのうち dictionary_cache を持つ語。これだけ <a href> にする */
+  etymologyLinkableWords?: string[]
 }) {
   const router = useRouter()
 
@@ -1253,6 +1259,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       onTogglePin={handleTogglePin}
       displayLocale={displayLocale}
       noCard={noCard}
+      initialEtymologyRelatedWords={initialEtymologyRelatedWords}
+      etymologyLinkableWords={etymologyLinkableWords}
     />
     {/* 「この単語の内容を報告」は、EntryCard の直後・収録デッキ / 記事の前に
         置いておく (誤りに気づいたユーザーがすぐ動けるように)。 */}

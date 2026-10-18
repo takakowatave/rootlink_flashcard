@@ -168,6 +168,76 @@ const getDecksContainingWord = cache(async (word: string): Promise<WordDeckCard[
   }
 })
 
+/**
+ * 語源ツリー (語根チップを開くと出る「語源仲間」) を SSR で先に引いておく。
+ *
+ * 以前はクライアントで etymology_part_words を読んでいたため HTML に出ず、
+ * Googlebot が単語ページ同士を辿れなかった (SEO基盤整備 Epic「単語ページの孤立解消」)。
+ * クエリ条件は EtymologyBlock のクライアント側と同じにしてある。
+ *
+ * linkable は dictionary_cache を持つ語だけ。キャッシュの無い語は /word/ が 404 になるので
+ * リンクにしない (クローラーに 404 を大量に踏ませないため)。
+ * Supabase を読むだけで Cloud Run / Oxford には一切到達しない。
+ */
+type EtymologyTreeWords = { relatedWords: Record<string, string[]>; linkable: string[] }
+
+const getEtymologyTreeWords = cache(
+  async (headword: string, dictionary: RewrittenPayload | null): Promise<EtymologyTreeWords> => {
+    const empty: EtymologyTreeWords = { relatedWords: {}, linkable: [] }
+    type Part = { text?: string | null; meaning?: string | null; meaningJa?: string | null }
+    const structure = (dictionary as unknown as {
+      etymologyData?: { structure?: { type?: string; parts?: Part[] } } | null
+    } | null)?.etymologyData?.structure
+    if (!structure || structure.type !== 'parts' || !Array.isArray(structure.parts)) return empty
+    const parts = structure.parts.filter((p) => p && (p.text || p.meaning) && p.text)
+    if (parts.length === 0) return empty
+    const head = headword.toLowerCase()
+    try {
+      const relatedEntries = await Promise.all(
+        parts.map(async (part) => {
+          const partText = String(part.text).toLowerCase()
+          const meaningJa = part.meaningJa?.trim() || null
+          const meaningEn = part.meaning?.trim() || null
+          let url =
+            `${SUPABASE_URL}/rest/v1/etymology_part_words?select=word` +
+            `&part_text=eq.${encodeURIComponent(partText)}` +
+            `&word=neq.${encodeURIComponent(head)}&limit=24`
+          if (meaningJa) url += `&meaning_ja=eq.${encodeURIComponent(meaningJa)}`
+          else if (meaningEn) url += `&meaning_en=eq.${encodeURIComponent(meaningEn)}`
+          const res = await fetch(url, { headers: SUPABASE_HEADERS, next: { revalidate: DAY } })
+          if (!res.ok) return [partText, [] as string[]] as const
+          const rows = (await res.json()) as Array<{ word: string }>
+          return [partText, rows.map((r) => r.word).slice(0, 8)] as const
+        })
+      )
+      const relatedWords: Record<string, string[]> = {}
+      for (const [k, v] of relatedEntries) if (v.length > 0) relatedWords[k] = v
+      const all = [...new Set(Object.values(relatedWords).flat().map((w) => w.toLowerCase()))]
+      if (all.length === 0) return { relatedWords, linkable: [] }
+
+      const inList = all.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
+      const wordsRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})&limit=500`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      )
+      if (!wordsRes.ok) return { relatedWords, linkable: [] }
+      const wordRows = (await wordsRes.json()) as Array<{ id: string | number; word: string }>
+      if (wordRows.length === 0) return { relatedWords, linkable: [] }
+      const idList = wordRows.map((r) => encodeURIComponent(String(r.id))).join(',')
+      const cacheRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id&word_id=in.(${idList})&limit=500`,
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+      )
+      if (!cacheRes.ok) return { relatedWords, linkable: [] }
+      const cached = new Set(((await cacheRes.json()) as Array<{ word_id: string | number }>).map((r) => String(r.word_id)))
+      const linkable = wordRows.filter((r) => cached.has(String(r.id))).map((r) => r.word.toLowerCase())
+      return { relatedWords, linkable }
+    } catch {
+      return empty
+    }
+  }
+)
+
 function readDerivativesFromDictionary(dictionary: RewrittenPayload | null): string[] {
   const raw = (dictionary as unknown as { derivatives?: unknown } | null)?.derivatives
   if (!Array.isArray(raw)) return []
@@ -282,10 +352,11 @@ export default async function Page({
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)
-    const [relatedPosts, initialExistingDerivatives, containingDecks] = await Promise.all([
+    const [relatedPosts, initialExistingDerivatives, containingDecks, etymologyTree] = await Promise.all([
       getPostsReferencingWord(resolvedWord),
       filterExistingWords(rawDerivatives),
       getDecksContainingWord(resolvedWord),
+      getEtymologyTreeWords(resolvedWord, data.dictionary),
     ])
     return (
       <WordPageClient
@@ -296,6 +367,8 @@ export default async function Page({
         relatedPosts={relatedPosts}
         initialExistingDerivatives={initialExistingDerivatives}
         containingDecks={containingDecks}
+        initialEtymologyRelatedWords={etymologyTree.relatedWords}
+        etymologyLinkableWords={etymologyTree.linkable}
       />
     )
   }
