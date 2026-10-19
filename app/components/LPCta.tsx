@@ -19,9 +19,9 @@ export default function LPCta() {
 
         {/* テキスト — SP: 上 / PC: 右 */}
         <div className="order-1 md:order-2 flex flex-col gap-3 text-center md:text-left">
-          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">2026.10</p>
+          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">Android版 配信中</p>
           <p className="text-[31px] font-bold leading-tight text-white md:text-[34px]">
-            公式アプリリリース予定
+            iOS版も近日公開予定
           </p>
           {/* バッジ — PC のみここに表示 */}
           <div className="hidden md:flex flex-wrap items-center gap-4 pb-[80px]">
