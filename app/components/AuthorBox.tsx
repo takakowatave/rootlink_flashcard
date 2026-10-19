@@ -25,6 +25,22 @@ export default function AuthorBox({ author, className }: Props) {
         <BlogMetaText>この記事を書いた人</BlogMetaText>
         <p className="mt-0.5 text-base font-semibold text-gray-950">{author.name}</p>
         <p className="mt-2 text-base leading-relaxed text-gray-700">{author.bio}</p>
+        {author.links && author.links.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            {author.links.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-950"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   )
