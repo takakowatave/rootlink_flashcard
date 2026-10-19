@@ -2,6 +2,7 @@
 
 import { HiSpeakerWave } from 'react-icons/hi2'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import HighlightedText from '@/components/blog/HighlightedText'
 
 type Props = {
   example: string | null | undefined
@@ -9,9 +10,11 @@ type Props = {
   displayLocale: DisplayLocale
   onPlay?: () => void
   isLoading?: boolean
+  // 例文の中で強調する表現（大文字小文字は区別しない）。見つからなければ強調しない
+  highlight?: string | null
 }
 
-export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading }: Props) {
+export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading, highlight }: Props) {
   const showTranslation = displayLocale === 'ja' && !!translation
   if (!example && !showTranslation) return null
 
@@ -19,7 +22,9 @@ export default function SenseExample({ example, translation, displayLocale, onPl
     <div className="mt-2 flex flex-col gap-2 text-sm text-black">
       {example && (
         <div className="flex items-start gap-2">
-          <p className="flex-1 min-w-0">{example}</p>
+          <p className="flex-1 min-w-0">
+            <HighlightedText terms={highlight ? [highlight] : []} termClassName="font-bold text-primary">{example}</HighlightedText>
+          </p>
           {onPlay && (
             <button
               type="button"

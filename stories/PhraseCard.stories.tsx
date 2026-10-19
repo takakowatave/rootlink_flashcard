@@ -150,3 +150,67 @@ export const NoExample: Story = {
     onPlayHeadword: () => {},
   },
 }
+
+export const WithNotes: Story = {
+  args: {
+    card: {
+      id: 'sample-notes',
+      phrase: 'could do with something',
+      meaning_ja: '〜があるとありがたい',
+      meaning_en: 'to need or want something',
+      example_en: 'I could do with a cup of tea.',
+      example_ja: '紅茶が一杯欲しいところだ。',
+      type: 'idiom',
+      register: 'informal',
+      locale: 'en-GB',
+      us_equivalent: 'I could use ~',
+      senses: [
+        {
+          sense_id: 's1',
+          meaning_ja: '〜があるとありがたい',
+          meaning_en: 'to need or want something',
+          example_en: 'I could do with a cup of tea.',
+          example_ja: '紅茶が一杯欲しいところだ。',
+          explanation_ja: 'I want より控えめな言い方。疲れたときやのどが渇いたときなど、いま欲しいものを伝えるときに使う。',
+          explanation_en: 'A softer way of saying you want or need something.',
+        },
+      ],
+    },
+    isSaved: false,
+    displayLocale: 'ja',
+    onPlayHeadword: () => {},
+    onPlayExample: () => {},
+  },
+}
+
+export const BritishEnglishPhrasalVerb: Story = {
+  args: {
+    card: {
+      id: 'sample-gb-only',
+      phrase: 'budge up',
+      meaning_ja: '詰めて座る',
+      meaning_en: 'to move along to make room for someone to sit',
+      example_en: 'Can you budge up a bit so I can sit down?',
+      example_ja: 'ちょっと詰めてくれる？私も座りたいから。',
+      type: 'phrasal_verb',
+      register: 'informal',
+      locale: 'en-GB',
+      us_equivalent: 'scoot over',
+      senses: [
+        {
+          sense_id: 's1',
+          meaning_ja: '詰めて座る',
+          meaning_en: 'to move along to make room for someone to sit',
+          example_en: 'Can you budge up a bit so I can sit down?',
+          example_ja: 'ちょっと詰めてくれる？私も座りたいから。',
+          explanation_ja: '座っている人に「詰めて」と頼むくだけた言い方。ベンチやソファ、電車の座席などで使う。',
+          explanation_en: 'Used when asking someone to move to make space on a seat.',
+        },
+      ],
+    },
+    isSaved: false,
+    displayLocale: 'ja',
+    onPlayHeadword: () => {},
+    onPlayExample: () => {},
+  },
+}

@@ -4,6 +4,7 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import SenseExample from '@/components/SenseExample'
 import SensePinButton from '@/components/SensePinButton'
 import GrammarTags from '@/components/GrammarTags'
+import PhraseNotes from '@/components/PhraseNotes'
 
 type Props = {
   meaning: string
@@ -18,6 +19,10 @@ type Props = {
   isPinned?: boolean
   onTogglePin?: () => void
   tutorialPinAttr?: boolean
+  // フレーズ用: 例文中の強調語と解説
+  highlight?: string | null
+  explanation?: string | null
+  usEquivalent?: string | null
 }
 
 export default function SenseRow({
@@ -33,6 +38,9 @@ export default function SenseRow({
   isPinned = false,
   onTogglePin,
   tutorialPinAttr,
+  highlight,
+  explanation,
+  usEquivalent,
 }: Props) {
   return (
     <div className="group flex items-start gap-2 rounded-xl -mx-3 px-3 py-2 hover:bg-gray-50 transition-colors">
@@ -56,7 +64,14 @@ export default function SenseRow({
           displayLocale={displayLocale}
           onPlay={onPlayExample}
           isLoading={exampleLoading}
+          highlight={highlight}
         />
+
+        {(explanation || usEquivalent) && (
+          <div className="mt-2">
+            <PhraseNotes explanation={explanation} usEquivalent={usEquivalent} displayLocale={displayLocale} />
+          </div>
+        )}
       </div>
 
       {showPinButton && onTogglePin && (

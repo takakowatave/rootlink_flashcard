@@ -12,3 +12,13 @@ export function displayPhrase(phrase: string): string {
   let i = 0
   return stripped.replace(slotRegex, () => labels[i++] ?? '~')
 }
+
+// 例文の強調用に、phrase から目的語スロット（someone / something / one's など）を外した形を返す
+// 例: 'could do with something' -> 'could do with'。スロットが途中にある場合は先頭側だけを返す
+const SLOT_WORDS = new Set(['someone', "someone's", 'something', "one's", 'oneself', 'sb', 'sth', 'doing'])
+export function phraseHighlightTerm(phrase: string): string {
+  const words = stripPhraseParens(phrase).split(/\s+/).filter(Boolean)
+  const cut = words.findIndex(w => SLOT_WORDS.has(w.toLowerCase()))
+  const head = cut < 0 ? words : words.slice(0, cut)
+  return head.join(' ')
+}

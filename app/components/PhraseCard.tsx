@@ -7,8 +7,9 @@ import type { DisplayLocale } from '@/types/DisplayLocale'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import SenseExample from '@/components/SenseExample'
+import PhraseNotes from '@/components/PhraseNotes'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
-import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
+import { stripPhraseParens, displayPhrase, phraseHighlightTerm } from '@/lib/phraseDisplay'
 
 export type PhraseCardSense = {
   sense_id: string
@@ -16,6 +17,8 @@ export type PhraseCardSense = {
   meaning_en: string | null
   example_en: string | null
   example_ja: string | null
+  explanation_ja?: string | null
+  explanation_en?: string | null
 }
 
 export type PhraseCardData = {
@@ -29,6 +32,10 @@ export type PhraseCardData = {
   register: string | null
   locale: string | null
   senses: PhraseCardSense[] | null
+  explanation_ja?: string | null
+  explanation_en?: string | null
+  // アメリカ英語での言い方（locale が en-GB のときだけ表示）
+  us_equivalent?: string | null
 }
 
 type Props = {
@@ -83,6 +90,10 @@ export default function PhraseCard({
     ? pickLabel(REGISTER_LABEL, card.register, displayLocale)
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
+  const explanation = displayLocale === 'ja'
+    ? (primary?.explanation_ja ?? card.explanation_ja ?? null)
+    : (primary?.explanation_en ?? card.explanation_en ?? null)
+  const usEquivalent = card.locale === 'en-GB' ? card.us_equivalent : null
   const defaultHref = `/word/${stripPhraseParens(card.phrase).replace(/\s+/g, '_')}`
   const handleCardClick = onClickProp ?? (() => router.push(defaultHref))
 
@@ -127,7 +138,14 @@ export default function PhraseCard({
             displayLocale={displayLocale}
             onPlay={onPlayExample}
             isLoading={exampleAudioLoading}
+            highlight={phraseHighlightTerm(card.phrase)}
           />
+
+          {(explanation || usEquivalent) && (
+            <div className="mt-2">
+              <PhraseNotes explanation={explanation} usEquivalent={usEquivalent} displayLocale={displayLocale} />
+            </div>
+          )}
         </div>
       </div>
     </CardShell>

@@ -12,7 +12,7 @@ import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import ReportContentLink from '@/components/ReportContentLink'
-import { stripPhraseParens, displayPhrase } from '@/lib/phraseDisplay'
+import { stripPhraseParens, displayPhrase, phraseHighlightTerm } from '@/lib/phraseDisplay'
 import { useAuthReload } from '@/lib/useAuthReload'
 
 type PhraseSense = {
@@ -38,6 +38,7 @@ type PhraseCard = {
   register: string | null
   locale: string | null
   senses: PhraseSense[] | null
+  us_equivalent?: string | null
 }
 
 const STOP_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'is', 'be', 'or', 'and', 'not', 'so', 'but', 'one', 'all', 'out', 'up', 'off', 'had', 'got', 'get', 'do', 'from', 'sth', 'sb', "one's"])
@@ -181,6 +182,9 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const componentWords = getComponentWords(card.phrase)
+  const highlight = phraseHighlightTerm(card.phrase)
+  // アメリカ英語での言い方はイギリス英語の表現にだけ出す
+  const usEquivalent = card.locale === 'en-GB' ? (card.us_equivalent ?? null) : null
 
   return (
     <div className="bg-surface min-h-screen">
@@ -200,13 +204,13 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
         {(typeLabel || localeLabel || registerLabel) && (
           <div className="flex flex-wrap items-center gap-2 mb-2">
             {typeLabel && (
-              <span className="text-xs text-muted border border-line rounded px-2 py-1">{typeLabel}</span>
+              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{typeLabel}</span>
             )}
             {localeLabel && (
-              <span className="text-xs text-muted border border-line rounded px-2 py-1">{localeLabel}</span>
+              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{localeLabel}</span>
             )}
             {registerLabel && (
-              <span className="text-xs text-muted border border-line rounded px-2 py-1">{registerLabel}</span>
+              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{registerLabel}</span>
             )}
           </div>
         )}
@@ -218,6 +222,9 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
               ? (sense.meaning_ja ?? sense.meaning_en ?? '')
               : (sense.meaning_en ?? sense.meaning_ja ?? '')
             const hasMultiple = senses.length > 1
+            const explanation = displayLocale === 'ja'
+              ? (sense.explanation_ja ?? sense.explanation_en)
+              : (sense.explanation_en ?? sense.explanation_ja)
 
             return (
               <SenseRow
@@ -232,6 +239,9 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                 showPinButton={hasMultiple}
                 isPinned={pinnedSenseId === sense.sense_id}
                 onTogglePin={() => togglePin(sense.sense_id)}
+                highlight={highlight}
+                explanation={explanation}
+                usEquivalent={idx === 0 ? usEquivalent : null}
               />
             )
           })}

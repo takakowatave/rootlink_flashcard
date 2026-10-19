@@ -12,6 +12,7 @@ module.exports = {
           hover:   '#005f5a',  // teal-800 (Figma primary/hover)
           light:   '#cbfbf1',  // teal-100 (Figma primary/subdued02)
           subtle:  '#f0fdfa',  // teal-50  (Figma primary/subtle)
+          dark:    '#00786f',  // teal-700 (Figma color/teal/700, 解説テキスト)
           mid:     '#00d5be',  // teal-400 (Figma primary/subdued03)
         },
         muted:   '#90a1b9',    // subdued icons and text (IPA, pin, labels)
