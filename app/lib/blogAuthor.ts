@@ -19,10 +19,10 @@ export const BLOG_AUTHOR: BlogAuthor = {
 // アバターは public/authors/<key>.webp を規定パスとする。仮画像でよい (kiko が後で差し替え)。
 export const BLOG_AUTHORS: Record<string, BlogAuthor> = {
   yui: BLOG_AUTHOR,
-  // Cuppa English シリーズの記事。著者名は RootLink編集部、アイコンは RootLink のマーク (2026-10-19 kiko 指定)
+  // Cuppa English シリーズの記事。著者名は Cuppa English、アイコンは RootLink のマーク (2026-10-19 kiko 指定)
   'cuppa-english': {
-    name: 'RootLink編集部',
-    bio: 'ハリポタ原作の会話表現を毎週ひとつ、語源とニュアンスで紐解いていくシリーズ「Cuppa English」をお届けしています。',
+    name: 'Cuppa English',
+    bio: 'ハリポタ原作の会話表現を、毎日のショート動画と毎週のブログで紐解いていくシリーズです。',
     avatarSrc: '/authors/rootlink.svg',
   },
 }
