@@ -1,5 +1,7 @@
 import Image from 'next/image'
 
+const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rootlink.app'
+
 export default function LPCta() {
   return (
     <section
@@ -23,12 +25,12 @@ export default function LPCta() {
           </p>
           {/* バッジ — PC のみここに表示 */}
           <div className="hidden md:flex flex-wrap items-center gap-4 pb-[80px]">
-            <div className="relative h-[54px] w-[145px]">
-              <Image src="/lp/appstore.png" alt="Download on the App Store" fill className="object-contain" sizes="145px" />
+            <div className="relative h-[54px] w-[145px] cursor-not-allowed opacity-40 grayscale" aria-disabled="true">
+              <Image src="/lp/appstore.png" alt="App Store（準備中）" fill className="object-contain" sizes="145px" />
             </div>
-            <div className="relative h-[54px] w-[180px]">
+            <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[54px] w-[180px]">
               <Image src="/lp/googleplay.png" alt="Get it on Google Play" fill className="object-contain" sizes="180px" />
-            </div>
+            </a>
           </div>
         </div>
 
@@ -47,12 +49,12 @@ export default function LPCta() {
 
       {/* バッジ — SP のみ、スマホ画像の下 */}
       <div className="md:hidden flex items-center justify-center gap-2 pb-8 pt-2">
-        <div className="relative h-[52px] w-[156px]">
-          <Image src="/lp/appstore.png" alt="Download on the App Store" fill className="object-contain" sizes="156px" />
+        <div className="relative h-[52px] w-[156px] cursor-not-allowed opacity-40 grayscale" aria-disabled="true">
+          <Image src="/lp/appstore.png" alt="App Store（準備中）" fill className="object-contain" sizes="156px" />
         </div>
-        <div className="relative h-[52px] w-[176px]">
+        <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[52px] w-[176px]">
           <Image src="/lp/googleplay.png" alt="Get it on Google Play" fill className="object-contain" sizes="176px" />
-        </div>
+        </a>
       </div>
     </section>
   )
