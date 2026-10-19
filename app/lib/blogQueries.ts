@@ -55,7 +55,7 @@ export async function fetchPostEmbeds(content: string): Promise<{
     phraseIds.length > 0
       ? supabase
           .from('phrase_cards')
-          .select('id, phrase, meaning_ja, meaning_en, example_en, example_ja, type, register, locale, senses')
+          .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, senses, us_equivalent')
           .in('id', phraseIds)
           .limit(phraseIds.length)
       : Promise.resolve({ data: null }),
