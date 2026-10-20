@@ -76,6 +76,7 @@ export default function PhraseCardEmbed({ phrase }: { phrase: EmbeddedPhrase }) 
         headwordAudioLoading={headword.loading}
         onPlayExample={example.play}
         exampleAudioLoading={example.loading}
+        bordered
       />
     </div>
   )

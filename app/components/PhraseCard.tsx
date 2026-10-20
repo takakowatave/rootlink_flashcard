@@ -41,6 +41,7 @@ type Props = {
   onPlayExample?: () => void
   exampleAudioLoading?: boolean
   onClick?: () => void
+  bordered?: boolean
 }
 
 export default function PhraseCard({
@@ -53,6 +54,7 @@ export default function PhraseCard({
   onPlayExample,
   exampleAudioLoading,
   onClick: onClickProp,
+  bordered = false,
 }: Props) {
   const router = useRouter()
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
@@ -87,7 +89,7 @@ export default function PhraseCard({
   const handleCardClick = onClickProp ?? (() => router.push(defaultHref))
 
   return (
-    <CardShell onClick={handleCardClick}>
+    <CardShell onClick={handleCardClick} bordered={bordered}>
       {/* HEADER */}
       <CardHeader
         title={displayPhrase(card.phrase)}
