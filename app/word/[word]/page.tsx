@@ -127,10 +127,19 @@ type SortableRow = {
   is_premium: boolean
 }
 
-const getDecksContainingWord = cache(async (word: string): Promise<WordDeckCard[]> => {
+// 熟語ページ用。熟語の deck_words 行は word ではなく phrase_card_id で結ぶので別関数にする。
+const getDecksContainingPhrase = cache(async (phraseCardId: string): Promise<WordDeckCard[]> =>
+  fetchContainingDecks(`phrase_card_id=eq.${encodeURIComponent(phraseCardId)}`)
+)
+
+const getDecksContainingWord = cache(async (word: string): Promise<WordDeckCard[]> =>
+  fetchContainingDecks(`word=eq.${encodeURIComponent(word)}`)
+)
+
+async function fetchContainingDecks(filter: string): Promise<WordDeckCard[]> {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/deck_words?select=decks(id,slug,name,label,is_official,is_premium,word_count)&word=eq.${encodeURIComponent(word)}&limit=200`,
+      `${SUPABASE_URL}/rest/v1/deck_words?select=decks(id,slug,name,label,is_official,is_premium,word_count)&${filter}&limit=200`,
       { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
     )
     if (!res.ok) return []
@@ -166,7 +175,7 @@ const getDecksContainingWord = cache(async (word: string): Promise<WordDeckCard[
   } catch {
     return []
   }
-})
+}
 
 /**
  * 語源ツリー (語根チップを開くと出る「語源仲間」) を SSR で先に引いておく。
@@ -344,7 +353,8 @@ export default async function Page({
   if (raw.includes(' ')) {
     const phraseCard = await resolvePhrase(raw)
     if (phraseCard) {
-      return <PhrasePageClient card={phraseCard} />
+      const containingDecks = await getDecksContainingPhrase(phraseCard.id)
+      return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} />
     }
   }
 
@@ -376,7 +386,8 @@ export default async function Page({
   // 単語がなければ phrase_cards を検索
   const phraseCard = await resolvePhrase(raw)
   if (phraseCard) {
-    return <PhrasePageClient card={phraseCard} />
+    const containingDecks = await getDecksContainingPhrase(phraseCard.id)
+    return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} />
   }
 
   // キャッシュに無い語は 404。ここで Oxford を叩きに行かない。
