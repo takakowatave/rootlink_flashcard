@@ -19,8 +19,8 @@ type Props = {
   isPinned?: boolean
   onTogglePin?: () => void
   tutorialPinAttr?: boolean
-  // フレーズ用: 例文中の強調語と解説
-  highlight?: string | null
+  // フレーズ用: 例文中の強調語（複数）と解説
+  highlights?: string[] | null
   explanation?: string | null
   usEquivalent?: string | null
 }
@@ -38,7 +38,7 @@ export default function SenseRow({
   isPinned = false,
   onTogglePin,
   tutorialPinAttr,
-  highlight,
+  highlights,
   explanation,
   usEquivalent,
 }: Props) {
@@ -64,7 +64,7 @@ export default function SenseRow({
           displayLocale={displayLocale}
           onPlay={onPlayExample}
           isLoading={exampleLoading}
-          highlight={highlight}
+          highlights={highlights}
         />
 
         {(explanation || usEquivalent) && (

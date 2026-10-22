@@ -10,20 +10,23 @@ type Props = {
   displayLocale: DisplayLocale
   onPlay?: () => void
   isLoading?: boolean
-  // 例文の中で強調する表現（大文字小文字は区別しない）。見つからなければ強調しない
-  highlight?: string | null
+  // 例文の中で強調する表現（大文字小文字は区別しない）。見つからなければ強調しない。
+  // スロット語をはさむフレーズは phraseHighlightTerms で分割した非スロット部分を複数渡す
+  highlights?: string[] | null
 }
 
-export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading, highlight }: Props) {
+export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading, highlights }: Props) {
   const showTranslation = displayLocale === 'ja' && !!translation
   if (!example && !showTranslation) return null
+
+  const terms = (highlights ?? []).filter((t): t is string => !!t && t.length > 0)
 
   return (
     <div className="mt-2 flex flex-col gap-2 text-sm text-black">
       {example && (
         <div className="flex items-start gap-2">
           <p className="flex-1 min-w-0">
-            <HighlightedText terms={highlight ? [highlight] : []} termClassName="font-bold text-primary">{example}</HighlightedText>
+            <HighlightedText terms={terms} termClassName="font-bold text-primary">{example}</HighlightedText>
           </p>
           {onPlay && (
             <button

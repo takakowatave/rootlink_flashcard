@@ -22,3 +22,18 @@ export function phraseHighlightTerm(phrase: string): string {
   const head = cut < 0 ? words : words.slice(0, cut)
   return head.join(' ')
 }
+
+// 例文の強調用に、phrase をスロット語（someone / somebody / something / one's / sb / sth / doing / oneself）
+// で分割した非スロット部分の配列を返す。クイズ / フレーズ詳細 / 検品ツールで共用する。
+// 例: "can't stress something enough" -> ["can't stress", "enough"]
+// 例: "take one's time"               -> ["take", "time"]
+// 例: "put on"                        -> ["put on"]
+// 例文側でスロット語が別の節に置き換わっていても、残った部分がそれぞれ個別に強調される。
+const SLOT_PATTERN = /\b(?:someone(?:'s)?|somebody(?:'s)?|something|one's|oneself|sb(?:'s)?|sth|doing)\b/gi
+export function phraseHighlightTerms(phrase: string): string[] {
+  const stripped = stripPhraseParens(phrase)
+  return stripped
+    .split(SLOT_PATTERN)
+    .map(s => s.trim())
+    .filter(Boolean)
+}

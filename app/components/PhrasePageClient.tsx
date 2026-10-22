@@ -12,7 +12,7 @@ import SenseRow from '@/components/SenseRow'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import ReportContentLink from '@/components/ReportContentLink'
-import { stripPhraseParens, displayPhrase, phraseHighlightTerm } from '@/lib/phraseDisplay'
+import { stripPhraseParens, displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
 import { useAuthReload } from '@/lib/useAuthReload'
 
 type PhraseSense = {
@@ -182,7 +182,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const componentWords = getComponentWords(card.phrase)
-  const highlight = phraseHighlightTerm(card.phrase)
+  const highlights = phraseHighlightTerms(card.phrase)
   // アメリカ英語での言い方はイギリス英語の表現にだけ出す
   const usEquivalent = card.locale === 'en-GB' ? (card.us_equivalent ?? null) : null
 
@@ -239,7 +239,7 @@ export default function PhrasePageClient({ card }: { card: PhraseCard }) {
                 showPinButton={hasMultiple}
                 isPinned={pinnedSenseId === sense.sense_id}
                 onTogglePin={() => togglePin(sense.sense_id)}
-                highlight={highlight}
+                highlights={highlights}
                 explanation={explanation}
                 usEquivalent={idx === 0 ? usEquivalent : null}
               />

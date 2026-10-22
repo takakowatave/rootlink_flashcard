@@ -9,7 +9,7 @@ import CardHeader from '@/components/CardHeader'
 import SenseExample from '@/components/SenseExample'
 import PhraseNotes from '@/components/PhraseNotes'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
-import { stripPhraseParens, displayPhrase, phraseHighlightTerm } from '@/lib/phraseDisplay'
+import { stripPhraseParens, displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
 
 export type PhraseCardSense = {
   sense_id: string
@@ -138,7 +138,7 @@ export default function PhraseCard({
             displayLocale={displayLocale}
             onPlay={onPlayExample}
             isLoading={exampleAudioLoading}
-            highlight={phraseHighlightTerm(card.phrase)}
+            highlights={phraseHighlightTerms(card.phrase)}
           />
 
           {(explanation || usEquivalent) && (
