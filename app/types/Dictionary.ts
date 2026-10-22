@@ -30,6 +30,8 @@ export type RewrittenPayload = {
   etymology?: string
   etymologyData?: EtymologyData | null
   ipa?: string
+  /** 見出しが英綴りのとき、対応する米綴り（例: analyse → analyze） */
+  usSpelling?: string
   audio?: { audioUrl?: string; audioPath?: string }
   locales?: {
     ja?: {

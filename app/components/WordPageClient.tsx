@@ -1238,6 +1238,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     <EntryCard
       headword={word}
       pronunciation={pronunciation}
+      usSpelling={dictionary && typeof dictionary === 'object' && 'usSpelling' in dictionary ? (dictionary as { usSpelling?: string }).usSpelling : undefined}
       etymology={etymology}
       etymologyData={enrichedEtymologyData ?? etymologyData}
       localizedEtymologyJa={localizedEtymologyJa}

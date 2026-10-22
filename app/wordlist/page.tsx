@@ -477,6 +477,7 @@ export default function WordListPage() {
                       <EntryCard
                         headword={item.word}
                         pronunciation={pronunciation}
+                        usSpelling={d?.usSpelling}
                         etymology=""
                         senses={senses}
                         inflections={inflections}
