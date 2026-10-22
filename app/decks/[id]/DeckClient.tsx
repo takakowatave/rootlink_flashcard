@@ -639,6 +639,7 @@ export default function DeckClient({
                   <EntryCard
                     headword={entry.word}
                     pronunciation={pronunciation}
+                    usSpelling={d?.usSpelling}
                     etymology=""
                     senses={senses}
                     inflections={inflections}

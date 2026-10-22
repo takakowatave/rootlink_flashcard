@@ -10,7 +10,7 @@ import LearnedPartWords from '@/components/LearnedPartWords'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
-import { displayPhrase } from '@/lib/phraseDisplay'
+import { displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
 import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
@@ -284,16 +284,19 @@ function CardView({
     if (!text) return null
     // 活用形もハイライトする（run→ran/running, shove→shoving/shoved 等）。
     // サーバ側 exampleContainsHeadword と同じ語幹戦略：短語は完全語＋短い接尾辞、長語は先頭 stem 前方一致。
+    // フレーズはスロット語（something / somebody / one's など）で分割し、非スロット部分を
+    // それぞれ \b で囲んだ alternation にする。これで例文側がスロットを具体に置き換えても
+    // 残った部分がすべて強調される。
     const hw = card.word.toLowerCase().trim()
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const pattern = isPhrase
-      ? escape(hw)
+      ? phraseHighlightTerms(hw).map(t => `\\b${escape(t)}\\b`).join('|') || '(?!)'
       : hw.length <= 3
         ? `\\b${escape(hw)}[a-z]{0,3}\\b`
         : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
     const regex = new RegExp(`(${pattern})`, 'gi')
     const parts = text.split(regex)
-    const isMatch = (s: string) => new RegExp(`^${pattern}$`, 'i').test(s)
+    const isMatch = (s: string) => new RegExp(`^(?:${pattern})$`, 'i').test(s)
     return (
       <div>
         <p className="text-2xl font-bold text-gray-800 leading-relaxed">

@@ -30,6 +30,7 @@ type SenseItem = {
 type Props = {
   headword: string
   pronunciation: Pronunciation
+  usSpelling?: string
   etymology: string
   etymologyData?: EtymologyData | null
   localizedEtymologyJa?: LocalizedEtymologyJa | null
@@ -70,6 +71,7 @@ function getPosLabel(pos: string, locale: DisplayLocale): string {
 export default function EntryCard({
   headword,
   pronunciation,
+  usSpelling,
   etymology,
   etymologyData,
   localizedEtymologyJa,
@@ -178,12 +180,20 @@ export default function EntryCard({
           tutorialAttr
         />
 
-        {/* IPA */}
-        {pronunciation?.phoneticSpelling && (
-          <div className="flex items-center">
-            <span className="text-base font-medium text-muted">
-              /{pronunciation.phoneticSpelling}/
-            </span>
+        {/* IPA ＋ 米綴り */}
+        {(pronunciation?.phoneticSpelling || usSpelling) && (
+          <div className="flex items-center gap-3 flex-wrap">
+            {pronunciation?.phoneticSpelling && (
+              <span className="text-base font-medium text-muted">
+                /{pronunciation.phoneticSpelling}/
+              </span>
+            )}
+            {usSpelling && (
+              <span className="inline-flex items-center gap-1.5 text-base font-medium text-muted">
+                <span className="rounded-md border border-current px-1.5 py-px text-xs leading-tight">US</span>
+                {usSpelling}
+              </span>
+            )}
           </div>
         )}
 

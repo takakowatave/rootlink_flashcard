@@ -15,7 +15,7 @@ function buildPattern(terms: string[]): RegExp | null {
   return new RegExp(`(${parts.join('|')})`, 'gi')
 }
 
-function highlightString(text: string, pattern: RegExp): ReactNode[] {
+function highlightString(text: string, pattern: RegExp, termClassName: string): ReactNode[] {
   const out: ReactNode[] = []
   pattern.lastIndex = 0
   let last = 0
@@ -23,7 +23,7 @@ function highlightString(text: string, pattern: RegExp): ReactNode[] {
   while ((m = pattern.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index))
     out.push(
-      <strong key={`${m.index}-${m[0]}`} className={TERM_CLASS}>
+      <strong key={`${m.index}-${m[0]}`} className={termClassName}>
         {m[0]}
       </strong>
     )
@@ -33,21 +33,22 @@ function highlightString(text: string, pattern: RegExp): ReactNode[] {
   return out
 }
 
-export default function HighlightedText({ children, terms }: { children: ReactNode; terms: string[] }) {
+// termClassName を渡すと強調色を変えられる（既定はブログ用のオレンジ）
+export default function HighlightedText({ children, terms, termClassName = TERM_CLASS }: { children: ReactNode; terms: string[]; termClassName?: string }) {
   const pattern = buildPattern(terms)
   if (!pattern) return <>{children}</>
   return (
     <>
       {Children.toArray(children).map((child, i) => {
         if (typeof child === 'string') {
-          return <Fragment key={i}>{highlightString(child, pattern)}</Fragment>
+          return <Fragment key={i}>{highlightString(child, pattern, termClassName)}</Fragment>
         }
         if (isValidElement(child)) {
           const el = child as ReactElement<{ children?: ReactNode }>
           if (el.props?.children) {
             return cloneElement(el, {
               key: i,
-              children: <HighlightedText terms={terms}>{el.props.children}</HighlightedText>,
+              children: <HighlightedText terms={terms} termClassName={termClassName}>{el.props.children}</HighlightedText>,
             })
           }
         }
