@@ -417,6 +417,7 @@ export default function DeckClient({
         initialMode={quizDefaultMode}
         autoPlayExampleAudio={quizAutoAudio}
         autoPlayHeadwordAudio={quizAutoHeadword}
+        deckId={deck.id}
       />
     )
   }
@@ -675,6 +676,7 @@ export default function DeckClient({
           initialPinnedSenseId={selectedEntry.pinned_sense_id}
           displayLocale={displayLocale}
           onClose={() => setSelectedEntry(null)}
+          deckId={deck.id}
         />
       )}
     </>

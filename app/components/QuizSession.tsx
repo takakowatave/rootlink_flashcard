@@ -210,7 +210,7 @@ function DetailModal({
 
 function CardView({
   card, onAnswer, current, total, mode, onModeChange, onQuit, autoPlayExampleAudio, autoPlayHeadwordAudio,
-  prefetchedHeadwordUrl, prefetchedExampleUrl,
+  prefetchedHeadwordUrl, prefetchedExampleUrl, deckId,
 }: {
   card: QuizCard
   onAnswer: (correct: boolean) => void
@@ -223,6 +223,7 @@ function CardView({
   autoPlayHeadwordAudio?: boolean
   prefetchedHeadwordUrl?: string | null
   prefetchedExampleUrl?: string | null
+  deckId?: string | null
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
@@ -235,7 +236,16 @@ function CardView({
   const example = useTtsAudio(
     isPhrase
       ? { endpoint: '/audio/phrase', body: { phrase_card_id: card.phrase_card_id! }, playbackRate: 1.2, initialUrl: prefetchedExampleUrl ?? null }
-      : { endpoint: '/audio/word/example', body: { word: card.word, sense_id: card.senseId ?? '' }, playbackRate: 1.2, initialUrl: prefetchedExampleUrl ?? null }
+      : {
+          endpoint: '/audio/word/example',
+          body: {
+            word: card.word,
+            sense_id: card.senseId ?? '',
+            ...(deckId ? { deck_id: deckId } : {}),
+          },
+          playbackRate: 1.2,
+          initialUrl: prefetchedExampleUrl ?? null,
+        }
   )
 
   useEffect(() => {
@@ -514,11 +524,15 @@ type Props = {
   initialMode?: QuizMode
   autoPlayExampleAudio?: boolean
   autoPlayHeadwordAudio?: boolean
+  // deck 画面経由で起動したときの deck.id。サーバーが deck_words.example override を解決するのに使う。
+  // /quiz (saved_words 復習) など deck 文脈が無い起動では省略。
+  deckId?: string | null
 }
 
 export default function QuizSession({
   initialCards, entries, onQuit, onAnswer,
   initialMode = 'example', autoPlayExampleAudio = false, autoPlayHeadwordAudio = false,
+  deckId = null,
 }: Props) {
   const [cards, setCards] = useState<QuizCard[]>(initialCards)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -557,7 +571,7 @@ export default function QuizSession({
         const endpoint = isPhrase ? '/audio/phrase' : '/audio/word/example'
         const body = isPhrase
           ? { phrase_card_id: card.phrase_card_id! }
-          : { word: card.word, sense_id: card.senseId ?? '' }
+          : { word: card.word, sense_id: card.senseId ?? '', ...(deckId ? { deck_id: deckId } : {}) }
         fetchTtsAudioUrl(endpoint, body).then((result) => {
           if (!result.url) return
           const audioUrl = result.url
@@ -664,6 +678,7 @@ export default function QuizSession({
         autoPlayHeadwordAudio={autoPlayHeadwordAudio}
         prefetchedHeadwordUrl={currentPrefetched.headwordUrl}
         prefetchedExampleUrl={currentPrefetched.exampleUrl}
+        deckId={deckId}
       />
       {detailModal}
       {tutorialVisible && (

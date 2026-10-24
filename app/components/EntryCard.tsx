@@ -53,6 +53,9 @@ type Props = {
   noCard?: boolean
   initialEtymologyRelatedWords?: Record<string, string[]>
   etymologyLinkableWords?: string[]
+  // deck 画面に出すときの deck.id。サーバーが deck_words.example override を解決するのに使う。
+  // /word 直検索では省略 → cache sense.example の音声が返る。
+  deckId?: string | null
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -93,6 +96,7 @@ export default function EntryCard({
   noCard = false,
   initialEtymologyRelatedWords,
   etymologyLinkableWords,
+  deckId = null,
 }: Props) {
   // 見出し音声: Oxford 実録音があればそれを初期URLに、なければ TTS フォールバック
   const headwordAudio = useTtsAudio({
@@ -144,7 +148,11 @@ export default function EntryCard({
     const cached = exampleAudioUrls[senseId]
     if (cached) { playAudioAtRate(cached, 1.2); return }
     setExampleAudioLoading(prev => ({ ...prev, [senseId]: true }))
-    const result = await fetchTtsAudioUrl('/audio/word/example', { word: headword, sense_id: senseId })
+    const result = await fetchTtsAudioUrl('/audio/word/example', {
+      word: headword,
+      sense_id: senseId,
+      ...(deckId ? { deck_id: deckId } : {}),
+    })
     if (result.url) {
       const audioUrl = result.url
       setExampleAudioUrls(prev => ({ ...prev, [senseId]: audioUrl }))
