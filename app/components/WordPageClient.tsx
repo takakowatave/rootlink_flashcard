@@ -658,6 +658,7 @@ export default function WordPageClient({
   containingDecks,
   initialEtymologyRelatedWords,
   etymologyLinkableWords,
+  deckId,
 }: {
   word: string
   dictionary: DictionaryInput
@@ -668,6 +669,8 @@ export default function WordPageClient({
   noCard?: boolean
   relatedPosts?: Array<{ title: string; slug: string }>
   initialExistingDerivatives?: string[]
+  /** deck 画面から modal で開いたときの deck.id。例文音声を deck_words.example 由来に切り替えるのに使う */
+  deckId?: string | null
   /**
    * その単語が収録されている公式デッキ (Notion issue 3d2d…-7fcfc)。
    * 単語カード直下に DeckScrollStrip (Dashboard 等と共通) で表紙カルーセル表示。
@@ -1262,6 +1265,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       noCard={noCard}
       initialEtymologyRelatedWords={initialEtymologyRelatedWords}
       etymologyLinkableWords={etymologyLinkableWords}
+      deckId={deckId}
     />
     {/* 「この単語の内容を報告」は、EntryCard の直後・収録デッキ / 記事の前に
         置いておく (誤りに気づいたユーザーがすぐ動けるように)。 */}

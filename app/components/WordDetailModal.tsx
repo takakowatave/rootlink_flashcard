@@ -18,10 +18,13 @@ type Props = {
   initialPinnedSenseId?: string | null
   displayLocale: DisplayLocale
   onClose: () => void
+  /** deck 画面経由で開いたときの deck.id。例文音声を deck 用に切り替えるために伝搬する */
+  deckId?: string | null
 }
 
 export default function WordDetailModal({
   word, dictionary, savedId, initialPinnedSenseId, displayLocale, onClose,
+  deckId = null,
 }: Props) {
   const [showShareMenu, setShowShareMenu] = useState(false)
   const shareBtnRef = useRef<HTMLButtonElement>(null)
@@ -82,6 +85,7 @@ export default function WordDetailModal({
           initialPinnedSenseId={initialPinnedSenseId ?? null}
           initialDisplayLocale={displayLocale}
           noCard
+          deckId={deckId}
         />
       </ModalShell>
       <ShareMenu
