@@ -10,6 +10,7 @@ export type PostCard = {
   tags: string[] | null
   published_at: string | null
   hero_image_url?: string | null
+  thumb_image_url?: string | null
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ export async function fetchTagCounts(): Promise<TagCount[]> {
 // タグで絞った公開記事の一覧。
 export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
   const { data } = await applyPublishedFilter(
-    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url')
+    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url, thumb_image_url')
   )
     .contains('tags', [tag])
     .order('published_at', { ascending: false })
@@ -141,7 +142,7 @@ export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
 // 著者（シリーズ）ごとの公開記事を新しい順に。/cuppa など著者ページで使う。
 export async function fetchPostsByAuthor(authorKey: string): Promise<PostCard[]> {
   const { data } = await applyPublishedFilter(
-    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url')
+    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url, thumb_image_url')
   )
     .eq('author_key', authorKey)
     .order('published_at', { ascending: false })

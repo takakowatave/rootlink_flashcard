@@ -13,6 +13,8 @@ export type Post = {
   published_at: string | null
   created_at: string
   hero_image_url: string | null
+  // 一覧・カルーセルのサムネイル専用。記事上部と OGP には使わない
+  thumb_image_url: string | null
   meta_description: string | null
   // 記事ごとの著者キー (app/lib/blogAuthor.ts の BLOG_AUTHORS を引く)。null なら Yui。
   author_key: string | null

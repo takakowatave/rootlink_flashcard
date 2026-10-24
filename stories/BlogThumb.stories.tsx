@@ -38,3 +38,11 @@ export const InListCard: Story = {
     </div>
   ),
 }
+
+// thumb_image_url がある記事。サムネイルだけ写真にし、記事上部と OGP は文字入りカバーのまま。
+export const WithThumbImage: Story = {
+  args: {
+    slug: 'cuppa-english-dumbledore-phrases',
+    thumbImageUrl: 'https://images.unsplash.com/photo-1660233868899-f800885dca59?w=800&q=70&auto=format&fit=crop',
+  },
+}

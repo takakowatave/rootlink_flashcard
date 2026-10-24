@@ -47,7 +47,7 @@ export default async function BlogTagPage({ params }: Params) {
               href={`/blog/${post.slug}`}
               className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
             >
-              <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} />
+              <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} thumbImageUrl={post.thumb_image_url} />
               <div className="min-w-0 flex-1">
                 <BlogTagList tags={post.tags} className="mb-2" />
                 <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>

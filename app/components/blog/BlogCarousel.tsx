@@ -26,6 +26,7 @@ export default function BlogCarousel({ posts, className }: Props) {
             <BlogThumb
               slug={post.slug}
               heroImageUrl={post.hero_image_url}
+              thumbImageUrl={post.thumb_image_url}
               widthClass="w-full"
               framed={false}
               className="border-b border-line"
