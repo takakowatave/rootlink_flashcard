@@ -9,13 +9,18 @@ type Props = {
   slug: string
   heroImageUrl?: string | null
   className?: string
+  /** 幅を上書きする（カルーセルのカードでは w-full） */
+  widthClass?: string
+  /** false で角丸と枠線を外す（カードの上辺にぴったり置くとき） */
+  framed?: boolean
 }
 
-export default function BlogThumb({ slug, heroImageUrl, className }: Props) {
+export default function BlogThumb({ slug, heroImageUrl, className, widthClass = BLOG_THUMB_WIDTH, framed = true }: Props) {
   const src = heroImageUrl ?? `/blog/${slug}/cover.png`
+  const frame = framed ? 'rounded-lg border border-line' : ''
   return (
     <div
-      className={`${BLOG_THUMB_WIDTH} aspect-[1200/630] shrink-0 self-start overflow-hidden rounded-lg border border-line bg-surface ${className ?? ''}`}
+      className={`${widthClass} aspect-[1200/630] shrink-0 self-start overflow-hidden ${frame} bg-surface ${className ?? ''}`}
     >
       {/* 記事タイトルがすぐ隣にあるので、画像は装飾扱いにする */}
       {/* eslint-disable-next-line @next/next/no-img-element */}

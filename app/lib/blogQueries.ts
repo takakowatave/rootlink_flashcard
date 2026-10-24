@@ -138,6 +138,17 @@ export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
   return (data as PostCard[] | null) ?? []
 }
 
+// 著者（シリーズ）ごとの公開記事を新しい順に。/cuppa など著者ページで使う。
+export async function fetchPostsByAuthor(authorKey: string): Promise<PostCard[]> {
+  const { data } = await applyPublishedFilter(
+    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url')
+  )
+    .eq('author_key', authorKey)
+    .order('published_at', { ascending: false })
+    .limit(200)
+  return (data as PostCard[] | null) ?? []
+}
+
 // サイドカラム用の関連記事。同じタグを持つ公開記事を新しい順に。
 export async function fetchRelatedPosts(current: Pick<Post, 'slug' | 'tags'>): Promise<{
   related: PostCard[]
