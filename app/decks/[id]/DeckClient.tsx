@@ -27,7 +27,7 @@ import NativePaywall from '@/components/NativePaywall'
 import { isNativePlatform } from '@/lib/isNativePlatform'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import { CHAPTER_SIZE, chapterOfPosition, chapterCount, isChapterLocked, freeChapterCount } from '@/lib/chapters'
-import { toShortName } from '@/lib/deckDisplay'
+import { deckHeaderTitle } from '@/lib/deckDisplay'
 import toast from 'react-hot-toast'
 
 type DeckInfo = {
@@ -504,8 +504,8 @@ export default function DeckClient({
         showSearch={false}
         title={
           chapter != null
-            ? `${deck.label}${toShortName(deck.name, deck.label)} / ${chapterLabel(chapter)}`
-            : `${deck.label}${toShortName(deck.name, deck.label)}`
+            ? `${deckHeaderTitle(deck.name, deck.label)} / ${chapterLabel(chapter)}`
+            : deckHeaderTitle(deck.name, deck.label)
         }
       />
 

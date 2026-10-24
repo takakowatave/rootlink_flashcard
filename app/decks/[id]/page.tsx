@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import DeckClient from './DeckClient'
-import { toShortName } from '@/lib/deckDisplay'
+import { toShortName, isSeriesLabel } from '@/lib/deckDisplay'
 import { getDeck, getDeckWordsMetaSSR, UUID_RE, type DeckRow } from './deckSsr'
 
 function buildTitleHead(label: string, shortName: string): string {
@@ -20,7 +20,10 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
   const shortName = toShortName(deck.name, deck.label)
   const head = buildTitleHead(deck.label, shortName)
-  const title = `${head}の英単語${deck.word_count}語｜語源で覚える`
+  // シリーズ系 (英会話) は単語帳ではなくフレーズ集なので、デッキ名をそのままタイトルにする
+  const title = isSeriesLabel(deck.label)
+    ? deck.name
+    : `${head}の英単語${deck.word_count}語｜語源で覚える`
   const shareTitle = `${title} | RootLink`
   const description =
     deck.description ??

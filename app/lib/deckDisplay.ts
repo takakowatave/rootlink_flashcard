@@ -1,5 +1,25 @@
 export const LABEL_ORDER = ['TOEIC', 'IELTS', 'TOEFL', '英検']
 
+// 教材一覧 (/decks) だけに出すラベル。ダッシュボードの試験対策の並びには入れない
+export const SERIES_LABELS = ['英会話']
+export const DECKS_PAGE_LABEL_ORDER = [...LABEL_ORDER, ...SERIES_LABELS]
+
+// シリーズ系 (英会話) はデッキ名が長く「ラベル+級」の形でもないので、表示を分ける
+export function isSeriesLabel(label: string): boolean {
+  return SERIES_LABELS.includes(label)
+}
+
+// デッキ画面のヘッダーなどに出す名前。試験系は「TOEIC600」、シリーズ系はデッキ名そのまま
+export function deckHeaderTitle(name: string, label: string): string {
+  return isSeriesLabel(label) ? name : `${label}${toShortName(name, label)}`
+}
+
+// 教材カード (DeckCard) に出す名前。シリーズ系は「｜」より前だけにしてラベルを重ねない
+export function deckCardTitle(name: string, label: string): { label?: string; title: string } {
+  if (isSeriesLabel(label)) return { title: name.split('｜')[0].trim() }
+  return { label, title: toShortName(name, label) }
+}
+
 const DECK_IMAGES: Record<string, string> = {
   'TOEIC-頻出': '/deck-covers/toeic-frequent.png',
   'TOEIC-600': '/deck-covers/toeic-600.png',
@@ -17,6 +37,7 @@ const DECK_IMAGES: Record<string, string> = {
   'TOEFL-100': '/deck-covers/toefl-100.png',
   '英検-準1級': '/deck-covers/eiken-jun1.png',
   '英検-1級': '/deck-covers/eiken-1.png',
+  '英会話-Cuppa English｜イギリス英語の会話表現': '/authors/cuppa-english.webp',
 }
 
 export function toShortName(name: string, label: string) {
