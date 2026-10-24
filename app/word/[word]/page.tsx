@@ -256,6 +256,41 @@ function readDerivativesFromDictionary(dictionary: RewrittenPayload | null): str
 // 完全一致 (ilike, case-insensitive) で引く。以前は末尾に `*` を付けていたため
 // `/word/meet` のフォールバックが `meet up with someone` を prefix match で拾って
 // 単語検索が熟語ページに化ける事故が起きていた (2026-09-20 kiko 指摘)。
+// フレーズページの「構成単語」リンクは dictionary_cache を持つ語だけに絞る。
+// それ以外は PhrasePageClient 側でプレーンテキスト表示にして 404 を踏ませない。
+// 使い方は PhrasePageClient の STOP_WORDS / getComponentWords と同じ分解規則。
+const PHRASE_STOP_WORDS = new Set(['a','an','the','to','of','in','on','at','by','for','with','as','is','be','or','and','not','so','but','one','all','out','up','off','had','got','get','do','from','sth','sb',"one's"])
+
+const getLinkableComponentWords = cache(async (phrase: string): Promise<string[]> => {
+  const stripped = phrase.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  const candidates = [...new Set(
+    stripped.split(/\s+/)
+      .filter(w => /^[a-zA-Z]+$/.test(w) && !PHRASE_STOP_WORDS.has(w.toLowerCase()))
+      .map(w => w.toLowerCase())
+  )]
+  if (candidates.length === 0) return []
+  try {
+    const inList = candidates.map(w => `"${w.replace(/"/g, '')}"`).join(',')
+    const wordsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/words?select=id,word&word=in.(${encodeURIComponent(inList)})&limit=50`,
+      { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+    )
+    if (!wordsRes.ok) return []
+    const wordRows = (await wordsRes.json()) as Array<{ id: string | number; word: string }>
+    if (wordRows.length === 0) return []
+    const idList = wordRows.map(r => encodeURIComponent(String(r.id))).join(',')
+    const cacheRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/dictionary_cache?select=word_id&word_id=in.(${idList})&limit=50`,
+      { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
+    )
+    if (!cacheRes.ok) return []
+    const cached = new Set(((await cacheRes.json()) as Array<{ word_id: string | number }>).map(r => String(r.word_id)))
+    return wordRows.filter(r => cached.has(String(r.id))).map(r => r.word.toLowerCase())
+  } catch {
+    return []
+  }
+})
+
 const resolvePhrase = cache(async (raw: string) => {
   try {
     const res = await fetch(
@@ -353,8 +388,11 @@ export default async function Page({
   if (raw.includes(' ')) {
     const phraseCard = await resolvePhrase(raw)
     if (phraseCard) {
-      const containingDecks = await getDecksContainingPhrase(phraseCard.id)
-      return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} />
+      const [containingDecks, linkableComponentWords] = await Promise.all([
+        getDecksContainingPhrase(phraseCard.id),
+        getLinkableComponentWords(phraseCard.phrase as string),
+      ])
+      return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} linkableComponentWords={linkableComponentWords} />
     }
   }
 
@@ -386,8 +424,11 @@ export default async function Page({
   // 単語がなければ phrase_cards を検索
   const phraseCard = await resolvePhrase(raw)
   if (phraseCard) {
-    const containingDecks = await getDecksContainingPhrase(phraseCard.id)
-    return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} />
+    const [containingDecks, linkableComponentWords] = await Promise.all([
+      getDecksContainingPhrase(phraseCard.id),
+      getLinkableComponentWords(phraseCard.phrase as string),
+    ])
+    return <PhrasePageClient card={phraseCard} containingDecks={containingDecks} linkableComponentWords={linkableComponentWords} />
   }
 
   // キャッシュに無い語は 404。ここで Oxford を叩きに行かない。

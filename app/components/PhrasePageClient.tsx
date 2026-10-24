@@ -58,7 +58,7 @@ function getComponentWords(phrase: string): string[] {
     .filter(w => /^[a-zA-Z]+$/.test(w) && !STOP_WORDS.has(w.toLowerCase()))
 }
 
-export default function PhrasePageClient({ card, containingDecks }: { card: PhraseCard; containingDecks?: ContainingDeck[] }) {
+export default function PhrasePageClient({ card, containingDecks, linkableComponentWords }: { card: PhraseCard; containingDecks?: ContainingDeck[]; linkableComponentWords?: string[] }) {
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -191,6 +191,11 @@ export default function PhrasePageClient({ card, containingDecks }: { card: Phra
     : null
   const localeLabel = pickLabel(LOCALE_LABEL, card.locale, displayLocale)
   const componentWords = getComponentWords(card.phrase)
+  // dictionary_cache を持つ語だけリンクにする。キャッシュに無い語を踏むと /word/ が 404 になる
+  const linkableSet = useMemo(
+    () => new Set((linkableComponentWords ?? []).map((w) => w.toLowerCase())),
+    [linkableComponentWords],
+  )
   const highlights = phraseHighlightTerms(card.phrase)
   // アメリカ英語での言い方はイギリス英語の表現にだけ出す
   const usEquivalent = card.locale === 'en-GB' ? (card.us_equivalent ?? null) : null
@@ -262,13 +267,24 @@ export default function PhrasePageClient({ card, containingDecks }: { card: Phra
             <p className="text-xs text-muted mb-2">{displayLocale === 'ja' ? '構成単語' : 'Component words'}</p>
             <div className="flex flex-wrap gap-2">
               {componentWords.map(w => (
-                <Link
-                  key={w}
-                  href={`/word/${w}`}
-                  className="text-sm text-primary hover:underline"
-                >
-                  {w}
-                </Link>
+                linkableSet.has(w.toLowerCase())
+                  ? (
+                    <Link
+                      key={w}
+                      href={`/word/${w}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {w}
+                    </Link>
+                  )
+                  : (
+                    <span
+                      key={w}
+                      className="text-sm text-muted"
+                    >
+                      {w}
+                    </span>
+                  )
               ))}
             </div>
           </div>
