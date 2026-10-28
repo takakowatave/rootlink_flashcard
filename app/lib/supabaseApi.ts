@@ -743,7 +743,9 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
   const wordEntries = deckRows.filter(r => !r.phrase_card_id)
   const phraseIds = deckRows.map(r => r.phrase_card_id).filter((id): id is string => !!id)
 
-  const wordTexts = wordEntries.map(r => r.word)
+  // deck 側は "Earth" "DNA" のように大文字始まり、words 側は小文字で登録されていることがある。
+  // 両方の表記で引いておき、行ごとに辞書キャッシュがある方を使う。
+  const wordTexts = [...new Set(wordEntries.flatMap(r => [r.word, r.word.toLowerCase()]))]
   const wordChunkPromises: Array<Promise<Array<{ id: string; word: string }>>> = []
   for (let i = 0; i < wordTexts.length; i += WORDS_CHUNK) {
     const slice = wordTexts.slice(i, i + WORDS_CHUNK)
@@ -810,7 +812,10 @@ export const fetchDeckWords = async (deckId: string): Promise<DeckWordEntry[]> =
         phrase_type: p?.type ?? null,
       }
     }
-    const rawDictionary = cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ?? null
+    const rawDictionary =
+      cacheByWordId.get(wordIdByWord.get(row.word) ?? '') ??
+      cacheByWordId.get(wordIdByWord.get(row.word.toLowerCase()) ?? '') ??
+      null
     const dictionary = applyDeckOverridesToDictionary(rawDictionary, {
       pinnedSenseId: row.pinned_sense_id ?? null,
       meaning: row.meaning ?? null,

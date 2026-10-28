@@ -83,13 +83,27 @@ const resolveWord = cache(
   }
 )
 
+/**
+ * words.word は基本小文字だが、略語など大文字で登録されている語 (BA, PhD, TCP/IP など) がある。
+ * 小文字で見つからなければ、URL に来た元の表記でもう一度引く。どちらも Supabase を読むだけ。
+ */
+async function resolveWordAnyCase(
+  original: string,
+  fresh = false,
+): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> {
+  const lower = original.toLowerCase()
+  const hit = await resolveWord(lower, fresh)
+  if (hit) return hit
+  return original !== lower ? resolveWord(original, fresh) : null
+}
+
 const filterExistingWords = cache(async (candidates: string[]): Promise<string[]> => {
   const unique = [...new Set(candidates.map((c) => c.toLowerCase()).filter(Boolean))]
   if (unique.length === 0) return []
   try {
     const inList = unique.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/words?select=word&word=in.(${encodeURIComponent(inList)})&limit=2000`,
+      `${SUPABASE_URL}/rest/v1/words?select=word,dictionary_cache!inner(word_id)&word=in.(${encodeURIComponent(inList)})&limit=2000`,
       { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
     )
     if (!res.ok) return []
@@ -344,9 +358,10 @@ export async function generateMetadata({
   params: { word: string }
   searchParams?: { fresh?: string }
 }): Promise<Metadata> {
-  const raw = decodeURIComponent(params.word).trim().toLowerCase()
+  const original = decodeURIComponent(params.word).trim()
+  const raw = original.toLowerCase()
   const fresh = searchParams?.fresh === '1'
-  const data = await resolveWord(raw, fresh)
+  const data = await resolveWordAnyCase(original, fresh)
   const word = data?.resolved ?? raw
   const dictionary = (data?.dictionary ?? null) as MetaDictionary | null
   const title = buildTitle(word)
@@ -380,7 +395,8 @@ export default async function Page({
   params: { word: string }
   searchParams?: { pin?: string; fresh?: string }
 }) {
-  const raw = decodeURIComponent(params.word).replace(/_/g, ' ').trim().toLowerCase()
+  const original = decodeURIComponent(params.word).replace(/_/g, ' ').trim()
+  const raw = original.toLowerCase()
   const pin = searchParams?.pin ?? null
   const fresh = searchParams?.fresh === '1'
 
@@ -396,7 +412,7 @@ export default async function Page({
     }
   }
 
-  const data = await resolveWord(raw, fresh)
+  const data = await resolveWordAnyCase(original, fresh)
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)

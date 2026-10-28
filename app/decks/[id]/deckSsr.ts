@@ -182,9 +182,12 @@ async function fetchDictionariesFor(
   tags: string[],
 ): Promise<Map<string, SavedWordDictionary | null>> {
   if (words.length === 0) return new Map()
+  // deck 側は "Earth" "DNA" のように大文字始まり、words 側は小文字で登録されていることがある。
+  // 両方の表記で引き、最後に deck の表記をキーにして返す。
+  const lookupWords = [...new Set(words.flatMap((w) => [w, w.toLowerCase()]))]
   const chunkPromises: Array<Promise<WordsWithDict[]>> = []
-  for (let i = 0; i < words.length; i += WORDS_CHUNK) {
-    const slice = words.slice(i, i + WORDS_CHUNK)
+  for (let i = 0; i < lookupWords.length; i += WORDS_CHUNK) {
+    const slice = lookupWords.slice(i, i + WORDS_CHUNK)
     const inList = slice.map((w) => `"${w.replace(/"/g, '')}"`).join(',')
     chunkPromises.push(
       fetch(
@@ -203,6 +206,12 @@ async function fetchDictionariesFor(
       payload = r.dictionary_cache.payload ?? null
     }
     byWord.set(r.word, payload)
+  }
+  for (const w of words) {
+    const exact = byWord.get(w) ?? null
+    if (exact) continue
+    const lower = byWord.get(w.toLowerCase()) ?? null
+    if (lower) byWord.set(w, lower)
   }
   return byWord
 }
