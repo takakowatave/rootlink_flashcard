@@ -1005,7 +1005,8 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     const candidates = [...new Set(derivatives.map(d => d.toLowerCase()))]
     supabase
       .from('words')
-      .select('word')
+      // dictionary_cache が無い語は /word/ が 404 になるのでリンクにしない
+      .select('word, dictionary_cache!inner(word_id)')
       .in('word', candidates)
       .limit(candidates.length)
       .then(({ data }) => {
