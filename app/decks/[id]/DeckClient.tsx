@@ -114,15 +114,23 @@ export default function DeckClient({
 
   const loadStatus = useCallback(async (data: DeckWordEntry[], userId: string) => {
     const words = data.map(e => e.word)
-    const { data: qr } = await supabase
-      .from('quiz_results')
-      .select('word, correct, answered_at')
-      .eq('user_id', userId)
-      .in('word', words)
-      .order('answered_at', { ascending: false })
-      .limit(10000)
+    // 英検1級 (2218 語) や TOEFL 80 (1762 語) で `.in('word', words)` を 1 発撃つと
+    // PostgREST の URL 長を超えて silent fail する → 進捗ドーナツが 0/N のままになる
+    // (= ユーザーからは「クイズの記録が消えた」に見える)。loadSavedWords と同じく 200 件で切る。
+    const IN_CHUNK = 200
+    const rows: Array<{ word: string; correct: boolean; answered_at: string }> = []
+    for (let i = 0; i < words.length; i += IN_CHUNK) {
+      const { data: chunk } = await supabase
+        .from('quiz_results')
+        .select('word, correct, answered_at')
+        .eq('user_id', userId)
+        .in('word', words.slice(i, i + IN_CHUNK))
+        .order('answered_at', { ascending: false })
+        .limit(10000)
+      if (chunk) rows.push(...(chunk as typeof rows))
+    }
     const { status, wrongCount } = classifyQuizStatus(
-      (qr ?? []) as { word: string; correct: boolean }[],
+      rows,
       words,
     )
     setWordStatus(status)
