@@ -128,6 +128,17 @@ export async function fetchTagCounts(): Promise<TagCount[]> {
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'ja'))
 }
 
+// 最新の公開記事を1件。ダッシュボードのブログ動線バナーで使う。
+export async function fetchLatestPost(): Promise<PostCard | null> {
+  const { data } = await applyPublishedFilter(
+    supabase.from('posts').select('slug, title, tags, published_at, hero_image_url, thumb_image_url')
+  )
+    .order('published_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as PostCard | null) ?? null
+}
+
 // タグで絞った公開記事の一覧。
 export async function fetchPostsByTag(tag: string): Promise<PostCard[]> {
   const { data } = await applyPublishedFilter(

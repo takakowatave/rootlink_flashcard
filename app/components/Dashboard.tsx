@@ -26,6 +26,8 @@ import {
   REVIEW_PERIODS,
   type ReviewPeriod,
 } from '@/lib/reviewPeriod'
+import { fetchLatestPost, type PostCard } from '@/lib/blogQueries'
+import BlogLatestBanner from '@/components/blog/BlogLatestBanner'
 
 type Deck = {
   id: string
@@ -467,6 +469,7 @@ export default function Dashboard() {
   const [reviewCounts, setReviewCounts] = useState<Record<ReviewPeriod, number>>({
     yesterday: 0, week: 0, month: 0, all: 0,
   })
+  const [latestPost, setLatestPost] = useState<PostCard | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -502,6 +505,9 @@ export default function Dashboard() {
       if (decksData.data) setDecks(decksData.data as Deck[])
       const userPlan = await getUserPlan()
       setPlan(userPlan)
+
+      // 最新ブログ記事 (ブログ動線バナー用)。失敗しても他をブロックしない。
+      fetchLatestPost().then(setLatestPost).catch(() => setLatestPost(null))
 
       // 復習カード用の期間別件数
       const candidates = await fetchReviewCandidates(user.id, userPlan)
@@ -720,6 +726,9 @@ export default function Dashboard() {
             </section>
 
             <DeckSection title="履歴" items={historyItems} />
+
+            {latestPost && <BlogLatestBanner post={latestPost} />}
+
             <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
 
           </div>
