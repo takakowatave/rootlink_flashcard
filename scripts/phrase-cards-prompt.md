@@ -46,6 +46,7 @@
 **NG1. 冠詞つきの塊**
 - `a` / `an` / `the` から始まる。辞書見出しには冠詞は付かない
 - 例: `a good idea`, `an important decision`, `the recent report`
+- **例外**: `the` まで含めて1つの固有の名前になっているもの（歴史上の時代・機関・理論・天体系など）は `the` を付けたまま残す。固有名なので小文字化せず辞書の見出しの大文字を使う（例: `the Renaissance`, `the House of Commons`, `the Enlightenment`）
 
 **NG2. エッセイ文脈依存**
 - 具体トピック語（固有名詞・限定的な名詞）と一般動詞の組み合わせで、その文脈を離れると成立しない
@@ -78,6 +79,7 @@
 
 - **例外（NG5にならない）**: 比喩性・非合成性のある verb + 体の一部は **idiom** として残す
   - `break someone's heart` / `lose one's head` / `hold one's tongue` → 意味が字義から復元できない
+- **例外（NG5にならない）**: 学問分野で定着した専門用語（複合名詞）で、試験対策の単語教材に見出しとして載っているものは残す。英英辞書に独立項目がなくても、その分野の用語として1つの概念を指していれば対象にする。type は `fixed_expression`（例: `supply chain`, `market share`, `natural selection`）
 
 **NG6. 文まるごと**
 - 文単位ではなく辞書粒度で立てる。文の中に慣用性のある塊があれば、その部分だけ抽出
@@ -90,7 +92,7 @@
 1. **`idiom`** — 意味が字義から復元できない（比喩・慣用）。slot があっても意味非合成なら idiom
 2. **`phrasal_verb`** — 動詞 + 副詞/前置詞のセット
 3. **`pattern`** — 差し替え可能な構文の枠が固定（`...` / `doing` / `to do` の slot）
-4. **`fixed_expression`** — 語順固定で意味は合成的
+4. **`fixed_expression`** — 語順固定で意味は合成的。学問分野の専門用語（複合名詞）もここに入れる
 5. **`collocation`** — 自然な組み合わせだが差し替えも可能
 6. **`slang`** — スラングとして辞書に載っているもののみ
 
