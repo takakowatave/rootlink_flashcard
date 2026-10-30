@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { fetchPostsByTag, fetchTagCounts } from '@/lib/blogQueries'
 import { BlogDate, BlogTagList } from '@/components/blog/BlogMeta'
 import BlogThumb from '@/components/blog/BlogThumb'
+import PostAuthorChip from '@/components/blog/PostAuthorChip'
 
 export const revalidate = 60
 
@@ -43,17 +44,22 @@ export default async function BlogTagPage({ params }: Params) {
       <ul className="space-y-4">
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link
-              href={`/blog/${post.slug}`}
-              className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-primary"
-            >
+            <div className="group relative flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-primary">
+              <Link
+                href={`/blog/${post.slug}`}
+                className="absolute inset-0 z-0 rounded-2xl"
+                aria-label={post.title}
+              />
               <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} thumbImageUrl={post.thumb_image_url} />
               <div className="min-w-0 flex-1">
                 <BlogTagList tags={post.tags} className="mb-2" />
                 <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
-                {post.published_at && <BlogDate date={post.published_at} className="mt-2" />}
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {post.published_at && <BlogDate date={post.published_at} />}
+                  <PostAuthorChip authorKey={post.author_key} />
+                </div>
               </div>
-            </Link>
+            </div>
           </li>
         ))}
       </ul>
