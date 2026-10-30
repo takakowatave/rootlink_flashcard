@@ -58,3 +58,6 @@ out/
 *.jks
 *.keystore
 keystore.properties
+
+# Claude の作業出力（コミット対象外）
+Claude outputs/
