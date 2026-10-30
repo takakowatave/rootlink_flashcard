@@ -19,7 +19,7 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
   const baseClass = `relative bg-white border border-line rounded-2xl px-2 py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
     disabled
       ? 'opacity-40 cursor-not-allowed'
-      : 'hover:border-muted active:scale-[0.98] cursor-pointer'
+      : 'hover:border-primary active:scale-[0.98] cursor-pointer'
   } ${className ?? ''}`
 
   const inner = (

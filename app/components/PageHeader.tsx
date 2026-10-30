@@ -36,7 +36,7 @@ export default function PageHeader({
           <button
             type="button"
             onClick={() => router.back()}
-            className="p-2 rounded-full hover:bg-gray-100 text-muted shrink-0"
+            className="p-2 rounded-full hover:bg-primary-light text-muted shrink-0"
             aria-label="戻る"
           >
             <MdArrowBackIosNew className="size-6" />

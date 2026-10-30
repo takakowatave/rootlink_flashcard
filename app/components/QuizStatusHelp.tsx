@@ -44,7 +44,7 @@ export default function QuizStatusHelp() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 text-gray-400"
+              className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary-light text-gray-400"
               aria-label="閉じる"
             >
               <BsX size={24} />

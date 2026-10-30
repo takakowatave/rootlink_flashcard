@@ -15,7 +15,7 @@ export default function BlogLatestBanner({ post, className }: Props) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className={`flex items-stretch overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-primary-mid ${className ?? ''}`}
+      className={`flex items-stretch overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-primary ${className ?? ''}`}
     >
       <div className="relative w-[120px] shrink-0 bg-primary-subtle sm:w-[180px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}

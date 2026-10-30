@@ -39,14 +39,14 @@ export default function WordDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="md:hidden p-2 rounded-full hover:bg-gray-100 text-muted"
+              className="md:hidden p-2 rounded-full hover:bg-primary-light text-muted"
               aria-label="戻る"
             >
               <MdArrowBackIosNew className="size-6" />
             </button>
             <a
               href={`/word/${encodeURIComponent(word)}`}
-              className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
+              className="hidden md:inline-flex p-2 rounded-full hover:bg-primary-light text-muted"
               aria-label="単語ページを開く"
             >
               <BsArrowUpRightSquare className="size-5" />
@@ -62,7 +62,7 @@ export default function WordDetailModal({
                 prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
                 setShowShareMenu(true)
               }}
-              className="p-2 rounded-full hover:bg-gray-100 text-muted"
+              className="p-2 rounded-full hover:bg-primary-light text-muted"
               aria-label="共有"
             >
               <MdIosShare className="size-6" />
@@ -70,7 +70,7 @@ export default function WordDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-100 text-muted"
+              className="hidden md:inline-flex p-2 rounded-full hover:bg-primary-light text-muted"
               aria-label="閉じる"
             >
               <MdClose className="size-6" />

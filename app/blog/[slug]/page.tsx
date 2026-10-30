@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: Params) {
     <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-8 lg:flex-row">
       <main className="w-full min-w-0 lg:max-w-[672px]">
         <nav className="mb-4 text-base">
-          <Link href="/blog" className="text-muted hover:text-gray-950">
+          <Link href="/blog" className="text-muted hover:text-primary-dark">
             ← Blog
           </Link>
         </nav>

@@ -21,7 +21,7 @@ export default function BlogCarousel({ posts, className }: Props) {
         <li key={post.slug} className="w-[260px] shrink-0 snap-start">
           <Link
             href={`/blog/${post.slug}`}
-            className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-muted"
+            className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-primary"
           >
             <BlogThumb
               slug={post.slug}

@@ -188,7 +188,7 @@ function DetailModal({
         <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
           <button
             onClick={onBack}
-            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-light transition-colors text-gray-500"
           >
             <MdArrowBackIosNew size={18} />
             <span className="text-sm">戻る</span>
@@ -317,7 +317,7 @@ function CardView({
           )}
         </p>
         <div className="mt-2 h-5 text-gray-400">
-          <button onClick={example.play} disabled={example.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+          <button onClick={example.play} disabled={example.loading} className="p-1 hover:text-primary-dark transition-colors disabled:opacity-50">
             {example.loading
               ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
               : <HiSpeakerWave className="size-5" />}
@@ -385,7 +385,7 @@ function CardView({
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
                   {card.ipa && <span className="text-base">/{card.ipa}/</span>}
-                  <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-gray-600 transition-colors disabled:opacity-50">
+                  <button onClick={headword.play} disabled={headword.loading} className="p-1 hover:text-primary-dark transition-colors disabled:opacity-50">
                     {headword.loading
                       ? <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
                       : <HiSpeakerWave className="size-5" />}
@@ -488,7 +488,7 @@ function ResultScreen({
             </div>
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
@@ -501,7 +501,7 @@ function ResultScreen({
             <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-gray-50 -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
@@ -686,7 +686,7 @@ export default function QuizSession({
           <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
             <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-              <button onClick={finishTutorial} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors">
+              <button onClick={finishTutorial} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors">
                 <HiX className="size-4" />
               </button>
               <div className="text-3xl text-center mb-3 select-none">🎯</div>

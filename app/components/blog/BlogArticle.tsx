@@ -125,7 +125,7 @@ export default function BlogArticle({
           {prev ? (
             <Link
               href={`/blog/${prev.slug}`}
-              className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-muted"
+              className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-primary"
             >
               <BlogMetaText>← 前の記事</BlogMetaText>
               <p className="mt-1 line-clamp-1 text-base text-gray-800">{prev.title}</p>
@@ -136,7 +136,7 @@ export default function BlogArticle({
           {next ? (
             <Link
               href={`/blog/${next.slug}`}
-              className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-right transition-colors hover:border-muted"
+              className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-right transition-colors hover:border-primary"
             >
               <BlogMetaText>次の記事 →</BlogMetaText>
               <p className="mt-1 line-clamp-1 text-base text-gray-800">{next.title}</p>

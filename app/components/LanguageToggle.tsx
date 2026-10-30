@@ -27,7 +27,7 @@ export default function LanguageToggle({
           'rounded-full px-3 py-1 text-xs font-medium transition',
           value === 'en'
             ? 'bg-white text-zinc-900 shadow-sm'
-            : 'text-zinc-500 hover:text-zinc-700',
+            : 'text-zinc-500 hover:text-primary-dark',
         ].join(' ')}
       >
         EN
@@ -42,7 +42,7 @@ export default function LanguageToggle({
           'rounded-full px-3 py-1 text-xs font-medium transition',
           value === 'ja'
             ? 'bg-white text-zinc-900 shadow-sm'
-            : 'text-zinc-500 hover:text-zinc-700',
+            : 'text-zinc-500 hover:text-primary-dark',
         ].join(' ')}
       >
         JA

@@ -53,7 +53,7 @@ export default async function BlogListPage() {
             <li key={post.id}>
               <Link
                 href={`/blog/${post.slug}`}
-                className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
+                className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-primary"
               >
                 <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} thumbImageUrl={post.thumb_image_url} />
                 <div className="min-w-0 flex-1">

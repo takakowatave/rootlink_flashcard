@@ -30,7 +30,7 @@ export default async function BlogTagPage({ params }: Params) {
   return (
     <main className="mx-auto max-w-[672px] px-4 py-8">
       <nav className="mb-4 text-base">
-        <Link href="/blog" className="text-muted hover:text-gray-950">
+        <Link href="/blog" className="text-muted hover:text-primary-dark">
           ← Blog
         </Link>
       </nav>
@@ -45,7 +45,7 @@ export default async function BlogTagPage({ params }: Params) {
           <li key={post.slug}>
             <Link
               href={`/blog/${post.slug}`}
-              className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
+              className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-primary"
             >
               <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} thumbImageUrl={post.thumb_image_url} />
               <div className="min-w-0 flex-1">

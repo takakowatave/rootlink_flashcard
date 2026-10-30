@@ -179,7 +179,7 @@ export default function SearchBox({
               onPointerDown={e => { e.preventDefault(); navigate(s.label) }}
               onClick={() => navigate(s.label)}
               style={{ touchAction: 'manipulation' }}
-              className={`w-full text-left px-4 py-4 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
+              className={`w-full text-left px-4 py-4 text-sm flex items-center gap-2 hover:bg-primary-light transition-colors ${i === activeIndex ? 'bg-gray-50' : ''}`}
             >
               <span className="text-gray-900">{s.type === 'phrase' ? displayPhrase(s.label) : s.label}</span>
               {s.type === 'phrase' && (

@@ -33,7 +33,7 @@ export default function AuthorBox({ author, className }: Props) {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-950"
+                  className="text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-primary-dark"
                 >
                   {link.label}
                 </a>

@@ -414,7 +414,7 @@ function DeckSection({
         {moreHref && (
           <Link
             href={moreHref}
-            className="flex items-center gap-0.5 text-sm text-muted hover:text-gray-700"
+            className="flex items-center gap-0.5 text-sm text-muted hover:text-primary-dark"
           >
             もっと見る
             <HiChevronRight className="size-4" />

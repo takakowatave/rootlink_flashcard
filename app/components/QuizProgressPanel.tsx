@@ -103,7 +103,7 @@ function CountStepper({
         onClick={() => onChange(clamp(value - 1))}
         disabled={value <= min}
         aria-label="減らす"
-        className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-gray-50 transition-colors"
+        className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
       >
         −
       </button>
@@ -113,7 +113,7 @@ function CountStepper({
         onClick={() => onChange(clamp(value + 1))}
         disabled={value >= max}
         aria-label="増やす"
-        className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-gray-50 transition-colors"
+        className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
       >
         +
       </button>
@@ -241,7 +241,7 @@ export default function QuizProgressPanel({
             headerRight={
               <button
                 onClick={() => setSettingsOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-100 text-muted"
+                className="p-2 rounded-full hover:bg-primary-light text-muted"
                 aria-label="閉じる"
               >
                 <MdClose className="size-6" />

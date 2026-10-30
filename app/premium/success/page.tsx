@@ -38,7 +38,7 @@ function PremiumSuccessContent() {
         </p>
         <Link
           href="/wordlist"
-          className="inline-block w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
+          className="inline-block w-full py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
         >
           今すぐWordlistへ
         </Link>
