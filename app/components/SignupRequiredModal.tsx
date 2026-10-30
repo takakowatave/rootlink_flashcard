@@ -38,7 +38,7 @@ export default function SignupRequiredModal({ onClose, trigger }: Props) {
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 text-gray-400"
+          className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary-light text-gray-400"
         >
           <BsX size={24} />
         </button>

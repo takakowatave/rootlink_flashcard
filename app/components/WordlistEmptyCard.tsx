@@ -10,7 +10,7 @@ export default function WordlistEmptyCard({ onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="bg-white border border-line rounded-3xl px-5 py-5 flex items-center gap-4 w-full text-left hover:border-muted transition-colors active:scale-[0.99] cursor-pointer"
+      className="bg-white border border-line rounded-3xl px-5 py-5 flex items-center gap-4 w-full text-left hover:border-primary transition-colors active:scale-[0.99] cursor-pointer"
     >
       <img
         src="/plant/lv1.png"

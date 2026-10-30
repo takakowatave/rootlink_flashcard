@@ -4,6 +4,7 @@ import type { Post } from '@/lib/blog'
 import { applyPublishedFilter } from '@/lib/blogQueries'
 import { BlogDate, BlogTagList } from '@/components/blog/BlogMeta'
 import BlogThumb from '@/components/blog/BlogThumb'
+import PostAuthorChip from '@/components/blog/PostAuthorChip'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default async function BlogListPage() {
   const { data, error } = await applyPublishedFilter(
     supabase
       .from('posts')
-      .select('id, title, slug, tags, published_at, created_at, hero_image_url')
+      .select('id, title, slug, tags, published_at, created_at, hero_image_url, thumb_image_url, author_key')
   )
     .order('published_at', { ascending: false })
     .limit(5000)
@@ -33,7 +34,7 @@ export default async function BlogListPage() {
 
   const posts = (data ?? []) as Pick<
     Post,
-    'id' | 'title' | 'slug' | 'tags' | 'published_at' | 'created_at' | 'hero_image_url'
+    'id' | 'title' | 'slug' | 'tags' | 'published_at' | 'created_at' | 'hero_image_url' | 'thumb_image_url' | 'author_key'
   >[]
 
   return (
@@ -51,17 +52,22 @@ export default async function BlogListPage() {
         <ul className="space-y-4">
           {posts.map((post) => (
             <li key={post.id}>
-              <Link
-                href={`/blog/${post.slug}`}
-                className="flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-muted"
-              >
-                <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} />
+              <div className="group relative flex gap-4 rounded-2xl border border-line bg-white px-5 py-4 transition-colors hover:border-primary">
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="absolute inset-0 z-0 rounded-2xl"
+                  aria-label={post.title}
+                />
+                <BlogThumb slug={post.slug} heroImageUrl={post.hero_image_url} thumbImageUrl={post.thumb_image_url} />
                 <div className="min-w-0 flex-1">
                   <BlogTagList tags={post.tags} className="mb-2" />
                   <h2 className="text-lg font-semibold text-gray-950">{post.title}</h2>
-                  <BlogDate date={post.published_at ?? post.created_at} className="mt-2" />
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <BlogDate date={post.published_at ?? post.created_at} />
+                    <PostAuthorChip authorKey={post.author_key} />
+                  </div>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

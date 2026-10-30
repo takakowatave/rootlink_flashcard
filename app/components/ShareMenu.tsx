@@ -160,7 +160,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
         <button
           type="button"
           onClick={items[0].onClick}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left"
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-light text-left"
         >
           <FaLink className="size-4 text-gray-700" />
           <span className="text-sm text-gray-950">リンクをコピー</span>
@@ -171,7 +171,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
             key={item.key}
             type="button"
             onClick={item.onClick}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-light text-left"
           >
             <span className="size-4 text-gray-700 flex items-center justify-center">
               {item.icon}

@@ -38,7 +38,7 @@ export default function ReportContentLink({ kind, content }: Props) {
         <button
           type="button"
           onClick={handleClick}
-          className="inline-flex items-center gap-1 text-xs text-muted hover:text-gray-700 transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-primary-dark transition-colors"
         >
           <HiOutlineFlag className="size-4" />
           この{kindLabel}の内容を報告

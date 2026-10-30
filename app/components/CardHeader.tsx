@@ -78,7 +78,7 @@ export default function CardHeader({
             type="button"
             onClick={(e) => { e.stopPropagation(); onShare(e) }}
             aria-label="共有"
-            className="hidden md:inline-flex p-2 -mt-1 rounded-full hover:bg-gray-100 text-muted"
+            className="hidden md:inline-flex p-2 -mt-1 rounded-full hover:bg-primary-light text-muted"
           >
             <MdIosShare className="size-6" />
           </button>

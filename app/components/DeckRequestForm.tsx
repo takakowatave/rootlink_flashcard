@@ -108,7 +108,7 @@ export default function DeckRequestForm() {
         headerRight={
           <button
             onClick={closeModal}
-            className="p-2 rounded-full hover:bg-gray-100 text-muted"
+            className="p-2 rounded-full hover:bg-primary-light text-muted"
             aria-label="閉じる"
           >
             <MdClose className="size-6" />

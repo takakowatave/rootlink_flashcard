@@ -60,7 +60,7 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-gray-700"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary-dark"
             aria-label={show ? "パスワードを隠す" : "パスワードを表示"}
             tabIndex={-1}
           >

@@ -4,6 +4,10 @@ import { applyPublishedFilter } from "@/lib/blogQueries"
 
 const BASE_URL = "https://www.rootlink.app"
 
+// ビルド時に固定せず 1 時間ごとに作り直す。
+// 固定だと予約投稿・一括公開した記事がデプロイまでサイトマップに載らない
+export const revalidate = 3600
+
 type ShardId = "main" | "words" | "blog"
 
 export async function generateSitemaps(): Promise<{ id: ShardId }[]> {
@@ -25,6 +29,7 @@ async function buildMainSitemap(
     { url: BASE_URL, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
     { url: `${BASE_URL}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/decks`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${BASE_URL}/cuppa`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ]
 
   const { data: decks } = await supabase

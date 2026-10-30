@@ -20,14 +20,14 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setPrivacyOpen(true)}
-            className="hover:text-gray-950 transition-colors"
+            className="hover:text-primary-dark transition-colors"
           >
             プライバシーポリシー
           </button>
           <button
             type="button"
             onClick={() => openExternalLink(CONTACT_URL)}
-            className="hover:text-gray-950 transition-colors"
+            className="hover:text-primary-dark transition-colors"
           >
             お問い合わせ
           </button>
@@ -42,7 +42,7 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setPrivacyOpen(false)}
-            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
+            className="p-2 -mr-1 rounded-full hover:bg-primary-light text-muted"
             aria-label="閉じる"
           >
             <HiX className="size-5" />

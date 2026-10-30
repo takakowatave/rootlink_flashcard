@@ -88,7 +88,7 @@ export default function GoogleAuthButton({
       type="button"
       onClick={handleClick}
       disabled={inAppBrowser}
-      className="w-full h-12 px-4 bg-white border border-line rounded-md hover:bg-gray-50 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+      className="w-full h-12 px-4 bg-white border border-line rounded-md hover:bg-primary-light flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />

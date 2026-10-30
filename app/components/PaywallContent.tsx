@@ -285,7 +285,7 @@ export default function PaywallContent({
           <button
             type="button"
             onClick={() => setOpenDoc(null)}
-            className="p-2 -mr-1 rounded-full hover:bg-gray-100 text-muted"
+            className="p-2 -mr-1 rounded-full hover:bg-primary-light text-muted"
             aria-label="閉じる"
           >
             <HiX className="size-5" />

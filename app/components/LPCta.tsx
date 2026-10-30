@@ -1,6 +1,7 @@
 import Image from 'next/image'
 
 const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rootlink.app'
+const APP_STORE_URL = 'https://apps.apple.com/jp/app/rootlink/id6809248684'
 
 export default function LPCta() {
   return (
@@ -19,15 +20,15 @@ export default function LPCta() {
 
         {/* テキスト — SP: 上 / PC: 右 */}
         <div className="order-1 md:order-2 flex flex-col gap-3 text-center md:text-left">
-          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">Android版 配信中</p>
+          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">iOS / Android</p>
           <p className="text-[31px] font-bold leading-tight text-white md:text-[34px]">
-            iOS版も近日公開予定
+            配信中
           </p>
           {/* バッジ — PC のみここに表示 */}
           <div className="hidden md:flex flex-wrap items-center gap-4 pb-[80px]">
-            <div className="relative h-[54px] w-[145px] cursor-not-allowed opacity-40 grayscale" aria-disabled="true">
-              <Image src="/lp/appstore.png" alt="App Store（準備中）" fill className="object-contain" sizes="145px" />
-            </div>
+            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[54px] w-[145px]">
+              <Image src="/lp/appstore.png" alt="Download on the App Store" fill className="object-contain" sizes="145px" />
+            </a>
             <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[54px] w-[180px]">
               <Image src="/lp/googleplay.png" alt="Get it on Google Play" fill className="object-contain" sizes="180px" />
             </a>
@@ -49,9 +50,9 @@ export default function LPCta() {
 
       {/* バッジ — SP のみ、スマホ画像の下 */}
       <div className="md:hidden flex items-center justify-center gap-2 pb-8 pt-2">
-        <div className="relative h-[52px] w-[156px] cursor-not-allowed opacity-40 grayscale" aria-disabled="true">
-          <Image src="/lp/appstore.png" alt="App Store（準備中）" fill className="object-contain" sizes="156px" />
-        </div>
+        <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[52px] w-[156px]">
+          <Image src="/lp/appstore.png" alt="Download on the App Store" fill className="object-contain" sizes="156px" />
+        </a>
         <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer" className="relative block h-[52px] w-[176px]">
           <Image src="/lp/googleplay.png" alt="Get it on Google Play" fill className="object-contain" sizes="176px" />
         </a>

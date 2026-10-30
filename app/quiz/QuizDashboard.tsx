@@ -73,7 +73,7 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-muted hover:text-gray-600 transition-colors" aria-label="スキップ">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors" aria-label="スキップ">
             <HiX className="size-4" />
           </button>
           <div className="text-3xl text-center mb-3 select-none">🃏</div>

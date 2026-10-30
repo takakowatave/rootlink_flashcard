@@ -207,7 +207,7 @@ export default function NativeAuthForm({ mode }: Props) {
             type="button"
             onClick={handleOtpEditEmail}
             aria-label="戻る"
-            className="p-2 rounded-full text-gray-700 hover:bg-gray-100"
+            className="p-2 rounded-full text-gray-700 hover:bg-primary-light"
           >
             <MdArrowBackIosNew className="size-5" />
           </button>
@@ -238,7 +238,7 @@ export default function NativeAuthForm({ mode }: Props) {
           type="button"
           onClick={() => router.back()}
           aria-label="戻る"
-          className="p-2 rounded-full text-gray-700 hover:bg-gray-100"
+          className="p-2 rounded-full text-gray-700 hover:bg-primary-light"
         >
           <MdArrowBackIosNew className="size-5" />
         </button>

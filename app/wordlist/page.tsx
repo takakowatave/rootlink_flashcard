@@ -424,7 +424,7 @@ export default function WordListPage() {
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-                className="w-full max-w-[420px] h-12 flex items-center gap-2 bg-white border border-line rounded-full pl-5 pr-4 text-left hover:border-muted transition-colors"
+                className="w-full max-w-[420px] h-12 flex items-center gap-2 bg-white border border-line rounded-full pl-5 pr-4 text-left hover:border-primary transition-colors"
                 aria-label="検索を開く"
               >
                 <span className="flex-1 text-sm text-gray-400">検索</span>

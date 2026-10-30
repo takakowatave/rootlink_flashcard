@@ -1176,7 +1176,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
                 router.push('/dashboard')
               }
             }}
-            className="p-2 rounded-full hover:bg-gray-100 text-muted shrink-0"
+            className="p-2 rounded-full hover:bg-primary-light text-muted shrink-0"
             aria-label="戻る"
           >
             <MdArrowBackIosNew className="size-6" />
@@ -1198,7 +1198,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
               prefetchShareImage(`/word/${encodeURIComponent(word)}/card.png`)
               setShowShareMenu(true)
             }}
-            className="p-2 rounded-full hover:bg-gray-100 text-muted shrink-0"
+            className="p-2 rounded-full hover:bg-primary-light text-muted shrink-0"
             aria-label="共有"
           >
             <MdIosShare className="size-6" />
@@ -1302,7 +1302,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
             <li key={post.slug}>
               <Link
                 href={`/blog/${post.slug}`}
-                className="block rounded-2xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-950 transition-colors hover:border-muted"
+                className="block rounded-2xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-950 transition-colors hover:border-primary"
               >
                 {post.title}
               </Link>

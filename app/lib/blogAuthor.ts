@@ -13,6 +13,9 @@ export type BlogAuthor = {
   avatarSrc: string
   // 筆者欄の紹介文の下に並べる SNS などのリンク (任意)
   links?: BlogAuthorLink[]
+  // シリーズのランディング (/cuppa 等) がある場合に設定。
+  // AuthorBox・BlogLatestBanner・ブログ一覧の著者チップから遷移する。
+  seriesHref?: string
 }
 
 // 従来からの既定著者 (author_key=null または未定義キー)。全記事共通の状態を保つ。
@@ -31,6 +34,7 @@ export const BLOG_AUTHORS: Record<string, BlogAuthor> = {
     name: 'Cuppa English',
     bio: 'ハリポタ原作の会話表現を、毎日のショート動画と毎週のブログで紐解いていくシリーズです。',
     avatarSrc: '/authors/cuppa-english.webp',
+    seriesHref: '/cuppa',
     links: [
       { label: 'YouTube', href: 'https://www.youtube.com/@Cuppa_English' },
       { label: 'TikTok', href: 'https://www.tiktok.com/@cuppa_english___' },
