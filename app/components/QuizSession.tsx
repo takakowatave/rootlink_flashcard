@@ -273,10 +273,37 @@ function CardView({
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
-    const base = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2 || /\p{Script=Han}/u.test(s))
-    // 動詞・形容詞の活用を吸収: 「称賛する」→漢字連続「称賛」だけでも一致させる
+    // meaning_ja から候補を抽出:
+    //   - 句読点・助詞で分割した素片 (2文字以上)
+    //   - 動詞/形容詞の活用末尾を落とした語幹 (「許されている」→「許されて」)
+    //   - 漢字 2+ 連続
+    //   - カタカナ 3+ 連続 (外来語)
+    //   - ひらがな 3+ 連続 (オノマトペ・特徴的副詞)
+    //   - 単漢字 (活用で埋まるケース)
+    // ノイズになる超頻出 hiragana は除外。
+    const trimOkurigana = (s: string) => s.replace(
+      /(?:している|していない|されている|されていない|られている|られていない|ている|ていた|ていない|ました|ません|ます|だった|です|なきゃ|まま|だ|た|て|る|ない)+$/u,
+      '',
+    )
+    const base = card.meaning.split(/[のをにはがでともやへ、。・〜…\s（）「」？！]+/).filter(s => s.length >= 2)
     const kanjiChunks = card.meaning.match(/\p{Script=Han}{2,}/gu) ?? []
-    const candidates = Array.from(new Set([...base, ...kanjiChunks])).sort((a, b) => b.length - a.length)
+    const katakanaChunks = card.meaning.match(/[゠-ヿー]{3,}/gu) ?? []
+    const hiraganaChunks = card.meaning.match(/[぀-ゟー]{3,}/gu) ?? []
+    const singleKanji = card.meaning.match(/\p{Script=Han}/gu) ?? []
+    const stems = base.map(trimOkurigana).filter(s => s.length >= 1)
+    const STOP = new Set(['している','された','されて','になる','という','ように','ことは','ことに','ことを','なった','なって','います','ました','ません'])
+    const candidates = Array.from(new Set([
+      ...base, ...stems, ...kanjiChunks, ...katakanaChunks, ...hiraganaChunks, ...singleKanji,
+    ]))
+      .filter(c => {
+        if (STOP.has(c)) return false
+        if (c.length === 1 && /\p{Script=Han}/u.test(c)) return true
+        if (c.length >= 2 && /\p{Script=Han}/u.test(c)) return true
+        if (c.length >= 3 && /^[゠-ヿー]+$/u.test(c)) return true
+        if (c.length >= 3 && /^[぀-ゟー]+$/u.test(c)) return true
+        return false
+      })
+      .sort((a, b) => b.length - a.length)
     const matches = candidates.filter(c => ja.includes(c))
     if (matches.length === 0) return <>{ja}</>
     const hiRegex = new RegExp(`(${matches.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
