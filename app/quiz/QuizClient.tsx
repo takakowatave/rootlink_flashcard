@@ -271,7 +271,7 @@ export default function QuizClient() {
     return (
       <>
         <ReviewDashboard
-          initialPeriod={initialPeriod}
+          selectedPeriod={initialPeriod}
           statsByPeriod={reviewStats}
           onStart={(p) => loadPeriodQuiz(p)}
           onBack={() => router.push('/')}

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Button from '@/components/Button'
 import TriDonutChart from '@/components/TriDonutChart'
 import ChapterListItem from '@/components/ChapterListItem'
@@ -22,7 +21,8 @@ const PERIOD_LABEL: Record<ReviewPeriod, string> = {
 }
 
 type Props = {
-  initialPeriod: ReviewPeriod
+  /** 現在選択中の期間 (URL の ?period= 由来)。他デッキと同じく章タップで URL 遷移する */
+  selectedPeriod: ReviewPeriod
   statsByPeriod: Record<ReviewPeriod, ReviewPeriodStats>
   onStart: (period: ReviewPeriod) => void
   onBack: () => void
@@ -32,12 +32,10 @@ type Props = {
  * /quiz?period=X で開く「復習デッキ」の入口画面。
  * デッキ画面 (/decks/[id]) と同じ構造 (上にドーナツ + 下に章リスト) で、
  * 章 = 期間 (昨日 / 1週間 / 1ヶ月 / 全期間) を縦に並べる。
- * Dashboard の復習カードから初期の期間が選択済みで渡ってくる。
- * スタートボタンで初めてクイズが開始される (自動開始しない)。
+ * 章タップは onClick ではなく href で URL 遷移させる (他デッキと揃える)。
  */
-export default function ReviewDashboard({ initialPeriod, statsByPeriod, onStart, onBack }: Props) {
-  const [selected, setSelected] = useState<ReviewPeriod>(initialPeriod)
-  const current = statsByPeriod[selected]
+export default function ReviewDashboard({ selectedPeriod, statsByPeriod, onStart, onBack }: Props) {
+  const current = statsByPeriod[selectedPeriod]
 
   return (
     <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
@@ -74,8 +72,8 @@ export default function ReviewDashboard({ initialPeriod, statsByPeriod, onStart,
                       label={PERIOD_LABEL[period]}
                       mastered={s.mastered}
                       total={s.count}
-                      highlighted={period === selected}
-                      onClick={() => setSelected(period)}
+                      highlighted={period === selectedPeriod}
+                      href={`/quiz?period=${period}`}
                     />
                   )
                 })}
@@ -84,7 +82,7 @@ export default function ReviewDashboard({ initialPeriod, statsByPeriod, onStart,
           </div>
 
           <Button
-            onClick={() => onStart(selected)}
+            onClick={() => onStart(selectedPeriod)}
             disabled={current.count === 0}
             variant="primary"
             size="lg"
