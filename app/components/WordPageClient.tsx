@@ -677,7 +677,7 @@ export default function WordPageClient({
    */
   containingDecks?: Array<{
     slug: string
-    label: string
+    label?: string
     shortName: string
     wordCount: number
     imageSrc?: string

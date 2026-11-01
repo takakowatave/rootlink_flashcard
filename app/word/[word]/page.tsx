@@ -123,7 +123,8 @@ const filterExistingWords = cache(async (candidates: string[]): Promise<string[]
  */
 export type WordDeckCard = {
   slug: string
-  label: string
+  // シリーズ系 (Cuppa English 等) は label を伏せるので optional
+  label?: string
   shortName: string
   wordCount: number
   imageSrc?: string
@@ -184,7 +185,8 @@ async function fetchContainingDecks(filter: string): Promise<WordDeckCard[]> {
       const card = deckCardTitle(r.name, r.label)
       return {
         slug: r.slug,
-        label: card.label ?? r.label,
+        // シリーズ系は label を undefined にしておく (deckCardTitle の仕様に従う)
+        label: card.label,
         shortName: card.title,
         wordCount: r.wordCount,
         imageSrc: r.imageSrc,

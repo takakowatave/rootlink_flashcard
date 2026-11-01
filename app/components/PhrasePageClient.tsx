@@ -44,7 +44,7 @@ type PhraseCard = {
 
 type ContainingDeck = {
   slug: string
-  label: string
+  label?: string
   shortName: string
   wordCount: number
   imageSrc?: string
