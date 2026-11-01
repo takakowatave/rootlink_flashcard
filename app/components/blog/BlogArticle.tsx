@@ -56,7 +56,7 @@ export default function BlogArticle({
   const limitedTags = post.tags?.slice(0, 3) ?? null
   return (
     <article>
-      <div className="overflow-hidden bg-white sm:rounded-2xl sm:border sm:border-line">
+      <div className="overflow-hidden sm:rounded-2xl sm:border sm:border-line sm:bg-white">
         {heroSrc && (
           <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
