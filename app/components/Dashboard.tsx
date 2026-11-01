@@ -718,7 +718,7 @@ export default function Dashboard() {
                     imageSrc="/dashboard/recent-words.png"
                     wordCount={reviewCounts[period]}
                     disabled={reviewCounts[period] === 0}
-                    href={`/quiz?period=${period}`}
+                    href={`/review/${period}`}
                     className="shrink-0 w-[146px] sm:w-[180px]"
                   />
                 ))}

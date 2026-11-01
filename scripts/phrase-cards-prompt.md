@@ -201,6 +201,43 @@ RETURNING id;
 - 古風・古語 → `archaic`
 - 下品・粗俗 → `vulgar`
 
+## Step 2.5: ハイライト検証（INSERT 前の必須ゲート）
+
+Case B で JSON を組んだら、INSERT の前に以下 2 点を自分でシミュレートする。片方でも失敗したら example を書き直す（再生成）。「ちょっと惜しい」で妥協して INSERT しない — クイズのオレンジ強調が壊れて、ユーザーに即バレる。
+
+### 2.5.A — 英語ハイライト検証
+
+**要件**: `example_en` に `phrase` 本体（スロットは具体語で埋めてよい、動詞は時制/人称で活用してよい）が **連続スパン** として含まれていること。
+
+- phrase: `keep one's mouth shut`
+  - OK: `I should have kept my mouth shut about the surprise party.`（kept = keep の活用 / my = one's の slot filler）
+  - NG: `She didn't say anything.`（phrase の語が1つも入っていない）
+- phrase: `be opposed to something`
+  - OK: `Most residents are strongly opposed to building a motorway.`（are = be の活用 / strongly = 副詞 filler は OK / building ... = sth の slot filler）
+  - NG: `We disagreed with the proposal.`（opposed が入っていない）
+
+**チェック方法**: `app/lib/phraseDisplay.ts` の `buildPhraseSpanRegex(phrase)` と等価な regex を頭の中で組み、`example_en` にマッチするか試す。
+regex は be の活用・不規則動詞 50 語超・冠詞代名詞揺らぎ・名詞複数・分離型句動詞のスロット省略まで吸収する。それでも落ちるようなら example 側で phrase の文字列（または活用形）を直接含める方向で書き直す。
+
+### 2.5.B — 日本語ハイライト検証
+
+**要件**: `example_ja` に `meaning_ja` の **特徴語（漢字塊 / カタカナ 3+ / ひらがなオノマトペ）** が少なくとも 1 つ含まれていること。
+
+- meaning_ja: `選択肢を残しておく` / example_ja: `選択肢を残しておきたい` → OK（「選択肢」「残しておく」が共通）
+- meaning_ja: `〜が好きである、気に入っている` / example_ja: `大人数の集まりはあまり得意ではない。` → **NG**（「好き」「気に入って」が例文側に 1 つも無い。「得意」は意味的に近いが文字列が違う → 書き直し）
+
+**チェック方法**: `app/lib/jaHighlight.ts` の `jaHighlightMatches(meaning_ja, example_ja)` を想定して、meaning から抽出した候補が example に 1 つは出てくるか確認する。「意味は合うけど文字列が違う」ケースは NG — meaning_ja に出てくる漢字・特徴語を example_ja にも入れ直すか、meaning_ja 側を例文に合わせて書き直す。
+
+### 共通: 失敗したときの直し方
+
+1. まず例文側を書き直して phrase を含める（優先）
+2. phrase 側の表記がおかしい（略記 sb/sth が残っている、冠詞付きになっている）→ Step 0 からやり直し
+3. どうしても example が自然にならない → 違う example 候補を考える。それでもダメなら skip 相当として扱ってよい（kiko に相談）
+
+### 検証を飛ばしたときの被害
+
+ハイライトが壊れると `/review/*` クイズでオレンジ強調が消え、「どこがキーフレーズなのか」が見えない。1件でも入ると `/phrases` の「要修正」セクションに積まれて kiko の手作業負担になる。**gate 判定と同格の必須ステップ**として扱う。
+
 ## 品質基準
 
 - 中立・辞書的な説明。個人の感想や主観を避ける

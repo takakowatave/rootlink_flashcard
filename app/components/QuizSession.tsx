@@ -10,7 +10,8 @@ import LearnedPartWords from '@/components/LearnedPartWords'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
-import { displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
+import { buildPhraseSpanRegex, displayPhrase } from '@/lib/phraseDisplay'
+import { jaHighlightMatches } from '@/lib/jaHighlight'
 import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
@@ -188,7 +189,7 @@ function DetailModal({
         <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
           <button
             onClick={onBack}
-            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-light transition-colors text-gray-500"
+            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-subtle transition-colors text-gray-500"
           >
             <MdArrowBackIosNew size={18} />
             <span className="text-sm">戻る</span>
@@ -273,11 +274,7 @@ function CardView({
 
   const renderJaHighlighted = (ja: string) => {
     if (!card.meaning) return <>{ja}</>
-    const base = card.meaning.split(/[のをにはがでともや、。・\s]+/).filter(s => s.length >= 2 || /\p{Script=Han}/u.test(s))
-    // 動詞・形容詞の活用を吸収: 「称賛する」→漢字連続「称賛」だけでも一致させる
-    const kanjiChunks = card.meaning.match(/\p{Script=Han}{2,}/gu) ?? []
-    const candidates = Array.from(new Set([...base, ...kanjiChunks])).sort((a, b) => b.length - a.length)
-    const matches = candidates.filter(c => ja.includes(c))
+    const matches = jaHighlightMatches(card.meaning, ja)
     if (matches.length === 0) return <>{ja}</>
     const hiRegex = new RegExp(`(${matches.map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
     return (
@@ -300,7 +297,7 @@ function CardView({
     const hw = card.word.toLowerCase().trim()
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const pattern = isPhrase
-      ? phraseHighlightTerms(hw).map(t => `\\b${escape(t)}\\b`).join('|') || '(?!)'
+      ? buildPhraseSpanRegex(hw)
       : hw.length <= 3
         ? `\\b${escape(hw)}[a-z]{0,3}\\b`
         : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
@@ -488,7 +485,7 @@ function ResultScreen({
             </div>
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-subtle -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
@@ -501,7 +498,7 @@ function ResultScreen({
             <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-subtle -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>

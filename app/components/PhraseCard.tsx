@@ -140,7 +140,8 @@ export default function PhraseCard({
             displayLocale={displayLocale}
             onPlay={onPlayExample}
             isLoading={exampleAudioLoading}
-            highlights={phraseHighlightTerms(card.phrase)}
+            phrase={card.phrase}
+            meaning={meaning}
           />
 
           {(explanation || usEquivalent) && (

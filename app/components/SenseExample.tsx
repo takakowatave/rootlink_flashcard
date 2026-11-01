@@ -3,6 +3,8 @@
 import { HiSpeakerWave } from 'react-icons/hi2'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import HighlightedText from '@/components/blog/HighlightedText'
+import { buildPhraseSpanRegex } from '@/lib/phraseDisplay'
+import { jaHighlightMatches } from '@/lib/jaHighlight'
 
 type Props = {
   example: string | null | undefined
@@ -10,12 +12,40 @@ type Props = {
   displayLocale: DisplayLocale
   onPlay?: () => void
   isLoading?: boolean
-  // 例文の中で強調する表現（大文字小文字は区別しない）。見つからなければ強調しない。
-  // スロット語をはさむフレーズは phraseHighlightTerms で分割した非スロット部分を複数渡す
+  // 例文の中で強調する表現 (単純一致版)。phrase を使う場合は不要。
   highlights?: string[] | null
+  // 熟語の見出し語。渡すと buildPhraseSpanRegex で活用・冠詞揺らぎ・連続スパンを吸収して
+  // example 側をハイライトする。
+  phrase?: string | null
+  // meaning_ja。渡すと jaHighlightMatches で translation 側もハイライトする。
+  meaning?: string | null
 }
 
-export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading, highlights }: Props) {
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function renderExampleWithPhrase(text: string, phrase: string): React.ReactNode {
+  const pat = buildPhraseSpanRegex(phrase)
+  const re = new RegExp(`(${pat})`, 'gi')
+  const parts = text.split(re)
+  const match = new RegExp(`^(?:${pat})$`, 'i')
+  return parts.map((p, i) => match.test(p)
+    ? <span key={i} className="font-bold text-primary">{p}</span>
+    : <span key={i}>{p}</span>)
+}
+
+function renderTranslationWithMeaning(ja: string, meaning: string): React.ReactNode {
+  const matches = jaHighlightMatches(meaning, ja)
+  if (matches.length === 0) return ja
+  const re = new RegExp(`(${matches.map(escapeRe).join('|')})`, 'g')
+  const matchSet = new Set(matches)
+  return ja.split(re).map((p, i) => matchSet.has(p)
+    ? <span key={i} className="font-bold text-primary">{p}</span>
+    : <span key={i}>{p}</span>)
+}
+
+export default function SenseExample({ example, translation, displayLocale, onPlay, isLoading, highlights, phrase, meaning }: Props) {
   const showTranslation = displayLocale === 'ja' && !!translation
   if (!example && !showTranslation) return null
 
@@ -26,7 +56,9 @@ export default function SenseExample({ example, translation, displayLocale, onPl
       {example && (
         <div className="flex items-start gap-2">
           <p className="flex-1 min-w-0">
-            <HighlightedText terms={terms} termClassName="font-bold text-primary">{example}</HighlightedText>
+            {phrase
+              ? renderExampleWithPhrase(example, phrase)
+              : <HighlightedText terms={terms} termClassName="font-bold text-primary">{example}</HighlightedText>}
           </p>
           {onPlay && (
             <button
@@ -40,7 +72,13 @@ export default function SenseExample({ example, translation, displayLocale, onPl
           )}
         </div>
       )}
-      {showTranslation && <p>{translation}</p>}
+      {showTranslation && translation && (
+        <p>
+          {meaning
+            ? renderTranslationWithMeaning(translation, meaning)
+            : translation}
+        </p>
+      )}
     </div>
   )
 }

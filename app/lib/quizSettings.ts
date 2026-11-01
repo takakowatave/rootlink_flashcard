@@ -16,6 +16,12 @@ export const QUIZ_SETTINGS_DEFAULTS: QuizSettings = {
   autoPlayHeadword: false,
 }
 
+// 問題数は 5 刻み (最小 5)。既存の保存値が 5 の倍数でないときは
+// ロード時に丸めて 36 のような中途半端な値がユーザーに見えないようにする。
+function normalizeQuestionCount(n: number): number {
+  return Math.max(5, Math.round(n / 5) * 5)
+}
+
 export async function fetchQuizSettings(userId: string): Promise<QuizSettings> {
   const { data } = await supabase
     .from('profiles')
@@ -23,9 +29,10 @@ export async function fetchQuizSettings(userId: string): Promise<QuizSettings> {
     .eq('id', userId)
     .maybeSingle()
   if (!data) return QUIZ_SETTINGS_DEFAULTS
+  const rawCount = data.quiz_question_count ?? QUIZ_SETTINGS_DEFAULTS.questionCount
   return {
     defaultMode: (data.quiz_default_mode as QuizDefaultMode) ?? QUIZ_SETTINGS_DEFAULTS.defaultMode,
-    questionCount: data.quiz_question_count ?? QUIZ_SETTINGS_DEFAULTS.questionCount,
+    questionCount: normalizeQuestionCount(rawCount),
     autoPlayAudio: data.quiz_auto_play_audio ?? QUIZ_SETTINGS_DEFAULTS.autoPlayAudio,
     autoPlayHeadword: data.quiz_auto_play_headword ?? QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword,
   }

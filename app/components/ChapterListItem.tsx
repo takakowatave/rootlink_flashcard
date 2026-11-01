@@ -61,7 +61,7 @@ export default function ChapterListItem({
     </div>
   )
 
-  const className = 'w-full text-left transition-colors hover:bg-primary-light'
+  const className = 'w-full text-left transition-colors hover:bg-primary-subtle'
 
   if (href && !onClick) {
     return (

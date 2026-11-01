@@ -11,48 +11,131 @@ import {
   getUserPlan,
   saveQuizResult,
 } from '@/lib/supabaseApi'
-import { classifyQuizStatus, filterKeysByScope } from '@/lib/quizScope'
+import { classifyForDonut, classifyQuizStatus, filterKeysByScope } from '@/lib/quizScope'
 import type { QuizScope } from '@/components/QuizScopeSelector'
 import toast from 'react-hot-toast'
 import QuizDashboard from './QuizDashboard'
+import ReviewDashboard, { type ReviewPeriodStats } from '@/components/ReviewDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
-import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
+import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, saveQuizSettings, type QuizSettings } from '@/lib/quizSettings'
 import { useAuthReload } from '@/lib/useAuthReload'
 import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import {
   fetchReviewCandidates,
   filterByPeriod,
-  sortReviewCandidates,
   type ReviewPeriod,
 } from '@/lib/reviewPeriod'
 
 type QuizMode = QuizScope
 
-export default function QuizClient() {
+const EMPTY_REVIEW_STATS: ReviewPeriodStats = {
+  mastered: 0, review: 0, hard: 0, unseen: 0,
+  scopes: { all: 0, unseen: 0, review: 0, hard: 0 },
+}
+
+type QuizClientProps = {
+  /** /review/[period] 経由で明示的に渡す期間。/quiz?period=X でも検出するが、新規は route 版推奨 */
+  initialPeriodProp?: ReviewPeriod | null
+}
+
+export default function QuizClient({ initialPeriodProp = null }: QuizClientProps = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const hasPeriodParam = ((): boolean => {
+    if (initialPeriodProp) return true
     const p = searchParams.get('period')
     return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all'
   })()
-  const [loading, setLoading] = useState(hasPeriodParam)
+  const [loading, setLoading] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  // 復習エントリ (?period=X) で来たら ReviewDashboard を出す。クイズ中は false。
+  const [reviewMode, setReviewMode] = useState<boolean>(hasPeriodParam)
+  const [reviewStats, setReviewStats] = useState<ReviewPeriodStats>(EMPTY_REVIEW_STATS)
+  const [reviewStatsLoaded, setReviewStatsLoaded] = useState(false)
   const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
   const [settings, setSettings] = useState<QuizSettings>(QUIZ_SETTINGS_DEFAULTS)
+  const [userId, setUserId] = useState<string | null>(null)
 
   // ログイン後に settings を反映するため、SIGNED_IN でも再取得する。
-  useAuthReload(async (userId, event) => {
-    if (event === 'SIGNED_OUT' || !userId) {
+  useAuthReload(async (uid, event) => {
+    if (event === 'SIGNED_OUT' || !uid) {
       setSettings(QUIZ_SETTINGS_DEFAULTS)
+      setUserId(null)
       return
     }
-    setSettings(await fetchQuizSettings(userId))
+    setUserId(uid)
+    setSettings(await fetchQuizSettings(uid))
   })
 
+  const updateSetting = useCallback(
+    <K extends keyof QuizSettings>(key: K, value: QuizSettings[K]) => {
+      setSettings((prev) => ({ ...prev, [key]: value }))
+      if (userId) void saveQuizSettings(userId, { [key]: value })
+    },
+    [userId],
+  )
+
   useEffect(() => { toast.dismiss() }, [])
+
+  const initialPeriod = ((): ReviewPeriod => {
+    if (initialPeriodProp) return initialPeriodProp
+    const p = searchParams.get('period')
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : 'all'
+  })()
+
+  // 現在の period に対する ReviewDashboard のドーナツ・スコープ件数を取得する。
+  // period が変わったら (URL 遷移で) 再計算させる。
+  const loadReviewStats = useCallback(async (period: ReviewPeriod) => {
+    setReviewStatsLoaded(false)
+    try {
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) { setShowSignupModal(true); return }
+      const userId = data.user.id
+      const plan = await getUserPlan()
+      const [candidates, qr] = await Promise.all([
+        fetchReviewCandidates(userId, plan),
+        supabase
+          .from('quiz_results')
+          .select('word, correct')
+          .eq('user_id', userId)
+          .order('answered_at', { ascending: false })
+          .limit(10000),
+      ])
+      const qrRows = (qr.data ?? []) as { word: string; correct: boolean }[]
+      const words = filterByPeriod(candidates, period).map((c) => c.word)
+      const { status, wrongCount } = classifyQuizStatus(qrRows, words)
+      const buckets = classifyForDonut(status, wrongCount, words)
+      const unseenKeys = filterKeysByScope(words, status, wrongCount, 'unseen')
+      const reviewKeys = filterKeysByScope(words, status, wrongCount, 'review')
+      const hardKeys = filterKeysByScope(words, status, wrongCount, 'hard')
+      setReviewStats({
+        ...buckets,
+        scopes: {
+          all: words.length,
+          unseen: unseenKeys.length,
+          review: reviewKeys.length,
+          hard: hardKeys.length,
+        },
+      })
+    } catch (err) {
+      console.error('loadReviewStats failed', err)
+    } finally {
+      // 失敗・早期 return でも必ずローディング解除 (そうしないと「読み込み中…」で永久固着する)。
+      setReviewStatsLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (hasPeriodParam) {
+      void loadReviewStats(initialPeriod)
+    }
+    // 期間切り替え (URL の period 変化) で再計算
+  }, [hasPeriodParam, initialPeriod, loadReviewStats])
 
   const loadCards = useCallback(async (quizMode: QuizMode = 'all') => {
     setLoading(true)
@@ -66,14 +149,12 @@ export default function QuizClient() {
     if (quizMode === 'recent') {
       const plan = await getUserPlan()
       const recent = await fetchRecentQuizWords(userId, plan, 20)
-      // 優先度: 誤答回数 desc → 最新解答日時 desc
       recent.sort((a, b) => {
         if (b.wrongCount !== a.wrongCount) return b.wrongCount - a.wrongCount
         return a.latestAt < b.latestAt ? 1 : -1
       })
       const top = recent.slice(0, settings.questionCount)
       const entries = await fetchQuizEntriesByWords(top.map((r) => r.word))
-      // 表示順のみシャッフル (slice しない)
       const cards = shuffleCards(buildQuizCards(entries))
       setSessionEntries(
         cards.map((c) => entries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
@@ -105,8 +186,6 @@ export default function QuizClient() {
       })),
     ]
 
-    // 出題元にデッキ単語も含める: quiz_results の履歴 word から
-    // saved_words に無いものだけ取得して追加
     const existingWords = new Set(savedEntries.map((e) => e.word))
     const { data: historyRows } = await supabase
       .from('quiz_results')
@@ -150,9 +229,10 @@ export default function QuizClient() {
     )
     setLoading(false)
     setShowDashboard(false)
-  }, [])
+  }, [settings.questionCount])
 
-  const loadPeriodQuiz = useCallback(async (period: ReviewPeriod) => {
+  // 復習エントリの「はじめる」。period で母集団を絞り、scope で状態フィルタ、ランダム N 件。
+  const loadPeriodQuiz = useCallback(async (period: ReviewPeriod, scope: QuizScope) => {
     setLoading(true)
     const ok = await ensureNativeGuestSession()
     if (!ok) { setShowSignupModal(true); setLoading(false); return }
@@ -162,10 +242,31 @@ export default function QuizClient() {
     const plan = await getUserPlan()
     const candidates = await fetchReviewCandidates(userId, plan)
     const inPeriod = filterByPeriod(candidates, period)
-    const sorted = sortReviewCandidates(inPeriod)
-    const top = sorted.slice(0, settings.questionCount)
+    const periodWords = inPeriod.map((c) => c.word)
 
-    // フレーズは phrase 情報から直接 QuizEntry を組む。単語は fetchQuizEntriesByWords で dictionary を引く。
+    // scope で絞る (ランダム = all なら絞らない)。
+    let filteredWords = periodWords
+    if (scope !== 'all' && scope !== 'recent') {
+      const { data: qrRows } = await supabase
+        .from('quiz_results')
+        .select('word, correct, answered_at')
+        .eq('user_id', userId)
+        .in('word', periodWords)
+        .order('answered_at', { ascending: false })
+        .limit(10000)
+      const { status, wrongCount } = classifyQuizStatus(
+        (qrRows ?? []) as { word: string; correct: boolean }[],
+        periodWords,
+      )
+      const target = new Set(filterKeysByScope(periodWords, status, wrongCount, scope))
+      filteredWords = periodWords.filter((w) => target.has(w))
+    }
+
+    // 期間 x scope の母集団からランダム N 件。優先度ソートはしない。
+    const filteredCandidates = inPeriod.filter((c) => filteredWords.includes(c.word))
+    const shuffled = [...filteredCandidates].sort(() => Math.random() - 0.5)
+    const top = shuffled.slice(0, settings.questionCount)
+
     const wordTargets = top.filter((c) => !c.phrase).map((c) => c.word)
     const wordEntries = wordTargets.length > 0 ? await fetchQuizEntriesByWords(wordTargets) : []
     const wordEntryMap = new Map(wordEntries.map((e) => [e.word, e]))
@@ -189,14 +290,14 @@ export default function QuizClient() {
       }
     }
 
-    // 表示順のみシャッフル (slice しない = 優先順位を維持)
     const cards = shuffleCards(buildQuizCards(orderedEntries))
     setSessionEntries(
       cards.map((c) => orderedEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
     )
     setLoading(false)
+    setReviewMode(false)
     setShowDashboard(false)
-  }, [])
+  }, [settings.questionCount])
 
   const handleAnswer = useCallback(async (word: string, correct: boolean) => {
     saveQuizResult(word, correct)
@@ -207,16 +308,24 @@ export default function QuizClient() {
     return m === 'recent' || m === 'hard' || m === 'all' || m === 'unseen' || m === 'review' ? m : 'all'
   })()
 
-  const initialPeriod = ((): ReviewPeriod | null => {
-    const p = searchParams.get('period')
-    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : null
-  })()
-
-  useEffect(() => {
-    if (initialPeriod) loadPeriodQuiz(initialPeriod)
-    // 起動時1回のみ
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // 復習エントリ: ReviewDashboard (QuizProgressPanel ベース = 他デッキ章画面と同構造)
+  if (reviewMode) {
+    if (!reviewStatsLoaded) {
+      return <div className="py-20 text-center text-gray-400">読み込み中...</div>
+    }
+    return (
+      <>
+        <ReviewDashboard
+          period={initialPeriod}
+          stats={reviewStats}
+          settings={settings}
+          onSettingChange={updateSetting}
+          onStart={(scope) => loadPeriodQuiz(initialPeriod, scope)}
+        />
+        {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
+      </>
+    )
+  }
 
   if (showDashboard) {
     return (
@@ -249,8 +358,13 @@ export default function QuizClient() {
       initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, settings.questionCount)}
       entries={sessionEntries}
       onQuit={() => {
-        if (hasPeriodParam) router.push('/')
-        else setShowDashboard(true)
+        if (hasPeriodParam) {
+          // 復習フローは入口の ReviewDashboard に戻す。stats は再計算 (回答が反映されるよう)。
+          setReviewMode(true)
+          void loadReviewStats(initialPeriod)
+        } else {
+          setShowDashboard(true)
+        }
       }}
       onAnswer={handleAnswer}
       initialMode={settings.defaultMode}

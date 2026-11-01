@@ -241,6 +241,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pathname === '/signup' ||
     pathname === '/reset-password' ||
     pathname === '/callback'
+  // /review/* は復習デッキ (ReviewDashboard) の入口。他デッキと同じ chrome 挙動
+  // (SP で PageHeader 戻る、PC でロゴ Header + パンくず) にしたいので
+  // hideChrome の対象から外し isBackHeader 扱いにする。
+  // 実際のクイズ中は QuizSession が fixed inset-0 z-50 で画面全体を覆うので
+  // Header が見えても邪魔にならない。
+  const isReviewEntry = pathname?.startsWith('/review') ?? false
   const isQuiz = pathname === '/quiz'
   const isWordDetail = pathname?.startsWith('/word/') ?? false
   const isOnboarding = pathname === '/onboarding'
@@ -252,6 +258,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isBackHeader =
     isWordDetail ||
     pathname === '/wordlist' ||
+    isReviewEntry ||
     (pathname?.startsWith('/decks') ?? false)
 
   return (
