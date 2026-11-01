@@ -26,7 +26,6 @@ import {
   fetchReviewCandidates,
   filterByPeriod,
   REVIEW_PERIODS,
-  sortReviewCandidates,
   type ReviewPeriod,
 } from '@/lib/reviewPeriod'
 
@@ -211,8 +210,10 @@ export default function QuizClient() {
     const plan = await getUserPlan()
     const candidates = await fetchReviewCandidates(userId, plan)
     const inPeriod = filterByPeriod(candidates, period)
-    const sorted = sortReviewCandidates(inPeriod)
-    const top = sorted.slice(0, settings.questionCount)
+    // 期間を変えると出題内容も変わる体験にするため、優先度順ではなく
+    // 期間内でランダムに questionCount 件抽出する。
+    const shuffled = [...inPeriod].sort(() => Math.random() - 0.5)
+    const top = shuffled.slice(0, settings.questionCount)
 
     // フレーズは phrase 情報から直接 QuizEntry を組む。単語は fetchQuizEntriesByWords で dictionary を引く。
     const wordTargets = top.filter((c) => !c.phrase).map((c) => c.word)
