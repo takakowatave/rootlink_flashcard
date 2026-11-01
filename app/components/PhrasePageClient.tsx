@@ -254,6 +254,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
                 isPinned={pinnedSenseId === sense.sense_id}
                 onTogglePin={() => togglePin(sense.sense_id)}
                 highlights={highlights}
+                phrase={card.phrase}
                 explanation={explanation}
                 usEquivalent={idx === 0 ? usEquivalent : null}
               />

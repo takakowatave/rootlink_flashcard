@@ -21,6 +21,8 @@ type Props = {
   tutorialPinAttr?: boolean
   // フレーズ用: 例文中の強調語（複数）と解説
   highlights?: string[] | null
+  // 熟語の見出し語。渡すと buildPhraseSpanRegex で example を活用対応で連続ハイライト。
+  phrase?: string | null
   explanation?: string | null
   usEquivalent?: string | null
 }
@@ -39,6 +41,7 @@ export default function SenseRow({
   onTogglePin,
   tutorialPinAttr,
   highlights,
+  phrase,
   explanation,
   usEquivalent,
 }: Props) {
@@ -65,6 +68,8 @@ export default function SenseRow({
           onPlay={onPlayExample}
           isLoading={exampleLoading}
           highlights={highlights}
+          phrase={phrase}
+          meaning={meaning}
         />
 
         {(explanation || usEquivalent) && (
