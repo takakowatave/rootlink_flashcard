@@ -8,6 +8,8 @@ import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/D
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import { useTtsAudio } from '@/lib/useTtsAudio'
+import { buildPhraseSpanRegex } from '@/lib/phraseDisplay'
+import { jaHighlightMatches } from '@/lib/jaHighlight'
 
 type PhraseCardRow = PhraseCardData & {
   explanation_ja: string | null
@@ -146,6 +148,18 @@ function PhrasesPageInner() {
   const keptCards = displayed.filter(c => !c.skip_reason)
   const droppedCards = displayed.filter(c => !!c.skip_reason)
 
+  // 要修正: ハイライトが失敗するカード。英例文に phrase 本体がマッチしない、
+  // または meaning_ja の候補が example_ja に出てこないケース。gate 合格済み (skip_reason=null) のみ対象。
+  const highlightFailCards = keptCards.filter(c => {
+    const enFail = !!c.example_en && !new RegExp(buildPhraseSpanRegex(c.phrase), 'gi').test(c.example_en)
+    const jaFail = !!c.meaning_ja && !!c.example_ja && jaHighlightMatches(c.meaning_ja, c.example_ja).length === 0
+    return enFail || jaFail
+  }).map(c => {
+    const enFail = !!c.example_en && !new RegExp(buildPhraseSpanRegex(c.phrase), 'gi').test(c.example_en)
+    const jaFail = !!c.meaning_ja && !!c.example_ja && jaHighlightMatches(c.meaning_ja, c.example_ja).length === 0
+    return { card: c, enFail, jaFail }
+  })
+
   return (
     <div className="bg-surface min-h-screen">
       <div className="flex justify-center w-full">
@@ -208,6 +222,34 @@ function PhrasesPageInner() {
                     {keptCards.map((card) => (
                       <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
                         className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <PhraseCardWithAudio
+                          card={card}
+                          displayLocale={displayLocale}
+                          isSaved={savedIds.has(card.id)}
+                          onSave={() => handleSave(card.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {highlightFailCards.length > 0 && (
+                <div className="mt-8 pt-6 border-t-2 border-dashed border-line">
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <h2 className="text-sm font-semibold text-quiz-review">要修正（ハイライト失敗）</h2>
+                    <span className="text-xs text-muted">{highlightFailCards.length}件</span>
+                  </div>
+                  <p className="text-xs text-muted mb-3 px-1">
+                    例文/訳に phrase 本体がマッチしないカード。例文を書き直すか、meaning_ja と example_ja に共通の語を入れる。
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    {highlightFailCards.map(({ card, enFail, jaFail }) => (
+                      <div key={card.id} ref={card.id === matchedId ? highlightRef : null}
+                        className={card.id === matchedId ? 'ring-2 ring-primary rounded-lg' : ''}>
+                        <div className="mb-1 flex gap-2 text-[11px] font-semibold">
+                          {enFail && <span className="rounded bg-quiz-review/10 text-quiz-review px-1.5 py-0.5">EN</span>}
+                          {jaFail && <span className="rounded bg-quiz-review/10 text-quiz-review px-1.5 py-0.5">JA</span>}
+                        </div>
                         <PhraseCardWithAudio
                           card={card}
                           displayLocale={displayLocale}
