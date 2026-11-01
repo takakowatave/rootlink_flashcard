@@ -10,7 +10,7 @@ import LearnedPartWords from '@/components/LearnedPartWords'
 import WordPageClient from '@/components/WordPageClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
-import { displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
+import { buildPhraseSpanRegex, displayPhrase } from '@/lib/phraseDisplay'
 import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
 import { POS_LABEL_JA } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
@@ -300,7 +300,7 @@ function CardView({
     const hw = card.word.toLowerCase().trim()
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const pattern = isPhrase
-      ? phraseHighlightTerms(hw).map(t => `\\b${escape(t)}\\b`).join('|') || '(?!)'
+      ? buildPhraseSpanRegex(hw)
       : hw.length <= 3
         ? `\\b${escape(hw)}[a-z]{0,3}\\b`
         : `\\b${escape(hw.slice(0, Math.max(4, hw.length - 2)))}[a-z]*\\b`
