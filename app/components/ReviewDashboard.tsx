@@ -49,7 +49,7 @@ export default function ReviewDashboard({ initialPeriod, statsByPeriod, onStart,
         <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
           <div className="bg-white rounded-2xl shadow-sm border border-line p-6 mb-4">
             <p className="text-xs text-gray-500 text-center mb-4">
-              My単語帳、デッキで間違えたもの全て出ます
+              My単語帳、デッキで間違えたものの総復習ができます
             </p>
 
             <div className="flex justify-center mb-6">
