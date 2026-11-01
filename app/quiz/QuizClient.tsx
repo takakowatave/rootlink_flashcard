@@ -18,7 +18,7 @@ import QuizDashboard from './QuizDashboard'
 import ReviewDashboard, { type ReviewPeriodStats } from '@/components/ReviewDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
-import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
+import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, saveQuizSettings, type QuizSettings } from '@/lib/quizSettings'
 import { useAuthReload } from '@/lib/useAuthReload'
 import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
@@ -51,15 +51,26 @@ export default function QuizClient() {
   const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
   const [settings, setSettings] = useState<QuizSettings>(QUIZ_SETTINGS_DEFAULTS)
+  const [userId, setUserId] = useState<string | null>(null)
 
   // ログイン後に settings を反映するため、SIGNED_IN でも再取得する。
-  useAuthReload(async (userId, event) => {
-    if (event === 'SIGNED_OUT' || !userId) {
+  useAuthReload(async (uid, event) => {
+    if (event === 'SIGNED_OUT' || !uid) {
       setSettings(QUIZ_SETTINGS_DEFAULTS)
+      setUserId(null)
       return
     }
-    setSettings(await fetchQuizSettings(userId))
+    setUserId(uid)
+    setSettings(await fetchQuizSettings(uid))
   })
+
+  const updateSetting = useCallback(
+    <K extends keyof QuizSettings>(key: K, value: QuizSettings[K]) => {
+      setSettings((prev) => ({ ...prev, [key]: value }))
+      if (userId) void saveQuizSettings(userId, { [key]: value })
+    },
+    [userId],
+  )
 
   useEffect(() => { toast.dismiss() }, [])
 
@@ -300,6 +311,8 @@ export default function QuizClient() {
         <ReviewDashboard
           period={initialPeriod}
           stats={reviewStats}
+          settings={settings}
+          onSettingChange={updateSetting}
           onStart={(scope) => loadPeriodQuiz(initialPeriod, scope)}
         />
         {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}

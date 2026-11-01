@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import PageHeader from '@/components/PageHeader'
 import QuizProgressPanel from '@/components/QuizProgressPanel'
 import type { QuizScope } from '@/components/QuizScopeSelector'
+import type { QuizSettings } from '@/lib/quizSettings'
 import type { ReviewPeriod } from '@/lib/reviewPeriod'
 
 export type ReviewPeriodStats = {
@@ -25,16 +26,18 @@ const PERIOD_LABEL: Record<ReviewPeriod, string> = {
 type Props = {
   period: ReviewPeriod
   stats: ReviewPeriodStats
+  settings: QuizSettings
+  onSettingChange: <K extends keyof QuizSettings>(key: K, value: QuizSettings[K]) => void
   onStart: (scope: QuizScope) => void
 }
 
 /**
  * /quiz?period=X の着地画面。他デッキの章画面と同じ構造 (PageHeader でパンくず +
- * QuizProgressPanel で donut + 出題範囲 chips + 設定 + はじめる) に揃える。
+ * QuizProgressPanel で donut + 出題範囲 chips + 問題数設定 + はじめる) に揃える。
  * 期間 (昨日/週/月/全) ごとに母集団を変え、出題範囲 (ランダム/未習得/要復習/苦手)
- * を他デッキと同じ UI で選べる。
+ * を他デッキと同じ UI で選べる。問題数ステッパー・音声設定も同じ。
  */
-export default function ReviewDashboard({ period, stats, onStart }: Props) {
+export default function ReviewDashboard({ period, stats, settings, onSettingChange, onStart }: Props) {
   const [scope, setScope] = useState<QuizScope>('all')
 
   // scope が 0 件なら 'all' にフォールバック (他デッキと同じ振る舞い)
@@ -75,6 +78,18 @@ export default function ReviewDashboard({ period, stats, onStart }: Props) {
         buttonLabel="はじめる"
         buttonDisabled={currentCount === 0}
         onStart={() => onStart(scope)}
+        settings={currentCount > 0 ? {
+          defaultMode: settings.defaultMode,
+          onDefaultModeChange: (v) => onSettingChange('defaultMode', v),
+          questionCount: settings.questionCount,
+          onQuestionCountChange: (v) => onSettingChange('questionCount', v),
+          questionCountMax: Math.max(1, Math.min(100, currentCount)),
+          questionCountMin: 1,
+          autoPlayAudio: settings.autoPlayAudio,
+          onAutoPlayAudioChange: (v) => onSettingChange('autoPlayAudio', v),
+          autoPlayHeadword: settings.autoPlayHeadword,
+          onAutoPlayHeadwordChange: (v) => onSettingChange('autoPlayHeadword', v),
+        } : undefined}
       />
     </>
   )
