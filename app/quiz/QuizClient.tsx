@@ -72,38 +72,44 @@ export default function QuizClient() {
   // period が変わったら (URL 遷移で) 再計算させる。
   const loadReviewStats = useCallback(async (period: ReviewPeriod) => {
     setReviewStatsLoaded(false)
-    const ok = await ensureNativeGuestSession()
-    if (!ok) { setShowSignupModal(true); return }
-    const { data } = await supabase.auth.getUser()
-    if (!data.user) { setShowSignupModal(true); return }
-    const userId = data.user.id
-    const plan = await getUserPlan()
-    const [candidates, qr] = await Promise.all([
-      fetchReviewCandidates(userId, plan),
-      supabase
-        .from('quiz_results')
-        .select('word, correct')
-        .eq('user_id', userId)
-        .order('answered_at', { ascending: false })
-        .limit(10000),
-    ])
-    const qrRows = (qr.data ?? []) as { word: string; correct: boolean }[]
-    const words = filterByPeriod(candidates, period).map((c) => c.word)
-    const { status, wrongCount } = classifyQuizStatus(qrRows, words)
-    const buckets = classifyForDonut(status, wrongCount, words)
-    const unseenKeys = filterKeysByScope(words, status, wrongCount, 'unseen')
-    const reviewKeys = filterKeysByScope(words, status, wrongCount, 'review')
-    const hardKeys = filterKeysByScope(words, status, wrongCount, 'hard')
-    setReviewStats({
-      ...buckets,
-      scopes: {
-        all: words.length,
-        unseen: unseenKeys.length,
-        review: reviewKeys.length,
-        hard: hardKeys.length,
-      },
-    })
-    setReviewStatsLoaded(true)
+    try {
+      const ok = await ensureNativeGuestSession()
+      if (!ok) { setShowSignupModal(true); return }
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) { setShowSignupModal(true); return }
+      const userId = data.user.id
+      const plan = await getUserPlan()
+      const [candidates, qr] = await Promise.all([
+        fetchReviewCandidates(userId, plan),
+        supabase
+          .from('quiz_results')
+          .select('word, correct')
+          .eq('user_id', userId)
+          .order('answered_at', { ascending: false })
+          .limit(10000),
+      ])
+      const qrRows = (qr.data ?? []) as { word: string; correct: boolean }[]
+      const words = filterByPeriod(candidates, period).map((c) => c.word)
+      const { status, wrongCount } = classifyQuizStatus(qrRows, words)
+      const buckets = classifyForDonut(status, wrongCount, words)
+      const unseenKeys = filterKeysByScope(words, status, wrongCount, 'unseen')
+      const reviewKeys = filterKeysByScope(words, status, wrongCount, 'review')
+      const hardKeys = filterKeysByScope(words, status, wrongCount, 'hard')
+      setReviewStats({
+        ...buckets,
+        scopes: {
+          all: words.length,
+          unseen: unseenKeys.length,
+          review: reviewKeys.length,
+          hard: hardKeys.length,
+        },
+      })
+    } catch (err) {
+      console.error('loadReviewStats failed', err)
+    } finally {
+      // 失敗・早期 return でも必ずローディング解除 (そうしないと「読み込み中…」で永久固着する)。
+      setReviewStatsLoaded(true)
+    }
   }, [])
 
   useEffect(() => {
