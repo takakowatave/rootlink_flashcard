@@ -13,7 +13,7 @@ import type { SavedWordDictionary } from '@/types/Dictionary'
 type AdjacentPost = { slug: string; title: string } | null
 
 type Props = {
-  post: Pick<Post, 'title' | 'tags' | 'hero_image_url' | 'content'>
+  post: Pick<Post, 'title' | 'tags' | 'hero_image_url' | 'thumb_image_url' | 'content'>
   displayDate: string
   headings: Heading[]
   phraseMap: Record<string, EmbeddedPhrase>
@@ -48,7 +48,12 @@ export default function BlogArticle({
   dateNote,
   ctaDeckSlug,
 }: Props) {
-  const heroSrc = post.hero_image_url ?? coverSrc ?? null
+  // 記事ヘッダー画像は thumb_image_url (Unsplash 等の写真) を優先。
+  // 自動生成の OGP (coverSrc = /blog/[slug]/cover.png) は文字情報が多くて
+  // 本文中に出すと「もじもじしい」ため、SNS シェア用に限定。
+  const heroSrc = post.hero_image_url ?? post.thumb_image_url ?? coverSrc ?? null
+  // タグは最大 3 つに制限 (SP で画面が狭いときの行溢れ対策)。
+  const limitedTags = post.tags?.slice(0, 3) ?? null
   return (
     <article>
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
@@ -61,8 +66,8 @@ export default function BlogArticle({
 
         <div className="px-5 py-8 sm:px-8 sm:py-10">
           <header className="mb-8">
-            <BlogTagList tags={post.tags} className="mb-3" />
-            <h1 className="text-3xl font-bold leading-tight text-gray-950">{post.title}</h1>
+            <BlogTagList tags={limitedTags} className="mb-3" />
+            <h1 className="text-2xl font-bold leading-tight text-gray-950 sm:text-3xl">{post.title}</h1>
             <BlogDate date={displayDate} className="mt-3">
               {dateNote}
             </BlogDate>
