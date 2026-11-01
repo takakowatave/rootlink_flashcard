@@ -248,10 +248,7 @@ export default function QuizClient() {
     <QuizSession
       initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, settings.questionCount)}
       entries={sessionEntries}
-      onQuit={() => {
-        if (hasPeriodParam) router.push('/')
-        else setShowDashboard(true)
-      }}
+      onQuit={() => setShowDashboard(true)}
       onAnswer={handleAnswer}
       initialMode={settings.defaultMode}
       autoPlayExampleAudio={settings.autoPlayAudio}
