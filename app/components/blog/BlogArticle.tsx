@@ -56,7 +56,7 @@ export default function BlogArticle({
   const limitedTags = post.tags?.slice(0, 3) ?? null
   return (
     <article>
-      <div className="overflow-hidden rounded-2xl border border-line bg-white">
+      <div className="overflow-hidden bg-white sm:rounded-2xl sm:border sm:border-line">
         {heroSrc && (
           <div className="aspect-[1200/630] w-full overflow-hidden bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,7 +64,7 @@ export default function BlogArticle({
           </div>
         )}
 
-        <div className="px-5 py-8 sm:px-8 sm:py-10">
+        <div className="py-6 sm:px-8 sm:py-10">
           <header className="mb-8">
             <BlogTagList tags={limitedTags} className="mb-3" />
             <h1 className="text-2xl font-bold leading-tight text-gray-950 sm:text-3xl">{post.title}</h1>
