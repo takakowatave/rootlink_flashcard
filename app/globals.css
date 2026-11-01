@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* クリック可能なカードの hover (単語ページの関連記事カード等が元の基準)。
+     bg は変えず border 色だけ primary にする。SenseRow 等でもこれに揃える。
+     使い方: className="rounded-2xl border border-line bg-white card-hover" */
+  .card-hover {
+    @apply transition-colors hover:border-primary;
+  }
+}
+
 body {
   overflow-x: hidden;
   max-width: 100vw;

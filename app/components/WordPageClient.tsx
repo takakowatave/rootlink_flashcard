@@ -1302,7 +1302,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
             <li key={post.slug}>
               <Link
                 href={`/blog/${post.slug}`}
-                className="block rounded-2xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-950 transition-colors hover:border-primary"
+                className="block rounded-2xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-950 card-hover"
               >
                 {post.title}
               </Link>
