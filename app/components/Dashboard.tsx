@@ -28,7 +28,6 @@ import {
 } from '@/lib/reviewPeriod'
 import { fetchLatestPost, type PostCard } from '@/lib/blogQueries'
 import BlogLatestBanner from '@/components/blog/BlogLatestBanner'
-import ReviewPeriodListItem from '@/components/ReviewPeriodListItem'
 
 type Deck = {
   id: string
@@ -453,14 +452,6 @@ const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
   all: '全期間',
 }
 
-// 復習セクションの行の左端に出す 1 文字バッジ (章番号の代わり)
-const REVIEW_PERIOD_BADGE: Record<ReviewPeriod, string> = {
-  yesterday: '昨',
-  week: '週',
-  month: '月',
-  all: '全',
-}
-
 export default function Dashboard() {
   const router = useRouter()
   const [streak, setStreak] = useState(0)
@@ -716,22 +707,21 @@ export default function Dashboard() {
               )}
             </section>
 
-            {/* 復習 (期間別4行固定・デッキの章リストと同じ造形) */}
+            {/* 復習 (期間別4枚固定) */}
             <section className="flex flex-col gap-3">
               <h2 className="text-xl font-bold text-gray-950">復習</h2>
-              <div className="rounded-2xl border border-line bg-white overflow-hidden">
-                <div className="flex flex-col divide-y divide-line">
-                  {REVIEW_PERIODS.map((period) => (
-                    <ReviewPeriodListItem
-                      key={period}
-                      badge={REVIEW_PERIOD_BADGE[period]}
-                      label={REVIEW_PERIOD_LABEL[period]}
-                      wordCount={reviewCounts[period]}
-                      disabled={reviewCounts[period] === 0}
-                      href={`/quiz?period=${period}`}
-                    />
-                  ))}
-                </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                {REVIEW_PERIODS.map((period) => (
+                  <SharedDeckCard
+                    key={period}
+                    title={REVIEW_PERIOD_LABEL[period]}
+                    imageSrc="/dashboard/recent-words.png"
+                    wordCount={reviewCounts[period]}
+                    disabled={reviewCounts[period] === 0}
+                    href={`/quiz?period=${period}`}
+                    className="shrink-0 w-[146px] sm:w-[180px]"
+                  />
+                ))}
               </div>
             </section>
 
