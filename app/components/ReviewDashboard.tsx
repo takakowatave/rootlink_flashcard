@@ -1,16 +1,18 @@
 'use client'
 
-import Button from '@/components/Button'
-import TriDonutChart from '@/components/TriDonutChart'
-import ChapterListItem from '@/components/ChapterListItem'
-import { REVIEW_PERIODS, type ReviewPeriod } from '@/lib/reviewPeriod'
+import { useEffect, useState } from 'react'
+import PageHeader from '@/components/PageHeader'
+import QuizProgressPanel from '@/components/QuizProgressPanel'
+import type { QuizScope } from '@/components/QuizScopeSelector'
+import type { ReviewPeriod } from '@/lib/reviewPeriod'
 
 export type ReviewPeriodStats = {
-  count: number
   mastered: number
   review: number
   hard: number
   unseen: number
+  /** 出題範囲 chips 用の件数。他デッキと同じ 4 スコープ */
+  scopes: { all: number; unseen: number; review: number; hard: number }
 }
 
 const PERIOD_LABEL: Record<ReviewPeriod, string> = {
@@ -21,77 +23,59 @@ const PERIOD_LABEL: Record<ReviewPeriod, string> = {
 }
 
 type Props = {
-  /** 現在選択中の期間 (URL の ?period= 由来)。他デッキと同じく章タップで URL 遷移する */
-  selectedPeriod: ReviewPeriod
-  statsByPeriod: Record<ReviewPeriod, ReviewPeriodStats>
-  onStart: (period: ReviewPeriod) => void
-  onBack: () => void
+  period: ReviewPeriod
+  stats: ReviewPeriodStats
+  onStart: (scope: QuizScope) => void
 }
 
 /**
- * /quiz?period=X で開く「復習デッキ」の入口画面。
- * デッキ画面 (/decks/[id]) と同じ構造 (上にドーナツ + 下に章リスト) で、
- * 章 = 期間 (昨日 / 1週間 / 1ヶ月 / 全期間) を縦に並べる。
- * 章タップは onClick ではなく href で URL 遷移させる (他デッキと揃える)。
+ * /quiz?period=X の着地画面。他デッキの章画面と同じ構造 (PageHeader でパンくず +
+ * QuizProgressPanel で donut + 出題範囲 chips + 設定 + はじめる) に揃える。
+ * 期間 (昨日/週/月/全) ごとに母集団を変え、出題範囲 (ランダム/未習得/要復習/苦手)
+ * を他デッキと同じ UI で選べる。
  */
-export default function ReviewDashboard({ selectedPeriod, statsByPeriod, onStart, onBack }: Props) {
-  const current = statsByPeriod[selectedPeriod]
+export default function ReviewDashboard({ period, stats, onStart }: Props) {
+  const [scope, setScope] = useState<QuizScope>('all')
+
+  // scope が 0 件なら 'all' にフォールバック (他デッキと同じ振る舞い)
+  useEffect(() => {
+    if (stats.scopes[scope === 'recent' ? 'all' : scope] === 0 && stats.scopes.all > 0) {
+      setScope('all')
+    }
+  }, [stats, scope])
+
+  const breadcrumb = [
+    { label: 'ホーム', href: '/' },
+    { label: '復習' },
+    { label: PERIOD_LABEL[period] },
+  ]
+
+  const currentCount = scope === 'recent' ? stats.scopes.all : stats.scopes[scope]
 
   return (
-    <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
-      <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
-      </header>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[700px] mx-auto px-4 pt-6 pb-4 w-full">
-          <div className="bg-white rounded-2xl shadow-sm border border-line p-6 mb-4">
-            <p className="text-xs text-gray-500 text-center mb-4">
-              My単語帳、デッキで間違えたものの総復習ができます
-            </p>
-
-            <div className="flex justify-center mb-6">
-              <TriDonutChart
-                mastered={current.mastered}
-                review={current.review}
-                hard={current.hard}
-                unseen={current.unseen}
-                size={234}
-              />
-            </div>
-
-            <p className="text-sm font-semibold text-gray-400 mb-3">期間</p>
-            <div className="rounded-xl border border-line overflow-hidden">
-              <div className="flex flex-col divide-y divide-line">
-                {REVIEW_PERIODS.map((period, i) => {
-                  const s = statsByPeriod[period]
-                  return (
-                    <ChapterListItem
-                      key={period}
-                      chapterNo={i + 1}
-                      label={PERIOD_LABEL[period]}
-                      mastered={s.mastered}
-                      total={s.count}
-                      highlighted={period === selectedPeriod}
-                      href={`/quiz?period=${period}`}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => onStart(selectedPeriod)}
-            disabled={current.count === 0}
-            variant="primary"
-            size="lg"
-            fullWidth
-          >
-            スタート ({current.count}語)
-          </Button>
-        </div>
-      </div>
-    </div>
+    <>
+      <PageHeader
+        items={breadcrumb}
+        showSearch={false}
+        title={`復習 / ${PERIOD_LABEL[period]}`}
+      />
+      <QuizProgressPanel
+        mastered={stats.mastered}
+        review={stats.review}
+        hard={stats.hard}
+        unseen={stats.unseen}
+        scopeItems={[
+          { key: 'all', count: stats.scopes.all },
+          { key: 'unseen', count: stats.scopes.unseen },
+          { key: 'review', count: stats.scopes.review },
+          { key: 'hard', count: stats.scopes.hard },
+        ]}
+        selectedScope={scope}
+        onScopeChange={setScope}
+        buttonLabel="はじめる"
+        buttonDisabled={currentCount === 0}
+        onStart={() => onStart(scope)}
+      />
+    </>
   )
 }

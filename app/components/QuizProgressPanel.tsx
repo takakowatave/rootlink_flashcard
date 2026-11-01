@@ -304,13 +304,13 @@ export default function QuizProgressPanel({
 
       {afterSettings}
 
-      {/* SP: 浮遊 CTA と下部スペーサー。secondary が積むと帯が高くなるので spacer も広げる。
-          タブレット/PC では浮遊させると画面全幅の帯になって背景に被って中途半端に見えるため
-          md+ ではインライン CTA に切り替える。 */}
-      <div aria-hidden className={hasSecondary ? 'md:hidden h-40' : 'md:hidden h-24'} />
+      {/* SP/PC 共通で浮遊 CTA (フッター追従)。
+          SP: secondary ありは縦積み、無しは primary 1本。帯の高さぶんの spacer を敷く。
+          PC: secondary ありは横並び (左 secondary / 右 primary)。高さが低いので spacer は短め。 */}
+      <div aria-hidden className={hasSecondary ? 'h-40 md:h-20' : 'h-24 md:h-20'} />
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto max-w-[600px] flex flex-col gap-2">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:py-3">
+        <div className={`mx-auto max-w-[600px] flex gap-2 ${hasSecondary ? 'flex-col md:flex-row' : 'flex-col'}`}>
           {hasSecondary && (
             <Button
               onClick={onSecondaryStart}
@@ -318,6 +318,7 @@ export default function QuizProgressPanel({
               variant="secondary"
               size="lg"
               fullWidth
+              className="md:flex-1"
             >
               {secondaryButtonLabel}
             </Button>
@@ -328,34 +329,11 @@ export default function QuizProgressPanel({
             variant="primary"
             size="lg"
             fullWidth
+            className="md:flex-1"
           >
             {buttonLabel}
           </Button>
         </div>
-      </div>
-
-      {/* md+: インライン CTA。CardShell と同じ max-w / 横 padding にそろえる。 */}
-      <div className="hidden md:flex flex-col gap-2 w-full mx-auto max-w-[600px] px-4 pt-2 pb-6">
-        {hasSecondary && (
-          <Button
-            onClick={onSecondaryStart}
-            disabled={secondaryButtonDisabled}
-            variant="secondary"
-            size="lg"
-            fullWidth
-          >
-            {secondaryButtonLabel}
-          </Button>
-        )}
-        <Button
-          onClick={onStart}
-          disabled={buttonDisabled}
-          variant="primary"
-          size="lg"
-          fullWidth
-        >
-          {buttonLabel}
-        </Button>
       </div>
     </>
   )
