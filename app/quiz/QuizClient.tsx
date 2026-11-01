@@ -11,10 +11,11 @@ import {
   getUserPlan,
   saveQuizResult,
 } from '@/lib/supabaseApi'
-import { classifyQuizStatus, filterKeysByScope } from '@/lib/quizScope'
+import { classifyForDonut, classifyQuizStatus, filterKeysByScope } from '@/lib/quizScope'
 import type { QuizScope } from '@/components/QuizScopeSelector'
 import toast from 'react-hot-toast'
 import QuizDashboard from './QuizDashboard'
+import ReviewDashboard, { type ReviewPeriodStats } from '@/components/ReviewDashboard'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { fetchQuizSettings, QUIZ_SETTINGS_DEFAULTS, type QuizSettings } from '@/lib/quizSettings'
@@ -24,11 +25,19 @@ import SignupRequiredModal from '@/components/SignupRequiredModal'
 import {
   fetchReviewCandidates,
   filterByPeriod,
+  REVIEW_PERIODS,
   sortReviewCandidates,
   type ReviewPeriod,
 } from '@/lib/reviewPeriod'
 
 type QuizMode = QuizScope
+
+const EMPTY_REVIEW_STATS: Record<ReviewPeriod, ReviewPeriodStats> = {
+  yesterday: { count: 0, mastered: 0, review: 0, hard: 0, unseen: 0 },
+  week:      { count: 0, mastered: 0, review: 0, hard: 0, unseen: 0 },
+  month:     { count: 0, mastered: 0, review: 0, hard: 0, unseen: 0 },
+  all:       { count: 0, mastered: 0, review: 0, hard: 0, unseen: 0 },
+}
 
 export default function QuizClient() {
   const router = useRouter()
@@ -37,8 +46,12 @@ export default function QuizClient() {
     const p = searchParams.get('period')
     return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all'
   })()
-  const [loading, setLoading] = useState(hasPeriodParam)
+  const [loading, setLoading] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  // 復習エントリ (?period=X) で来たら ReviewDashboard を出す。クイズ中は false。
+  const [reviewMode, setReviewMode] = useState<boolean>(hasPeriodParam)
+  const [reviewStats, setReviewStats] = useState<Record<ReviewPeriod, ReviewPeriodStats>>(EMPTY_REVIEW_STATS)
+  const [reviewStatsLoaded, setReviewStatsLoaded] = useState(false)
   const [showDashboard, setShowDashboard] = useState(!hasPeriodParam)
   const [sessionEntries, setSessionEntries] = useState<QuizEntry[] | null>(null)
   const [settings, setSettings] = useState<QuizSettings>(QUIZ_SETTINGS_DEFAULTS)
@@ -53,6 +66,42 @@ export default function QuizClient() {
   })
 
   useEffect(() => { toast.dismiss() }, [])
+
+  // 復習エントリで来たとき、ReviewDashboard のドーナツ/章リスト用に期間別の
+  // 習得状況を集計する。1 回だけ実行。
+  const loadReviewStats = useCallback(async () => {
+    const ok = await ensureNativeGuestSession()
+    if (!ok) { setShowSignupModal(true); return }
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) { setShowSignupModal(true); return }
+    const userId = data.user.id
+    const plan = await getUserPlan()
+    const [candidates, qr] = await Promise.all([
+      fetchReviewCandidates(userId, plan),
+      supabase
+        .from('quiz_results')
+        .select('word, correct')
+        .eq('user_id', userId)
+        .order('answered_at', { ascending: false })
+        .limit(10000),
+    ])
+    const qrRows = (qr.data ?? []) as { word: string; correct: boolean }[]
+    const next = {} as Record<ReviewPeriod, ReviewPeriodStats>
+    for (const p of REVIEW_PERIODS) {
+      const words = filterByPeriod(candidates, p).map((c) => c.word)
+      const { status, wrongCount } = classifyQuizStatus(qrRows, words)
+      const buckets = classifyForDonut(status, wrongCount, words)
+      next[p] = { count: words.length, ...buckets }
+    }
+    setReviewStats(next)
+    setReviewStatsLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (hasPeriodParam && !reviewStatsLoaded) {
+      void loadReviewStats()
+    }
+  }, [hasPeriodParam, reviewStatsLoaded, loadReviewStats])
 
   const loadCards = useCallback(async (quizMode: QuizMode = 'all') => {
     setLoading(true)
@@ -150,7 +199,7 @@ export default function QuizClient() {
     )
     setLoading(false)
     setShowDashboard(false)
-  }, [])
+  }, [settings.questionCount])
 
   const loadPeriodQuiz = useCallback(async (period: ReviewPeriod) => {
     setLoading(true)
@@ -195,8 +244,9 @@ export default function QuizClient() {
       cards.map((c) => orderedEntries.find((e) => e.word === c.word) ?? { word: c.word, dictionary: null }),
     )
     setLoading(false)
+    setReviewMode(false)
     setShowDashboard(false)
-  }, [])
+  }, [settings.questionCount])
 
   const handleAnswer = useCallback(async (word: string, correct: boolean) => {
     saveQuizResult(word, correct)
@@ -207,16 +257,28 @@ export default function QuizClient() {
     return m === 'recent' || m === 'hard' || m === 'all' || m === 'unseen' || m === 'review' ? m : 'all'
   })()
 
-  const initialPeriod = ((): ReviewPeriod | null => {
+  const initialPeriod = ((): ReviewPeriod => {
     const p = searchParams.get('period')
-    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : null
+    return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : 'all'
   })()
 
-  useEffect(() => {
-    if (initialPeriod) loadPeriodQuiz(initialPeriod)
-    // 起動時1回のみ
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // 復習エントリ: ReviewDashboard (ドーナツ + 期間 "章" リスト + スタート)
+  if (reviewMode) {
+    if (!reviewStatsLoaded) {
+      return <div className="py-20 text-center text-gray-400">読み込み中...</div>
+    }
+    return (
+      <>
+        <ReviewDashboard
+          initialPeriod={initialPeriod}
+          statsByPeriod={reviewStats}
+          onStart={(p) => loadPeriodQuiz(p)}
+          onBack={() => router.push('/')}
+        />
+        {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
+      </>
+    )
+  }
 
   if (showDashboard) {
     return (
@@ -248,7 +310,15 @@ export default function QuizClient() {
     <QuizSession
       initialCards={shuffleCards(buildQuizCards(sessionEntries)).slice(0, settings.questionCount)}
       entries={sessionEntries}
-      onQuit={() => setShowDashboard(true)}
+      onQuit={() => {
+        if (hasPeriodParam) {
+          // 復習フローは入口の ReviewDashboard に戻す。ドーナツも再計算させる。
+          setReviewStatsLoaded(false)
+          setReviewMode(true)
+        } else {
+          setShowDashboard(true)
+        }
+      }}
       onAnswer={handleAnswer}
       initialMode={settings.defaultMode}
       autoPlayExampleAudio={settings.autoPlayAudio}
