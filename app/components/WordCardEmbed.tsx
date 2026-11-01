@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import toast from 'react-hot-toast'
@@ -8,6 +7,7 @@ import CardShell from '@/components/CardShell'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import SenseExample from '@/components/SenseExample'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import WordDetailModal from '@/components/WordDetailModal'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import { toggleSaveStatus } from '@/lib/supabaseApi'
@@ -86,6 +86,9 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
   const [isSaved, setIsSaved] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
+  // 単語カードタップ時に出す WordDetailModal の開閉状態。
+  // ブログ記事を離れずに単語詳細を見せる (遷移するとブラウザ戻るで記事位置へ戻れない)。
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   // 音声（見出し語）— Oxford の実録音があればそれ、なければ TTS
   const headwordAudioInitial = dictionary?.audio?.audioUrl
@@ -155,8 +158,13 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
     }
   }
 
-  const handleHeadwordClick = () => {
+  const handleHeadwordClick = (e: React.MouseEvent) => {
+    // 通常クリックはブログを離れずモーダルで開く。
+    // Cmd/Ctrl/Shift/中クリックや右クリックは <a href> の通常挙動 (新規タブ・保存) を保持。
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    e.preventDefault()
     sendEvent('word_card_open', { word })
+    setShowDetailModal(true)
   }
 
   const playHeadwordAudio = async () => {
@@ -189,13 +197,13 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
       <div className="not-prose my-6">
         <CardShell>
           <div className="py-2">
-            <Link
+            <a
               href={headwordHref}
               onClick={handleHeadwordClick}
               className="text-2xl font-semibold text-primary hover:underline"
             >
               {word}
-            </Link>
+            </a>
             <p className="mt-1 text-sm text-muted">
               この単語の詳細ページを開く
             </p>
@@ -217,13 +225,13 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
         {/* ── HEADER: 見出し語（リンク）＋ 音声 ＋ ブックマーク ── */}
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2.5 min-w-0">
-            <Link
+            <a
               href={headwordHref}
               onClick={handleHeadwordClick}
               className="text-2xl font-semibold leading-8 text-black hover:underline"
             >
               {word}
-            </Link>
+            </a>
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); playHeadwordAudio() }}
@@ -284,6 +292,14 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
           </div>
         )}
       </CardShell>
+      {showDetailModal && (
+        <WordDetailModal
+          word={word}
+          dictionary={dictionary}
+          displayLocale="ja"
+          onClose={() => setShowDetailModal(false)}
+        />
+      )}
     </div>
   )
 }
