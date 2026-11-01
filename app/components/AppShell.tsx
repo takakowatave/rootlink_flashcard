@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Header from './Header'
 import Footer from './Footer'
 import MobileSearchOverlay from './MobileSearchOverlay'
@@ -29,7 +29,6 @@ const processedAuthTokens = new Set<string>()
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // パスワード再設定リンクを踏むと Supabase が recovery セッションを張り、
   // SDK が onAuthStateChange(PASSWORD_RECOVERY) を発火する。
@@ -242,11 +241,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pathname === '/signup' ||
     pathname === '/reset-password' ||
     pathname === '/callback'
-  // /quiz?period=X は復習デッキ (ReviewDashboard) の入口。他デッキの章画面と
-  // 同じ chrome 挙動にしたいので hideChrome の対象から外す。実際のクイズ中は
-  // QuizSession が fixed inset-0 z-50 で画面全体を覆うので Header が見えても邪魔にならない。
-  const isReviewEntry = pathname === '/quiz' && searchParams?.get('period') != null
-  const isQuiz = pathname === '/quiz' && !isReviewEntry
+  // /review/* は復習デッキ (ReviewDashboard) の入口。他デッキと同じ chrome 挙動
+  // (SP で PageHeader 戻る、PC でロゴ Header + パンくず) にしたいので
+  // hideChrome の対象から外し isBackHeader 扱いにする。
+  // 実際のクイズ中は QuizSession が fixed inset-0 z-50 で画面全体を覆うので
+  // Header が見えても邪魔にならない。
+  const isReviewEntry = pathname?.startsWith('/review') ?? false
+  const isQuiz = pathname === '/quiz'
   const isWordDetail = pathname?.startsWith('/word/') ?? false
   const isOnboarding = pathname === '/onboarding'
   const hideChrome = isAuth || isQuiz || isOnboarding

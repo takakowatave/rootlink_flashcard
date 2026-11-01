@@ -35,10 +35,16 @@ const EMPTY_REVIEW_STATS: ReviewPeriodStats = {
   scopes: { all: 0, unseen: 0, review: 0, hard: 0 },
 }
 
-export default function QuizClient() {
+type QuizClientProps = {
+  /** /review/[period] 経由で明示的に渡す期間。/quiz?period=X でも検出するが、新規は route 版推奨 */
+  initialPeriodProp?: ReviewPeriod | null
+}
+
+export default function QuizClient({ initialPeriodProp = null }: QuizClientProps = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const hasPeriodParam = ((): boolean => {
+    if (initialPeriodProp) return true
     const p = searchParams.get('period')
     return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all'
   })()
@@ -75,6 +81,7 @@ export default function QuizClient() {
   useEffect(() => { toast.dismiss() }, [])
 
   const initialPeriod = ((): ReviewPeriod => {
+    if (initialPeriodProp) return initialPeriodProp
     const p = searchParams.get('period')
     return p === 'yesterday' || p === 'week' || p === 'month' || p === 'all' ? p : 'all'
   })()
