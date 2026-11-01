@@ -42,7 +42,7 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setPrivacyOpen(false)}
-            className="p-2 -mr-1 rounded-full hover:bg-primary-light text-muted"
+            className="p-2 -mr-1 rounded-full hover:bg-primary-subtle text-muted"
             aria-label="閉じる"
           >
             <HiX className="size-5" />

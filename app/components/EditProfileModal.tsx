@@ -520,7 +520,7 @@ export default function EditProfileModal({
           <>
             <button
               onClick={onClose}
-              className="md:hidden p-2 rounded-full hover:bg-primary-light text-muted"
+              className="md:hidden p-2 rounded-full hover:bg-primary-subtle text-muted"
               aria-label="戻る"
             >
               <MdArrowBackIosNew className="size-6" />
@@ -615,7 +615,7 @@ export default function EditProfileModal({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-primary-light disabled:opacity-50"
+                        className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-primary-subtle disabled:opacity-50"
                         aria-label="アイコン変更"
                       >
                         <BsPencil size={14} />
@@ -861,7 +861,7 @@ export default function EditProfileModal({
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-8 h-11 rounded-full bg-gray-100 text-sm font-bold text-gray-700 hover:bg-primary-light"
+                  className="px-8 h-11 rounded-full bg-gray-100 text-sm font-bold text-gray-700 hover:bg-primary-subtle"
                 >
                   ログアウト
                 </button>

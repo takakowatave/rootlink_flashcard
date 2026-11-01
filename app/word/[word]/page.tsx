@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord } from '@/lib/blog'
-import { toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
+import { deckCardTitle, toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -178,14 +178,19 @@ async function fetchContainingDecks(filter: string): Promise<WordDeckCard[]> {
         is_premium: !!d.is_premium,
       })
     }
-    return sortDecksByDifficulty(sortable).map((r) => ({
-      slug: r.slug,
-      label: r.label,
-      shortName: r.shortName,
-      wordCount: r.wordCount,
-      imageSrc: r.imageSrc,
-      isPremium: r.is_premium,
-    }))
+    return sortDecksByDifficulty(sortable).map((r) => {
+      // シリーズ系 (英会話 Cuppa English 等) はラベル+長い name で桁あふれするので
+      // deckCardTitle で title のみ (「Cuppa English」) に短縮し、label も伏せる。
+      const card = deckCardTitle(r.name, r.label)
+      return {
+        slug: r.slug,
+        label: card.label ?? r.label,
+        shortName: card.title,
+        wordCount: r.wordCount,
+        imageSrc: r.imageSrc,
+        isPremium: r.is_premium,
+      }
+    })
   } catch {
     return []
   }

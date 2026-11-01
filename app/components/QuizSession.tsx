@@ -189,7 +189,7 @@ function DetailModal({
         <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
           <button
             onClick={onBack}
-            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-light transition-colors text-gray-500"
+            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-subtle transition-colors text-gray-500"
           >
             <MdArrowBackIosNew size={18} />
             <span className="text-sm">戻る</span>
@@ -485,7 +485,7 @@ function ResultScreen({
             </div>
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-subtle -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
@@ -498,7 +498,7 @@ function ResultScreen({
             <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => openByWord(card.word)}
-                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-light -mx-1 px-1 rounded">
+                className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-subtle -mx-1 px-1 rounded">
                 <span className="font-semibold text-gray-800 w-36 truncate">{card.phrase_card_id ? displayPhrase(card.word) : card.word}</span>
                 <span className="text-gray-400 text-sm truncate flex-1">{card.meaning}</span>
                 <span className="text-gray-300 text-base leading-none">›</span>
