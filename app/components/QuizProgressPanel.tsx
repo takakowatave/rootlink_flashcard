@@ -95,12 +95,13 @@ function CountStepper({
   min: number
   max: number
 }) {
+  const STEP = 5
   const clamp = (n: number) => Math.max(min, Math.min(max, n))
   return (
     <div className="inline-flex items-center gap-4">
       <button
         type="button"
-        onClick={() => onChange(clamp(value - 1))}
+        onClick={() => onChange(clamp(value - STEP))}
         disabled={value <= min}
         aria-label="減らす"
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
@@ -110,7 +111,7 @@ function CountStepper({
       <span className="min-w-[2ch] text-center text-lg font-semibold text-gray-900 tabular-nums">{value}</span>
       <button
         type="button"
-        onClick={() => onChange(clamp(value + 1))}
+        onClick={() => onChange(clamp(value + STEP))}
         disabled={value >= max}
         aria-label="増やす"
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
