@@ -71,6 +71,7 @@ export default function QuizClient() {
   // 現在の period に対する ReviewDashboard のドーナツ・スコープ件数を取得する。
   // period が変わったら (URL 遷移で) 再計算させる。
   const loadReviewStats = useCallback(async (period: ReviewPeriod) => {
+    setReviewStatsLoaded(false)
     const ok = await ensureNativeGuestSession()
     if (!ok) { setShowSignupModal(true); return }
     const { data } = await supabase.auth.getUser()
@@ -107,7 +108,6 @@ export default function QuizClient() {
 
   useEffect(() => {
     if (hasPeriodParam) {
-      setReviewStatsLoaded(false)
       void loadReviewStats(initialPeriod)
     }
     // 期間切り替え (URL の period 変化) で再計算
@@ -333,9 +333,9 @@ export default function QuizClient() {
       entries={sessionEntries}
       onQuit={() => {
         if (hasPeriodParam) {
-          // 復習フローは入口の ReviewDashboard に戻す。ドーナツも再計算させる。
-          setReviewStatsLoaded(false)
+          // 復習フローは入口の ReviewDashboard に戻す。stats は再計算 (回答が反映されるよう)。
           setReviewMode(true)
+          void loadReviewStats(initialPeriod)
         } else {
           setShowDashboard(true)
         }
