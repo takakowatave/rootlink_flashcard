@@ -96,23 +96,27 @@ function CountStepper({
   max: number
 }) {
   const STEP = 5
-  const clamp = (n: number) => Math.max(min, Math.min(max, n))
+  // 5 刻みに揃える。実質上限も STEP の倍数まで (max=36 なら実質 35)。
+  // 既存の保存値が 5 の倍数で無くても (例: 36)、表示は 5 の倍数 (35) に正規化し、
+  // ±STEP ボタン操作で保存値も 5 の倍数に収束する。
+  const effMax = Math.max(min, Math.floor(max / STEP) * STEP)
+  const display = Math.max(min, Math.min(effMax, Math.round(value / STEP) * STEP))
   return (
     <div className="inline-flex items-center gap-4">
       <button
         type="button"
-        onClick={() => onChange(clamp(value - STEP))}
-        disabled={value <= min}
+        onClick={() => onChange(Math.max(min, display - STEP))}
+        disabled={display <= min}
         aria-label="減らす"
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
       >
         −
       </button>
-      <span className="min-w-[2ch] text-center text-lg font-semibold text-gray-900 tabular-nums">{value}</span>
+      <span className="min-w-[2ch] text-center text-lg font-semibold text-gray-900 tabular-nums">{display}</span>
       <button
         type="button"
-        onClick={() => onChange(clamp(value + STEP))}
-        disabled={value >= max}
+        onClick={() => onChange(Math.min(effMax, display + STEP))}
+        disabled={display >= effMax}
         aria-label="増やす"
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-light transition-colors"
       >
