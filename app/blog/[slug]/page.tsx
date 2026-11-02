@@ -25,7 +25,7 @@ async function fetchPost(slug: string): Promise<Post | null> {
   const { data } = await applyPublishedFilter(
     supabase
       .from('posts')
-      .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description, author_key, cta_deck_slug')
+      .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, thumb_image_url, meta_description, author_key, cta_deck_slug')
   )
     .eq('slug', slug)
     .maybeSingle()
@@ -67,9 +67,9 @@ export default async function BlogPostPage({ params }: Params) {
   ])
 
   return (
-    <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-8 lg:flex-row">
+    <div className="mx-auto flex max-w-[1024px] flex-col items-start gap-8 px-4 py-2 sm:py-8 lg:flex-row">
       <main className="w-full min-w-0 lg:max-w-[672px]">
-        <nav className="mb-4 text-base">
+        <nav className="my-2 text-base">
           <Link href="/blog" className="text-muted hover:text-primary-dark">
             ← Blog
           </Link>

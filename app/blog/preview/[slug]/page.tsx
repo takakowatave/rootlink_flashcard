@@ -25,7 +25,7 @@ type Params = { params: { slug: string } }
 async function fetchPostAnyStatus(slug: string): Promise<Post | null> {
   const { data } = await supabase
     .from('posts')
-    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, meta_description, author_key, cta_deck_slug')
+    .select('id, title, slug, content, tags, published_at, created_at, hero_image_url, thumb_image_url, meta_description, author_key, cta_deck_slug')
     .eq('slug', slug)
     .maybeSingle()
   return (data as Post | null) ?? null

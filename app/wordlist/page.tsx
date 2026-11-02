@@ -473,22 +473,22 @@ export default function WordListPage() {
                     created_at: item.created_at,
                   }
                   return (
-                    <div key={item.saved_id ?? item.word_id} onClick={() => handleOpenModal(item)} className="cursor-pointer">
-                      <EntryCard
-                        headword={item.word}
-                        pronunciation={pronunciation}
-                        usSpelling={d?.usSpelling}
-                        etymology=""
-                        senses={senses}
-                        inflections={inflections}
-                        grammarTags={{}}
-                        isBookmarked={savedWords.includes(item.word)}
-                        onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(toggleTarget) }}
-                        pinnedSenseId={pinnedSenseId}
-                        displayLocale={displayLocale}
-                        compact
-                      />
-                    </div>
+                    <EntryCard
+                      key={item.saved_id ?? item.word_id}
+                      headword={item.word}
+                      pronunciation={pronunciation}
+                      usSpelling={d?.usSpelling}
+                      etymology=""
+                      senses={senses}
+                      inflections={inflections}
+                      grammarTags={{}}
+                      isBookmarked={savedWords.includes(item.word)}
+                      onSave={(e) => { e?.preventDefault(); e?.stopPropagation(); handleToggleSave(toggleTarget) }}
+                      pinnedSenseId={pinnedSenseId}
+                      displayLocale={displayLocale}
+                      compact
+                      onCardClick={() => handleOpenModal(item)}
+                    />
                   )
                 })}
             </div>

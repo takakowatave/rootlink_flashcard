@@ -69,7 +69,10 @@ export default function SenseRow({
           isLoading={exampleLoading}
           highlights={highlights}
           phrase={phrase}
-          meaning={meaning}
+          // meaning_ja ハイライトはフレーズ (phrase 指定時) のみ適用。
+          // 単語カードは meaning=「災害」が example_ja「その災害で…」にそのまま含まれて
+          // 緑に染まるため、phrase が無ければ渡さない。
+          meaning={phrase ? meaning : undefined}
         />
 
         {(explanation || usEquivalent) && (

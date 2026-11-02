@@ -35,6 +35,7 @@ export const Published: Story = {
       title: 'fartherとfurtherの違いは？語源で紐解くそのちがい',
       tags: ['語源', '使い分け', '比較級', 'TOEIC'],
       hero_image_url: null,
+      thumb_image_url: null,
       content: CONTENT,
     },
     displayDate: '2026-09-22',

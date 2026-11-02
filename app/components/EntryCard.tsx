@@ -56,6 +56,9 @@ type Props = {
   // deck 画面に出すときの deck.id。サーバーが deck_words.example override を解決するのに使う。
   // /word 直検索では省略 → cache sense.example の音声が返る。
   deckId?: string | null
+  // カード本体タップ時のハンドラ。指定時はカード外側で <a>/<div onClick> ラップせず、
+  // ここで渡すことで wordlist / deck / blog embed どこでも「タップ = モーダルを開く」挙動を揃える。
+  onCardClick?: () => void
 }
 
 const POS_LABEL_EN: Record<string, string> = {
@@ -97,6 +100,7 @@ export default function EntryCard({
   initialEtymologyRelatedWords,
   etymologyLinkableWords,
   deckId = null,
+  onCardClick,
 }: Props) {
   // 見出し音声: Oxford 実録音があればそれを初期URLに、なければ TTS フォールバック
   const headwordAudio = useTtsAudio({
@@ -171,7 +175,7 @@ export default function EntryCard({
   })
 
   return (
-    <CardShell noCard={noCard}>
+    <CardShell noCard={noCard} onClick={onCardClick}>
 
         {/* ── HEADER ── */}
         <CardHeader
