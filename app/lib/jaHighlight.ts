@@ -12,6 +12,18 @@ function trimOkurigana(s: string): string {
   )
 }
 
+// 五段活用動詞の終止形末尾 (「手を引く」「水を飲む」等) を落として語幹を作る。
+// trimOkurigana とは別経路: 文節 (「手を引く」) をそのまま保ちつつ、
+// 「手を引」も候補に入れたいときだけ使う。
+function trimTerminalVerb(s: string): string {
+  // 末尾の 1 かな (う/く/ぐ/す/つ/ぬ/ぶ/む/る) を落とす。
+  // 「〜する」の「する」も落とす (「撤退する」→「撤退」)。
+  // ただし「〜る」は trimOkurigana で既に落ちているので重複は無害。
+  if (/する$/u.test(s)) return s.slice(0, -2)
+  if (/[うくぐすつぬぶむる]$/u.test(s)) return s.slice(0, -1)
+  return s
+}
+
 // 動詞/形容詞の活用末尾として「立つ」「使える」のような <kanji>+<kana> 片を候補に加える。
 // 「役に立つ」の meaning_ja は句点で割れずそのまま入ってくるので base/stems では捕まらない。
 // 助詞 (に/を/は/が/で/と/も/や/へ/の) で始まる kana 片は除外して誤マッチを避ける。
@@ -41,6 +53,18 @@ function kanjiKanaChunks(meaning: string): string[] {
 export function jaHighlightMatches(meaning: string, ja: string): string[] {
   if (!meaning) return []
   const base = meaning.split(/[のをにはがでともやへ、。・〜…\s（）「」？！]+/).filter(s => s.length >= 2)
+  // 句読点だけで split した「文節」。助詞を含むフレーズ (「手を引く」「気を遣う」) を
+  // 1 つの候補として残す。活用末尾を trim した stem (「手を引」) も入れて
+  // example_ja の活用形「手を引きました」等に先頭一致させる。
+  const clauseChunks = meaning
+    .split(/[、。・〜…\s（）「」？！]+/)
+    .map(s => s.trim())
+    .filter(s => s.length >= 2 && /\p{Script=Han}/u.test(s))
+  // 文節の活用末尾を 2 段階で削る: 「手を引く」→「手を引」(終止形 く を落とす) /
+  // 「撤退する」→「撤退」(する を落とす) → example の「手を引きました」「撤退した」に先頭一致
+  const clauseStems = clauseChunks
+    .flatMap(c => [trimOkurigana(c), trimTerminalVerb(trimOkurigana(c))])
+    .filter(s => s.length >= 2)
   const kanjiChunks = meaning.match(/\p{Script=Han}{2,}/gu) ?? []
   const katakanaChunks = meaning.match(/[゠-ヿー]{3,}/gu) ?? []
   const hiraganaChunks = meaning.match(/[぀-ゟー]{3,}/gu) ?? []
@@ -49,6 +73,8 @@ export function jaHighlightMatches(meaning: string, ja: string): string[] {
   const verbSpans = kanjiKanaChunks(meaning)
 
   const candidates = Array.from(new Set([
+    // 長い塊 (文節) を先に入れて、長さ降順ソート後に優先マッチさせる
+    ...clauseChunks, ...clauseStems,
     ...base, ...stems, ...kanjiChunks, ...katakanaChunks, ...hiraganaChunks, ...verbSpans, ...singleKanji,
   ]))
     .filter(c => {
