@@ -104,6 +104,8 @@ order by n desc limit 60;
 ```
 
 - 番号は ①②③… を使う
+- **単語カードの意味を見出しに合わせる**: `<word-card>` はデフォルトで最初の意味が出る。記事で扱う意味が別なら `sense="N"` を付ける。N は `dictionary_cache.payload.senseGroups` を品詞をまたいで先頭から数えた通し番号（例: advocate は名詞4つの後なので動詞は `sense="5"`）
+- **本文の例文をカードの例文とかぶらせない**: カードの例文（`senseGroups[].senses[].example`）を先に見て、別の場面の例文を書く
 - 例文は1文。単語は `**` で太字。英文と和訳の間は `\\` で改行（既存記事と同じ）
 - 見出しの区切りは全角の縦棒「｜」
 - 本文に「RootLinkで復習」などの CTA 見出しは書かない（ブログテンプレ側に共通 CTA がある）
@@ -118,7 +120,7 @@ ON CONFLICT (slug) DO NOTHING
 RETURNING id, slug;
 ```
 
-**`published_at` は必ず NULL**。プレビューで kiko が確認して「公開して」と言ってから `UPDATE posts SET published_at = NOW() WHERE slug = '...'` を実行する。
+**`published_at` は必ず NULL**。INSERT 後は Claude in Chrome で `/blog/preview/{slug}` を開き、カードの意味と例文が記事と合っているかを確認してから報告する（WebFetch は robots で弾かれる）。プレビューで kiko が確認して「公開して」と言ってから `UPDATE posts SET published_at = NOW() WHERE slug = '...'` を実行する。
 
 ### 6. ショート動画の台本を作る
 
