@@ -33,7 +33,7 @@ export const BLOG_AUTHORS: Record<string, BlogAuthor> = {
   kiko: {
     name: 'Kiko',
     bio: 'ゆる言語学習者。語源で覚える英単語辞書アプリ RootLink の開発者です。洋ドラマや本を使って学習するのが好きです。',
-    avatarSrc: '/authors/rootlink.svg',
+    avatarSrc: '/authors/kiko.webp',
     links: [{ label: 'X', href: 'https://x.com/RootlinkJapan' }],
   },
   // Cuppa English シリーズの記事。著者名とアイコンは Cuppa English、SNS リンク付き (2026-10-19 kiko 指定)
