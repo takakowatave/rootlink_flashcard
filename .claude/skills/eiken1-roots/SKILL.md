@@ -114,13 +114,13 @@ order by n desc limit 60;
 ### 5. posts に下書きで INSERT
 
 ```sql
-INSERT INTO posts (title, slug, content, tags, published_at)
-VALUES ('{title}', '{slug}', $BODY${markdown 全文}$BODY$, ARRAY[...], NULL)
+INSERT INTO posts (title, slug, content, tags, author_key, published_at)
+VALUES ('{title}', '{slug}', $BODY${markdown 全文}$BODY$, ARRAY[...], 'kiko', NULL)
 ON CONFLICT (slug) DO NOTHING
 RETURNING id, slug;
 ```
 
-**`published_at` は必ず NULL**。INSERT 後は Claude in Chrome で `/blog/preview/{slug}` を開き、カードの意味と例文が記事と合っているかを確認してから報告する（WebFetch は robots で弾かれる）。プレビューで kiko が確認して「公開して」と言ってから `UPDATE posts SET published_at = NOW() WHERE slug = '...'` を実行する。
+著者は `author_key = 'kiko'`（2026-11-05 kiko 指定）。**`published_at` は必ず NULL**。INSERT 後は Claude in Chrome で `/blog/preview/{slug}` を開き、カードの意味と例文が記事と合っているかを確認してから報告する（WebFetch は robots で弾かれる）。プレビューで kiko が確認して「公開して」と言ってから `UPDATE posts SET published_at = NOW() WHERE slug = '...'` を実行する。
 
 ### 6. ショート動画の台本を作る
 
