@@ -654,6 +654,7 @@ export default function WordPageClient({
   initialDisplayLocale,
   noCard,
   relatedPosts,
+  rootPosts,
   initialExistingDerivatives,
   containingDecks,
   initialEtymologyRelatedWords,
@@ -668,6 +669,8 @@ export default function WordPageClient({
   initialDisplayLocale?: DisplayLocale
   noCard?: boolean
   relatedPosts?: Array<{ title: string; slug: string }>
+  /** 語源パーツに一致する語根まとめ記事。収録デッキの下にデッキと同じカードで出す */
+  rootPosts?: Array<{ title: string; slug: string; root: string; wordCount: number }>
   initialExistingDerivatives?: string[]
   /** deck 画面から modal で開いたときの deck.id。例文音声を deck_words.example 由来に切り替えるのに使う */
   deckId?: string | null
@@ -1289,6 +1292,25 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
             wordCount: d.wordCount,
             // 章単位の課金へ移行済みなので王冠バッジは出さない (/decks 一覧と揃える)
             href: `/decks/${d.slug}`,
+          }))}
+        />
+      </section>
+    )}
+
+    {rootPosts && rootPosts.length > 0 && (
+      <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
+        <h2 className="text-xl font-bold text-gray-950 mb-3">
+          {rootPosts.length === 1 ? `語根「${rootPosts[0].root}」をもっと知る` : '語根をもっと知る'}
+        </h2>
+        <DeckScrollStrip
+          items={rootPosts.map((p) => ({
+            key: p.slug,
+            label: '語根',
+            title: p.root,
+            imageSrc: `/blog/${p.slug}/cover.png`,
+            imageFit: 'contain' as const,
+            wordCount: p.wordCount,
+            href: `/blog/${p.slug}`,
           }))}
         />
       </section>

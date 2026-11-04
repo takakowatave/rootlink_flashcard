@@ -7,6 +7,8 @@ type Props = {
   title: string
   wordCount?: number
   imageSrc?: string
+  /** 画像の収め方。default は 'cover'。横長の記事カバーなどは 'contain' で切らずに見せる */
+  imageFit?: 'cover' | 'contain'
   isPremium?: boolean
   disabled?: boolean
   href?: string
@@ -14,7 +16,7 @@ type Props = {
   className?: string
 }
 
-export default function DeckCard({ label, title, wordCount, imageSrc, isPremium, disabled, href, onClick, className }: Props) {
+export default function DeckCard({ label, title, wordCount, imageSrc, imageFit = 'cover', isPremium, disabled, href, onClick, className }: Props) {
   const displayTitle = label ? `${label} ${title}` : title
   const baseClass = `relative bg-white border border-line rounded-2xl px-2 py-3 flex flex-col items-center justify-center gap-3 overflow-hidden transition-colors ${
     disabled
@@ -37,7 +39,7 @@ export default function DeckCard({ label, title, wordCount, imageSrc, isPremium,
       </p>
       <div className="w-full aspect-[546/400] rounded-lg overflow-hidden">
         {imageSrc && (
-          <img src={imageSrc} alt={displayTitle} className="w-full h-full object-cover" />
+          <img src={imageSrc} alt={displayTitle} className={`w-full h-full ${imageFit === 'contain' ? 'object-contain' : 'object-cover'}`} />
         )}
       </div>
       {typeof wordCount === 'number' && (

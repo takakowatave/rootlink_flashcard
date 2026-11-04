@@ -102,3 +102,14 @@ export const ReviewPeriod: Story = {
     wordCount: 42,
   },
 }
+
+export const RootPostContain: Story = {
+  name: '語根まとめ記事（横長カバーを contain で表示）',
+  args: {
+    label: '語根',
+    title: 'voc',
+    imageSrc: '/opengraph-image.png',
+    imageFit: 'contain',
+    wordCount: 7,
+  },
+}

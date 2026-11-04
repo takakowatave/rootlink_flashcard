@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from "next"
 import WordPageClient from '@/components/WordPageClient'
 import PhrasePageClient from '@/components/PhrasePageClient'
-import { getPostsReferencingWord } from '@/lib/blog'
+import { getPostsReferencingWord, getRootPostsForParts } from '@/lib/blog'
 import { deckCardTitle, toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
 
@@ -423,12 +423,19 @@ export default async function Page({
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)
-    const [relatedPosts, initialExistingDerivatives, containingDecks, etymologyTree] = await Promise.all([
+    const etymologyStructure = data.dictionary.etymologyData?.structure
+    const etymologyPartTexts =
+      etymologyStructure && etymologyStructure.type === 'parts' ? etymologyStructure.parts.map((p) => p.text) : []
+    const [referencingPosts, initialExistingDerivatives, containingDecks, etymologyTree, rootPosts] = await Promise.all([
       getPostsReferencingWord(resolvedWord),
       filterExistingWords(rawDerivatives),
       getDecksContainingWord(resolvedWord),
       getEtymologyTreeWords(resolvedWord, data.dictionary),
+      getRootPostsForParts(etymologyPartTexts),
     ])
+    // 語根まとめ記事はカードで別に出すので、テキストリンクの記事一覧からは外す
+    const rootPostSlugs = new Set(rootPosts.map((p) => p.slug))
+    const relatedPosts = referencingPosts.filter((p) => !rootPostSlugs.has(p.slug))
     return (
       <WordPageClient
         key={resolvedWord}
@@ -436,6 +443,7 @@ export default async function Page({
         dictionary={data.dictionary}
         initialPinnedSenseId={pin}
         relatedPosts={relatedPosts}
+        rootPosts={rootPosts}
         initialExistingDerivatives={initialExistingDerivatives}
         containingDecks={containingDecks}
         initialEtymologyRelatedWords={etymologyTree.relatedWords}
