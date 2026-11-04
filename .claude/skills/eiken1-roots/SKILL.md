@@ -120,7 +120,32 @@ ON CONFLICT (slug) DO NOTHING
 RETURNING id, slug;
 ```
 
-著者は `author_key = 'kiko'`（2026-11-05 kiko 指定）。**`published_at` は必ず NULL**。INSERT 後は Claude in Chrome で `/blog/preview/{slug}` を開き、カードの意味と例文が記事と合っているかを確認してから報告する（WebFetch は robots で弾かれる）。プレビューで kiko が確認して「公開して」と言ってから `UPDATE posts SET published_at = NOW() WHERE slug = '...'` を実行する。
+著者は `author_key = 'kiko'`（2026-11-05 kiko 指定）。**`published_at` は必ず NULL**。INSERT 後は Claude in Chrome で `/blog/preview/{slug}` を開き、カードの意味と例文が記事と合っているかを確認してから報告する（WebFetch は robots で弾かれる）。プレビューで kiko が確認して「公開して」と言ってから公開する。
+
+**公開は毎朝 7:00（JST）に1本ずつ予約する**（2026-11-05 kiko 決定）。kiko が承認した下書きを、まだ語根記事が入っていない一番早い日の 7:00 に並べる。
+
+```sql
+-- 予約済みの最終日を確認
+select max(published_at) at time zone 'Asia/Tokyo' from posts where slug like 'eiken1-root-%';
+-- 翌日以降の空いている日の 07:00 JST に予約（例）
+update posts set published_at = '2026-11-06 07:00+09' where slug = 'eiken1-root-xxx' and published_at is null;
+```
+
+ブログは未来日付の記事を出さないので、7:00 になると自動で公開される。
+
+### X への投稿は自動
+
+毎朝 7:12 に予約タスク「RootLink 語根記事のX投稿（毎朝）」が動き、その日に公開された語根記事を @RootlinkJapan に 7:30 で予約投稿する（Metricool の RootLink ブランド経由、表紙画像つき、リンクは最初のリプ）。このスキルで X に直接投稿しない。
+
+### 語源の出典
+
+記事の末尾（`<word-list>` の後）に必ず入れる。
+
+```markdown
+## 語源の出典
+
+各単語の語源は [Online Etymology Dictionary](https://www.etymonline.com/) で確認しています。
+```
 
 ### 6. ショート動画の台本を作る
 
