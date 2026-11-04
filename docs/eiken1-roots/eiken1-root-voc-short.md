@@ -1,7 +1,7 @@
 # ショート台本: eiken1-root-voc
 
 - 記事: https://www.rootlink.app/blog/eiken1-root-voc
-- 尺の目安: 1ページ 3〜4秒、全10ページで約35秒
+- 尺: 34秒（動画: rootlink_voc_short.mp4）
 
 | P | 画面の文字 | 補足 |
 | --- | --- | --- |
@@ -14,9 +14,12 @@
 | 7 | advocate<br>ad（〜へ）+ voc（呼ぶ）<br>→ 支持する | 元は「助けに呼ばれた人」＝弁護人 |
 | 8 | equivocal<br>equi（等しい）+ voc（声）<br>→ あいまいな | 2通りに呼べる＝どちらにも取れる |
 | 9 | vociferous<br>voci（声）+ fer（運ぶ）<br>→ 声高な | |
-| 10 | voc ＝ 声・呼ぶ<br>7語まとめ<br>ストアで「RootLink」と検索 | 最後に7語を一覧で |
+| 10 | voc でつながる7語 | 7語の一覧 |
+| 11 | QUIZ irrevocable<br>ir（〜でない）+ re（元へ）+ voc（呼ぶ）+ able（できる）<br>① 取り消せない ② 声が大きすぎる ③ 何度も呼び出せる<br>わかったら番号をコメントで！ | 答えは動画で出さず固定コメントへ |
+| 12 | RootLink ロゴ<br>ストアで「RootLink」と検索 | 解説記事はプロフィールのリンクから |
 
 ## キャプション案
 - タイトル: `voc の意味は？語源で覚える英検1級単語 #shorts`
 - 本文: voc はラテン語で「声・呼ぶ」。evoke・provoke・revoke など英検1級の7語をまとめて覚えよう。解説記事はプロフィールのリンクから。
 - ハッシュタグ: #英検1級 #英単語 #語源 #英語学習 #RootLink
+- 固定コメント（答え）: 答えは ① 取り消せない。ir（〜でない）+ re（元へ）+ voc（呼ぶ）+ able（できる）で「呼び戻せない」。irrevocable decision（取り消せない決定）のように使います。
