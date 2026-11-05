@@ -29,6 +29,13 @@ export const BLOG_AUTHOR: BlogAuthor = {
 // アバターは public/authors/<key>.webp を規定パスとする。仮画像でよい (kiko が後で差し替え)。
 export const BLOG_AUTHORS: Record<string, BlogAuthor> = {
   yui: BLOG_AUTHOR,
+  // RootLink 開発者本人。英検1級の語根シリーズなど (2026-11-05 kiko 指定)
+  kiko: {
+    name: 'Kiko',
+    bio: 'ゆる言語学習者。語源で覚える英単語辞書アプリ RootLink の開発者です。洋ドラマや本を使って学習するのが好きです。',
+    avatarSrc: '/authors/kiko.webp',
+    links: [{ label: 'X', href: 'https://x.com/RootlinkJapan' }],
+  },
   // Cuppa English シリーズの記事。著者名とアイコンは Cuppa English、SNS リンク付き (2026-10-19 kiko 指定)
   'cuppa-english': {
     name: 'Cuppa English',

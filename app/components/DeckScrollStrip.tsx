@@ -8,6 +8,8 @@ export type DeckStripItem = {
   label?: string
   title: string
   imageSrc?: string
+  /** 画像の収め方。横長の記事カバーなどを切らずに見せるときは 'contain' */
+  imageFit?: 'cover' | 'contain'
   wordCount?: number
   isPremium?: boolean
   href: string
@@ -42,6 +44,7 @@ export default function DeckScrollStrip({
             label={item.label}
             title={item.title}
             imageSrc={item.imageSrc}
+            imageFit={item.imageFit}
             wordCount={item.wordCount}
             isPremium={item.isPremium}
             href={item.href}

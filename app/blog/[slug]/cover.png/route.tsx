@@ -48,14 +48,14 @@ function loadLogoDataUrl(): Promise<string> {
   return logoPromise
 }
 
-type PostLite = { title: string; tags: string[] | null; published_at: string | null }
+type PostLite = { title: string; tags: string[] | null; published_at: string | null; content?: string | null }
 
 // 下書き (published_at=null) はプレビュー用途で描画を許すが、未来日付 (予約投稿)
 // は 404 で弾く。判定は GET 側で行う (fetchPost は生データのみ返す)。
 async function fetchPost(slug: string): Promise<PostLite | null> {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?select=title,tags,published_at&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/posts?select=title,tags,published_at,content&slug=eq.${encodeURIComponent(slug)}&limit=1`,
       {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         next: { revalidate: 300 },
@@ -105,6 +105,150 @@ function splitTitle(t: string): [string, string | null] {
   return [t, null]
 }
 
+
+// ── 語根記事 (slug = 語根, 例: /blog/voc) 用 ─────────────────────
+// タイトル「{root}」は「{意味}」… と本文の表「| 単語 | 分解 | 意味 |」から
+// 先頭4語を読み、語根 → 単語の枝分かれ図を描く。読めなければ通常デザインに戻す。
+type RootWord = { word: string; hl: [string, string, string]; meaning: string }
+type RootCover = { root: string; meaning: string; words: RootWord[] }
+
+function commonPrefix(a: string, b: string): number {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  return i
+}
+
+function parseRootCover(post: PostLite | null, slug: string): RootCover | null {
+  if (!post?.content) return null
+  const m = post.title.match(/^「([^」]+)」は「([^」]+)」/)
+  if (!m || m[1].trim().toLowerCase() !== slug.toLowerCase()) return null
+  const root = m[1]
+  const words: RootWord[] = []
+  const rows = post.content.split('\n').filter((l) => l.trim().startsWith('|'))
+  for (const row of rows) {
+    const cells = row.split('|').slice(1, -1).map((c) => c.trim())
+    if (cells.length < 3) continue
+    const [word, parts, meaning] = cells
+    if (!/^[a-zA-Z][a-zA-Z-]*$/.test(word)) continue
+    // 分解セルから語根に一番近いパーツを探してハイライト
+    let best = ''
+    let score = 1
+    for (const raw of parts.split('+')) {
+      const t = raw.replace(/（.*$/, '').replace(/\(.*$/, '').trim().toLowerCase()
+      const sc = commonPrefix(t, root.toLowerCase())
+      if (sc > score) { score = sc; best = t }
+    }
+    const idx = best ? word.toLowerCase().indexOf(best) : -1
+    const hl: [string, string, string] =
+      idx >= 0 ? [word.slice(0, idx), word.slice(idx, idx + best.length), word.slice(idx + best.length)] : [word, '', '']
+    words.push({ word, hl, meaning: meaning.split('・')[0].trim() })
+    if (words.length === 4) break
+  }
+  if (words.length < 2) return null
+  return { root, meaning: m[2], words }
+}
+
+const INK = '#020617'
+const TEAL = '#009689'
+const TEAL_DARK = '#005f5a'
+
+function RootCoverImage({ data, logo }: { data: RootCover; logo: string }) {
+  const n = data.words.length
+  const cardH = 96
+  const gap = Math.floor((630 - 120 - cardH * n) / Math.max(n - 1, 1))
+  const tops = data.words.map((_, i) => 60 + i * (cardH + gap))
+  const rootSize = Math.min(110, Math.floor(280 / (data.root.length * 0.62)))
+  const rootTop = 190
+  const rootH = 250
+  const cy = rootTop + rootH / 2
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        position: 'relative',
+        backgroundColor: TEAL_50,
+        backgroundImage: 'radial-gradient(circle, #00968922 2px, transparent 2.5px)',
+        backgroundSize: '40px 40px',
+        fontFamily: 'NotoSansJP',
+      }}
+    >
+      <div style={{ position: 'absolute', left: 0, top: 0, width: 1200, height: 630, display: 'flex' }}>
+      <svg width={1200} height={630} viewBox="0 0 1200 630">
+        {tops.map((t) => {
+          const y = t + cardH / 2
+          return (
+            <path
+              key={t}
+              d={`M390 ${cy} C 480 ${cy}, 480 ${y}, 570 ${y}`}
+              stroke={TEAL}
+              strokeWidth={9}
+              fill="none"
+              strokeLinecap="round"
+            />
+          )
+        })}
+      </svg>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          left: 60,
+          top: rootTop,
+          width: 330,
+          height: rootH,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: TEAL,
+          border: `5px solid ${INK}`,
+          borderRadius: 30,
+          boxShadow: `0 9px 0 ${TEAL_DARK}`,
+          color: '#ffffff',
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: rootSize, fontWeight: 700, lineHeight: 1 }}>{data.root}</div>
+        <div style={{ display: 'flex', fontSize: 38, fontWeight: 700, marginTop: 14 }}>{data.meaning}</div>
+      </div>
+      {data.words.map((w, i) => {
+        const size = Math.min(56, Math.floor(300 / (w.word.length * 0.6)))
+        return (
+          <div
+            key={w.word}
+            style={{
+              position: 'absolute',
+              left: 570,
+              top: tops[i],
+              width: 570,
+              height: cardH,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 20,
+              padding: '0 30px',
+              backgroundColor: '#ffffff',
+              border: `4px solid ${INK}`,
+              borderRadius: 22,
+              boxShadow: `0 7px 0 ${INK}`,
+            }}
+          >
+            <div style={{ display: 'flex', fontSize: size, fontWeight: 700, color: INK, letterSpacing: '-0.01em' }}>
+              <span>{w.hl[0]}</span>
+              <span style={{ color: TEAL }}>{w.hl[1]}</span>
+              <span>{w.hl[2]}</span>
+            </div>
+            <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, color: '#475569' }}>{w.meaning}</div>
+          </div>
+        )
+      })}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logo} width={186} height={26} alt="RootLink" style={{ position: 'absolute', left: 64, bottom: 44 }} />
+    </div>
+  )
+}
+
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const [fonts, logo, post] = await Promise.all([
     loadFonts(),
@@ -122,8 +266,12 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
   const [main, sub] = splitTitle(rawTitle)
   const tags = (post?.tags ?? []).slice(0, 2)
 
+  const rootCover = parseRootCover(post, params.slug)
+
   const image = new ImageResponse(
-    (
+    rootCover ? (
+      <RootCoverImage data={rootCover} logo={logo} />
+    ) : (
       <div style={{ width: '100%', height: '100%', display: 'flex', backgroundColor: MINT, padding: 16 }}>
         <div
           style={{
