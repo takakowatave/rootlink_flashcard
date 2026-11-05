@@ -147,27 +147,17 @@ update posts set published_at = '2026-11-06 07:00+09' where slug = 'xxx' and pub
 各単語の語源は [Online Etymology Dictionary](https://www.etymonline.com/) で確認しています。
 ```
 
-### 6. ショート動画の台本を作る
+### 6. ショート動画を作って予約する（Canva内で完結）
 
-記事と同じ中身を、Canva でそのまま組める形にする。1ページ＝1画面。
+手順と要素IDの正本は Notion「動画ワークフロー（RootLink語根ショート）」 https://app.notion.com/p/40fd9703217a81df879ae7865edbda5d 。ここは要点だけ。
 
-```
-P1 フック: 「{word1}・{word2}・{word3}…全部 {語根} でつながる」
-P2 語根: {語根} ＝ {元の言語}「{意味}」
-P3〜: 1単語1ページ
-      {word}
-      {pre} + {root} + {suf}
-      → {意味}
-まとめP: 「{語根} でつながる{N}語」と単語を一覧
-クイズP: 動画に出てこない同じ語根の単語を1つ出し、分解チップをヒントに3択で問う
-         「わかったら番号をコメントで！」。答えは動画で出さず固定コメントに書く
-最終P: ロゴ＋「ストアで RootLink と検索」＋「解説記事はプロフィールのリンクから」
-```
-
-台本は `docs/eiken1-roots/{slug}-short.md` に書き出す（リポジトリ内・commit 対象）。固定コメント用の答えの文も台本に書く。
-
-- クイズの単語は語源を Etymonline で確認し、記事の単語と重ならないものを選ぶ
-- 選択肢は正解1つ＋語根の意味からもっともらしく見える誤答2つ
+1. 台本を `docs/eiken1-roots/{slug}-short.md` に書く（固定コメント用の答えも）
+   - 単語は記事から**4語**。クイズは記事に出ない同じ語根の単語（Etymonline で確認）を3択。正解1つ＋もっともらしい誤答2つ
+2. Canva の雛形 `DAHaFqWO2W0`（9ページ）を copy-design で複製し、edit-design の replace_text で文字を差し替える。タイトルは `RootLink_{語根}`。サムネイルで1ページずつ確認してすぐ commit
+   - P1 フック3語 / P2 語根・言語・意味・補足 / P3〜P6 単語4つ / P7 まとめ / P8 クイズ / P9 そのまま
+3. export-design `{type: mp4, quality: vertical_1080p}` で書き出す
+4. Metricool（blogId `7886883`。cuppa_english には投稿しない）で YouTube を先に予約し、返ってきた `static.metricool.com` の URL で TikTok を予約する。毎日19:00 JST、記事公開日以降の空いている日。答えは firstCommentText
+5. ファイルのアップロード、GitHub、Chrome 経由の回避は使わない
 
 ### 7. kiko への報告
 
@@ -195,4 +185,5 @@ P3〜: 1単語1ページ
 - キャッシュに無い単語のために単語検索を叩く（課金事故）
 - DB の語根訳を確認せずに書く
 - 接尾辞だけの「語根」で記事を作る
-- Canva・Metricool で勝手に公開・予約する（投稿は kiko が動画を見て了承してから）
+- 決まった方針（毎日19:00予約など）の実行で kiko に確認を取って止まる
+- GitHub を動画の置き場や配信経路に使う
