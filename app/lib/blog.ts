@@ -100,8 +100,14 @@ const fetchPublishedPostsWithContent = cache(async (): Promise<Array<Pick<Post, 
   return (await res.json()) as Array<Pick<Post, 'title' | 'slug' | 'content'>>
 })
 
-// 語根まとめ記事（slug: eiken1-root-{語根}）。単語ページで語源パーツから逆引きする。
-export const ROOT_POST_SLUG_PREFIX = 'eiken1-root-'
+// 語根まとめ記事。slug は語根そのもの（例: /blog/voc）で、タイトルは「{語根}」は「{意味}」…。
+// slug とタイトル先頭の語根が一致するものだけを語根記事とみなす。
+export function rootOfPost(p: { slug: string; title: string }): string | null {
+  const m = p.title.match(/^「([^」]+)」は「/)
+  if (!m) return null
+  const root = m[1].trim().toLowerCase()
+  return p.slug.toLowerCase() === root ? root : null
+}
 
 export type RootPost = RelatedPost & { root: string; wordCount: number }
 
@@ -112,9 +118,8 @@ export async function getRootPostsForParts(parts: string[]): Promise<RootPost[]>
   const posts = await fetchPublishedPostsWithContent()
   const out: RootPost[] = []
   for (const p of posts) {
-    if (!p.slug.startsWith(ROOT_POST_SLUG_PREFIX)) continue
-    const root = p.slug.slice(ROOT_POST_SLUG_PREFIX.length)
-    if (!roots.has(root)) continue
+    const root = rootOfPost(p)
+    if (!root || !roots.has(root)) continue
     out.push({ title: p.title, slug: p.slug, root, wordCount: extractWordCardWords(p.content ?? '').length })
   }
   return out

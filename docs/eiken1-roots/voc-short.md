@@ -1,6 +1,6 @@
-# ショート台本: eiken1-root-voc
+# ショート台本: voc
 
-- 記事: https://www.rootlink.app/blog/eiken1-root-voc
+- 記事: https://www.rootlink.app/blog/voc
 - 尺: 34秒（動画: rootlink_voc_short.mp4）
 
 | P | 画面の文字 | 補足 |

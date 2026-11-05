@@ -21,8 +21,6 @@ const TEAL_700 = '#00786f'
 const TEAL_50 = '#f0fdfa'
 const BODY_WIDTH = 1040
 
-const ROOT_PREFIX = 'eiken1-root-'
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -57,7 +55,7 @@ type PostLite = { title: string; tags: string[] | null; published_at: string | n
 async function fetchPost(slug: string): Promise<PostLite | null> {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?select=${slug.startsWith(ROOT_PREFIX) ? 'title,tags,published_at,content' : 'title,tags,published_at'}&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/posts?select=title,tags,published_at,content&slug=eq.${encodeURIComponent(slug)}&limit=1`,
       {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         next: { revalidate: 300 },
@@ -108,7 +106,7 @@ function splitTitle(t: string): [string, string | null] {
 }
 
 
-// ── 語根記事 (eiken1-root-*) 用 ─────────────────────
+// ── 語根記事 (slug = 語根, 例: /blog/voc) 用 ─────────────────────
 // タイトル「{root}」は「{意味}」… と本文の表「| 単語 | 分解 | 意味 |」から
 // 先頭4語を読み、語根 → 単語の枝分かれ図を描く。読めなければ通常デザインに戻す。
 type RootWord = { word: string; hl: [string, string, string]; meaning: string }
@@ -120,10 +118,10 @@ function commonPrefix(a: string, b: string): number {
   return i
 }
 
-function parseRootCover(post: PostLite | null): RootCover | null {
+function parseRootCover(post: PostLite | null, slug: string): RootCover | null {
   if (!post?.content) return null
-  const m = post.title.match(/「([^」]+)」は「([^」]+)」/)
-  if (!m) return null
+  const m = post.title.match(/^「([^」]+)」は「([^」]+)」/)
+  if (!m || m[1].trim().toLowerCase() !== slug.toLowerCase()) return null
   const root = m[1]
   const words: RootWord[] = []
   const rows = post.content.split('\n').filter((l) => l.trim().startsWith('|'))
@@ -268,7 +266,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
   const [main, sub] = splitTitle(rawTitle)
   const tags = (post?.tags ?? []).slice(0, 2)
 
-  const rootCover = params.slug.startsWith(ROOT_PREFIX) ? parseRootCover(post) : null
+  const rootCover = parseRootCover(post, params.slug)
 
   const image = new ImageResponse(
     rootCover ? (

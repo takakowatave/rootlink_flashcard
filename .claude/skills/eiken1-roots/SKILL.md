@@ -41,7 +41,7 @@ order by n desc limit 60;
 ```
 
 - **選ぶのは意味を持つ語根・接頭辞**（spect, ject, cede, voc, tract, bene, mal など）。`-ate` `-ion` `-ous` `-ity` `-able` のような品詞を作るだけの接尾辞は記事にしない（「なるほど」が生まれない）
-- `posts` に `slug = 'eiken1-root-{語根}'` がすでにあれば除外する
+- `posts` に `slug = '{語根}'` がすでにあれば除外する
 - 候補は「語根・意味・含まれる単語の例」を3つだけ短く出す
 
 ### 2. 単語を選ぶ
@@ -64,7 +64,7 @@ order by n desc limit 60;
 
 ### 4. 記事を書く
 
-**slug**: `eiken1-root-{語根}`（例: `eiken1-root-spect`）
+**slug**: `{語根}` そのもの（例: `spect` → https://www.rootlink.app/blog/spect）。タイトル先頭の「{語根}」と slug が一致していることで、単語ページのカードと OGP が語根記事として扱う。旧形式 `eiken1-root-{語根}` は next.config.js で転送している
 
 **タイトルの型**: `「{語根}」は「{意味}」。語源で覚える英検1級単語{N}選`
 
@@ -126,9 +126,9 @@ RETURNING id, slug;
 
 ```sql
 -- 予約済みの最終日を確認
-select max(published_at) at time zone 'Asia/Tokyo' from posts where slug like 'eiken1-root-%';
+select max(published_at) at time zone 'Asia/Tokyo' from posts where title ~ '^「[^」]+」は「' and slug = lower(substring(title from '^「([^」]+)」'));
 -- 翌日以降の空いている日の 07:00 JST に予約（例）
-update posts set published_at = '2026-11-06 07:00+09' where slug = 'eiken1-root-xxx' and published_at is null;
+update posts set published_at = '2026-11-06 07:00+09' where slug = 'xxx' and published_at is null;
 ```
 
 ブログは未来日付の記事を出さないので、7:00 になると自動で公開される。
@@ -174,9 +174,9 @@ P3〜: 1単語1ページ
 返答は**要約だけ**。記事本文・SQL・台本の全文を貼らない。
 
 ```
-✅ posts INSERT（下書き）: slug=eiken1-root-spect（6語）
-- プレビュー: https://www.rootlink.app/blog/preview/eiken1-root-spect
-- ショート台本: docs/eiken1-roots/eiken1-root-spect-short.md
+✅ posts INSERT（下書き）: slug=spect（6語）
+- プレビュー: https://www.rootlink.app/blog/preview/spect
+- ショート台本: docs/eiken1-roots/spect-short.md
 - 外した単語: inspectorate（キャッシュなし）
 - OK なら「公開して」と言ってください
 ```
