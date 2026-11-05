@@ -1,0 +1,46 @@
+# RootLink
+
+> RootLink (https://www.rootlink.app/) は、語源（etymology）で英単語を覚える英語学習アプリです。単語を接頭辞・語根・接尾辞のパーツに分けて意味の成り立ちを示し、同じ語根を持つ単語どうしを芋づる式につなげて覚えられるようにしています。主な対象は日本語話者の中〜上級学習者（TOEIC・英検・IELTS・TOEFL の受験者や、英英辞書を使いたいレベルの人）です。Web、iOS、Android で使えます。
+
+RootLink is an English vocabulary app built around etymology. Each word is broken into its roots and affixes (e.g. in- "in" + spec "look" → inspect), so learners understand why a word means what it does instead of memorising it by rote, and can guess unfamiliar words from their parts. The interface is mainly Japanese, with British English pronunciation.
+
+## 主な機能 / Key features
+
+- 単語ページ: 意味（和英・英英を切り替え可能）、例文、イギリス英語の音声、語源パーツとその意味、同じ語根を持つ関連語
+- 語源パーツから未知語の意味を推測する学習
+- 保存した単語をそのままフラッシュカードでテスト（○/×、間違えた単語だけ再挑戦）
+- 試験別の公式単語デッキ（TOEIC / 英検 / IELTS / TOEFL）と、イギリス英語の会話表現デッキ「Cuppa English」
+
+## 単語ページ / Word pages
+
+URL は `https://www.rootlink.app/word/<英単語>` の形です。公開済みの単語ページの一覧はサイトマップ（https://www.rootlink.app/sitemap/words.xml）にあります。
+
+- [inspect](https://www.rootlink.app/word/inspect): in（中に）+ spec（見る）
+- [transport](https://www.rootlink.app/word/transport): trans（越えて）+ port（運ぶ）
+- [describe](https://www.rootlink.app/word/describe): de（離れて）+ scrib（書く）
+- [construct](https://www.rootlink.app/word/construct): con（共に）+ struct（建てる）
+- [perturb](https://www.rootlink.app/word/perturb): per（完全に）+ turb（乱れる）
+
+## 単語デッキ / Decks
+
+- [デッキ一覧](https://www.rootlink.app/decks): TOEIC 600+ / 730+ / 860+ / 990+ / 頻出、英検 準1級 / 1級、IELTS 5.5 / 6.5 / 7.5、TOEFL 60 / 80 / 100
+- [Cuppa English](https://www.rootlink.app/cuppa): イギリス英語の会話表現
+
+## ブログ / Blog
+
+- [ブログ一覧](https://www.rootlink.app/blog): 語源で英単語を覚える記事
+- [electricとelectricalの違い](https://www.rootlink.app/blog/electric-vs-electrical)
+- [classicとclassicalの違い](https://www.rootlink.app/blog/classic-vs-classical)
+- [principalとprincipleの違い](https://www.rootlink.app/blog/principal-vs-principle)
+- [fartherとfurtherの違い](https://www.rootlink.app/blog/farther-vs-further)
+- [economicとeconomicalの違い](https://www.rootlink.app/blog/economic-vs-economical)
+- [complementとcomplimentの違い](https://www.rootlink.app/blog/complement-vs-compliment)
+- [historicとhistoricalの違い](https://www.rootlink.app/blog/historic-vs-historical)
+- [「dict」は「言う」: 語源で覚える英検1級単語](https://www.rootlink.app/blog/dict)
+- [「voc」は「声・呼ぶ」: 語源で覚える英検1級単語](https://www.rootlink.app/blog/voc)
+
+## Optional
+
+- [サイトマップ](https://www.rootlink.app/sitemap.xml)
+- [プライバシーポリシー](https://www.rootlink.app/privacy)
+- [利用規約](https://www.rootlink.app/terms)
