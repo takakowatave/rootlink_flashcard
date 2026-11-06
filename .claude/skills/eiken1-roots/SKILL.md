@@ -159,6 +159,13 @@ update posts set published_at = '2026-11-06 07:00+09' where slug = 'xxx' and pub
 4. Metricool（blogId `7886883`。cuppa_english には投稿しない）で YouTube を先に予約し、返ってきた `static.metricool.com` の URL で TikTok を予約する。毎日19:00 JST、記事公開日以降の空いている日。答えは firstCommentText
 5. ファイルのアップロード、GitHub、Chrome 経由の回避は使わない
 
+### 6b. 横サムネ（長尺・通常動画用）
+
+- 雛形は Canva DAHaGCaHgyc の2ページ目。量産は sequ 版 DAHaGg0sruE を copy-design で複製して作る
+- 文言は固定（英検1級の難単語／語源で／一瞬で覚えよう／1つ覚えて3語わかる）。差し替えるのはカードの語根・意味・3語だけ
+- 語根100px、意味51px（幅340、top 274、left 863）。チップ文字は最大50pxで長い語は縮める。チップ画像は resize の後に crop_media をかける
+- 書き出しは PNG。ショートの表紙は縦長なので、予約済みショートには付けない
+
 ### 7. kiko への報告
 
 返答は**要約だけ**。記事本文・SQL・台本の全文を貼らない。
