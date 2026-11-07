@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
 import { detectServerLocale } from "@/lib/serverLocale";
+import { LocaleProvider } from "@/lib/LocaleProvider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -62,9 +63,11 @@ export default function RootLayout({
                     },
                 }}
             />
-            <AppShell>
-                {children}
-            </AppShell>
+            <LocaleProvider initialLocale={locale}>
+                <AppShell>
+                    {children}
+                </AppShell>
+            </LocaleProvider>
             <DevBadge />
             <Analytics />
             <GoogleAnalytics gaId="G-89GNQBCJSL" />

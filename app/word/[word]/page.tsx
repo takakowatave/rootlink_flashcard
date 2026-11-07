@@ -357,7 +357,8 @@ function getFirstEnMeaning(dictionary: MetaDictionaryWithEn | null): string | nu
 }
 
 function buildTitle(word: string, locale: 'ja' | 'en'): string {
-  if (locale === 'en') return `${word} — etymology and meaning | RootLink`
+  // layout.tsx の metadata.template が "%s | RootLink" を付けるので、ここでは語単体にする。
+  if (locale === 'en') return `${word} — etymology and meaning`
   return `${word} の語源と意味｜語根から覚える英単語`
 }
 
