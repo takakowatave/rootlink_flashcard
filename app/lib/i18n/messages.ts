@@ -170,6 +170,16 @@ export type Messages = {
     shareStreakText: (streak: number) => string
     shareLevelUpText: (level: number, streak: number) => string
   }
+  quizDashboard: {
+    emptySaved: string
+    description: string
+    tutorialSkip: string
+    tutorialTitle: string
+    tutorialBody: string
+    tutorialNext: string
+    startLabel: string
+    masteredCenter: string
+  }
   paywall: {
     title: string
     subtitle: string
@@ -375,6 +385,16 @@ const ja: Messages = {
     periodAll: '全期間',
     shareStreakText: (streak: number) => `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`,
     shareLevelUpText: (level: number, streak: number) => `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`,
+  },
+  quizDashboard: {
+    emptySaved: '単語リストに単語を保存するとはじめられます',
+    description: '辞書から作った単語帳とデッキの単語をまとめて復習できます',
+    tutorialSkip: 'スキップ',
+    tutorialTitle: '定着させよう',
+    tutorialBody: 'あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたら復習しましょう。',
+    tutorialNext: '次へ',
+    startLabel: 'スタート',
+    masteredCenter: '習得済',
   },
   paywall: {
     title: 'プランのアップグレード',
@@ -593,6 +613,16 @@ const en: Messages = {
     periodAll: 'All time',
     shareStreakText: (streak: number) => `${streak}-day English vocabulary streak 🔥\n\n#RootLink #Vocabulary #Etymology`,
     shareLevelUpText: (level: number, streak: number) => `Leveled up to Lv.${level} on RootLink 🌱 ${streak}-day streak\n\n#RootLink #Vocabulary #Etymology`,
+  },
+  quizDashboard: {
+    emptySaved: 'Save a few words to start quizzing',
+    description: 'Review the words from your wordlist and decks all in one place',
+    tutorialSkip: 'Skip',
+    tutorialTitle: 'Lock it in',
+    tutorialBody: 'Turn your saved words into flashcards and review them whenever you like.',
+    tutorialNext: 'Next',
+    startLabel: 'Start',
+    masteredCenter: 'Mastered',
   },
   paywall: {
     title: 'Upgrade your plan',

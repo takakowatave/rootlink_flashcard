@@ -10,6 +10,8 @@ import QuizStatusHelp from '@/components/QuizStatusHelp'
 import { classifyQuizStatus, classifyForDonut } from '@/lib/quizScope'
 import { fetchRecentQuizWords, getUserPlan } from '@/lib/supabaseApi'
 import { useAuthReload } from '@/lib/useAuthReload'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 const QUIZ_DASHBOARD_TUTORIAL_KEY = 'rootlink_quiz_dashboard_tutorial_v1_seen'
 
@@ -25,6 +27,8 @@ type MasteryStats = {
 type QuizMode = QuizScope
 
 function DonutChart({ stats }: { stats: MasteryStats }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].quizDashboard
   const { mastered, review, hard, total } = stats
   if (total === 0) return null
 
@@ -60,7 +64,7 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
       </svg>
       <div className="absolute flex flex-col items-center">
         <span className="text-4xl font-bold text-gray-900">{masteredPct100}<span className="text-xl font-medium text-gray-400">%</span></span>
-        <span className="text-sm text-gray-400 mt-0.5">習得済</span>
+        <span className="text-sm text-gray-400 mt-0.5">{d.masteredCenter}</span>
       </div>
     </div>
   )
@@ -68,24 +72,26 @@ function DonutChart({ stats }: { stats: MasteryStats }) {
 
 // チュートリアル step5: クイズページの説明カード（スポットライトなし）
 function QuizTutorialCard({ onClose }: { onClose: () => void }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].quizDashboard
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
       <div className="fixed inset-0 bg-black/70 pointer-events-auto" />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors" aria-label="スキップ">
+          <button onClick={onClose} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors" aria-label={d.tutorialSkip}>
             <HiX className="size-4" />
           </button>
           <div className="text-3xl text-center mb-3 select-none">🃏</div>
-          <h2 className="text-base font-bold text-center text-gray-900 mb-2">定着させよう</h2>
+          <h2 className="text-base font-bold text-center text-gray-900 mb-2">{d.tutorialTitle}</h2>
           <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-            あなたが学んだ単語のストックを効率的にフラッシュカードにして学習できます。単語が溜まってきたら復習しましょう。
+            {d.tutorialBody}
           </p>
           <button
             onClick={onClose}
             className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
           >
-            次へ
+            {d.tutorialNext}
           </button>
         </div>
       </div>
@@ -94,6 +100,10 @@ function QuizTutorialCard({ onClose }: { onClose: () => void }) {
 }
 
 export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: { onStart: (mode: QuizMode) => void, onBack: () => void, initialMode?: QuizMode }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].quizDashboard
+  const q = messages[locale].quiz
+  const s = messages[locale].quizSession
   const [stats, setStats] = useState<MasteryStats>({ unlearned: 0, review: 0, mastered: 0, hard: 0, review_scope: 0, total: 0 })
   const [savedTotal, setSavedTotal] = useState(0)
   const [recentCount, setRecentCount] = useState(0)
@@ -203,10 +213,10 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
         <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
-          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
+          <Button onClick={onBack} variant="secondary" size="sm">{s.back}</Button>
         </header>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-400 text-sm">読み込み中...</div>
+          <div className="text-gray-400 text-sm">{s.loading}</div>
         </div>
       </div>
     )
@@ -216,10 +226,10 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
     return (
       <div className="flex flex-col" style={{ height: '100dvh' }}>
         <header className="h-10 bg-white border-b border-line flex items-center px-2 shrink-0">
-          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
+          <Button onClick={onBack} variant="secondary" size="sm">{s.back}</Button>
         </header>
         <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-gray-400 text-sm text-center">単語リストに単語を保存するとはじめられます</p>
+          <p className="text-gray-400 text-sm text-center">{d.emptySaved}</p>
         </div>
       </div>
     )
@@ -238,7 +248,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
       <div className="flex flex-col bg-white" style={{ height: '100dvh' }}>
         {/* ヘッダー */}
         <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-          <Button onClick={onBack} variant="secondary" size="sm">戻る</Button>
+          <Button onClick={onBack} variant="secondary" size="sm">{s.back}</Button>
         </header>
 
         <div className="flex-1 overflow-y-auto">
@@ -247,7 +257,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
 
             {/* 説明 */}
             <p className="text-xs text-gray-500 text-center mb-4">
-              辞書から作った単語帳とデッキの単語をまとめて復習できます
+              {d.description}
             </p>
 
             {/* ドーナツ */}
@@ -259,25 +269,25 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 mb-8">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-line" />
-                <span className="text-sm text-gray-500">未習得 <strong className="text-gray-800">{stats.unlearned}</strong></span>
+                <span className="text-sm text-gray-500">{q.donutUnseen} <strong className="text-gray-800">{stats.unlearned}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-quiz-review" />
-                <span className="text-sm text-gray-500">要復習 <strong className="text-gray-800">{stats.review}</strong></span>
+                <span className="text-sm text-gray-500">{q.donutReview} <strong className="text-gray-800">{stats.review}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary-mid" />
-                <span className="text-sm text-gray-500">習得済 <strong className="text-gray-800">{stats.mastered}</strong></span>
+                <span className="text-sm text-gray-500">{q.donutMastered} <strong className="text-gray-800">{stats.mastered}</strong></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-quiz-hard" />
-                <span className="text-sm text-gray-500">苦手 <strong className="text-gray-800">{stats.hard}</strong></span>
+                <span className="text-sm text-gray-500">{q.donutHard} <strong className="text-gray-800">{stats.hard}</strong></span>
               </div>
               <QuizStatusHelp />
             </div>
 
             {/* モード選択タブ */}
-            <p className="text-sm font-semibold text-gray-400 mb-3">出題範囲</p>
+            <p className="text-sm font-semibold text-gray-400 mb-3">{q.scopeHeader}</p>
             <div className="mb-8">
               <QuizScopeSelector
                 items={[
@@ -303,7 +313,7 @@ export default function QuizDashboard({ onStart, onBack, initialMode = 'all' }: 
               fullWidth
               data-tutorial="quiz-start"
             >
-              スタート
+              {d.startLabel}
             </Button>
           </div>
         </div>
