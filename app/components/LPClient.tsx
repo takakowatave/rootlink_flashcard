@@ -87,8 +87,8 @@ export default function LPClient() {
 
   return (
     <main>
-      {/* 言語トグル。LP 画面右上に固定表示。 */}
-      <div className="absolute right-4 top-4 z-30 md:right-6 md:top-6">
+      {/* 言語トグル。Header (sticky z-40) の上に出すため fixed z-50。 */}
+      <div className="fixed right-3 top-3 z-50 pt-[env(safe-area-inset-top)] md:right-4 md:top-4">
         <LanguageToggle value={locale} onChange={handleLocaleChange} />
       </div>
 
