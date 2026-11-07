@@ -91,7 +91,7 @@ export const lpCopy: Record<DisplayLocale, LpCopy> = {
   },
   en: {
     hero: {
-      headlineBefore: 'Learn words',
+      headlineBefore: 'Learn words ',
       headlineHighlight: 'by their roots',
       headlineAfter: '',
       searchAriaLabel: 'Search',

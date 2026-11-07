@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import Button from '@/components/Button'
 import { BsX } from 'react-icons/bs'
 import { sendEvent } from '@/lib/ga'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 
 type Props = {
   onClose: () => void
@@ -15,6 +16,10 @@ type Props = {
 const SIGNUP_TRIGGER_KEY = 'signup_trigger'
 
 export default function SignupRequiredModal({ onClose, trigger }: Props) {
+  const locale = useDisplayLocale()
+  const t = locale === 'en'
+    ? { title: 'Sign up required', body: 'An account is required to save words. Sign up is free.', signup: 'Sign up (free)', login: 'Log in' }
+    : { title: 'アカウント登録が必要です', body: '単語を保存するにはアカウントが必要です。無料で登録できます。', signup: '新規登録（無料）', login: 'ログイン' }
   useEffect(() => {
     sendEvent('signup_modal_shown', { trigger: trigger ?? 'unknown' })
     if (trigger && typeof window !== 'undefined') {
@@ -43,17 +48,17 @@ export default function SignupRequiredModal({ onClose, trigger }: Props) {
           <BsX size={24} />
         </button>
 
-        <h2 className="text-lg font-bold text-gray-900 mb-2">アカウント登録が必要です</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-2">{t.title}</h2>
         <p className="text-sm text-gray-500 mb-6">
-          単語を保存するにはアカウントが必要です。無料で登録できます。
+          {t.body}
         </p>
 
         <div className="flex flex-col gap-2">
           <Link href="/signup" className="w-full">
-            <Button variant="primary" size="md" fullWidth>新規登録（無料）</Button>
+            <Button variant="primary" size="md" fullWidth>{t.signup}</Button>
           </Link>
           <Link href="/login" className="w-full">
-            <Button variant="secondary" size="md" fullWidth>ログイン</Button>
+            <Button variant="secondary" size="md" fullWidth>{t.login}</Button>
           </Link>
         </div>
       </div>
