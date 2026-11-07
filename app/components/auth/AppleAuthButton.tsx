@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { isAndroidPlatform } from "@/lib/isAndroidPlatform";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 // DevBadge と同じ判定: 本番ドメインでは出さない、それ以外 (localhost / Vercel
 // preview / Capacitor WebView の server.url が preview のとき) では原文トーストを出す。
@@ -30,16 +32,7 @@ type Variant = "signup" | "login";
 
 // Web (/login /signup) は従来どおり signup / login で分けるが、
 // ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Apple" とだけ出す。
-const LABEL_WEB: Record<Variant, string> = {
-  signup: "Appleで登録",
-  login: "Appleでログイン",
-};
 const LABEL_NATIVE = "Apple";
-
-const ERROR_MESSAGE: Record<Variant, string> = {
-  signup: "Apple登録に失敗しました。時間をおいて再試行してください",
-  login: "Appleログインに失敗しました。時間をおいて再試行してください",
-};
 
 // @capgo/capacitor-social-login の initialize は一度だけで良いので、
 // モジュールスコープの Promise にキャッシュしてボタンマウントごとに走らせない。
@@ -114,6 +107,10 @@ export default function AppleAuthButton({
   variant: Variant;
   onError?: (message: string) => void;
 }) {
+  const locale = useDisplayLocale();
+  const authCopy = messages[locale].auth;
+  const label = variant === "signup" ? authCopy.appleSignup : authCopy.appleLogin;
+  const errorMessage = variant === "signup" ? authCopy.appleSignupError : authCopy.appleLoginError;
   const [inAppBrowser, setInAppBrowser] = useState(false);
   // SSR / 初回レンダーは false → 初回ペイントで一瞬 Android にも出るのを避ける
   // ため、mounted になるまでは描画しない。マウント後に platform を判定する。
@@ -166,7 +163,7 @@ export default function AppleAuthButton({
               { duration: 15000 },
             );
           }
-          onError?.(ERROR_MESSAGE[variant]);
+          onError?.(errorMessage);
           return;
         }
         const idToken = loginRes.result.idToken;
@@ -175,7 +172,7 @@ export default function AppleAuthButton({
           if (isDevEnvironment()) {
             toast.error("[apple] no idToken returned", { duration: 15000 });
           }
-          onError?.(ERROR_MESSAGE[variant]);
+          onError?.(errorMessage);
           return;
         }
         const { error: supaErr } = await supabase.auth.signInWithIdToken({
@@ -191,7 +188,7 @@ export default function AppleAuthButton({
               { duration: 15000 },
             );
           }
-          onError?.(ERROR_MESSAGE[variant]);
+          onError?.(errorMessage);
           return;
         }
         // profile 補完・sign_up_complete 計測は /callback 側に集約してあるので
@@ -209,7 +206,7 @@ export default function AppleAuthButton({
           const msg = typeof e?.message === "string" ? e.message : String(err);
           toast.error(`[apple] code=${code} msg=${msg}`, { duration: 15000 });
         }
-        onError?.(ERROR_MESSAGE[variant]);
+        onError?.(errorMessage);
       }
       return;
     }
@@ -222,12 +219,12 @@ export default function AppleAuthButton({
         options: { redirectTo, skipBrowserRedirect: true },
       });
       if (error || !data?.url) {
-        onError?.(ERROR_MESSAGE[variant]);
+        onError?.(errorMessage);
         return;
       }
       window.location.href = data.url;
     } catch {
-      onError?.(ERROR_MESSAGE[variant]);
+      onError?.(errorMessage);
     }
   };
 
@@ -260,8 +257,8 @@ export default function AppleAuthButton({
         <img src="/apple-icon.svg" className="w-5 h-5" alt="Apple" />
       )}
       {APPLE_DISABLED
-        ? `${native ? LABEL_NATIVE : LABEL_WEB[variant]}（テスト中につき不可）`
-        : (native ? LABEL_NATIVE : LABEL_WEB[variant])}
+        ? authCopy.appleTesting(native ? LABEL_NATIVE : label)
+        : (native ? LABEL_NATIVE : label)}
     </button>
   );
 }

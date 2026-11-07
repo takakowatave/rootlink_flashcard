@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Button from '../Button'
 import { TextInput } from '../TextInput'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 // メール認証をリンク方式から 6 桁 OTP コード方式に切り替えたときに全フロー
 // (signup / email_change / recovery) で共通で使う入力ステップ。
@@ -26,7 +28,7 @@ type Props = {
 
 export default function OtpVerifyStep({
   email,
-  title = '確認コードを入力',
+  title,
   description,
   onVerify,
   onResend,
@@ -36,6 +38,9 @@ export default function OtpVerifyStep({
   autoFocus = true,
   initialResendCooldownSeconds = RESEND_COOLDOWN_SECONDS,
 }: Props) {
+  const locale = useDisplayLocale()
+  const authCopy = messages[locale].auth
+  const resolvedTitle = title ?? authCopy.otpTitle
   const [code, setCode] = useState('')
   const [resendSecondsLeft, setResendSecondsLeft] = useState(initialResendCooldownSeconds)
   const [resending, setResending] = useState(false)
@@ -72,22 +77,30 @@ export default function OtpVerifyStep({
   const sanitize = (value: string) => value.replace(/\D/g, '').slice(0, 6)
 
   const resendLabel = resending
-    ? '送信中...'
+    ? authCopy.otpResendSending
     : resendSecondsLeft > 0
-      ? `コードを再送する (${resendSecondsLeft}秒)`
-      : 'コードを再送する'
+      ? authCopy.otpResendWait(resendSecondsLeft)
+      : authCopy.otpResend
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold text-gray-950">{title}</h2>
+        <h2 className="text-base font-semibold text-gray-950">{resolvedTitle}</h2>
         <p className="text-sm text-gray-700 leading-relaxed break-all">
           {description ?? (
-            <>
-              <span className="text-primary font-semibold">{email}</span>
-              <br />
-              に6桁のコードを送りました
-            </>
+            locale === 'ja' ? (
+              <>
+                <span className="text-primary font-semibold">{email}</span>
+                <br />
+                {authCopy.otpSentPrefix}
+              </>
+            ) : (
+              <>
+                {authCopy.otpSentPrefix}
+                <br />
+                <span className="text-primary font-semibold">{email}</span>
+              </>
+            )
           )}
         </p>
       </div>
@@ -116,7 +129,7 @@ export default function OtpVerifyStep({
         fullWidth
         disabled={submitting || code.length !== 6}
       >
-        {submitting ? '確認中...' : '確認する'}
+        {submitting ? authCopy.otpSubmitting : authCopy.otpSubmit}
       </Button>
 
       <div className="flex flex-col items-center gap-3">
@@ -135,7 +148,7 @@ export default function OtpVerifyStep({
             disabled={submitting}
             className="text-sm text-primary underline disabled:text-gray-400"
           >
-            メールアドレスを修正する
+            {authCopy.otpEditEmail}
           </button>
         )}
       </div>

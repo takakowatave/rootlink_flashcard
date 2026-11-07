@@ -17,6 +17,8 @@ import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import NativeAuthForm from "@/components/auth/NativeAuthForm";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 interface FormData {
   email: string;
@@ -25,6 +27,8 @@ interface FormData {
 
 export default function AuthLogin() {
   const router = useRouter();
+  const locale = useDisplayLocale();
+  const t = messages[locale];
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [isNative, setIsNative] = useState(false);
@@ -57,7 +61,7 @@ export default function AuthLogin() {
       // メール/パスワードのどちらが間違っているかは Supabase から特定できないので、
       // メッセージは email 側にだけ出し、password 側は border を赤くする manual error
       // だけ立てる (message なし)。両方の欄が「入力を見直す対象」だと視覚的に伝える。
-      setError("email", { message: "メールアドレスまたはパスワードが正しくありません" });
+      setError("email", { message: t.login.wrongCredentials });
       setError("password", { type: "manual" });
       return;
     }
@@ -74,23 +78,23 @@ export default function AuthLogin() {
 
   return (
     <AuthPage>
-      <AuthCard title="アカウントにログイン">
+      <AuthCard title={t.login.title}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <TextInput
             type="email"
-            label="メールアドレス"
+            label={t.auth.email}
             error={errors.email}
-            {...register("email", { required: "メールアドレスは必須です" })}
+            {...register("email", { required: t.auth.emailRequired })}
           />
           <TextInput
             type="password"
-            label="パスワード"
+            label={t.auth.password}
             error={errors.password}
-            {...register("password", { required: "パスワードは必須です" })}
+            {...register("password", { required: t.auth.passwordRequired })}
           />
           <TurnstileWidget onVerify={handleCaptcha} />
           <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
-            {isSubmitting ? "ログイン中..." : "ログイン"}
+            {isSubmitting ? t.login.submitting : t.login.submit}
           </Button>
         </form>
 
@@ -108,7 +112,7 @@ export default function AuthLogin() {
           />
         </div>
 
-        <AuthBottomLink prefix="アカウントをお持ちでない方は" linkText="新規登録" href="/signup" />
+        <AuthBottomLink prefix={t.login.noAccount} linkText={t.login.signupLink} href="/signup" />
       </AuthCard>
     </AuthPage>
   );

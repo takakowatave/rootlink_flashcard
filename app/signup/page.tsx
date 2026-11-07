@@ -23,6 +23,8 @@ import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 interface FormData {
   email: string;
@@ -32,6 +34,8 @@ interface FormData {
 
 export default function AuthSignup() {
   const router = useRouter();
+  const locale = useDisplayLocale();
+  const t = messages[locale];
   const [sentEmail, setSentEmail] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSubmitting, setOtpSubmitting] = useState(false);
@@ -75,7 +79,7 @@ export default function AuthSignup() {
     if (signUpData.user && signUpData.user.identities?.length === 0) {
       setExistingAccount(true);
       setError("email", {
-        message: "このメールアドレスはすでに登録されています",
+        message: t.signup.emailExists,
       });
       return;
     }
@@ -94,7 +98,7 @@ export default function AuthSignup() {
     if (error) {
       setOtpError(
         /expired|invalid/i.test(error.message)
-          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          ? t.auth.otpInvalid
           : error.message,
       );
       return;
@@ -109,7 +113,7 @@ export default function AuthSignup() {
       email: sentEmail,
     });
     if (error) {
-      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+      setOtpError(t.auth.otpResendFailed);
     }
   };
 
@@ -126,7 +130,7 @@ export default function AuthSignup() {
 
   return (
     <AuthPage>
-      <AuthCard title={inOtpStep ? "確認コードを入力" : "アカウント新規作成"}>
+      <AuthCard title={inOtpStep ? t.auth.otpTitle : t.signup.title}>
         {inOtpStep ? (
           <OtpVerifyStep
             email={sentEmail}
@@ -141,32 +145,33 @@ export default function AuthSignup() {
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
               <TextInput
                 type="email"
-                label="メールアドレス"
+                label={t.auth.email}
                 error={errors.email}
-                {...register("email", { required: "メールアドレスは必須です" })}
+                {...register("email", { required: t.auth.emailRequired })}
               />
               {existingAccount && (
                 <p className="-mt-3 text-sm">
                   <Link href="/login" className="text-primary underline">
-                    ログインはこちら
+                    {t.signup.existingAccountLink}
                   </Link>
                 </p>
               )}
               <TextInput
                 type="password"
-                label="パスワード"
+                label={t.auth.password}
                 error={errors.password}
-                helperText="8文字以上で設定してください"
+                helperText={t.auth.passwordHelper}
                 {...register("password", {
-                  required: "パスワードは必須です",
-                  minLength: { value: 8, message: "8文字以上で設定してください" },
+                  required: t.auth.passwordRequired,
+                  minLength: { value: 8, message: t.auth.passwordMinLength },
                 })}
               />
               {!isNative && (
                 <TermsAgreementCheckbox
                   error={errors.agreeToPrivacy}
-                  {...register("agreeToPrivacy", { required: "プライバシーポリシーへの同意が必要です" })}
+                  {...register("agreeToPrivacy", { required: t.auth.privacyRequired })}
                 >
+                  {t.auth.privacyAgreePrefix}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -175,14 +180,14 @@ export default function AuthSignup() {
                     }}
                     className="text-primary underline"
                   >
-                    プライバシーポリシー
+                    {t.auth.privacyLink}
                   </button>
-                  に同意する
+                  {t.auth.privacyAgreeSuffix}
                 </TermsAgreementCheckbox>
               )}
               <TurnstileWidget onVerify={handleCaptcha} />
               <Button type="submit" disabled={isSubmitting} variant="primary" size="md" radius="lg" fullWidth>
-                {isSubmitting ? "登録中..." : "新規作成"}
+                {isSubmitting ? t.signup.submitting : t.signup.submit}
               </Button>
             </form>
 
@@ -200,7 +205,7 @@ export default function AuthSignup() {
               />
             </div>
 
-            <AuthBottomLink prefix="すでにアカウントをお持ちの方は" linkText="ログイン" href="/login" />
+            <AuthBottomLink prefix={t.signup.haveAccount} linkText={t.signup.loginLink} href="/login" />
           </>
         )}
       </AuthCard>
@@ -213,7 +218,7 @@ export default function AuthSignup() {
             type="button"
             onClick={() => setPrivacyOpen(false)}
             className="p-2 -mr-1 rounded-full hover:bg-primary-subtle text-muted"
-            aria-label="閉じる"
+            aria-label={t.auth.close}
           >
             <HiX className="size-5" />
           </button>
