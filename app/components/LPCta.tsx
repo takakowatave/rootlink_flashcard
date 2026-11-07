@@ -7,7 +7,9 @@ interface Props {
 }
 
 const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rootlink.app'
-const APP_STORE_URL = 'https://apps.apple.com/jp/app/rootlink/id6809248684'
+// /jp/ を付けない: Apple 側でユーザーの国に応じて自動リダイレクトされるため、
+// 英語ユーザーにも US / UK / AU などのストアが開く。
+const APP_STORE_URL = 'https://apps.apple.com/app/rootlink/id6809248684'
 
 export default function LPCta({ locale }: Props) {
   const copy = lpCopy[locale].cta

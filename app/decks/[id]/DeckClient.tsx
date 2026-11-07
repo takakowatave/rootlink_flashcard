@@ -13,6 +13,7 @@ import WordDetailModal from '@/components/WordDetailModal'
 import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { type QuizScope } from '@/components/QuizScopeSelector'
@@ -101,8 +102,9 @@ export default function DeckClient({
   }, [])
 
   useEffect(() => {
-    const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
-    if (saved && saved !== displayLocale) setDisplayLocale(saved)
+    // 初回マウント: localStorage 未保存ならブラウザ言語を使う。
+    const detected = detectDisplayLocale()
+    if (detected !== displayLocale) setDisplayLocale(detected)
     const handler = () => {
       const s = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
       if (s) setDisplayLocale(s)

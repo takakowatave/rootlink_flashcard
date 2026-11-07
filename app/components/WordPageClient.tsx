@@ -29,6 +29,7 @@ import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload, SavedWordDictionary } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -709,6 +710,11 @@ export default function WordPageClient({
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
 
   useEffect(() => {
+    // 初回: localStorage 未設定ならブラウザ言語で決める。
+    if (!initialDisplayLocale) {
+      const detected = detectDisplayLocale()
+      if (detected !== displayLocale) setDisplayLocale(detected)
+    }
     const syncDisplayLocale = () => {
       const savedLocale = window.localStorage.getItem(
         DISPLAY_LOCALE_STORAGE_KEY
@@ -718,8 +724,6 @@ export default function WordPageClient({
         setDisplayLocale(savedLocale)
       }
     }
-
-    syncDisplayLocale()
 
     window.addEventListener(
       DISPLAY_LOCALE_EVENT_NAME,

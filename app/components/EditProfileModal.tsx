@@ -28,6 +28,7 @@ import { openNativeManageSubscriptions, signOutRevenueCat } from "@/lib/revenuec
 import { decidePaywallVariant, type PaywallVariant } from "@/lib/paywall";
 import type { DisplayLocale } from "@/types/DisplayLocale";
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale";
+import { detectDisplayLocale } from "@/lib/displayLocale";
 import Toggle from "@/components/Toggle";
 import InfoBanner from "@/components/InfoBanner";
 import Button from "@/components/Button";
@@ -345,8 +346,7 @@ export default function EditProfileModal({
           );
         });
     });
-    const saved = localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY);
-    if (saved === "en" || saved === "ja") setDisplayLocale(saved);
+    setDisplayLocale(detectDisplayLocale());
     // 実 native + Web プレビュー (?preview=native) の両方で通知セクションを
     // 出す。checkNotificationPermission は Capacitor が無い環境では 'unknown'
     // を返すので、Web でも表示に支障は無い。

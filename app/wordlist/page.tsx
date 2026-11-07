@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabaseClient"
 import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
+import { detectDisplayLocale } from "@/lib/displayLocale"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import PageHeader from "@/components/PageHeader"
 import CardShell from "@/components/CardShell"
@@ -99,10 +100,7 @@ export default function WordListPage() {
   const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
   const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
   const [userId, setUserId] = useState<string | null>(null)
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(detectDisplayLocale)
 
   const loadStatus = async (keys: string[], userId: string) => {
     if (keys.length === 0) { setWordStatus(new Map()); setWrongCounts(new Map()); return }

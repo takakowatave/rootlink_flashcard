@@ -19,7 +19,7 @@ import Footer from '@/components/Footer'
 import ShareMenu from '@/components/ShareMenu'
 import { shareViaClipboardAndX } from '@/lib/shareToX'
 import { isNativePlatform } from '@/lib/isNativePlatform'
-import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
+import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty, deckCardTitle } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
   filterByPeriod,
@@ -28,6 +28,8 @@ import {
 } from '@/lib/reviewPeriod'
 import { fetchLatestPost, type PostCard } from '@/lib/blogQueries'
 import BlogLatestBanner from '@/components/blog/BlogLatestBanner'
+import { detectDisplayLocale } from '@/lib/displayLocale'
+import { DISPLAY_LOCALE_EVENT_NAME, DISPLAY_LOCALE_STORAGE_KEY, type DisplayLocale } from '@/types/DisplayLocale'
 
 type Deck = {
   id: string
@@ -470,6 +472,18 @@ export default function Dashboard() {
     yesterday: 0, week: 0, month: 0, all: 0,
   })
   const [latestPost, setLatestPost] = useState<PostCard | null>(null)
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
+
+  useEffect(() => {
+    // 初回: 端末言語で判定。以降は localStorage 更新イベントに追従。
+    setDisplayLocale(detectDisplayLocale())
+    const handler = () => {
+      const saved = window.localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+      if (saved === 'ja' || saved === 'en') setDisplayLocale(saved)
+    }
+    window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+    return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -583,10 +597,12 @@ export default function Dashboard() {
     .filter((d): d is Deck => d !== undefined)
     .map(d => {
       const shortName = toShortName(d.name, d.label)
+      // シリーズ系 (英会話 Cuppa English 等) はカード用に短縮タイトルを使い label を伏せる。
+      const card = deckCardTitle(d.name, d.label)
       return {
         key: d.id,
-        label: d.label,
-        title: shortName,
+        label: card.label,
+        title: card.title,
         imageSrc: getDeckImage(d.label, shortName),
         wordCount: d.word_count,
         isPremium: d.is_premium && plan === 'free',
@@ -598,10 +614,11 @@ export default function Dashboard() {
     sortDecksByDifficulty(decks.filter(d => d.label === label))
       .map(d => {
         const shortName = toShortName(d.name, d.label)
+        const card = deckCardTitle(d.name, d.label)
         return {
           key: d.id,
-          label: d.label,
-          title: shortName,
+          label: card.label,
+          title: card.title,
           imageSrc: getDeckImage(d.label, shortName),
           wordCount: d.word_count,
           isPremium: d.is_premium && plan === 'free',
@@ -729,7 +746,9 @@ export default function Dashboard() {
 
             {latestPost && <BlogLatestBanner post={latestPost} />}
 
-            <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
+            {displayLocale === 'ja' && (
+              <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
+            )}
 
           </div>
         </div>

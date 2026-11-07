@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { buildPhraseSpanRegex } from '@/lib/phraseDisplay'
@@ -66,10 +67,7 @@ function PhrasesPageInner() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
   const [todayOnly, setTodayOnly] = useState(searchParams.get('today') === '1')
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(detectDisplayLocale)
 
   useEffect(() => {
     const load = async () => {
