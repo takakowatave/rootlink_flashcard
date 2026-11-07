@@ -93,7 +93,7 @@ export default function LPClient() {
       </div>
       <LPAbout locale={locale} />
       <LPFeatures locale={locale} />
-      <LPDecks locale={locale} />
+      {locale === 'ja' && <LPDecks locale={locale} />}
       <LPCta locale={locale} />
       <LPFooter locale={locale} />
 
