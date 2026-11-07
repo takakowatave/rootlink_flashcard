@@ -91,7 +91,7 @@ export const lpCopy: Record<DisplayLocale, LpCopy> = {
   },
   en: {
     hero: {
-      headlineBefore: 'Learn English words',
+      headlineBefore: 'Learn words',
       headlineHighlight: 'by their roots',
       headlineAfter: '',
       searchAriaLabel: 'Search',
@@ -100,26 +100,26 @@ export const lpCopy: Record<DisplayLocale, LpCopy> = {
       title: 'What is RootLink?',
       intro: {
         lead: 'RootLink is ',
-        strong: 'a vocabulary tool for learning words by the links between them',
+        strong: 'a dictionary that teaches words by their roots',
         tail: '.',
       },
-      body: 'A dictionary and wordlist built around etymology. Every search breaks a word down into its roots and affixes right on the spot, so you understand its parts — not just the word itself.',
-      highlight: 'One root unlocks a whole family of related words at once, instead of memorising one word at a time.',
+      body: 'Every word is broken down into its roots and affixes, so you see how the meaning is built.',
+      highlight: 'Learn one root, and a whole family of words comes with it.',
     },
     features: {
-      title: 'Three things that make RootLink different',
+      title: 'What makes it different',
       items: [
         {
-          title: 'Guess unknown words from their roots',
-          body: 'Even a word you have never seen before becomes readable once you know its roots. Move from reading English by feel to reading it by structure.',
+          title: 'Decode unknown words',
+          body: 'Know the roots, guess the meaning. Read English by structure, not by feel.',
         },
         {
-          title: 'Switch between Japanese and English definitions',
-          body: 'One tap toggles between a Japanese gloss and an English-English definition. Start in your native language, then shift to English-only to think in English.',
+          title: 'Japanese or English, your call',
+          body: 'Tap to switch between a Japanese gloss and a plain-English definition.',
         },
         {
-          title: 'Every saved word becomes a flashcard',
-          body: 'The words you save do not just sit there. Every saved word is instantly reviewable as a flashcard, so searching the dictionary builds your review deck for you.',
+          title: 'Every saved word is a flashcard',
+          body: 'Search, save, review — in one flow. No extra setup.',
         },
       ],
     },
@@ -135,8 +135,8 @@ export const lpCopy: Record<DisplayLocale, LpCopy> = {
       status: 'Available now',
     },
     footer: {
-      privacy: 'Privacy Policy',
-      terms: 'Terms of Service',
+      privacy: 'Privacy',
+      terms: 'Terms',
       contact: 'Contact',
       copyright: '© 2026 RootLink. All rights reserved.',
     },
