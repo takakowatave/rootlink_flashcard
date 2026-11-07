@@ -8,9 +8,8 @@ import LPFeatures from '@/components/LPFeatures'
 import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
-import LanguageToggle from '@/components/LanguageToggle'
 import { HiSearch } from 'react-icons/hi'
-import { detectLpLocale, setLpLocaleInUrl } from '@/lib/getLpLocale'
+import { detectLpLocale } from '@/lib/getLpLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 
 const API_BASE =
@@ -39,11 +38,6 @@ export default function LPClient() {
     if (typeof document === 'undefined') return
     document.documentElement.lang = locale
   }, [locale])
-
-  const handleLocaleChange = (next: DisplayLocale) => {
-    setLocale(next)
-    setLpLocaleInUrl(next)
-  }
 
   useEffect(() => {
     const el = heroRef.current
@@ -87,11 +81,6 @@ export default function LPClient() {
 
   return (
     <main>
-      {/* 言語トグル。Header (sticky z-40) の上に出すため fixed z-50。 */}
-      <div className="fixed right-3 top-3 z-50 pt-[env(safe-area-inset-top)] md:right-4 md:top-4">
-        <LanguageToggle value={locale} onChange={handleLocaleChange} />
-      </div>
-
       <div ref={heroRef}>
         <LPHero
           value={value}
