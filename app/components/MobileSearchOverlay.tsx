@@ -8,6 +8,8 @@ import { guardQuery } from '@/lib/queryGuard'
 import SearchBox from './SearchBox'
 import { resolveWord } from '@/lib/resolveClient'
 import { emitQuotaExceeded } from '@/lib/quotaExceeded'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 // SP は全画面白 / PC は中央ダイアログの検索オーバーレイ。
 // `open-mobile-search` イベントを受けて開く。Header の中に置くと
@@ -16,6 +18,8 @@ import { emitQuotaExceeded } from '@/lib/quotaExceeded'
 export default function MobileSearchOverlay() {
   const router = useRouter()
   const pathname = usePathname()
+  const locale = useDisplayLocale()
+  const t = messages[locale].search
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -157,13 +161,13 @@ export default function MobileSearchOverlay() {
       >
         <div className="px-4 pt-3 pb-6 md:p-6">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-base font-bold text-gray-950 hidden md:block">単語を検索</p>
+            <p className="text-base font-bold text-gray-950 hidden md:block">{t.title}</p>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="text-sm font-bold text-primary md:ml-auto"
             >
-              閉じる
+              {t.close}
             </button>
           </div>
           <SearchBox
@@ -184,7 +188,7 @@ export default function MobileSearchOverlay() {
             }}
           />
           {searchError && (
-            <p className="mt-2 text-xs text-red-500 pl-4">見つかりませんでした</p>
+            <p className="mt-2 text-xs text-red-500 pl-4">{t.notFound}</p>
           )}
         </div>
       </div>

@@ -59,6 +59,30 @@ export type Messages = {
     noAccount: string
     signupLink: string
   }
+  search: {
+    title: string
+    close: string
+    notFound: string
+  }
+  word: {
+    back: string
+    openSearch: string
+    share: string
+    closeBanner: string
+    correctionPrefix: string
+    correctionSuffix: string
+    savedToast: string
+    containingDecks: string
+    rootMore: (root: string) => string
+    rootMoreMulti: string
+    rootLabel: string
+    relatedPosts: string
+  }
+  report: {
+    link: (kindLabel: string) => string
+    wordLabel: string
+    phraseLabel: string
+  }
 }
 
 const ja: Messages = {
@@ -115,6 +139,30 @@ const ja: Messages = {
     noAccount: 'アカウントをお持ちでない方は',
     signupLink: '新規登録',
   },
+  search: {
+    title: '単語を検索',
+    close: '閉じる',
+    notFound: '見つかりませんでした',
+  },
+  word: {
+    back: '戻る',
+    openSearch: '検索を開く',
+    share: '共有',
+    closeBanner: '閉じる',
+    correctionPrefix: 'を',
+    correctionSuffix: 'に補正して検索しました',
+    savedToast: '単語を保存しました！',
+    containingDecks: 'この単語が収録されている単語帳',
+    rootMore: (root: string) => `語根「${root}」をもっと知る`,
+    rootMoreMulti: '語根をもっと知る',
+    rootLabel: '語根',
+    relatedPosts: 'この単語を扱った記事',
+  },
+  report: {
+    link: (kindLabel: string) => `この${kindLabel}の内容を報告`,
+    wordLabel: '単語',
+    phraseLabel: 'フレーズ',
+  },
 }
 
 const en: Messages = {
@@ -170,6 +218,30 @@ const en: Messages = {
     wrongCredentials: 'Incorrect email or password',
     noAccount: "Don't have an account? ",
     signupLink: 'Sign up',
+  },
+  search: {
+    title: 'Search a word',
+    close: 'Close',
+    notFound: 'Not found',
+  },
+  word: {
+    back: 'Back',
+    openSearch: 'Open search',
+    share: 'Share',
+    closeBanner: 'Close',
+    correctionPrefix: 'Searched',
+    correctionSuffix: 'instead',
+    savedToast: 'Word saved!',
+    containingDecks: 'Decks that include this word',
+    rootMore: (root: string) => `More about the root "${root}"`,
+    rootMoreMulti: 'More about these roots',
+    rootLabel: 'Root',
+    relatedPosts: 'Related articles',
+  },
+  report: {
+    link: (kindLabel: string) => `Report an issue with this ${kindLabel}`,
+    wordLabel: 'word',
+    phraseLabel: 'phrase',
   },
 }
 
