@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import LPHeroTree from '@/components/LPHeroTree'
-import { DEMO } from '@/lib/lp-data'
+import { DEMO, glossFor } from '@/lib/lp-data'
+import { lpCopy } from '@/lib/lp-copy'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 
 interface Props {
   value: string
@@ -10,12 +12,13 @@ interface Props {
   onSubmit: () => void
   isLoading: boolean
   error: string | null
+  locale: DisplayLocale
 }
 
 const CYCLE_MS   = 3800
 const TYPING_MS  = 90
 
-export default function LPHero({ value, onChange, onSubmit, isLoading, error }: Props) {
+export default function LPHero({ value, onChange, onSubmit, isLoading, error, locale }: Props) {
   const [ready,     setReady]     = useState(false)
   const [wordIdx,   setWordIdx]   = useState(0)
   const [typed,     setTyped]     = useState('')
@@ -24,6 +27,8 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
   const [isCompact, setIsCompact] = useState(true)
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const cycleRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const copy = lpCopy[locale]
 
   useEffect(() => { setReady(true) }, [])
 
@@ -90,7 +95,10 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
         className="mb-8 text-center text-[38px] font-bold leading-tight tracking-tight text-gray-800 md:text-6xl"
         style={anim(0)}
       >
-        関連性で単語を<br className="md:hidden" /><span className="text-primary">芋づる式</span>に覚えよう
+        {copy.hero.headlineBefore}
+        <br className="md:hidden" />
+        <span className="text-primary">{copy.hero.headlineHighlight}</span>
+        {copy.hero.headlineAfter}
       </h1>
 
       {/* Search bar */}
@@ -100,7 +108,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
           type="button"
           onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
           className="md:hidden w-full text-left"
-          aria-label="検索"
+          aria-label={copy.hero.searchAriaLabel}
         >
           <div
             className="p-[6px] rounded-[90px] pointer-events-none"
@@ -147,7 +155,7 @@ export default function LPHero({ value, onChange, onSubmit, isLoading, error }: 
           <LPHeroTree
             key={`${wordIdx}-${root.root}`}
             root={root.root}
-            gloss={root.gloss}
+            gloss={glossFor(root, locale)}
             words={root.words}
             compact={isCompact}
           />

@@ -3,10 +3,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { openExternalLink } from '@/lib/openExternal'
+import { lpCopy } from '@/lib/lp-copy'
+import type { DisplayLocale } from '@/types/DisplayLocale'
+
+interface Props {
+  locale: DisplayLocale
+}
 
 const CONTACT_URL = 'https://tally.so/r/ODJoEY'
 
-export default function LPFooter() {
+export default function LPFooter({ locale }: Props) {
+  const copy = lpCopy[locale].footer
+
   return (
     <footer className="w-full bg-[#202020] py-10">
       <div className="mx-auto flex max-w-[980px] flex-col items-center gap-6 px-4 md:px-6">
@@ -20,22 +28,22 @@ export default function LPFooter() {
 
         <div className="flex flex-wrap items-center justify-center gap-6 text-[13px] text-[#8899aa]">
           <Link href="/privacy" className="transition-colors hover:text-white">
-            プライバシーポリシー
+            {copy.privacy}
           </Link>
           <Link href="/terms" className="transition-colors hover:text-white">
-            利用規約
+            {copy.terms}
           </Link>
           <button
             type="button"
             onClick={() => openExternalLink(CONTACT_URL)}
             className="transition-colors hover:text-white"
           >
-            お問い合わせ
+            {copy.contact}
           </button>
         </div>
 
         <p className="text-[12px] text-[#556070]">
-          © 2026 RootLink. All rights reserved.
+          {copy.copyright}
         </p>
       </div>
     </footer>
