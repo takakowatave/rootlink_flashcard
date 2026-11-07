@@ -142,6 +142,34 @@ export type Messages = {
     noSavedWords: string
     goToWordlist: string
   }
+  dashboard: {
+    dayLabels: [string, string, string, string, string, string, string]
+    streakLabel: string
+    streakUnit: string
+    shareSNS: string
+    sharePreparing: string
+    shareFailed: string
+    levelUp: string
+    streakLearning: (n: number) => string
+    growWithLogin: string
+    nextEvolution: (pt: number) => string
+    usageTitle: string
+    studyingCount: string
+    masteredCount: string
+    createWordlistTitle: string
+    reviewTitle: string
+    historyTitle: string
+    examPrepTitle: string
+    myWordlistTitle: string
+    moreSuffix: string
+    searchAria: string
+    periodYesterday: string
+    periodWeek: string
+    periodMonth: string
+    periodAll: string
+    shareStreakText: (streak: number) => string
+    shareLevelUpText: (level: number, streak: number) => string
+  }
 }
 
 const ja: Messages = {
@@ -281,6 +309,34 @@ const ja: Messages = {
     noSavedWords: '保存した単語がありません',
     goToWordlist: '単語リストへ',
   },
+  dashboard: {
+    dayLabels: ['月', '火', '水', '木', '金', '土', '日'],
+    streakLabel: '連続ログイン',
+    streakUnit: '日',
+    shareSNS: 'SNSでシェア',
+    sharePreparing: '準備中...',
+    shareFailed: 'シェアに失敗しました',
+    levelUp: 'レベルアップ！',
+    streakLearning: (n: number) => `連続${n}日学習中`,
+    growWithLogin: '毎日ログインして育てよう',
+    nextEvolution: (pt: number) => `あと${pt}ptで次の進化`,
+    usageTitle: '利用状況',
+    studyingCount: '学習中の単語数',
+    masteredCount: '覚えた単語数',
+    createWordlistTitle: '辞書から単語帳を作成',
+    reviewTitle: '復習',
+    historyTitle: '履歴',
+    examPrepTitle: '試験対策',
+    myWordlistTitle: 'My単語帳',
+    moreSuffix: 'もっと見る',
+    searchAria: '検索',
+    periodYesterday: '昨日',
+    periodWeek: '1週間',
+    periodMonth: '1ヶ月',
+    periodAll: '全期間',
+    shareStreakText: (streak: number) => `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`,
+    shareLevelUpText: (level: number, streak: number) => `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`,
+  },
 }
 
 const en: Messages = {
@@ -419,6 +475,34 @@ const en: Messages = {
     loading: 'Loading...',
     noSavedWords: 'No saved words yet',
     goToWordlist: 'Go to wordlist',
+  },
+  dashboard: {
+    dayLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    streakLabel: 'Streak',
+    streakUnit: 'days',
+    shareSNS: 'Share on social',
+    sharePreparing: 'Preparing...',
+    shareFailed: 'Sharing failed',
+    levelUp: 'Level up!',
+    streakLearning: (n: number) => `${n}-day learning streak`,
+    growWithLogin: 'Log in every day to grow',
+    nextEvolution: (pt: number) => `${pt} pt to next stage`,
+    usageTitle: 'Your activity',
+    studyingCount: 'Words you are learning',
+    masteredCount: 'Words mastered',
+    createWordlistTitle: 'Build your wordlist from the dictionary',
+    reviewTitle: 'Review',
+    historyTitle: 'Recently viewed',
+    examPrepTitle: 'Exam prep',
+    myWordlistTitle: 'My Wordlist',
+    moreSuffix: 'See more',
+    searchAria: 'Search',
+    periodYesterday: 'Yesterday',
+    periodWeek: 'Past 7 days',
+    periodMonth: 'Past 30 days',
+    periodAll: 'All time',
+    shareStreakText: (streak: number) => `${streak}-day English vocabulary streak 🔥\n\n#RootLink #Vocabulary #Etymology`,
+    shareLevelUpText: (level: number, streak: number) => `Leveled up to Lv.${level} on RootLink 🌱 ${streak}-day streak\n\n#RootLink #Vocabulary #Etymology`,
   },
 }
 
