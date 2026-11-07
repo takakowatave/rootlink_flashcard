@@ -1,19 +1,13 @@
 'use client'
 
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
+
 export type QuizScope = 'all' | 'unseen' | 'review' | 'hard' | 'recent'
 
 export type QuizScopeItem = {
   key: QuizScope
   count: number
-}
-
-// アイコンは廃止 (ラベル＋問数の 2 段のみ)。選択枠色・背景色は従来維持。
-const META: Record<QuizScope, { label: string }> = {
-  all:    { label: 'ランダム' },
-  recent: { label: 'まとめて' },
-  unseen: { label: '未習得' },
-  review: { label: '要復習' },
-  hard:   { label: '苦手' },
 }
 
 export default function QuizScopeSelector({
@@ -23,11 +17,24 @@ export default function QuizScopeSelector({
   selected: QuizScope
   onChange: (scope: QuizScope) => void
 }) {
+  const locale = useDisplayLocale()
+  const q = messages[locale].quiz
+
+  const labelOf = (key: QuizScope): string => {
+    switch (key) {
+      case 'all':    return q.scopeAll
+      case 'recent': return q.scopeRecent
+      case 'unseen': return q.scopeUnseen
+      case 'review': return q.scopeReview
+      case 'hard':   return q.scopeHard
+    }
+  }
+
   return (
     <div className="quiz-scope-scroll flex gap-3 overflow-x-auto -mx-4 px-4 pb-1" style={{ scrollbarWidth: 'none' }}>
       <style>{`.quiz-scope-scroll::-webkit-scrollbar { display: none; }`}</style>
       {items.map((item) => {
-        const meta = META[item.key]
+        const label = labelOf(item.key)
         const isSelected = selected === item.key
         const isEmpty = item.count === 0
         return (
@@ -39,8 +46,8 @@ export default function QuizScopeSelector({
               isSelected ? 'border-primary bg-primary-subtle' : 'border-line bg-white'
             }`}
           >
-            <p className={`font-semibold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{meta.label}</p>
-            <p className="text-xs mt-0.5 text-gray-500">{item.count}問</p>
+            <p className={`font-semibold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{label}</p>
+            <p className="text-xs mt-0.5 text-gray-500">{item.count}{q.scopeItemsSuffix}</p>
           </button>
         )
       })}

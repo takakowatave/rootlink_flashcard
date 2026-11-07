@@ -68,6 +68,7 @@ export type Messages = {
     back: string
     openSearch: string
     share: string
+    openWordPage: string
     closeBanner: string
     correctionPrefix: string
     correctionSuffix: string
@@ -82,6 +83,45 @@ export type Messages = {
     link: (kindLabel: string) => string
     wordLabel: string
     phraseLabel: string
+  }
+  common: {
+    home: string
+    close: string
+    search: string
+    loginRequired: string
+    actionFailed: string
+    updated: string
+    loadMore: (n: number) => string
+  }
+  wordlist: {
+    breadcrumb: string
+    title: string
+    subtitle: string
+    emptyCta: string
+  }
+  quiz: {
+    start: string
+    scopeAll: string
+    scopeUnseen: string
+    scopeReview: string
+    scopeHard: string
+    scopeRecent: string
+    scopeItemsSuffix: string
+    scopeHeader: string
+    donutMastered: string
+    donutUnseen: string
+    donutReview: string
+    donutHard: string
+    settingsTitle: string
+    settingsOpen: string
+    defaultModeLabel: string
+    defaultModeExample: string
+    defaultModeWord: string
+    questionCountLabel: string
+    autoPlayExampleLabel: string
+    autoPlayHeadwordLabel: string
+    stepDecrease: string
+    stepIncrease: string
   }
 }
 
@@ -148,6 +188,7 @@ const ja: Messages = {
     back: '戻る',
     openSearch: '検索を開く',
     share: '共有',
+    openWordPage: '単語ページを開く',
     closeBanner: '閉じる',
     correctionPrefix: 'を',
     correctionSuffix: 'に補正して検索しました',
@@ -162,6 +203,45 @@ const ja: Messages = {
     link: (kindLabel: string) => `この${kindLabel}の内容を報告`,
     wordLabel: '単語',
     phraseLabel: 'フレーズ',
+  },
+  common: {
+    home: 'ホーム',
+    close: '閉じる',
+    search: '検索',
+    loginRequired: 'ログインが必要です',
+    actionFailed: '処理に失敗しました',
+    updated: '更新しました',
+    loadMore: (n: number) => `もっと見る（+${n}）`,
+  },
+  wordlist: {
+    breadcrumb: 'My単語帳',
+    title: 'My単語帳',
+    subtitle: '辞書から単語を検索してオリジナルの単語帳をつくれます。',
+    emptyCta: '辞書から単語を検索してオリジナルの単語帳をつくろう',
+  },
+  quiz: {
+    start: 'はじめる',
+    scopeAll: 'ランダム',
+    scopeUnseen: '未習得',
+    scopeReview: '要復習',
+    scopeHard: '苦手',
+    scopeRecent: 'まとめて',
+    scopeItemsSuffix: '問',
+    scopeHeader: '出題範囲',
+    donutMastered: '習得済',
+    donutUnseen: '未習得',
+    donutReview: '要復習',
+    donutHard: '苦手',
+    settingsTitle: '出題形式の設定',
+    settingsOpen: '出題形式の設定',
+    defaultModeLabel: 'デフォルト表示設定',
+    defaultModeExample: '例文',
+    defaultModeWord: '単語',
+    questionCountLabel: '一回の問題数',
+    autoPlayExampleLabel: '例文音声の自動再生',
+    autoPlayHeadwordLabel: '見出し語音声の自動再生',
+    stepDecrease: '減らす',
+    stepIncrease: '増やす',
   },
 }
 
@@ -228,6 +308,7 @@ const en: Messages = {
     back: 'Back',
     openSearch: 'Open search',
     share: 'Share',
+    openWordPage: 'Open word page',
     closeBanner: 'Close',
     correctionPrefix: 'Searched',
     correctionSuffix: 'instead',
@@ -242,6 +323,45 @@ const en: Messages = {
     link: (kindLabel: string) => `Report an issue with this ${kindLabel}`,
     wordLabel: 'word',
     phraseLabel: 'phrase',
+  },
+  common: {
+    home: 'Home',
+    close: 'Close',
+    search: 'Search',
+    loginRequired: 'Please log in',
+    actionFailed: 'Something went wrong',
+    updated: 'Updated',
+    loadMore: (n: number) => `Show more (+${n})`,
+  },
+  wordlist: {
+    breadcrumb: 'My Wordlist',
+    title: 'My Wordlist',
+    subtitle: 'Search the dictionary to build your own wordlist.',
+    emptyCta: 'Search the dictionary to start building your wordlist',
+  },
+  quiz: {
+    start: 'Start',
+    scopeAll: 'Random',
+    scopeUnseen: 'New',
+    scopeReview: 'Review',
+    scopeHard: 'Tough',
+    scopeRecent: 'Recent',
+    scopeItemsSuffix: '',
+    scopeHeader: 'Question set',
+    donutMastered: 'Mastered',
+    donutUnseen: 'New',
+    donutReview: 'Review',
+    donutHard: 'Tough',
+    settingsTitle: 'Quiz settings',
+    settingsOpen: 'Quiz settings',
+    defaultModeLabel: 'Default side',
+    defaultModeExample: 'Example',
+    defaultModeWord: 'Word',
+    questionCountLabel: 'Questions per round',
+    autoPlayExampleLabel: 'Auto-play example audio',
+    autoPlayHeadwordLabel: 'Auto-play headword audio',
+    stepDecrease: 'Decrease',
+    stepIncrease: 'Increase',
   },
 }
 

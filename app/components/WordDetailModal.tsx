@@ -10,6 +10,7 @@ import { buildShareText } from '@/lib/shareText'
 import { shareViaClipboardAndX, prefetchShareImage } from '@/lib/shareToX'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type Props = {
   word: string
@@ -28,6 +29,8 @@ export default function WordDetailModal({
 }: Props) {
   const [showShareMenu, setShowShareMenu] = useState(false)
   const shareBtnRef = useRef<HTMLButtonElement>(null)
+  const t = messages[displayLocale].word
+  const close = messages[displayLocale].common.close
 
   return (
     <>
@@ -40,14 +43,14 @@ export default function WordDetailModal({
               type="button"
               onClick={onClose}
               className="md:hidden p-2 rounded-full hover:bg-primary-subtle text-muted"
-              aria-label="戻る"
+              aria-label={t.back}
             >
               <MdArrowBackIosNew className="size-6" />
             </button>
             <a
               href={`/word/${encodeURIComponent(word)}`}
               className="hidden md:inline-flex p-2 rounded-full hover:bg-primary-subtle text-muted"
-              aria-label="単語ページを開く"
+              aria-label={t.openWordPage}
             >
               <BsArrowUpRightSquare className="size-5" />
             </a>
@@ -63,7 +66,7 @@ export default function WordDetailModal({
                 setShowShareMenu(true)
               }}
               className="p-2 rounded-full hover:bg-primary-subtle text-muted"
-              aria-label="共有"
+              aria-label={t.share}
             >
               <MdIosShare className="size-6" />
             </button>
@@ -71,7 +74,7 @@ export default function WordDetailModal({
               type="button"
               onClick={onClose}
               className="hidden md:inline-flex p-2 rounded-full hover:bg-primary-subtle text-muted"
-              aria-label="閉じる"
+              aria-label={close}
             >
               <MdClose className="size-6" />
             </button>

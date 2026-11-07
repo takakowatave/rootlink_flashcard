@@ -9,6 +9,8 @@ import TriDonutChart from '@/components/TriDonutChart'
 import QuizScopeSelector, { type QuizScope, type QuizScopeItem } from '@/components/QuizScopeSelector'
 import QuizStatusHelp from '@/components/QuizStatusHelp'
 import Button from '@/components/Button'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 export type QuizDefaultMode = 'example' | 'word'
 
@@ -60,6 +62,8 @@ function ModeSegmented({
   value: QuizDefaultMode
   onChange: (m: QuizDefaultMode) => void
 }) {
+  const locale = useDisplayLocale()
+  const q = messages[locale].quiz
   return (
     <div className="inline-flex border border-divider rounded-[4px] overflow-hidden">
       <button
@@ -69,7 +73,7 @@ function ModeSegmented({
           value === 'example' ? 'bg-primary-light text-primary-hover' : 'bg-white text-dim'
         }`}
       >
-        例文
+        {q.defaultModeExample}
       </button>
       <button
         type="button"
@@ -78,7 +82,7 @@ function ModeSegmented({
           value === 'word' ? 'bg-primary-light text-primary-hover font-bold' : 'bg-white text-dim font-normal'
         }`}
       >
-        単語
+        {q.defaultModeWord}
       </button>
     </div>
   )
@@ -95,6 +99,8 @@ function CountStepper({
   min: number
   max: number
 }) {
+  const locale = useDisplayLocale()
+  const q = messages[locale].quiz
   const STEP = 5
   // 5 刻みに揃える。実質上限も STEP の倍数まで (max=36 なら実質 35)。
   // 既存の保存値が 5 の倍数で無くても (例: 36)、表示は 5 の倍数 (35) に正規化し、
@@ -107,7 +113,7 @@ function CountStepper({
         type="button"
         onClick={() => onChange(Math.max(min, display - STEP))}
         disabled={display <= min}
-        aria-label="減らす"
+        aria-label={q.stepDecrease}
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-subtle transition-colors"
       >
         −
@@ -117,7 +123,7 @@ function CountStepper({
         type="button"
         onClick={() => onChange(Math.min(effMax, display + STEP))}
         disabled={display >= effMax}
-        aria-label="増やす"
+        aria-label={q.stepIncrease}
         className="size-8 rounded-full border border-line bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-lg leading-none hover:bg-primary-subtle transition-colors"
       >
         +
@@ -189,6 +195,9 @@ export default function QuizProgressPanel({
   compact = false,
   afterSettings,
 }: Props) {
+  const locale = useDisplayLocale()
+  const q = messages[locale].quiz
+  const c = messages[locale].common
   const hasSecondary = !!secondaryButtonLabel && !!onSecondaryStart
   const hasScope = scopeItems && selectedScope && onScopeChange
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -210,7 +219,7 @@ export default function QuizProgressPanel({
         {hasScope && (
           <div className={compact ? 'mt-3' : 'mt-4'}>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-400">出題範囲</p>
+              <p className="text-xs font-semibold text-gray-400">{q.scopeHeader}</p>
               {/* compact 時 (native) は凡例が消えるので、? をここに出す */}
               {compact && <QuizStatusHelp />}
             </div>
@@ -231,7 +240,7 @@ export default function QuizProgressPanel({
               onClick={() => setSettingsOpen(true)}
               className="w-full flex items-center justify-between gap-4 px-1 py-1 text-left"
             >
-              <span className="text-sm font-semibold text-gray-800">出題形式の設定</span>
+              <span className="text-sm font-semibold text-gray-800">{q.settingsOpen}</span>
               <HiChevronRight className="size-5 text-muted shrink-0" />
             </button>
           </CardShell>
@@ -241,13 +250,13 @@ export default function QuizProgressPanel({
             onClose={() => setSettingsOpen(false)}
             variant="halfsheet"
             headerLeft={
-              <h2 className="text-base font-bold text-gray-950 pl-2">出題形式の設定</h2>
+              <h2 className="text-base font-bold text-gray-950 pl-2">{q.settingsTitle}</h2>
             }
             headerRight={
               <button
                 onClick={() => setSettingsOpen(false)}
                 className="p-2 rounded-full hover:bg-primary-subtle text-muted"
-                aria-label="閉じる"
+                aria-label={c.close}
               >
                 <MdClose className="size-6" />
               </button>
@@ -256,7 +265,7 @@ export default function QuizProgressPanel({
             <div className="py-2 lg:py-4">
               <CardShell>
                 <SettingRow
-                  label="デフォルト表示設定"
+                  label={q.defaultModeLabel}
                   control={
                     <ModeSegmented
                       value={settings.defaultMode}
@@ -267,7 +276,7 @@ export default function QuizProgressPanel({
               </CardShell>
               <CardShell>
                 <SettingRow
-                  label="一回の問題数"
+                  label={q.questionCountLabel}
                   control={
                     <CountStepper
                       value={settings.questionCount}
@@ -280,24 +289,24 @@ export default function QuizProgressPanel({
               </CardShell>
               <CardShell>
                 <SettingRow
-                  label="例文音声の自動再生"
+                  label={q.autoPlayExampleLabel}
                   control={
                     <ToggleSwitch
                       checked={settings.autoPlayAudio}
                       onChange={settings.onAutoPlayAudioChange}
-                      label="例文音声の自動再生"
+                      label={q.autoPlayExampleLabel}
                     />
                   }
                 />
               </CardShell>
               <CardShell>
                 <SettingRow
-                  label="見出し語音声の自動再生"
+                  label={q.autoPlayHeadwordLabel}
                   control={
                     <ToggleSwitch
                       checked={settings.autoPlayHeadword}
                       onChange={settings.onAutoPlayHeadwordChange}
-                      label="見出し語音声の自動再生"
+                      label={q.autoPlayHeadwordLabel}
                     />
                   }
                 />
