@@ -15,10 +15,14 @@ import { guardQuery } from "@/lib/queryGuard";
 import { PROFILE_CREATED_EVENT } from "@/components/AppShell";
 import { resolveWord } from "@/lib/resolveClient";
 import { emitQuotaExceeded } from "@/lib/quotaExceeded";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const locale = useDisplayLocale();
+  const m = messages[locale].header;
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -153,8 +157,8 @@ const Header = () => {
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {authed === false && (
             <>
-              <Link href="/signup"><Button variant="primary" size="sm">新規登録</Button></Link>
-              <Link href="/login"><Button variant="secondary" size="sm">ログイン</Button></Link>
+              <Link href="/signup"><Button variant="primary" size="sm">{m.signup}</Button></Link>
+              <Link href="/login"><Button variant="secondary" size="sm">{m.login}</Button></Link>
             </>
           )}
           {authed === true && (
