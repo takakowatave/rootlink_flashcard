@@ -504,9 +504,16 @@ export default function EditProfileModal({
 
   const handleLocaleChange = (locale: DisplayLocale) => {
     setDisplayLocale(locale);
+    // 端末横断の最終保存先: profiles.display_locale。localStorage は後方互換の即時反映用キャッシュ。
+    // CLAUDE.md の「localStorage を端末横断ストレージとして扱うのは禁止」ルールに合わせる。
     localStorage.setItem(DISPLAY_LOCALE_STORAGE_KEY, locale);
     window.dispatchEvent(new Event(DISPLAY_LOCALE_EVENT_NAME));
-    toast.success(locale === "ja" ? "和英モードに切り替えました" : "英英モードに切り替えました");
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from("profiles").update({ display_locale: locale }).eq("id", data.user.id).then(() => {})
+      }
+    })
+    toast.success(locale === "ja" ? "和英モードに切り替えました" : "Switched to English-only mode");
   };
 
   if (!isOpen) return null;

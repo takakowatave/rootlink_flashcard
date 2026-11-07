@@ -1,4 +1,6 @@
 // types/profile.ts
+import type { DisplayLocale } from './DisplayLocale'
+
 export interface Profile {
     id: string;
     created_at: string;
@@ -7,4 +9,5 @@ export interface Profile {
     bio: string | null;
     twitter: string | null;
     email: string | null;
+    display_locale: DisplayLocale | null;
 }
