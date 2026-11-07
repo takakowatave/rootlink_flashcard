@@ -25,6 +25,23 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser()
 
+  // ?lang=en / ?lang=ja が付いていたら Cookie に書き、layout.tsx が同じリクエスト内で
+  // <html lang> と各ページの SSR 内容を正しい locale で返せるようにする。
+  // request.cookies にも入れることで、同じリクエスト内の layout.tsx / page.tsx の
+  // cookies().get() から読み取れる。response.cookies はブラウザに戻す用。
+  const lang = request.nextUrl.searchParams.get('lang')?.toLowerCase()
+  if (lang === 'ja' || lang === 'en') {
+    const current = request.cookies.get('rootlink_locale')?.value
+    if (current !== lang) {
+      request.cookies.set('rootlink_locale', lang)
+      response.cookies.set('rootlink_locale', lang, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: 'lax',
+      })
+    }
+  }
+
   return response
 }
 

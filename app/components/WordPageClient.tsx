@@ -1295,8 +1295,9 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
     {/* 収録デッキカルーセル (単語カード直下)。該当なしなら何も出さない
         (フッターリンク集化を回避)。DeckScrollStrip は Dashboard / /decks /
-        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc */}
-    {containingDecks && containingDecks.length > 0 && (
+        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc
+        EN 表示では公式デッキが日本語試験 (TOEIC/英検 等) 中心なので出さない。 */}
+    {displayLocale === 'ja' && containingDecks && containingDecks.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
         <h2 className="text-xl font-bold text-gray-950 mb-3">{tWord.containingDecks}</h2>
         <DeckScrollStrip
@@ -1313,7 +1314,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       </section>
     )}
 
-    {rootPosts && rootPosts.length > 0 && (
+    {displayLocale === 'ja' && rootPosts && rootPosts.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
         <h2 className="text-xl font-bold text-gray-950 mb-3">
           {rootPosts.length === 1 ? tWord.rootMore(rootPosts[0].root) : tWord.rootMoreMulti}
@@ -1332,7 +1333,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       </section>
     )}
 
-    {relatedPosts && relatedPosts.length > 0 && (
+    {displayLocale === 'ja' && relatedPosts && relatedPosts.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-3 mb-6">
         <h2 className="text-sm font-semibold text-muted mb-2">{tWord.relatedPosts}</h2>
         <ul className="space-y-2">

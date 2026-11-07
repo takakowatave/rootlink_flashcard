@@ -166,8 +166,16 @@ export default function EntryCard({
   }
 
   const labels = displayLocale === 'ja'
-    ? { synonyms: '類義語', antonyms: '対義語', derivatives: '派生語', pinThisSense: 'この意味をピン留め', saveToList: 'マイリストに追加', removeFromList: 'マイリストから外す' }
-    : { synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives', pinThisSense: 'Pin this sense', saveToList: 'Add to My List', removeFromList: 'Remove from list' }
+    ? {
+        synonyms: '類義語', antonyms: '対義語', derivatives: '派生語',
+        pinThisSense: 'この意味をピン留め', saveToList: 'マイリストに追加', removeFromList: 'マイリストから外す',
+        audioPlay: '音声を再生', audioUnavailable: '音声はありません', share: '共有',
+      }
+    : {
+        synonyms: 'Synonyms', antonyms: 'Antonyms', derivatives: 'Derivatives',
+        pinThisSense: 'Pin this sense', saveToList: 'Add to My List', removeFromList: 'Remove from list',
+        audioPlay: 'Play audio', audioUnavailable: 'No audio', share: 'Share',
+      }
 
   const orderedDerivatives = [...new Set(derivatives)].sort((a, b) => {
     const score = (v: string) => v.endsWith('ing') ? 3 : v.endsWith('ed') ? 2 : v.endsWith('s') ? 1 : 0
@@ -188,6 +196,13 @@ export default function EntryCard({
           onShare={onShare}
           shareBtnRef={shareBtnRef}
           saveTooltip={{ saved: labels.removeFromList, unsaved: labels.saveToList }}
+          ariaLabels={{
+            audioPlay: labels.audioPlay,
+            audioUnavailable: labels.audioUnavailable,
+            share: labels.share,
+            saved: labels.removeFromList,
+            save: labels.saveToList,
+          }}
           headingLevel="h1"
           tutorialAttr
         />
