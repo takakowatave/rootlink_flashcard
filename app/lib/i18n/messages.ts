@@ -123,6 +123,25 @@ export type Messages = {
     stepDecrease: string
     stepIncrease: string
   }
+  quizSession: {
+    back: string
+    quit: string
+    reveal: string
+    hide: string
+    notYet: string
+    gotIt: string
+    correctCountLabel: string
+    next: string
+    wrong: (n: number) => string
+    correct: (n: number) => string
+    retry: (n: number) => string
+    howToTitle: string
+    howToBody: string
+    howToStart: string
+    loading: string
+    noSavedWords: string
+    goToWordlist: string
+  }
 }
 
 const ja: Messages = {
@@ -243,6 +262,25 @@ const ja: Messages = {
     stepDecrease: '減らす',
     stepIncrease: '増やす',
   },
+  quizSession: {
+    back: '戻る',
+    quit: '終了',
+    reveal: '解説を見る',
+    hide: '解説を閉じる',
+    notYet: 'まだ',
+    gotIt: '覚えた',
+    correctCountLabel: 'わかった数',
+    next: '次へ',
+    wrong: (n: number) => `わからなかった（${n}語）`,
+    correct: (n: number) => `わかった（${n}語）`,
+    retry: (n: number) => `${n}問を復習`,
+    howToTitle: '使い方',
+    howToBody: '単語や例文を見て意味を思い出したら「覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。',
+    howToStart: 'はじめる',
+    loading: '読み込み中...',
+    noSavedWords: '保存した単語がありません',
+    goToWordlist: '単語リストへ',
+  },
 }
 
 const en: Messages = {
@@ -362,6 +400,25 @@ const en: Messages = {
     autoPlayHeadwordLabel: 'Auto-play headword audio',
     stepDecrease: 'Decrease',
     stepIncrease: 'Increase',
+  },
+  quizSession: {
+    back: 'Back',
+    quit: 'Quit',
+    reveal: 'Show details',
+    hide: 'Hide details',
+    notYet: 'Not yet',
+    gotIt: 'Got it',
+    correctCountLabel: 'Correct',
+    next: 'Next',
+    wrong: (n: number) => `Missed (${n})`,
+    correct: (n: number) => `Correct (${n})`,
+    retry: (n: number) => `Review ${n}`,
+    howToTitle: 'How it works',
+    howToBody: 'Look at the word or example and tap "Got it" if you remember the meaning, or "Not yet" if not. You can retry only the words you missed.',
+    howToStart: 'Start',
+    loading: 'Loading...',
+    noSavedWords: 'No saved words yet',
+    goToWordlist: 'Go to wordlist',
   },
 }
 
