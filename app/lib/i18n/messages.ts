@@ -170,6 +170,45 @@ export type Messages = {
     shareStreakText: (streak: number) => string
     shareLevelUpText: (level: number, streak: number) => string
   }
+  paywall: {
+    title: string
+    subtitle: string
+    offeringError: string
+    recommended: string
+    yearlyPlan: string
+    monthlyPlan: string
+    perYear: string
+    perMonth: string
+    monthlyEquivalent: (v: string) => string
+    yearlyDiscount: (v: string) => string
+    trialCta: string
+    monthlyCta: string
+    yearlyCta: string
+    processing: string
+    featureDecks: (count: number, totalWords: string) => string
+    featureDecksLoading: string
+    featureUnlimited: string
+    freePlanLimit: (n: number) => string
+    restore: string
+    restoring: string
+    autoRenewTitle: string
+    autoRenewStart: string
+    autoRenewContinue: string
+    autoRenewMonthly: (price: string) => string
+    autoRenewYearly: (price: string) => string
+    autoRenewAfterTrial: string
+    terms: string
+    privacy: string
+    close: string
+    billingIos: [string, string, string]
+    billingAndroid: [string, string, string]
+    billingWeb: [string, string, string]
+    nativePurchaseFailed: string
+    nativePurchaseSucceeded: string
+    nativeRestoreFailed: string
+    nativeNothingToRestore: string
+    nativeRestoreSucceeded: string
+  }
 }
 
 const ja: Messages = {
@@ -337,6 +376,57 @@ const ja: Messages = {
     shareStreakText: (streak: number) => `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`,
     shareLevelUpText: (level: number, streak: number) => `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`,
   },
+  paywall: {
+    title: 'プランのアップグレード',
+    subtitle: '有料デッキ・クイズ・辞書が使い放題。いつでも解約できます。',
+    offeringError: 'プラン情報の取得に失敗しました。しばらくしてからもう一度お試しください。',
+    recommended: 'おすすめ',
+    yearlyPlan: '年額プラン',
+    monthlyPlan: '月額プラン',
+    perYear: ' / 年',
+    perMonth: ' / 月',
+    monthlyEquivalent: (v: string) => `月あたり${v}`,
+    yearlyDiscount: (v: string) => `年${v}お得`,
+    trialCta: '14日間無料ではじめる',
+    monthlyCta: '月額プランで始める',
+    yearlyCta: '年額プランで始める',
+    processing: '処理中...',
+    featureDecks: (count: number, totalWords: string) => `✓ 有料デッキ${count}本(${totalWords}語)が使い放題`,
+    featureDecksLoading: '✓ 有料デッキが使い放題',
+    featureUnlimited: '✓ 辞書で調べた単語を無制限に保存',
+    freePlanLimit: (n: number) => `無料プランは${n}件まで`,
+    restore: '購入を復元',
+    restoring: '復元中...',
+    autoRenewTitle: '自動更新について',
+    autoRenewStart: '選択したプランで自動的に課金が開始されます。',
+    autoRenewContinue: '選択したプランで自動的に課金が継続されます。',
+    autoRenewMonthly: (price: string) => `■ 月額プラン ${price} / 月`,
+    autoRenewYearly: (price: string) => `■ 年額プラン ${price} / 年`,
+    autoRenewAfterTrial: '（14日間無料後）',
+    terms: '利用規約',
+    privacy: 'プライバシーポリシー',
+    close: '閉じる',
+    billingIos: [
+      '支払いは購入確定時に Apple ID に請求されます',
+      '自動更新は現在の期間終了の24時間前までにキャンセルしない限り継続されます',
+      'App Store の [設定] → [Apple ID] → [サブスクリプション] からいつでも解約できます',
+    ],
+    billingAndroid: [
+      '支払いは購入確定時に Google アカウントに請求されます',
+      '自動更新は現在の期間終了の24時間前までにキャンセルしない限り継続されます',
+      'Google Play の [アカウント] → [お支払いと定期購入] → [定期購入] からいつでも解約できます',
+    ],
+    billingWeb: [
+      '支払いは Stripe を通じて決済されます',
+      '自動更新は現在の期間終了までにキャンセルしない限り継続されます',
+      'マイページの [プランを管理] からいつでも解約できます',
+    ],
+    nativePurchaseFailed: '購入に失敗しました',
+    nativePurchaseSucceeded: 'プレミアム開始しました',
+    nativeRestoreFailed: '復元に失敗しました',
+    nativeNothingToRestore: '復元できる購入はありません',
+    nativeRestoreSucceeded: '購入を復元しました',
+  },
 }
 
 const en: Messages = {
@@ -503,6 +593,57 @@ const en: Messages = {
     periodAll: 'All time',
     shareStreakText: (streak: number) => `${streak}-day English vocabulary streak 🔥\n\n#RootLink #Vocabulary #Etymology`,
     shareLevelUpText: (level: number, streak: number) => `Leveled up to Lv.${level} on RootLink 🌱 ${streak}-day streak\n\n#RootLink #Vocabulary #Etymology`,
+  },
+  paywall: {
+    title: 'Upgrade your plan',
+    subtitle: 'Unlimited access to paid decks, quizzes, and the dictionary. Cancel anytime.',
+    offeringError: 'Could not load plan information. Please try again shortly.',
+    recommended: 'Recommended',
+    yearlyPlan: 'Yearly plan',
+    monthlyPlan: 'Monthly plan',
+    perYear: ' / year',
+    perMonth: ' / month',
+    monthlyEquivalent: (v: string) => `${v} / month`,
+    yearlyDiscount: (v: string) => `Save ${v} per year`,
+    trialCta: 'Start 14-day free trial',
+    monthlyCta: 'Start monthly plan',
+    yearlyCta: 'Start yearly plan',
+    processing: 'Processing...',
+    featureDecks: (count: number, totalWords: string) => `✓ Unlimited access to ${count} paid decks (${totalWords} words)`,
+    featureDecksLoading: '✓ Unlimited access to paid decks',
+    featureUnlimited: '✓ Save unlimited words from the dictionary',
+    freePlanLimit: (n: number) => `Free plan is limited to ${n} words`,
+    restore: 'Restore purchase',
+    restoring: 'Restoring...',
+    autoRenewTitle: 'About auto-renewal',
+    autoRenewStart: 'Your selected plan will begin billing automatically.',
+    autoRenewContinue: 'Your selected plan will continue billing automatically.',
+    autoRenewMonthly: (price: string) => `■ Monthly plan ${price} / month`,
+    autoRenewYearly: (price: string) => `■ Yearly plan ${price} / year`,
+    autoRenewAfterTrial: ' (after 14-day free trial)',
+    terms: 'Terms',
+    privacy: 'Privacy',
+    close: 'Close',
+    billingIos: [
+      'Payment will be charged to your Apple ID at confirmation of purchase',
+      'Auto-renewal continues unless cancelled at least 24 hours before the end of the current period',
+      'You can cancel anytime from App Store → Settings → Apple ID → Subscriptions',
+    ],
+    billingAndroid: [
+      'Payment will be charged to your Google account at confirmation of purchase',
+      'Auto-renewal continues unless cancelled at least 24 hours before the end of the current period',
+      'You can cancel anytime from Google Play → Account → Payments and subscriptions → Subscriptions',
+    ],
+    billingWeb: [
+      'Payment is processed via Stripe',
+      'Auto-renewal continues unless cancelled before the end of the current period',
+      'You can cancel anytime from "Manage plan" on your profile',
+    ],
+    nativePurchaseFailed: 'Purchase failed',
+    nativePurchaseSucceeded: 'Premium activated',
+    nativeRestoreFailed: 'Restore failed',
+    nativeNothingToRestore: 'No purchases to restore',
+    nativeRestoreSucceeded: 'Purchase restored',
   },
 }
 

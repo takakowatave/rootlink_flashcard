@@ -9,6 +9,8 @@ import PrivacyContent from "@/components/PrivacyContent"
 import { supabase } from "@/lib/supabaseClient"
 import { FREE_PLAN_LIMIT } from "@/lib/supabaseApi"
 import { toShortName, sortDecksByDifficulty } from "@/lib/deckDisplay"
+import { useDisplayLocale } from "@/lib/useDisplayLocale"
+import { messages } from "@/lib/i18n/messages"
 
 // Paywall の見た目・文言は Android / iOS / Web で完全に共通。
 // 違うのは (1) 購入処理 (2) 解約案内文だけ。ここでは表示層だけを持ち、
@@ -50,26 +52,6 @@ type PaidDeckSummary = {
   displayNames: string[]
 }
 
-// プラットフォーム別の請求・解約案内。
-// ここだけプラットフォームで差し替える。他の文言は全 3 面で同一。
-const BILLING_LINES: Record<PaywallPlatform, string[]> = {
-  ios: [
-    "支払いは購入確定時に Apple ID に請求されます",
-    "自動更新は現在の期間終了の24時間前までにキャンセルしない限り継続されます",
-    "App Store の [設定] → [Apple ID] → [サブスクリプション] からいつでも解約できます",
-  ],
-  android: [
-    "支払いは購入確定時に Google アカウントに請求されます",
-    "自動更新は現在の期間終了の24時間前までにキャンセルしない限り継続されます",
-    "Google Play の [アカウント] → [お支払いと定期購入] → [定期購入] からいつでも解約できます",
-  ],
-  web: [
-    "支払いは Stripe を通じて決済されます",
-    "自動更新は現在の期間終了までにキャンセルしない限り継続されます",
-    "マイページの [プランを管理] からいつでも解約できます",
-  ],
-}
-
 export default function PaywallContent({
   platform,
   loading = false,
@@ -83,6 +65,13 @@ export default function PaywallContent({
   isRestoring = false,
   onRestore,
 }: Props) {
+  const locale = useDisplayLocale()
+  const p = messages[locale].paywall
+  const BILLING_LINES: Record<PaywallPlatform, readonly string[]> = {
+    ios: p.billingIos,
+    android: p.billingAndroid,
+    web: p.billingWeb,
+  }
   const [openDoc, setOpenDoc] = useState<LegalDoc>(null)
   // 自動更新についての開閉。初期は閉じる。
   const [autoRenewOpen, setAutoRenewOpen] = useState(false)
@@ -114,8 +103,8 @@ export default function PaywallContent({
   }, [])
 
   // ボタン文言。トライアルがあれば「14日間無料ではじめる」、無ければ「〇〇プランで始める」。
-  const monthlyCtaLabel = monthly?.hasFreeTrial ? "14日間無料ではじめる" : "月額プランで始める"
-  const yearlyCtaLabel = yearly?.hasFreeTrial ? "14日間無料ではじめる" : "年額プランで始める"
+  const monthlyCtaLabel = monthly?.hasFreeTrial ? p.trialCta : p.monthlyCta
+  const yearlyCtaLabel = yearly?.hasFreeTrial ? p.trialCta : p.yearlyCta
 
   const purchaseDisabled = purchasingPlan !== null || loading
 
@@ -128,38 +117,38 @@ export default function PaywallContent({
         className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">プランのアップグレード</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">{p.title}</h2>
         <p className="text-sm text-gray-500 mb-4">
-          有料デッキ・クイズ・辞書が使い放題。いつでも解約できます。
+          {p.subtitle}
         </p>
 
         {offeringError ? (
           <div className="text-sm text-gray-500 mb-4">
-            プラン情報の取得に失敗しました。しばらくしてからもう一度お試しください。
+            {p.offeringError}
           </div>
         ) : (
           <>
             {/* 年額プラン (枠を強調) */}
             <div className="relative border border-line rounded-xl p-4 mb-2">
               <span className="absolute -top-2 right-3 inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 shadow-sm">
-                おすすめ
+                {p.recommended}
               </span>
               <div className="flex items-baseline justify-between mb-1">
-                <span className="font-semibold text-gray-900 text-sm">年額プラン</span>
+                <span className="font-semibold text-gray-900 text-sm">{p.yearlyPlan}</span>
                 <div>
                   <span className="text-xl font-bold text-gray-900">
                     {loading ? "…" : yearly?.priceString ?? ""}
                   </span>
-                  <span className="text-xs text-gray-500"> / 年</span>
+                  <span className="text-xs text-gray-500">{p.perYear}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs mb-3">
                 {yearly?.monthlyEquivalent && (
-                  <span className="text-gray-600">月あたり{yearly.monthlyEquivalent}</span>
+                  <span className="text-gray-600">{p.monthlyEquivalent(yearly.monthlyEquivalent)}</span>
                 )}
                 {yearly?.savings && (
                   <span className="inline-flex items-center h-5 px-2 rounded-full font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm">
-                    年{yearly.savings}お得
+                    {p.yearlyDiscount(yearly.savings)}
                   </span>
                 )}
               </div>
@@ -171,19 +160,19 @@ export default function PaywallContent({
                 radius="lg"
                 fullWidth
               >
-                {purchasingPlan === "yearly" ? "処理中..." : yearlyCtaLabel}
+                {purchasingPlan === "yearly" ? p.processing : yearlyCtaLabel}
               </Button>
             </div>
 
             {/* 月額プラン */}
             <div className="border border-line rounded-xl p-4 mb-4">
               <div className="flex items-baseline justify-between mb-3">
-                <span className="font-semibold text-gray-900 text-sm">月額プラン</span>
+                <span className="font-semibold text-gray-900 text-sm">{p.monthlyPlan}</span>
                 <div>
                   <span className="text-xl font-bold text-gray-900">
                     {loading ? "…" : monthly?.priceString ?? ""}
                   </span>
-                  <span className="text-xs text-gray-500"> / 月</span>
+                  <span className="text-xs text-gray-500">{p.perMonth}</span>
                 </div>
               </div>
               <Button
@@ -194,7 +183,7 @@ export default function PaywallContent({
                 radius="lg"
                 fullWidth
               >
-                {purchasingPlan === "monthly" ? "処理中..." : monthlyCtaLabel}
+                {purchasingPlan === "monthly" ? p.processing : monthlyCtaLabel}
               </Button>
             </div>
 
@@ -202,20 +191,20 @@ export default function PaywallContent({
             <ul className="text-sm text-gray-700 space-y-2 mb-4 px-1">
               <li>
                 <span className="font-medium">
-                  ✓ 有料デッキ
-                  {paidDecks ? `${paidDecks.count}本(${paidDecks.totalWords.toLocaleString()}語)` : "…"}
-                  が使い放題
+                  {paidDecks
+                    ? p.featureDecks(paidDecks.count, paidDecks.totalWords.toLocaleString())
+                    : p.featureDecksLoading}
                 </span>
                 {paidDecks && paidDecks.displayNames.length > 0 && (
                   <span className="block pl-4 text-xs text-gray-500 mt-0.5">
-                    {paidDecks.displayNames.join("、")}
+                    {paidDecks.displayNames.join(locale === 'ja' ? '、' : ', ')}
                   </span>
                 )}
               </li>
               <li className="font-medium">
-                ✓ 辞書で調べた単語を無制限に保存
+                {p.featureUnlimited}
                 <span className="block pl-4 text-xs text-gray-500 mt-0.5 font-normal">
-                  無料プランは{FREE_PLAN_LIMIT}件まで
+                  {p.freePlanLimit(FREE_PLAN_LIMIT)}
                 </span>
               </li>
             </ul>
@@ -227,7 +216,7 @@ export default function PaywallContent({
                 disabled={isRestoring}
                 className="w-full text-xs text-gray-500 underline py-1 mb-4 disabled:opacity-40"
               >
-                {isRestoring ? "復元中..." : "購入を復元"}
+                {isRestoring ? p.restoring : p.restore}
               </button>
             )}
 
@@ -239,18 +228,17 @@ export default function PaywallContent({
                 aria-expanded={autoRenewOpen}
                 className="w-full flex items-center justify-between text-xs font-semibold text-gray-600 py-1"
               >
-                自動更新について
+                {p.autoRenewTitle}
                 {autoRenewOpen ? <HiChevronUp className="size-4" /> : <HiChevronDown className="size-4" />}
               </button>
               {autoRenewOpen && (
                 <div className="text-[11px] text-gray-500 leading-relaxed space-y-2 pt-2">
                   <p>
-                    選択したプランで自動的に課金が
-                    {monthly?.hasFreeTrial || yearly?.hasFreeTrial ? "開始されます" : "継続されます"}。
-                    <br />■ 月額プラン {monthly?.priceString ?? ""} / 月
-                    {monthly?.hasFreeTrial && "（14日間無料後）"}
-                    <br />■ 年額プラン {yearly?.priceString ?? ""} / 年
-                    {yearly?.hasFreeTrial && "（14日間無料後）"}
+                    {(monthly?.hasFreeTrial || yearly?.hasFreeTrial) ? p.autoRenewStart : p.autoRenewContinue}
+                    <br />{p.autoRenewMonthly(monthly?.priceString ?? '')}
+                    {monthly?.hasFreeTrial && p.autoRenewAfterTrial}
+                    <br />{p.autoRenewYearly(yearly?.priceString ?? '')}
+                    {yearly?.hasFreeTrial && p.autoRenewAfterTrial}
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     {BILLING_LINES[platform].map((line) => (
@@ -263,18 +251,19 @@ export default function PaywallContent({
           </>
         )}
 
-        {/* 利用規約・プライバシーポリシー (App Store 審査 3.1.2 対応: トグル内に隠さず常に表示) */}
+        {/* 利用規約・プライバシーポリシー (App Store 審査 3.1.2 対応: トグル内に隠さず常に表示)
+            本文は W3 で英訳予定。EN ユーザーが開いても現時点は日本語のまま。 */}
         <div className="flex justify-center gap-4 text-xs text-gray-500 mb-3">
           <button type="button" onClick={() => setOpenDoc("terms")} className="underline">
-            利用規約
+            {p.terms}
           </button>
           <button type="button" onClick={() => setOpenDoc("privacy")} className="underline">
-            プライバシーポリシー
+            {p.privacy}
           </button>
         </div>
 
         <Button onClick={onClose} variant="secondary" size="md" radius="lg" fullWidth>
-          閉じる
+          {p.close}
         </Button>
       </div>
 
@@ -286,7 +275,7 @@ export default function PaywallContent({
             type="button"
             onClick={() => setOpenDoc(null)}
             className="p-2 -mr-1 rounded-full hover:bg-primary-subtle text-muted"
-            aria-label="閉じる"
+            aria-label={p.close}
           >
             <HiX className="size-5" />
           </button>

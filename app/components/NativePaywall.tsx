@@ -10,6 +10,8 @@ import {
   restoreNativePurchases,
   type PaywallPlanInfo,
 } from "@/lib/revenuecat"
+import { useDisplayLocale } from "@/lib/useDisplayLocale"
+import { messages } from "@/lib/i18n/messages"
 
 type Props = {
   variant: Exclude<PaywallVariant, "none">
@@ -91,6 +93,8 @@ function shouldForceJpy(currencyCode: string | null): boolean {
 }
 
 export default function NativePaywall({ variant, onClose }: Props) {
+  const locale = useDisplayLocale()
+  const p = messages[locale].paywall
   const [monthly, setMonthly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
   const [yearly, setYearly] = useState<PaywallPlanInfo>(EMPTY_PLAN)
   const [loading, setLoading] = useState(true)
@@ -146,10 +150,10 @@ export default function NativePaywall({ variant, onClose }: Props) {
       const result = await purchaseNativePlan(plan)
       if (result.cancelled) return // ユーザーが閉じただけ → 無言で戻す
       if (!result.ok) {
-        toast.error("購入に失敗しました")
+        toast.error(p.nativePurchaseFailed)
         return
       }
-      toast.success("プレミアム開始しました")
+      toast.success(p.nativePurchaseSucceeded)
       // 既知のトレードオフ: Cloud Run webhook が subscriptions を更新する前に reload すると、
       // getUserPlan がまだ free を返してロックが解けないことがある。500ms では webhook 到達が
       // 間に合わない場合もあり得る。恒久対応は Purchases.getCustomerInfo() の entitlement で
@@ -167,14 +171,14 @@ export default function NativePaywall({ variant, onClose }: Props) {
     try {
       const result = await restoreNativePurchases()
       if (!result.ok) {
-        toast.error("復元に失敗しました")
+        toast.error(p.nativeRestoreFailed)
         return
       }
       if (!result.hasActiveEntitlement) {
-        toast.error("復元できる購入はありません")
+        toast.error(p.nativeNothingToRestore)
         return
       }
-      toast.success("購入を復元しました")
+      toast.success(p.nativeRestoreSucceeded)
       await new Promise((r) => setTimeout(r, 500))
       window.location.reload()
     } finally {
