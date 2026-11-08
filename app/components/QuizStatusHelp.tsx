@@ -3,16 +3,34 @@
 import { useEffect, useState } from 'react'
 import { HiQuestionMarkCircle } from 'react-icons/hi'
 import { BsX } from 'react-icons/bs'
-
-const CATEGORIES: { label: string; dot: string; desc: string }[] = [
-  { label: '未習得', dot: 'bg-line',        desc: 'まだ出題されていない単語' },
-  { label: '要復習', dot: 'bg-quiz-review', desc: '直前の復習で間違えた単語' },
-  { label: '習得済', dot: 'bg-primary-mid', desc: '直前の復習で正解した単語' },
-  { label: '苦手',   dot: 'bg-quiz-hard',   desc: 'これまでに2回以上間違えた単語' },
-]
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 
 export default function QuizStatusHelp() {
   const [open, setOpen] = useState(false)
+  const locale = useDisplayLocale()
+  const L = locale === 'en'
+    ? {
+        aria: 'Open status guide',
+        close: 'Close',
+        title: 'What each status means',
+        cats: [
+          { label: 'New',      dot: 'bg-line',        desc: 'Words you have not been quizzed on yet' },
+          { label: 'Review',   dot: 'bg-quiz-review', desc: 'Words you got wrong in your last session' },
+          { label: 'Mastered', dot: 'bg-primary-mid', desc: 'Words you got right in your last session' },
+          { label: 'Tough',    dot: 'bg-quiz-hard',   desc: 'Words you have missed 2 or more times' },
+        ],
+      }
+    : {
+        aria: 'ステータスの見方を開く',
+        close: '閉じる',
+        title: 'ステータスの見方',
+        cats: [
+          { label: '未習得', dot: 'bg-line',        desc: 'まだ出題されていない単語' },
+          { label: '要復習', dot: 'bg-quiz-review', desc: '直前の復習で間違えた単語' },
+          { label: '習得済', dot: 'bg-primary-mid', desc: '直前の復習で正解した単語' },
+          { label: '苦手',   dot: 'bg-quiz-hard',   desc: 'これまでに2回以上間違えた単語' },
+        ],
+      }
 
   useEffect(() => {
     if (!open) return
@@ -27,7 +45,7 @@ export default function QuizStatusHelp() {
         type="button"
         onClick={() => setOpen(true)}
         className="text-primary hover:opacity-80 leading-none"
-        aria-label="ステータスの見方を開く"
+        aria-label={L.aria}
       >
         <HiQuestionMarkCircle className="size-5" />
       </button>
@@ -45,13 +63,13 @@ export default function QuizStatusHelp() {
               type="button"
               onClick={() => setOpen(false)}
               className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary-subtle text-gray-400"
-              aria-label="閉じる"
+              aria-label={L.close}
             >
               <BsX size={24} />
             </button>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">ステータスの見方</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">{L.title}</h2>
             <ul className="flex flex-col gap-4">
-              {CATEGORIES.map(c => (
+              {L.cats.map(c => (
                 <li key={c.label} className="flex items-start gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${c.dot}`} />
                   <div>

@@ -18,6 +18,8 @@ import {
   getOnboardingTotalSteps,
   type OnboardingStepId,
 } from '@/lib/onboardingSteps'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 
 // Figma 2613:6938 (native app) の 3 ステップ:
 //   step 1  2609:6530  ウェルカム (ロゴ + ヒーロー)
@@ -43,6 +45,10 @@ export default function OnboardingPage() {
 
 function OnboardingPageInner() {
   const router = useRouter()
+  const locale = useDisplayLocale()
+  const toastCopy = locale === 'en'
+    ? { startFailed: 'Failed to start. Please try again later.', sessionExpired: 'Your session expired. Please try again.', nameSaveFailed: 'Failed to save name' }
+    : { startFailed: 'はじめるのに失敗しました。しばらくしてもう一度お試しください', sessionExpired: 'セッションが切れました。もう一度お試しください', nameSaveFailed: '名前の保存に失敗しました' }
   const searchParams = useSearchParams()
   const resume = searchParams?.get('resume')
   const [ready, setReady] = useState(false)
@@ -114,13 +120,13 @@ function OnboardingPageInner() {
       if (!session?.user) {
         const { error } = await supabase.auth.signInAnonymously()
         if (error) {
-          toast.error('はじめるのに失敗しました。しばらくしてもう一度お試しください')
+          toast.error(toastCopy.startFailed)
           return
         }
       }
       setStep('accountName')
     } catch {
-      toast.error('はじめるのに失敗しました。しばらくしてもう一度お試しください')
+      toast.error(toastCopy.startFailed)
     } finally {
       setStarting(false)
     }
@@ -134,7 +140,7 @@ function OnboardingPageInner() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        toast.error('セッションが切れました。もう一度お試しください')
+        toast.error(toastCopy.sessionExpired)
         setStep('welcome')
         return
       }
@@ -143,7 +149,7 @@ function OnboardingPageInner() {
         .update({ username: trimmed })
         .eq('id', user.id)
       if (error) {
-        toast.error('名前の保存に失敗しました')
+        toast.error(toastCopy.nameSaveFailed)
         return
       }
       window.dispatchEvent(new CustomEvent(PROFILE_CREATED_EVENT))
@@ -181,6 +187,10 @@ function OnboardingPageInner() {
 }
 
 function WelcomeStep({ onNext }: { onNext: () => void }) {
+  const locale = useDisplayLocale()
+  const T = locale === 'en'
+    ? { badge: 'etymology', suffix: 'learn through', subtitle: 'English vocabulary dictionary', next: 'Next', haveAccount: 'Already have an account? Log in' }
+    : { badge: '語源', suffix: 'で覚える', subtitle: '英単語・辞書アプリ', next: '次へ', haveAccount: 'すでにアカウントをお持ちの方はログイン' }
   return (
     <>
       <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-12 pt-6 pb-3 px-6">
@@ -191,15 +201,15 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
             <div className="flex items-baseline gap-2 sm:gap-3">
               <span className="inline-flex items-center rounded-[10px] sm:rounded-[14px] bg-white border-t-2 border-l-2 border-r-[5px] border-b-[6px] sm:border-t-[3px] sm:border-l-[3px] sm:border-r-[7px] sm:border-b-[8px] border-solid border-[#ffb86a] px-2 sm:px-3 pt-1.5 pb-2.5 sm:pt-2 sm:pb-3 leading-none">
                 <span className="text-[36px] sm:text-[54px] font-bold text-[#ff8904] leading-none">
-                  語源
+                  {T.badge}
                 </span>
               </span>
               <span className="text-[28px] sm:text-[42px] font-bold text-gray-950 leading-none">
-                で覚える
+                {T.suffix}
               </span>
             </div>
             <p className="text-[26px] sm:text-[40px] font-bold text-gray-950 leading-none">
-              英単語・辞書アプリ
+              {T.subtitle}
             </p>
           </div>
         </div>
@@ -227,10 +237,10 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
           radius="full"
           className="h-[50px] text-base font-medium"
         >
-          次へ
+          {T.next}
         </Button>
         <Link href="/login" className="text-sm text-primary underline">
-          すでにアカウントをお持ちの方はログイン
+          {T.haveAccount}
         </Link>
       </div>
     </>
@@ -246,6 +256,10 @@ function TermsStep({
   onAgree: () => void
   agreeing: boolean
 }) {
+  const locale = useDisplayLocale()
+  const T = locale === 'en'
+    ? { back: 'Back', agreeing: 'Starting...', agree: 'Agree and start' }
+    : { back: '戻る', agreeing: 'はじめています...', agree: '同意してはじめる' }
   // Figma 2609:6552: 利用規約画面は header に arrow のみで progress bar は無い。
   return (
     <div className="flex flex-col flex-1 bg-slate-50 min-h-0">
@@ -253,7 +267,7 @@ function TermsStep({
         <button
           type="button"
           onClick={onBack}
-          aria-label="戻る"
+          aria-label={T.back}
           className="p-2 rounded-full text-gray-700 hover:bg-primary-subtle"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -276,7 +290,7 @@ function TermsStep({
           radius="full"
           className="h-[50px] text-base font-medium"
         >
-          {agreeing ? 'はじめています...' : '同意してはじめる'}
+          {agreeing ? T.agreeing : T.agree}
         </Button>
       </div>
     </div>
@@ -300,6 +314,10 @@ function AccountNameStep({
   stepIndex: number
   totalSteps: number
 }) {
+  const locale = useDisplayLocale()
+  const T = locale === 'en'
+    ? { title: 'What should we call you?', placeholder: 'Guest', helper: (n: number) => `Up to ${n} characters`, saving: 'Saving...', next: 'Next' }
+    : { title: 'アカウント名を教えてください', placeholder: 'ゲスト', helper: (n: number) => `${n} 文字以内で設定してください`, saving: '保存中...', next: '次へ' }
   const trimmed = value.trim()
   const canProceed = trimmed.length > 0 && trimmed.length <= NAME_MAX
   return (
@@ -311,19 +329,19 @@ function AccountNameStep({
       />
       <div className="flex-1 overflow-y-auto px-4 pt-6">
         <h2 className="text-xl font-semibold text-center text-gray-950">
-          アカウント名を教えてください
+          {T.title}
         </h2>
         <div className="pt-6">
           <TextInput
             type="text"
-            placeholder="ゲスト"
+            placeholder={T.placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             maxLength={NAME_MAX}
             autoFocus
           />
           <div className="flex justify-between text-sm text-gray-950 pt-1">
-            <span>{NAME_MAX} 文字以内で設定してください</span>
+            <span>{T.helper(NAME_MAX)}</span>
             <span className="tabular-nums">{trimmed.length} / {NAME_MAX}</span>
           </div>
         </div>
@@ -340,7 +358,7 @@ function AccountNameStep({
           radius="full"
           className="h-[50px] text-base font-medium"
         >
-          {saving ? '保存中...' : '次へ'}
+          {saving ? T.saving : T.next}
         </Button>
       </div>
     </div>
