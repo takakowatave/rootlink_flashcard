@@ -13,7 +13,7 @@ import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { buildPhraseSpanRegex, displayPhrase } from '@/lib/phraseDisplay'
 import { jaHighlightMatches } from '@/lib/jaHighlight'
 import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
-import { POS_LABEL_JA } from '@/lib/pos'
+import { getPosLabel } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
@@ -383,7 +383,7 @@ function CardView({
               <div>
                 {card.pos && (
                   <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
-                    {POS_LABEL_JA[card.pos] ?? card.pos}
+                    {getPosLabel(card.pos, locale)}
                   </span>
                 )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>

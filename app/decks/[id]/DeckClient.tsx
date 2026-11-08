@@ -14,6 +14,7 @@ import { buildPronunciation, buildSenses } from '@/lib/dictionaryRender'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import { detectDisplayLocale } from '@/lib/displayLocale'
+import { messages } from '@/lib/i18n/messages'
 import QuizSession, { buildQuizCards, shuffleCards } from '@/components/QuizSession'
 import type { QuizEntry } from '@/components/QuizSession'
 import { type QuizScope } from '@/components/QuizScopeSelector'
@@ -96,6 +97,9 @@ export default function DeckClient({
   // 初期値は server と client で必ず一致させる（hydration mismatch 回避）。
   // localStorage の値は mount 後に反映する。
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
+  const dt = messages[displayLocale].deckDetail
+  const ct = messages[displayLocale].common
+  const st = messages[displayLocale].quizSession
 
   useEffect(() => {
     setIsNative(isNativePlatform())
@@ -231,7 +235,7 @@ export default function DeckClient({
       return
     }
     const result = await toggleSaveStatus({ word: entry.word, dictionary: entry.dictionary ?? undefined })
-    if (!result.success) { toast.error('処理に失敗しました'); return }
+    if (!result.success) { toast.error(ct.actionFailed); return }
     setSavedWords(prev => {
       const s = new Set(prev)
       if (s.has(entry.word)) s.delete(entry.word); else s.add(entry.word)
@@ -342,7 +346,7 @@ export default function DeckClient({
     }
     const cards = buildQuizCards(enriched).slice(0, take)
     if (cards.length === 0) {
-      toast.error('クイズできる単語がありませんでした')
+      toast.error(dt.noQuizWords)
       return
     }
     const sessionEntries: QuizEntry[] = cards.map(c =>
@@ -434,14 +438,14 @@ export default function DeckClient({
 
   const breadcrumbItems = chapter != null
     ? [
-        { label: 'ホーム', href: '/' },
-        { label: '教材一覧', href: '/decks' },
+        { label: ct.home, href: '/' },
+        { label: dt.breadcrumbList, href: '/decks' },
         { label: deck.name, href: `/decks/${slugForUrl}` },
         { label: chapterLabel(chapter) },
       ]
     : [
-        { label: 'ホーム', href: '/' },
-        { label: '教材一覧', href: '/decks' },
+        { label: ct.home, href: '/' },
+        { label: dt.breadcrumbList, href: '/decks' },
         { label: deck.name },
       ]
 
@@ -452,23 +456,23 @@ export default function DeckClient({
   //   デッキ画面: 履歴あり=「前回の続き / Chapter NN」/ 履歴なし=「Chapter 01からはじめる」(1 行)
   //   章画面   : 「はじめる」(ロック時は premium 誘導)
   const buttonLabel = loading
-    ? '読み込み中...'
+    ? st.loading
     : chapter == null
       ? (
           hasResumeHistory && resumeChapter != null
             ? (
                 <span className="flex flex-col items-center leading-tight">
-                  <span>前回の続き</span>
+                  <span>{dt.continueLast}</span>
                   <span className="text-xs font-normal opacity-90">{chapterLabel(resumeChapter)}</span>
                 </span>
               )
-            : 'Chapter 01からはじめる'
+            : dt.startChapter1
         )
       : isLocked
-        ? '🔒 プレミアム登録ではじめる'
+        ? dt.premiumStart
         : availableCount === 0
-          ? '単語データがまだありません'
-          : 'はじめる'
+          ? dt.noWordData
+          : dt.start
 
   const buttonDisabled = loading || (
     chapter == null
@@ -485,13 +489,13 @@ export default function DeckClient({
         hasLockedChapters
           ? (
               <span className="flex flex-col items-center leading-tight">
-                <span>全章を解く</span>
+                <span>{dt.allChapters}</span>
                 <span className="text-xs font-normal opacity-80">
                   Chapter 01〜{String(unlockedChapterCount).padStart(2, '0')}
                 </span>
               </span>
             )
-          : '全章を解く'
+          : dt.allChapters
       )
     : undefined
   const onSecondaryStart = chapter == null ? startQuiz : undefined

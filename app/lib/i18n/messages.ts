@@ -92,6 +92,26 @@ export type Messages = {
     actionFailed: string
     updated: string
     loadMore: (n: number) => string
+    change: string
+    save: string
+    cancel: string
+    saveFailed: string
+    sessionExpired: string
+    unexpectedError: string
+  }
+  decksIndex: {
+    breadcrumbTitle: string
+    title: string
+  }
+  deckDetail: {
+    breadcrumbList: string
+    noQuizWords: string
+    continueLast: string
+    startChapter1: string
+    premiumStart: string
+    noWordData: string
+    start: string
+    allChapters: string
   }
   wordlist: {
     breadcrumb: string
@@ -308,6 +328,26 @@ const ja: Messages = {
     actionFailed: '処理に失敗しました',
     updated: '更新しました',
     loadMore: (n: number) => `もっと見る（+${n}）`,
+    change: '変更',
+    save: '保存',
+    cancel: 'キャンセル',
+    saveFailed: '保存に失敗しました',
+    sessionExpired: 'セッションが切れました。もう一度お試しください',
+    unexpectedError: 'エラーが発生しました',
+  },
+  decksIndex: {
+    breadcrumbTitle: '教材一覧',
+    title: '教材一覧',
+  },
+  deckDetail: {
+    breadcrumbList: '教材一覧',
+    noQuizWords: 'クイズできる単語がありませんでした',
+    continueLast: '前回の続き',
+    startChapter1: 'Chapter 01からはじめる',
+    premiumStart: '🔒 プレミアム登録ではじめる',
+    noWordData: '単語データがまだありません',
+    start: 'はじめる',
+    allChapters: '全章を解く',
   },
   wordlist: {
     breadcrumb: 'My単語帳',
@@ -536,6 +576,26 @@ const en: Messages = {
     actionFailed: 'Something went wrong',
     updated: 'Updated',
     loadMore: (n: number) => `Show more (+${n})`,
+    change: 'Change',
+    save: 'Save',
+    cancel: 'Cancel',
+    saveFailed: 'Failed to save',
+    sessionExpired: 'Your session expired. Please try again.',
+    unexpectedError: 'An error occurred',
+  },
+  decksIndex: {
+    breadcrumbTitle: 'Decks',
+    title: 'Decks',
+  },
+  deckDetail: {
+    breadcrumbList: 'Decks',
+    noQuizWords: 'No words available to quiz',
+    continueLast: 'Continue where you left off',
+    startChapter1: 'Start with Chapter 01',
+    premiumStart: '🔒 Start with Premium',
+    noWordData: 'No word data yet',
+    start: 'Start',
+    allChapters: 'All chapters',
   },
   wordlist: {
     breadcrumb: 'My Wordlist',

@@ -104,3 +104,39 @@ export const POS_LABEL_JA: Record<string,string> = {
     expression: "表現",
     slang: "スラング",
 };
+
+// 英語 displayLocale 用。POS_LABEL_JA のキーをそのまま使えるようにしておく。
+export const POS_LABEL_EN: Record<string,string> = {
+    noun: 'noun',
+    verb: 'verb',
+    adjective: 'adjective',
+    adverb: 'adverb',
+    adjectival_noun: 'adjectival noun',
+    pronoun: 'pronoun',
+    preposition: 'preposition',
+    adposition: 'preposition',
+    conjunction: 'conjunction',
+    interjection: 'interjection',
+    particle: 'particle',
+    auxiliary: 'auxiliary',
+    article: 'article',
+
+    "Phrasal verb": 'phrasal verb',
+    Idiom: 'idiom',
+    Phrase: 'phrase',
+
+    idiom: 'idiom',
+    phrasal_verb: 'phrasal verb',
+    fixed_expression: 'fixed expression',
+    spoken_expression: 'spoken expression',
+    collocation: 'collocation',
+    pattern: 'pattern',
+    expression: 'expression',
+    slang: 'slang',
+};
+
+import type { DisplayLocale } from '@/types/DisplayLocale'
+export function getPosLabel(pos: string, locale: DisplayLocale = 'ja'): string {
+    const map = locale === 'en' ? POS_LABEL_EN : POS_LABEL_JA
+    return map[pos] ?? pos
+}

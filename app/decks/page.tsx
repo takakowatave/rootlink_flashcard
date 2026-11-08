@@ -3,6 +3,8 @@ import DeckScrollStrip from '@/components/DeckScrollStrip'
 import DeckRequestForm from '@/components/DeckRequestForm'
 import PageHeader from '@/components/PageHeader'
 import { DECKS_PAGE_LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty, deckCardTitle } from '@/lib/deckDisplay'
+import { detectServerLocale } from '@/lib/serverLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type Deck = {
   id: string
@@ -15,6 +17,9 @@ type Deck = {
 
 // 章単位の課金へ移行したため、デッキカードでは premium 判定を出さない (常に全デッキを開ける)
 export default async function DecksPage() {
+  const locale = detectServerLocale()
+  const t = messages[locale].decksIndex
+  const c = messages[locale].common
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -33,14 +38,14 @@ export default async function DecksPage() {
     <div className="bg-surface min-h-screen">
       <PageHeader
         items={[
-          { label: 'ホーム', href: '/' },
-          { label: '教材一覧' },
+          { label: c.home, href: '/' },
+          { label: t.breadcrumbTitle },
         ]}
       />
       <div className="flex justify-center w-full">
         <div className="w-full max-w-[860px] px-4 py-6 flex flex-col gap-8">
 
-          <h1 className="text-xl font-bold text-gray-950">教材一覧</h1>
+          <h1 className="text-xl font-bold text-gray-950">{t.title}</h1>
 
           {DECKS_PAGE_LABEL_ORDER.map(label => {
             const group = sortDecksByDifficulty(decks.filter(d => d.label === label))

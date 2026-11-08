@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { MdArrowBackIosNew } from 'react-icons/md'
 import { HiSearch } from 'react-icons/hi'
 import Breadcrumb, { type BreadcrumbItem } from './Breadcrumb'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 // Figma xe5UwVx38JWu5doqwXczQu / 2897:6526
 // 戻るボタン＋検索バーを1つの 56px ヘッダーにまとめる。ロゴのヘッダーとは
@@ -28,6 +30,9 @@ export default function PageHeader({
   title?: string
 }) {
   const router = useRouter()
+  const locale = useDisplayLocale()
+  const w = messages[locale].word
+  const searchPlaceholder = locale === 'en' ? 'Search a word' : '知らない語を検索'
   return (
     <>
       {/* SP: 戻る + 検索の 56px ヘッダー */}
@@ -37,7 +42,7 @@ export default function PageHeader({
             type="button"
             onClick={() => router.back()}
             className="p-2 rounded-full hover:bg-primary-subtle text-muted shrink-0"
-            aria-label="戻る"
+            aria-label={w.back}
           >
             <MdArrowBackIosNew className="size-6" />
           </button>
@@ -46,9 +51,9 @@ export default function PageHeader({
               type="button"
               onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
               className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
-              aria-label="検索を開く"
+              aria-label={w.openSearch}
             >
-              <span className="flex-1 min-w-0 truncate text-sm text-muted">知らない語を検索</span>
+              <span className="flex-1 min-w-0 truncate text-sm text-muted">{searchPlaceholder}</span>
               <HiSearch className="size-5 text-muted shrink-0" />
             </button>
           ) : (
