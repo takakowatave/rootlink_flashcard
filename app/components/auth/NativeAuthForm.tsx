@@ -15,6 +15,8 @@ import TurnstileWidget from '@/components/auth/TurnstileWidget'
 import OtpVerifyStep from '@/components/auth/OtpVerifyStep'
 import GuestLinkConfirmDialog from '@/components/auth/GuestLinkConfirmDialog'
 import { hasAnyGuestLearningData } from '@/lib/guestData'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type Mode = 'login' | 'signup'
 
@@ -49,6 +51,42 @@ type Props = {
  */
 export default function NativeAuthForm({ mode }: Props) {
   const router = useRouter()
+  const locale = useDisplayLocale()
+  const authCopy = messages[locale].auth
+  const signupCopy = messages[locale].signup
+  const loginCopy = messages[locale].login
+  const wordCopy = messages[locale].word
+  const L = locale === 'en'
+    ? {
+        wrongCreds: 'Incorrect email or password',
+        emailExists: 'This email is already registered',
+        signupFailed: 'Sign-up failed',
+        accountCreated: 'Account created',
+        resendFailed: 'Resend failed. Please try again later.',
+        socialLogin: 'Log in with your social account',
+        socialSignup: 'Sign up with your social account',
+        loginHere: 'Log in here',
+        signupHere: 'Sign up here',
+        primaryLogin: 'Log in',
+        primarySignup: 'Create account',
+        submittingLogin: 'Logging in...',
+        submittingSignup: 'Creating...',
+      }
+    : {
+        wrongCreds: 'メールアドレスまたはパスワードが正しくありません',
+        emailExists: 'このメールアドレスはすでに登録されています',
+        signupFailed: '登録に失敗しました',
+        accountCreated: 'アカウントを作成しました',
+        resendFailed: '再送に失敗しました。時間をおいて再試行してください',
+        socialLogin: 'SNSアカウントでログイン',
+        socialSignup: 'SNSアカウントで新規登録',
+        loginHere: 'ログインはこちら',
+        signupHere: '新規登録はこちら',
+        primaryLogin: 'ログイン',
+        primarySignup: 'アカウント作成',
+        submittingLogin: 'ログイン中...',
+        submittingSignup: '作成中...',
+      }
   const [captchaToken, setCaptchaToken] = useState('')
   const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), [])
   const [isAnonymous, setIsAnonymous] = useState(false)
@@ -83,7 +121,7 @@ export default function NativeAuthForm({ mode }: Props) {
       options: { captchaToken: captchaToken || undefined },
     })
     if (error) {
-      setError('email', { message: 'メールアドレスまたはパスワードが正しくありません' })
+      setError('email', { message: L.wrongCreds })
       setError('password', { type: 'manual' })
       return false
     }
@@ -121,10 +159,10 @@ export default function NativeAuthForm({ mode }: Props) {
         const msg = error.message?.toLowerCase() ?? ''
         if (/already|exists|registered|taken/.test(msg)) {
           setExistingAccount(true)
-          setError('email', { message: 'このメールアドレスはすでに登録されています' })
+          setError('email', { message: L.emailExists })
           return
         }
-        setError('email', { message: error.message || '登録に失敗しました' })
+        setError('email', { message: error.message || L.signupFailed })
         return
       }
       // 匿名ユーザーの updateUser はメール確認が必要。確認 OTP の type は email_change。
@@ -148,7 +186,7 @@ export default function NativeAuthForm({ mode }: Props) {
     // 既に確認済みのメールで signUp された場合は identities が空になる
     if (signUpData.user && signUpData.user.identities?.length === 0) {
       setExistingAccount(true)
-      setError('email', { message: 'このメールアドレスはすでに登録されています' })
+      setError('email', { message: L.emailExists })
       return
     }
     setOtpEmail(data.email)
@@ -169,12 +207,12 @@ export default function NativeAuthForm({ mode }: Props) {
     if (error) {
       setOtpError(
         /expired|invalid/i.test(error.message)
-          ? 'コードが違うか期限切れです。もう一度ご確認ください'
+          ? authCopy.otpInvalid
           : error.message,
       )
       return
     }
-    toast.success('アカウントを作成しました')
+    toast.success(L.accountCreated)
     router.push('/')
     router.refresh()
   }
@@ -186,7 +224,7 @@ export default function NativeAuthForm({ mode }: Props) {
       email: otpEmail,
     })
     if (error) {
-      setOtpError('再送に失敗しました。時間をおいて再試行してください')
+      setOtpError(L.resendFailed)
     }
   }
 
@@ -195,8 +233,8 @@ export default function NativeAuthForm({ mode }: Props) {
     setOtpError(null)
   }
 
-  const primaryLabel = mode === 'login' ? 'ログイン' : 'アカウント作成'
-  const submittingLabel = mode === 'login' ? 'ログイン中...' : '作成中...'
+  const primaryLabel = mode === 'login' ? L.primaryLogin : L.primarySignup
+  const submittingLabel = mode === 'login' ? L.submittingLogin : L.submittingSignup
 
   // signup 完了後の OTP 入力ステップ
   if (mode === 'signup' && otpEmail) {
@@ -206,7 +244,7 @@ export default function NativeAuthForm({ mode }: Props) {
           <button
             type="button"
             onClick={handleOtpEditEmail}
-            aria-label="戻る"
+            aria-label={wordCopy.back}
             className="p-2 rounded-full text-gray-700 hover:bg-primary-subtle"
           >
             <MdArrowBackIosNew className="size-5" />
@@ -237,7 +275,7 @@ export default function NativeAuthForm({ mode }: Props) {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="戻る"
+          aria-label={wordCopy.back}
           className="p-2 rounded-full text-gray-700 hover:bg-primary-subtle"
         >
           <MdArrowBackIosNew className="size-5" />
@@ -252,7 +290,7 @@ export default function NativeAuthForm({ mode }: Props) {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col px-4 py-4 gap-0">
         <p className="text-sm font-medium text-gray-950 pb-4">
-          {mode === 'login' ? 'SNSアカウントでログイン' : 'SNSアカウントで新規登録'}
+          {mode === 'login' ? L.socialLogin : L.socialSignup}
         </p>
 
         <div className="flex flex-col gap-2">
@@ -275,9 +313,9 @@ export default function NativeAuthForm({ mode }: Props) {
         <div className="flex flex-col gap-4">
           <TextInput
             type="email"
-            label="メールアドレス"
+            label={authCopy.email}
             error={errors.email}
-            {...register('email', { required: 'メールアドレスは必須です' })}
+            {...register('email', { required: authCopy.emailRequired })}
           />
           {existingAccount && (
             <p className="-mt-3 text-sm">
@@ -288,13 +326,13 @@ export default function NativeAuthForm({ mode }: Props) {
           )}
           <TextInput
             type="password"
-            label="パスワード"
+            label={authCopy.password}
             error={errors.password}
-            helperText={mode === 'signup' ? '8文字以上で設定してください' : undefined}
+            helperText={mode === 'signup' ? authCopy.passwordHelper : undefined}
             {...register('password', {
-              required: 'パスワードは必須です',
+              required: authCopy.passwordRequired,
               ...(mode === 'signup' && {
-                minLength: { value: 8, message: '8文字以上で設定してください' },
+                minLength: { value: 8, message: authCopy.passwordMinLength },
               }),
             })}
           />
@@ -316,7 +354,7 @@ export default function NativeAuthForm({ mode }: Props) {
             href={mode === 'login' ? '/signup' : '/login'}
             className="text-sm text-primary underline"
           >
-            {mode === 'login' ? '新規登録はこちら' : 'ログインはこちら'}
+            {mode === 'login' ? L.signupHere : L.loginHere}
           </Link>
         </div>
       </form>

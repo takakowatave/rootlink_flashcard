@@ -10,6 +10,8 @@ import AuthPage from "@/components/auth/AuthPage";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthBottomLink from "@/components/auth/AuthBottomLink";
 import OtpVerifyStep from "@/components/auth/OtpVerifyStep";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 interface FormData {
   password: string;
@@ -39,6 +41,47 @@ type Step =
  */
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const locale = useDisplayLocale();
+  const authCopy = messages[locale].auth;
+  const t = locale === 'en'
+    ? {
+        title: 'Reset password',
+        loading: 'Loading...',
+        sendIntro: 'Enter the email you registered with. We will send a verification code.',
+        sending: 'Sending...',
+        sendCode: 'Send code',
+        haveAccount: 'Already have an account? ',
+        loginLink: 'Log in',
+        sendFailed: 'Failed to send. Please try again later.',
+        resendFailed: 'Resend failed. Please try again later.',
+        newPassword: 'New password',
+        confirmPassword: 'Confirm password',
+        confirmPasswordRequired: 'Please confirm your password',
+        passwordMismatch: 'Passwords do not match',
+        settingPassword: 'Setting...',
+        resetSubmit: 'Reset password',
+        doneTitle: 'Password reset complete',
+        doneSub: 'Redirecting to the home page...',
+      }
+    : {
+        title: 'パスワードの再設定',
+        loading: '読み込み中...',
+        sendIntro: '登録されているメールアドレスに確認コードを送ります。',
+        sending: '送信中...',
+        sendCode: 'コードを送る',
+        haveAccount: 'アカウントをお持ちの方は',
+        loginLink: 'ログイン',
+        sendFailed: '送信に失敗しました。時間をおいて再試行してください',
+        resendFailed: '再送に失敗しました。時間をおいて再試行してください',
+        newPassword: '新しいパスワード',
+        confirmPassword: 'パスワード (確認)',
+        confirmPasswordRequired: '確認用パスワードを入力してください',
+        passwordMismatch: 'パスワードが一致しません',
+        settingPassword: '設定中...',
+        resetSubmit: 'パスワードを再設定',
+        doneTitle: 'パスワードを再設定しました',
+        doneSub: 'まもなくトップページへ移動します...',
+      };
   const [step, setStep] = useState<Step>("checking");
   const [email, setEmail] = useState("");
   const [sendError, setSendError] = useState<string | undefined>();
@@ -69,7 +112,7 @@ export default function ResetPasswordPage() {
     setSendError(undefined);
     const { error } = await supabase.auth.resetPasswordForEmail(inputEmail);
     if (error) {
-      setSendError("送信に失敗しました。時間をおいて再試行してください");
+      setSendError(t.sendFailed);
       return;
     }
     setEmail(inputEmail);
@@ -88,7 +131,7 @@ export default function ResetPasswordPage() {
     if (error) {
       setOtpError(
         /expired|invalid/i.test(error.message)
-          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          ? authCopy.otpInvalid
           : error.message,
       );
       return;
@@ -99,7 +142,7 @@ export default function ResetPasswordPage() {
   const handleResend = async () => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
-      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+      setOtpError(t.resendFailed);
     }
   };
 
@@ -124,9 +167,9 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthPage>
-      <AuthCard title="パスワードの再設定">
+      <AuthCard title={t.title}>
         {step === "checking" && (
-          <p className="text-sm text-gray-500 text-center py-6">読み込み中...</p>
+          <p className="text-sm text-gray-500 text-center py-6">{t.loading}</p>
         )}
 
         {step === "email" && (
@@ -135,19 +178,19 @@ export default function ResetPasswordPage() {
             className="flex flex-col gap-4"
           >
             <p className="text-sm text-gray-700 leading-relaxed">
-              登録されているメールアドレスに確認コードを送ります。
+              {t.sendIntro}
             </p>
             <TextInput
-              label="メールアドレス"
+              label={authCopy.email}
               type="email"
               placeholder="email@example.com"
               autoFocus
               error={emailForm.formState.errors.email}
               {...emailForm.register("email", {
-                required: "メールアドレスは必須です",
+                required: authCopy.emailRequired,
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "メールアドレスの形式が正しくありません",
+                  message: locale === 'en' ? 'Please enter a valid email' : 'メールアドレスの形式が正しくありません',
                 },
               })}
             />
@@ -160,11 +203,11 @@ export default function ResetPasswordPage() {
               radius="lg"
               fullWidth
             >
-              {emailForm.formState.isSubmitting ? "送信中..." : "コードを送る"}
+              {emailForm.formState.isSubmitting ? t.sending : t.sendCode}
             </Button>
             <AuthBottomLink
-              prefix="アカウントをお持ちの方は"
-              linkText="ログイン"
+              prefix={t.haveAccount}
+              linkText={t.loginLink}
               href="/login"
             />
           </form>
@@ -187,25 +230,25 @@ export default function ResetPasswordPage() {
             className="flex flex-col gap-4"
           >
             <TextInput
-              label="新しいパスワード"
+              label={t.newPassword}
               type="password"
               placeholder="••••••••"
-              helperText="8文字以上で設定してください"
+              helperText={authCopy.passwordHelper}
               error={passwordForm.formState.errors.password}
               {...passwordForm.register("password", {
-                required: "パスワードは必須です",
-                minLength: { value: 8, message: "8文字以上で設定してください" },
+                required: authCopy.passwordRequired,
+                minLength: { value: 8, message: authCopy.passwordMinLength },
               })}
             />
             <TextInput
-              label="パスワード (確認)"
+              label={t.confirmPassword}
               type="password"
               placeholder="••••••••"
               error={passwordForm.formState.errors.confirmPassword}
               {...passwordForm.register("confirmPassword", {
-                required: "確認用パスワードを入力してください",
+                required: t.confirmPasswordRequired,
                 validate: (v) =>
-                  v === passwordForm.watch("password") || "パスワードが一致しません",
+                  v === passwordForm.watch("password") || t.passwordMismatch,
               })}
             />
             <Button
@@ -216,7 +259,7 @@ export default function ResetPasswordPage() {
               radius="lg"
               fullWidth
             >
-              {passwordForm.formState.isSubmitting ? "設定中..." : "パスワードを再設定"}
+              {passwordForm.formState.isSubmitting ? t.settingPassword : t.resetSubmit}
             </Button>
           </form>
         )}
@@ -224,9 +267,9 @@ export default function ResetPasswordPage() {
         {step === "done" && (
           <div className="flex flex-col gap-3 py-4 text-center">
             <p className="text-sm text-primary font-medium">
-              パスワードを再設定しました
+              {t.doneTitle}
             </p>
-            <p className="text-xs text-gray-500">まもなくトップページへ移動します...</p>
+            <p className="text-xs text-gray-500">{t.doneSub}</p>
           </div>
         )}
       </AuthCard>
