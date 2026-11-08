@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { HiLockClosed } from 'react-icons/hi'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 
 type Props = {
   chapterNo: number
@@ -23,6 +24,8 @@ type Props = {
 export default function ChapterListItem({
   chapterNo, label, mastered, total, locked, highlighted, href, onClick,
 }: Props) {
+  const locale = useDisplayLocale()
+  const premiumAria = locale === 'en' ? 'Premium only' : 'プレミアム限定'
   // Figma 2957:7272 Frame 570: row 72px / circle-container 56 / progress-ring 52
   const size = 52
   const stroke = 3
@@ -50,7 +53,7 @@ export default function ChapterListItem({
       </span>
       <span className={`flex-1 text-base font-semibold ${highlighted ? 'text-primary' : 'text-gray-800'}`}>{label}</span>
       {locked ? (
-        <span className="shrink-0 grid place-items-center size-8 rounded-full bg-primary-subtle text-primary" aria-label="プレミアム限定">
+        <span className="shrink-0 grid place-items-center size-8 rounded-full bg-primary-subtle text-primary" aria-label={premiumAria}>
           <HiLockClosed className="size-4" />
         </span>
       ) : (

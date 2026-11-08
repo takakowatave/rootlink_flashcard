@@ -347,7 +347,7 @@ export default function TutorialOverlay() {
         style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
       >
         <div className="relative bg-white rounded-2xl w-[min(340px,90vw)] p-6 shadow-2xl">
-          <button onClick={advance} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors" aria-label="閉じる">
+          <button onClick={advance} className="absolute top-3 right-3 p-1 text-muted hover:text-primary-dark transition-colors" aria-label={uiLabels.close}>
             <HiX className="size-4" />
           </button>
 

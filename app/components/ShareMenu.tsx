@@ -192,7 +192,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
         role="dialog"
         aria-label={L.share}
       >
-        <p className="px-5 pt-4 pb-2 text-sm text-gray-950">共有</p>
+        <p className="px-5 pt-4 pb-2 text-sm text-gray-950">{L.share}</p>
         <div className="flex justify-between px-4 pt-2 pb-4">
           {items.map((item) => (
             <button
