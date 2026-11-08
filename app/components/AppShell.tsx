@@ -9,6 +9,7 @@ import TutorialOverlay from './TutorialOverlay'
 import OnboardingQuestions from './OnboardingQuestions'
 import QuotaExceededListener from './QuotaExceededListener'
 import { isNativePlatform } from '@/lib/isNativePlatform'
+import { currentPlatform } from '@/lib/currentPlatform'
 import { supabase } from '@/lib/supabaseClient'
 import { ensureRevenueCatConfigured } from '@/lib/revenuecat'
 import { recordActivity } from '@/lib/supabaseApi'
@@ -58,7 +59,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         .select('id')
         .eq('id', user.id)
         .maybeSingle()
-      if (existing || cancelled) return
+      if (existing) {
+        // 登録プラットフォームを未設定のときだけ記録 (iOS/Android/Web の割合集計用)
+        await supabase
+          .from('profiles')
+          .update({ signup_platform: currentPlatform() })
+          .eq('id', user.id)
+          .is('signup_platform', null)
+        return
+      }
+      if (cancelled) return
       const username =
         user.user_metadata?.full_name ||
         user.user_metadata?.name ||
@@ -71,6 +81,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         email: user.email,
         username,
         avatar_url,
+        signup_platform: currentPlatform(),
       })
       if (!error && !cancelled) {
         window.dispatchEvent(new CustomEvent(PROFILE_CREATED_EVENT))
