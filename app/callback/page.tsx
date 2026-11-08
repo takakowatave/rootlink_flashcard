@@ -10,6 +10,7 @@ import { sendEvent } from "@/lib/ga";
 import { isNativePlatform } from "@/lib/isNativePlatform";
 import { hasAnyGuestLearningData } from "@/lib/guestData";
 import { isIdentityConflictError } from "@/lib/isIdentityConflictError";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
 
 const SIGNUP_TRIGGER_KEY = "signup_trigger";
 const PENDING_OAUTH_LINK_KEY = "rootlink_pending_oauth_link";
@@ -54,6 +55,22 @@ async function startSignInWithOAuth(provider: OAuthProvider): Promise<void> {
 //
 // 画面は AuthPage / AuthCard を流用してログイン・新規登録画面と同じ枠にする。
 export default function AuthCallback() {
+  const locale = useDisplayLocale();
+  const t = locale === 'en'
+    ? {
+        authenticating: 'Signing you in',
+        pleaseWait: 'Please wait a moment.',
+        linkExpired: 'This link is expired or already used',
+        linkExpiredBody: 'Email verification may already be complete. Please log in to continue.',
+        goLogin: 'Go to login',
+      }
+    : {
+        authenticating: '認証しています',
+        pleaseWait: 'しばらくお待ちください。',
+        linkExpired: 'リンクの有効期限が切れているか、すでに使われています',
+        linkExpiredBody: 'メール認証はすでに完了している可能性があります。\nそのままログインしてご利用ください。',
+        goLogin: 'ログイン画面へ',
+      };
   const [state, setState] = useState<State>("loading");
   const [conflictProvider, setConflictProvider] = useState<OAuthProvider | null>(null);
   const [conflictLoading, setConflictLoading] = useState(false);
@@ -271,9 +288,9 @@ export default function AuthCallback() {
     return (
       <>
         <AuthPage>
-          <AuthCard title="認証しています">
+          <AuthCard title={t.authenticating}>
             <p className="text-base text-muted text-center">
-              しばらくお待ちください。
+              {t.pleaseWait}
             </p>
           </AuthCard>
         </AuthPage>
@@ -303,11 +320,9 @@ export default function AuthCallback() {
   if (state === "confirmed" && mayShowError) {
     return (
       <AuthPage>
-        <AuthCard title="リンクの有効期限が切れているか、すでに使われています">
-          <p className="text-base text-gray-950 leading-relaxed text-center mb-6">
-            メール認証はすでに完了している可能性があります。
-            <br />
-            そのままログインしてご利用ください。
+        <AuthCard title={t.linkExpired}>
+          <p className="text-base text-gray-950 leading-relaxed text-center mb-6 whitespace-pre-line">
+            {t.linkExpiredBody}
           </p>
           <Button
             onClick={() => {
@@ -318,7 +333,7 @@ export default function AuthCallback() {
             radius="lg"
             fullWidth
           >
-            ログイン画面へ
+            {t.goLogin}
           </Button>
         </AuthCard>
       </AuthPage>
@@ -327,9 +342,9 @@ export default function AuthCallback() {
 
   return (
     <AuthPage>
-      <AuthCard title="認証しています">
+      <AuthCard title={t.authenticating}>
         <p className="text-base text-muted text-center">
-          しばらくお待ちください。
+          {t.pleaseWait}
         </p>
       </AuthCard>
     </AuthPage>

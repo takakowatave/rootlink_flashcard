@@ -6,6 +6,8 @@ import { HiX } from 'react-icons/hi'
 import { supabase } from '@/lib/supabaseClient'
 import { ONBOARDING_COMPLETE_EVENT } from './OnboardingQuestions'
 import { PROFILE_CREATED_EVENT } from './AppShell'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 
 // チュートリアル完了フラグはDB（profiles.tutorial_completed）で管理。
 // 途中ステップだけページ遷移をまたぐためユーザーIDごとに localStorage に保持する。
@@ -35,44 +37,55 @@ type Step = {
   autoSearch?: string
 }
 
-const STEPS: Step[] = [
-  {
-    emoji: '🌱',
-    title: 'ようこそ RootLink へ！',
-    description: '語源（ルーツ）から英単語を深く理解するアプリです。暗記に頼らず「なぜその意味なのか」を語根から学ぶことで、単語が自然と頭に定着します。',
-  },
-  {
-    emoji: '🔍',
-    title: '何か検索してみよう',
-    description: '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
-    // ハイライト対象は data-tutorial="search" が付いた要素の中で
-    // 表示中 (width > 0) のものを findTarget が拾う。
-    // - 1024px 未満: Dashboard 右下の検索 FAB (Header の検索バーは hidden)
-    // - 1024px 以上: Header のインライン検索バー (FAB は lg:hidden で消える)
-    selector: '[data-tutorial="search"]',
-    autoSearch: 'component',
-  },
-  {
-    emoji: '🌳',
-    title: '語源パーツで意味を掴む',
-    description: '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
-    selector: '[data-tutorial="etymology-tree"]',
-    requiredPath: /^\/word\//,
-  },
-  {
-    emoji: '📌',
-    title: '多義語はピン止めで整理',
-    description:
-      '複数の意味がある単語は、覚えたい意味だけピン留めできます。ピン留めした意味だけがクイズと単語帳に表示されます。',
-    selector: '[data-tutorial="pin-button"]',
-    requiredPath: /^\/word\//,
-  },
-]
+function getSteps(locale: DisplayLocale): Step[] {
+  const isEn = locale === 'en'
+  return [
+    {
+      emoji: '🌱',
+      title: isEn ? 'Welcome to RootLink!' : 'ようこそ RootLink へ！',
+      description: isEn
+        ? 'A dictionary that teaches English words by their roots. Instead of memorising, you learn why a word means what it does — so it sticks.'
+        : '語源（ルーツ）から英単語を深く理解するアプリです。暗記に頼らず「なぜその意味なのか」を語根から学ぶことで、単語が自然と頭に定着します。',
+    },
+    {
+      emoji: '🔍',
+      title: isEn ? 'Try a search' : '何か検索してみよう',
+      description: isEn
+        ? 'Type any English word into the search bar. You will see its etymology, pronunciation, meaning and examples together.'
+        : '検索バーに英単語を入力してみましょう。語源・発音・意味・例文がまとめて表示されます。',
+      selector: '[data-tutorial="search"]',
+      autoSearch: 'component',
+    },
+    {
+      emoji: '🌳',
+      title: isEn ? 'Read words by their parts' : '語源パーツで意味を掴む',
+      description: isEn
+        ? 'Each word is shown as a tree of roots, prefixes and suffixes. Tap a part to see other words that share it.'
+        : '単語を構成する語根・接頭辞・接尾辞をツリー形式で表示します。ここを押すと同じ語根を持つ単語の一覧も見られます。',
+      selector: '[data-tutorial="etymology-tree"]',
+      requiredPath: /^\/word\//,
+    },
+    {
+      emoji: '📌',
+      title: isEn ? 'Pin the sense you care about' : '多義語はピン止めで整理',
+      description: isEn
+        ? 'When a word has multiple meanings, pin only the one you want to learn. Only pinned senses appear in your wordlist and quizzes.'
+        : '複数の意味がある単語は、覚えたい意味だけピン留めできます。ピン留めした意味だけがクイズと単語帳に表示されます。',
+      selector: '[data-tutorial="pin-button"]',
+      requiredPath: /^\/word\//,
+    },
+  ]
+}
 
 type SpotlightRect = { top: number; left: number; width: number; height: number }
 
 export default function TutorialOverlay() {
   const pathname = usePathname()
+  const locale = useDisplayLocale()
+  const STEPS = getSteps(locale)
+  const uiLabels = locale === 'en'
+    ? { close: 'Close', start: 'Start', next: 'Next', searchComponent: 'Search for "component"' }
+    : { close: '閉じる', start: 'はじめる', next: '次へ', searchComponent: 'component を検索する' }
   const [authed, setAuthed] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [step, setStep] = useState<number | null>(null)
@@ -273,7 +286,7 @@ export default function TutorialOverlay() {
           <button
             onClick={() => setWaitMode(false)}
             className="shrink-0 text-white/50 hover:text-white ml-1"
-            aria-label="閉じる"
+            aria-label={uiLabels.close}
           >
             <HiX className="size-4" />
           </button>
@@ -352,7 +365,7 @@ export default function TutorialOverlay() {
             onClick={advance}
             className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors"
           >
-            {step === STEPS.length - 1 ? 'はじめる' : current.autoSearch ? 'component を検索する' : '次へ'}
+            {step === STEPS.length - 1 ? uiLabels.start : current.autoSearch ? uiLabels.searchComponent : uiLabels.next}
           </button>
         </div>
       </div>
