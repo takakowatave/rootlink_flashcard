@@ -85,17 +85,22 @@ function buildPlanHelperText(params: {
   expiresAt: string | null;
   willRenew: boolean | null;
   store: "stripe" | "app_store" | "play_store" | null;
+  locale: DisplayLocale;
 }): string | null {
-  const { plan, status, expiresAt, willRenew, store } = params;
+  const { plan, status, expiresAt, willRenew, store, locale } = params;
   if (plan !== "premium") return null;
   if (store === null) return null;
   const date = formatJPDate(expiresAt);
   if (!date) return null;
-  if (status === "trialing") return `無料期間は ${date} まで`;
-  if (status === "active" && willRenew === false) {
-    return `${date}で終了します（自動更新なし）`;
+  if (status === "trialing") {
+    return locale === 'en' ? `Free trial ends ${date}` : `無料期間は ${date} まで`;
   }
-  if (status === "active") return `次回更新日: ${date}`;
+  if (status === "active" && willRenew === false) {
+    return locale === 'en' ? `Ends ${date} (auto-renewal off)` : `${date}で終了します（自動更新なし）`;
+  }
+  if (status === "active") {
+    return locale === 'en' ? `Next renewal: ${date}` : `次回更新日: ${date}`;
+  }
   return null;
 }
 
@@ -164,6 +169,89 @@ export default function EditProfileModal({
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [paywallVariant, setPaywallVariant] = useState<Exclude<PaywallVariant, "none"> | null>(null);
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>("ja");
+  const L = displayLocale === 'en'
+    ? {
+        settings: 'Settings',
+        back: 'Back',
+        profile: 'Profile',
+        displayName: 'Display name',
+        guest: 'Guest',
+        enterName: 'Enter a display name',
+        notSet: 'Not set',
+        changeIcon: 'Change icon',
+        account: 'Account',
+        email: 'Email',
+        googleManaged: 'Managed via Google account — cannot be changed here.',
+        password: 'Password',
+        settingsSection: 'Settings',
+        currentPlan: 'Current plan',
+        premium: 'Premium',
+        tester: 'Tester',
+        trialEnds: (d: string) => `Free trial ends ${d}`,
+        nextRenewal: (d: string) => `Next renewal: ${d}`,
+        dictLanguage: 'Dictionary display language',
+        dictLanguageHelp: 'Switch between English-only and Japanese gloss modes.',
+        notifications: 'Notifications',
+        notifOffTitle: 'Notifications are off',
+        notifOffBody: 'Enable notifications in your device settings to receive reminders.',
+        reminderToggle: 'Turn on reminder notifications',
+        deleteSection: 'Delete account',
+        deleteBtn: 'Delete account',
+        deleteHelp: 'All learning data will be deleted. An active Premium plan will be cancelled automatically.',
+        portalOpenFailed: 'Could not open the management screen',
+        subscriptionNotFound: 'Subscription not found',
+        errorOccurred: 'An error occurred',
+        updateFailed: 'Failed to update',
+        saved: 'Saved',
+        unsupportedFormat: 'Only JPEG / PNG / WebP / GIF are supported',
+        tooLarge: 'File size must be 5MB or less',
+        iconUpdated: 'Avatar updated',
+        uploadFailed: 'Upload failed',
+        switchedLangJa: 'Switched to Japanese + English mode',
+        switchedLangEn: 'Switched to English-only mode',
+        emailChanged: 'Email address updated',
+      }
+    : {
+        settings: '設定',
+        back: '戻る',
+        profile: 'プロフィール',
+        displayName: '表示名',
+        guest: 'ゲスト',
+        enterName: '表示名を入力',
+        notSet: '未設定',
+        changeIcon: 'アイコン変更',
+        account: 'アカウント',
+        email: 'メールアドレス',
+        googleManaged: 'Googleアカウントで管理されているため変更できません。',
+        password: 'パスワード',
+        settingsSection: '設定',
+        currentPlan: '現在のプラン',
+        premium: 'Premium',
+        tester: 'テスター',
+        trialEnds: (d: string) => `無料期間は ${d} まで`,
+        nextRenewal: (d: string) => `次回更新日: ${d}`,
+        dictLanguage: '辞書の表示言語',
+        dictLanguageHelp: '英英モードと和英モードの切り替えができます。',
+        notifications: '通知',
+        notifOffTitle: '通知がオフになっています',
+        notifOffBody: 'リマインダーを受け取るには、端末の設定で通知を許可してください。',
+        reminderToggle: '通知リマインダーをオンにする',
+        deleteSection: 'アカウント削除',
+        deleteBtn: '退会する',
+        deleteHelp: 'すべての学習データが削除されます。Premium加入中の場合は自動的に解約されます。',
+        portalOpenFailed: '管理画面を開けませんでした',
+        subscriptionNotFound: 'サブスクリプション情報が見つかりません',
+        errorOccurred: 'エラーが発生しました',
+        updateFailed: '更新に失敗しました',
+        saved: '保存しました',
+        unsupportedFormat: '対応形式は JPEG / PNG / WebP / GIF のみです',
+        tooLarge: 'ファイルサイズは 5MB 以下にしてください',
+        iconUpdated: 'アイコンを更新しました',
+        uploadFailed: 'アップロードに失敗しました',
+        switchedLangJa: '和英モードに切り替えました',
+        switchedLangEn: '英英モードに切り替えました',
+        emailChanged: 'メールアドレスを変更しました',
+      };
   const [email, setEmail] = useState<string>("");
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -195,7 +283,7 @@ export default function EditProfileModal({
     try {
       if (subscriptionStore === "app_store" || subscriptionStore === "play_store") {
         const result = await openNativeManageSubscriptions();
-        if (!result.ok) toast.error("管理画面を開けませんでした");
+        if (!result.ok) toast.error(L.portalOpenFailed);
         return;
       }
       // subscriptionStore === "stripe" (or フォールバックで null は表示ガードで来ない)
@@ -221,10 +309,10 @@ export default function EditProfileModal({
       if (data.ok && data.url) {
         window.location.href = data.url;
       } else {
-        toast.error("サブスクリプション情報が見つかりません");
+        toast.error(L.subscriptionNotFound);
       }
     } catch {
-      toast.error("エラーが発生しました");
+      toast.error(L.errorOccurred);
     } finally {
       setIsPortalLoading(false);
     }
@@ -250,9 +338,9 @@ export default function EditProfileModal({
       .update({ username: draft })
       .eq("id", profile.id);
     if (error) {
-      throw new Error("更新に失敗しました");
+      throw new Error(L.updateFailed);
     }
-    toast.success("保存しました");
+    toast.success(L.saved);
     onUpdated();
   };
 
@@ -262,12 +350,12 @@ export default function EditProfileModal({
     if (!file || !profile) return;
 
     if (!AVATAR_ALLOWED_MIME_TYPES.includes(file.type)) {
-      toast.error("対応形式は JPEG / PNG / WebP / GIF のみです");
+      toast.error(L.unsupportedFormat);
       input.value = "";
       return;
     }
     if (file.size > AVATAR_MAX_FILE_SIZE) {
-      toast.error("ファイルサイズは 5MB 以下にしてください");
+      toast.error(L.tooLarge);
       input.value = "";
       return;
     }
@@ -286,16 +374,16 @@ export default function EditProfileModal({
         .update({ avatar_url: urlData.publicUrl })
         .eq("id", profile.id);
       if (updErr) throw updErr;
-      toast.success("アイコンを更新しました");
+      toast.success(L.iconUpdated);
       onUpdated();
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (/exceeded the maximum allowed size|payload too large/i.test(message)) {
-        toast.error("ファイルサイズは 5MB 以下にしてください");
+        toast.error(L.tooLarge);
       } else if (/mime type|not allowed|invalid_mime_type/i.test(message)) {
-        toast.error("対応形式は JPEG / PNG / WebP / GIF のみです");
+        toast.error(L.unsupportedFormat);
       } else {
-        toast.error("アップロードに失敗しました");
+        toast.error(L.uploadFailed);
       }
     } finally {
       setUploading(false);
@@ -513,7 +601,7 @@ export default function EditProfileModal({
         supabase.from("profiles").update({ display_locale: locale }).eq("id", data.user.id).then(() => {})
       }
     })
-    toast.success(locale === "ja" ? "和英モードに切り替えました" : "Switched to English-only mode");
+    toast.success(locale === "ja" ? L.switchedLangJa : L.switchedLangEn);
   };
 
   if (!isOpen) return null;
@@ -528,11 +616,11 @@ export default function EditProfileModal({
             <button
               onClick={onClose}
               className="md:hidden p-2 rounded-full hover:bg-primary-subtle text-muted"
-              aria-label="戻る"
+              aria-label={L.back}
             >
               <MdArrowBackIosNew className="size-6" />
             </button>
-            <h2 className="hidden md:block text-base font-bold text-gray-950 pl-2">設定</h2>
+            <h2 className="hidden md:block text-base font-bold text-gray-950 pl-2">{L.settings}</h2>
           </>
         }
         headerRight={
@@ -581,7 +669,7 @@ export default function EditProfileModal({
                 </div>
 
                 {profile && (
-                  <SettingsSection title="プロフィール">
+                  <SettingsSection title={L.profile}>
                     <div className="flex items-center gap-3 py-3">
                       {/* Figma 3187:6410 の木レベル画像。plantGrowth.ts の
                           実スコア (quiz 回答数 + ログイン日数×3) で決定。 */}
@@ -593,10 +681,10 @@ export default function EditProfileModal({
                       />
                       <div className="flex-1 min-w-0">
                         <EditableField
-                          label="表示名"
+                          label={L.displayName}
                           value={profile.username ?? ""}
-                          placeholder="ゲスト"
-                          emptyLabel="ゲスト"
+                          placeholder={L.guest}
+                          emptyLabel={L.guest}
                           onSave={handleSaveDisplayName}
                         />
                       </div>
@@ -623,7 +711,7 @@ export default function EditProfileModal({
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
                         className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-line shadow-sm flex items-center justify-center text-gray-700 hover:bg-primary-subtle disabled:opacity-50"
-                        aria-label="アイコン変更"
+                        aria-label={L.changeIcon}
                       >
                         <BsPencil size={14} />
                       </button>
@@ -637,12 +725,12 @@ export default function EditProfileModal({
                     </div>
                   </div>
 
-                  <SettingsSection title="プロフィール">
+                  <SettingsSection title={L.profile}>
                     <EditableField
-                      label="表示名"
+                      label={L.displayName}
                       value={profile.username ?? ""}
-                      placeholder="表示名を入力"
-                      emptyLabel="未設定"
+                      placeholder={L.enterName}
+                      emptyLabel={L.notSet}
                       onSave={handleSaveDisplayName}
                     />
                   </SettingsSection>
@@ -651,11 +739,11 @@ export default function EditProfileModal({
             )}
 
             {!isAnonymous && (
-            <SettingsSection title="アカウント">
+            <SettingsSection title={L.account}>
               <SettingsRow
                 label={
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="whitespace-nowrap">メールアドレス</span>
+                    <span className="whitespace-nowrap">{L.email}</span>
                     {provider === "google" && (
                       <span className="inline-flex items-center h-5 px-2 border border-primary text-primary text-[10px] font-bold rounded shrink-0 whitespace-nowrap">
                         Googleアカウント
@@ -665,7 +753,7 @@ export default function EditProfileModal({
                 }
                 helperText={
                   provider === "google"
-                    ? "Googleアカウントで管理されているため変更できません。"
+                    ? L.googleManaged
                     : undefined
                 }
               >
@@ -682,7 +770,7 @@ export default function EditProfileModal({
               </SettingsRow>
 
               {provider === "email" && (
-                <SettingsRow label="パスワード">
+                <SettingsRow label={L.password}>
                   <p className="flex-1 text-base text-gray-900 tracking-widest md:flex-none">
                     ••••••••
                   </p>
@@ -698,20 +786,21 @@ export default function EditProfileModal({
             </SettingsSection>
             )}
 
-            <SettingsSection title="設定">
+            <SettingsSection title={L.settingsSection}>
               <SettingsRow
-                label="現在のプラン"
+                label={L.currentPlan}
                 helperText={buildPlanHelperText({
                   plan,
                   status: subscriptionStatus,
                   expiresAt: subscriptionExpiresAt,
                   willRenew: subscriptionWillRenew,
                   store: subscriptionStore,
+                  locale: displayLocale,
                 })}
               >
                 {plan === "premium" ? (
                   <span className="inline-flex items-center h-6 px-2 border border-primary text-primary text-xs font-bold rounded">
-                    {subscriptionStore !== null ? "Premium" : "テスター"}
+                    {subscriptionStore !== null ? L.premium : L.tester}
                   </span>
                 ) : (
                   <span className="text-sm text-gray-700">Free</span>
@@ -739,8 +828,8 @@ export default function EditProfileModal({
 
               {!isAnonymous && (
                 <SettingsRow
-                  label="辞書の表示言語"
-                  helperText="英英モードと和英モードの切り替えができます。"
+                  label={L.dictLanguage}
+                  helperText={L.dictLanguageHelp}
                 >
                   <LanguageToggle value={displayLocale} onChange={handleLocaleChange} />
                 </SettingsRow>
@@ -748,12 +837,12 @@ export default function EditProfileModal({
             </SettingsSection>
 
             {!isAnonymous && isNativeOrPreview(isNativePlatform()) && (
-              <SettingsSection title="通知">
+              <SettingsSection title={L.notifications}>
                 {(notifPermission === "denied" || notifPermission === "prompt") && (
                   <div className="pt-4 pb-2 flex flex-col gap-3">
                     <InfoBanner
-                      title="通知がオフになっています"
-                      body="リマインダーを受け取るには、端末の設定で通知を許可してください。"
+                      title={L.notifOffTitle}
+                      body={L.notifOffBody}
                     />
                     <Button
                       variant="primary"
@@ -765,11 +854,11 @@ export default function EditProfileModal({
                     </Button>
                   </div>
                 )}
-                <SettingsRow label="通知リマインダーをオンにする">
+                <SettingsRow label={L.reminderToggle}>
                   <Toggle
                     checked={reminderSettings.masterEnabled}
                     onChange={handleMasterToggle}
-                    label="通知リマインダーをオンにする"
+                    label={L.reminderToggle}
                   />
                 </SettingsRow>
                 {reminderSettings.slots.map((slot) => {
@@ -846,10 +935,10 @@ export default function EditProfileModal({
             )}
 
             {!isAnonymous && (
-              <SettingsSection title="アカウント削除">
+              <SettingsSection title={L.deleteSection}>
                 <SettingsRow
-                  label="退会する"
-                  helperText="すべての学習データが削除されます。Premium加入中の場合は自動的に解約されます。"
+                  label={L.deleteBtn}
+                  helperText={L.deleteHelp}
                 >
                   <button
                     type="button"
@@ -884,7 +973,7 @@ export default function EditProfileModal({
         onSent={(newEmail) => {
           setShowEmailChange(false);
           setEmail(newEmail);
-          toast.success("メールアドレスを変更しました");
+          toast.success(L.emailChanged);
         }}
       />
 
