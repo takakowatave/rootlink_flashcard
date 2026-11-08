@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaLink, FaXTwitter, FaLine, FaFacebook, FaThreads } from 'react-icons/fa6'
 import { openExternalLink } from '@/lib/openExternal'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 
 type Props = {
   open: boolean
@@ -27,6 +28,10 @@ const MENU_WIDTH = 280
 const MENU_GAP = 8
 
 export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRef, onShareX }: Props) {
+  const locale = useDisplayLocale()
+  const L = locale === 'en'
+    ? { copy: 'Copy link', copied: 'Link copied', copyFailed: 'Copy failed', close: 'Close', share: 'Share' }
+    : { copy: 'リンクをコピー', copied: 'リンクをコピーしました', copyFailed: 'コピーに失敗しました', close: '閉じる', share: '共有' }
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
@@ -72,10 +77,10 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
-      toast.success('リンクをコピーしました')
+      toast.success(L.copied)
       onClose()
     } catch {
-      toast.error('コピーに失敗しました')
+      toast.error(L.copyFailed)
     }
   }
 
@@ -97,7 +102,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
   const items: Item[] = [
     {
       key: 'copy',
-      label: 'リンクをコピー',
+      label: L.copy,
       icon: <FaLink />,
       bg: 'bg-gray-400',
       onClick: copyLink,
@@ -147,7 +152,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
       <div
         className="fixed inset-0 z-50 bg-black/40"
         onClick={onClose}
-        aria-label="閉じる"
+        aria-label={L.close}
       />
 
       {/* PC: floating popover anchored to trigger */}
@@ -155,7 +160,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
         className="hidden md:block fixed z-50 bg-white rounded-2xl shadow-xl border border-line overflow-hidden"
         style={pcStyle}
         role="dialog"
-        aria-label="共有"
+        aria-label={L.share}
       >
         <button
           type="button"
@@ -163,7 +168,7 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary-subtle text-left"
         >
           <FaLink className="size-4 text-gray-700" />
-          <span className="text-sm text-gray-950">リンクをコピー</span>
+          <span className="text-sm text-gray-950">{L.copy}</span>
         </button>
         <div className="border-t border-line" />
         {items.slice(1).map((item) => (
@@ -185,9 +190,9 @@ export default function ShareMenu({ open, onClose, shareUrl, shareText, anchorRe
       <div
         className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-xl pb-[env(safe-area-inset-bottom)]"
         role="dialog"
-        aria-label="共有"
+        aria-label={L.share}
       >
-        <p className="px-5 pt-4 pb-2 text-sm text-gray-950">共有</p>
+        <p className="px-5 pt-4 pb-2 text-sm text-gray-950">{L.share}</p>
         <div className="flex justify-between px-4 pt-2 pb-4">
           {items.map((item) => (
             <button

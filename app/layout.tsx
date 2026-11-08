@@ -6,6 +6,8 @@ import DevBadge from "@/components/DevBadge";
 import { Analytics } from "@vercel/analytics/next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
+import { detectServerLocale } from "@/lib/serverLocale";
+import { LocaleProvider } from "@/lib/LocaleProvider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -42,8 +44,11 @@ export default function RootLayout({
     }: {
     children: React.ReactNode;
     }) {
+    // サーバー側で locale を決めて <html lang> に反映する。
+    // ?lang= は各ページの page.tsx で Cookie に書く前提 (layout は searchParams を取れない)。
+    const locale = detectServerLocale()
     return (
-        <html lang="ja">
+        <html lang={locale}>
         <body>
             <Toaster
                 position="top-center"
@@ -58,9 +63,11 @@ export default function RootLayout({
                     },
                 }}
             />
-            <AppShell>
-                {children}
-            </AppShell>
+            <LocaleProvider initialLocale={locale}>
+                <AppShell>
+                    {children}
+                </AppShell>
+            </LocaleProvider>
             <DevBadge />
             <Analytics />
             <GoogleAnalytics gaId="G-89GNQBCJSL" />

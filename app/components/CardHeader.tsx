@@ -16,9 +16,25 @@ type Props = {
   onShare?: (e?: ReactMouseEvent) => void
   shareBtnRef?: React.Ref<HTMLButtonElement>
   saveTooltip?: { saved: string; unsaved: string }
+  // 呼び出し側 (EntryCard) が locale に応じて差し込む aria-label。未指定時は JA を既定。
+  ariaLabels?: {
+    audioPlay?: string
+    audioUnavailable?: string
+    share?: string
+    saved?: string
+    save?: string
+  }
   headingLevel?: 'h1' | 'h2'
   tutorialAttr?: boolean
 }
+
+const DEFAULT_LABELS = {
+  audioPlay: '音声を再生',
+  audioUnavailable: '音声はありません',
+  share: '共有',
+  saved: '保存済み',
+  save: '保存',
+} as const
 
 export default function CardHeader({
   title,
@@ -30,9 +46,11 @@ export default function CardHeader({
   onShare,
   shareBtnRef,
   saveTooltip,
+  ariaLabels,
   headingLevel = 'h1',
   tutorialAttr = false,
 }: Props) {
+  const L = { ...DEFAULT_LABELS, ...(ariaLabels ?? {}) }
   const Heading = headingLevel
 
   const handleAudioClick = (e: ReactMouseEvent) => {
@@ -56,7 +74,7 @@ export default function CardHeader({
             type="button"
             onClick={handleAudioClick}
             disabled={!!audioLoading || audioUnavailable}
-            aria-label={audioUnavailable ? '音声はありません' : '音声を再生'}
+            aria-label={audioUnavailable ? L.audioUnavailable : L.audioPlay}
             className="shrink-0 disabled:cursor-not-allowed"
           >
             <HiSpeakerWave
@@ -77,7 +95,7 @@ export default function CardHeader({
             ref={shareBtnRef}
             type="button"
             onClick={(e) => { e.stopPropagation(); onShare(e) }}
-            aria-label="共有"
+            aria-label={L.share}
             className="hidden md:inline-flex p-2 -mt-1 rounded-full hover:bg-primary-subtle text-muted"
           >
             <MdIosShare className="size-6" />
@@ -88,7 +106,7 @@ export default function CardHeader({
             type="button"
             onClick={handleSaveClick}
             {...(tutorialAttr ? { 'data-tutorial': 'save-button' } : {})}
-            aria-label={isSaved ? '保存済み' : '保存'}
+            aria-label={isSaved ? L.saved : L.save}
             // touch-manipulation: iOS WebView の 300ms タップ遅延を排除
             className="p-2 -mr-2 -mt-1 touch-manipulation"
           >

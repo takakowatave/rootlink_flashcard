@@ -17,6 +17,8 @@ import { supabase } from "@/lib/supabaseClient"
 import type { SavedWordDictionary } from "@/types/Dictionary"
 import type { DisplayLocale } from "@/types/DisplayLocale"
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from "@/types/DisplayLocale"
+import { detectDisplayLocale } from "@/lib/displayLocale"
+import { messages } from "@/lib/i18n/messages"
 import SignupRequiredModal from "@/components/SignupRequiredModal"
 import PageHeader from "@/components/PageHeader"
 import CardShell from "@/components/CardShell"
@@ -99,10 +101,8 @@ export default function WordListPage() {
   const [quizAutoAudio, setQuizAutoAudio] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayAudio)
   const [quizAutoHeadword, setQuizAutoHeadword] = useState(QUIZ_SETTINGS_DEFAULTS.autoPlayHeadword)
   const [userId, setUserId] = useState<string | null>(null)
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(detectDisplayLocale)
+  const t = messages[displayLocale]
 
   const loadStatus = async (keys: string[], userId: string) => {
     if (keys.length === 0) { setWordStatus(new Map()); setWrongCounts(new Map()); return }
@@ -210,11 +210,11 @@ export default function WordListPage() {
 
   const handleToggleSave = async (word: SavedWordRow) => {
     const { data } = await supabase.auth.getUser()
-    if (!data.user) { toast.error("ログインが必要です"); return }
+    if (!data.user) { toast.error(t.common.loginRequired); return }
     const result = await toggleSaveStatus(word)
-    if (!result.success) { toast.error("処理に失敗しました"); return }
+    if (!result.success) { toast.error(t.common.actionFailed); return }
     await load()
-    toast.success("更新しました")
+    toast.success(t.common.updated)
   }
 
   const handleOpenModal = async (item: SavedWordMetaRow) => {
@@ -355,8 +355,8 @@ export default function WordListPage() {
           max-w のラッパの外に置く（内部で中身だけ max-w-[600px] で中央寄せ）。 */}
       <PageHeader
         items={[
-          { label: 'ホーム', href: '/' },
-          { label: 'My単語帳' },
+          { label: t.common.home, href: '/' },
+          { label: t.wordlist.breadcrumb },
         ]}
       />
 
@@ -368,8 +368,8 @@ export default function WordListPage() {
       <QuizProgressPanel
         header={
           <>
-            <h2 className="text-lg font-bold text-gray-950">My単語帳</h2>
-            <p className="text-sm text-gray-600 mt-1">辞書から単語を検索してオリジナルの単語帳をつくれます。</p>
+            <h2 className="text-lg font-bold text-gray-950">{t.wordlist.title}</h2>
+            <p className="text-sm text-gray-600 mt-1">{t.wordlist.subtitle}</p>
           </>
         }
         mastered={masteredCount}
@@ -384,7 +384,7 @@ export default function WordListPage() {
         ]}
         selectedScope={quizScope}
         onScopeChange={setQuizScope}
-        buttonLabel="はじめる"
+        buttonLabel={t.quiz.start}
         buttonDisabled={scopeSource[quizScope].length === 0}
         onStart={startQuiz}
         settings={{
@@ -414,7 +414,7 @@ export default function WordListPage() {
           <CardShell>
             <div className="flex flex-col items-center gap-4 py-6 px-4">
               <p className="font-bold text-base text-center text-default">
-                辞書から単語を検索してオリジナルの単語帳をつくろう
+                {t.wordlist.emptyCta}
               </p>
               <img
                 src="/wordlist/empty-search.png"
@@ -425,9 +425,9 @@ export default function WordListPage() {
                 type="button"
                 onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
                 className="w-full max-w-[420px] h-12 flex items-center gap-2 bg-white border border-line rounded-full pl-5 pr-4 text-left hover:border-primary transition-colors"
-                aria-label="検索を開く"
+                aria-label={t.word.openSearch}
               >
-                <span className="flex-1 text-sm text-gray-400">検索</span>
+                <span className="flex-1 text-sm text-gray-400">{t.common.search}</span>
                 <svg className="size-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -499,7 +499,7 @@ export default function WordListPage() {
                   variant="secondary"
                   fullWidth
                 >
-                  もっと見る（+{Math.min(LOAD_MORE_STEP, totalItems - visibleCount)}）
+                  {t.common.loadMore(Math.min(LOAD_MORE_STEP, totalItems - visibleCount))}
                 </Button>
               </div>
             )}

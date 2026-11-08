@@ -5,10 +5,15 @@ import { HiX } from "react-icons/hi";
 import ModalShell from "@/components/ModalShell";
 import PrivacyContent from "@/components/PrivacyContent";
 import { openExternalLink } from "@/lib/openExternal";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
 
 const CONTACT_URL = "https://tally.so/r/ODJoEY";
 
 export default function AuthPage({ children }: { children: React.ReactNode }) {
+  const locale = useDisplayLocale();
+  const labels = locale === 'en'
+    ? { privacy: 'Privacy', contact: 'Contact', close: 'Close' }
+    : { privacy: 'プライバシーポリシー', contact: 'お問い合わせ', close: '閉じる' };
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
   return (
@@ -22,14 +27,14 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
             onClick={() => setPrivacyOpen(true)}
             className="hover:text-primary-dark transition-colors"
           >
-            プライバシーポリシー
+            {labels.privacy}
           </button>
           <button
             type="button"
             onClick={() => openExternalLink(CONTACT_URL)}
             className="hover:text-primary-dark transition-colors"
           >
-            お問い合わせ
+            {labels.contact}
           </button>
         </div>
         <p>© 2026 RootLink. All rights reserved.</p>
@@ -43,7 +48,7 @@ export default function AuthPage({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={() => setPrivacyOpen(false)}
             className="p-2 -mr-1 rounded-full hover:bg-primary-subtle text-muted"
-            aria-label="閉じる"
+            aria-label={labels.close}
           >
             <HiX className="size-5" />
           </button>

@@ -7,6 +7,7 @@ import EtymologyPartBadge from '@/components/EtymologyPartBadge'
 import SavedWordRow from '@/components/SavedWordRow'
 import type { EtymologyData, EtymologyPart } from '@/types/Etymology'
 import type { RewrittenPayload } from '@/types/Dictionary'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 
 export type LearnedWord = {
   word: string
@@ -158,10 +159,14 @@ export function LearnedPartWordsView({
   groups: LearnedPartGroup[]
   onToggleSave?: (word: string) => void
 }) {
+  const locale = useDisplayLocale()
   if (groups.length === 0) return null
+  const heading = locale === 'en'
+    ? 'Words you have seen that share these parts'
+    : '過去に学習した同パーツを持つ単語'
   return (
     <div className="flex flex-col gap-2 w-full mt-4">
-      <p className="text-base font-medium text-gray-950 leading-6">過去に学習した同パーツを持つ単語</p>
+      <p className="text-base font-medium text-gray-950 leading-6">{heading}</p>
       <div className="bg-slate-50 rounded-lg p-2 flex flex-col gap-4">
         {groups.map((g, gi) => (
           <PartGroupTree key={`${g.part.text}-${gi}`} group={g} onToggleSave={onToggleSave} />

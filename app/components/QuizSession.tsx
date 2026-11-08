@@ -13,10 +13,12 @@ import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { buildPhraseSpanRegex, displayPhrase } from '@/lib/phraseDisplay'
 import { jaHighlightMatches } from '@/lib/jaHighlight'
 import { fetchTtsAudioUrl, useTtsAudio } from '@/lib/useTtsAudio'
-import { POS_LABEL_JA } from '@/lib/pos'
+import { getPosLabel } from '@/lib/pos'
 import { WordDetailContext, type WordDetailEntry } from '@/lib/wordDetailStack'
 import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@/types/Dictionary'
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
 
@@ -173,6 +175,8 @@ function DetailModal({
   entry: WordDetailEntry
   onBack: () => void
 }) {
+  const locale = useDisplayLocale()
+  const t = messages[locale].quizSession
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
@@ -192,7 +196,7 @@ function DetailModal({
             className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-subtle transition-colors text-gray-500"
           >
             <MdArrowBackIosNew size={18} />
-            <span className="text-sm">戻る</span>
+            <span className="text-sm">{t.back}</span>
           </button>
         </div>
         <div key={entry.word} className="overflow-y-auto flex-1">
@@ -228,6 +232,9 @@ function CardView({
 }) {
   const [revealed, setRevealed] = useState(false)
   const isPhrase = !!card.phrase_card_id
+  const locale = useDisplayLocale()
+  const t = messages[locale].quizSession
+  const q = messages[locale].quiz
 
   const headword = useTtsAudio(
     isPhrase
@@ -346,7 +353,7 @@ function CardView({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <header className="h-10 bg-white border-b border-line shadow-[0_1px_1px_rgba(0,0,0,0.05)] flex items-center px-2 shrink-0">
-        <Button onClick={onQuit} variant="secondary" size="sm">終了</Button>
+        <Button onClick={onQuit} variant="secondary" size="sm">{t.quit}</Button>
       </header>
       <div className="flex flex-col mx-auto w-full max-w-[700px] flex-1 min-h-0">
         <div className="mx-4 mt-4 flex items-center gap-2 shrink-0">
@@ -365,18 +372,18 @@ function CardView({
             <div className="inline-flex border border-divider rounded-[4px] overflow-hidden mb-4">
               <button onClick={() => card.example && onModeChange('example')} disabled={!card.example}
                 className={`px-6 h-8 text-base font-bold transition-colors ${mode === 'example' ? 'bg-primary-light text-primary-hover' : !card.example ? 'bg-white text-gray-300 cursor-not-allowed' : 'bg-white text-dim'}`}>
-                例文
+                {q.defaultModeExample}
               </button>
               <button onClick={() => onModeChange('word')}
                 className={`px-6 h-8 text-base transition-colors ${mode === 'word' ? 'bg-primary-light text-primary-hover font-bold' : 'bg-white text-dim font-normal'}`}>
-                単語
+                {q.defaultModeWord}
               </button>
             </div>
             {mode === 'example' && card.example ? renderExample() : (
               <div>
                 {card.pos && (
                   <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
-                    {POS_LABEL_JA[card.pos] ?? card.pos}
+                    {getPosLabel(card.pos, locale)}
                   </span>
                 )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>
@@ -430,11 +437,11 @@ function CardView({
             onClick={() => setRevealed(r => !r)}
             className="w-full h-10 rounded-full bg-primary-subtle text-primary text-sm font-medium px-6 mb-2 transition-colors active:scale-[0.98]"
           >
-            {revealed ? '解説を閉じる' : '解説を見る'}
+            {revealed ? t.hide : t.reveal}
           </button>
           <div className="flex gap-3">
-            <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">まだ</Button>
-            <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">覚えた</Button>
+            <Button onClick={() => onAnswer(false)} variant="secondary" size="lg" className="flex-1">{t.notYet}</Button>
+            <Button onClick={() => onAnswer(true)} variant="primary" size="lg" className="flex-1">{t.gotIt}</Button>
           </div>
         </div>
       </div>
@@ -452,6 +459,8 @@ function ResultScreen({
   onBack: () => void
   onOpenEntry: (entry: QuizEntry) => void
 }) {
+  const locale = useDisplayLocale()
+  const t = messages[locale].quizSession
   const correct = results.filter(Boolean).length
   const total = cards.length
   const correctCards = cards.filter((_, i) => results[i])
@@ -472,16 +481,16 @@ function ResultScreen({
         <Sparkles show={showSparkles} />
         <div className="relative bg-primary-subtle rounded-2xl p-6 mb-6 overflow-hidden flex flex-col items-center">
           <Sparkles show={showSparkles} />
-          <p className="text-xs font-medium text-primary-hover bg-primary-light px-3 py-1 rounded-full mb-3">わかった数</p>
+          <p className="text-xs font-medium text-primary-hover bg-primary-light px-3 py-1 rounded-full mb-3">{t.correctCountLabel}</p>
           <p className="text-5xl font-bold text-gray-900 mb-1">{correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span></p>
           <p className="text-base font-bold italic text-gray-600 mt-2">{message}</p>
         </div>
-        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-6">次へ</Button>
+        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-6">{t.next}</Button>
         {wrongCards.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-500">わからなかった（{wrongCards.length}語）</h3>
-              <Button onClick={onRetryWrong} variant="secondary" size="sm"><span>↺</span> {wrongCards.length}問を復習</Button>
+              <h3 className="text-sm font-semibold text-gray-500">{t.wrong(wrongCards.length)}</h3>
+              <Button onClick={onRetryWrong} variant="secondary" size="sm"><span>↺</span> {t.retry(wrongCards.length)}</Button>
             </div>
             {wrongCards.map((card, i) => (
               <div key={`wrong-${card.word}-${i}`} onClick={() => openByWord(card.word)}
@@ -495,7 +504,7 @@ function ResultScreen({
         )}
         {correctCards.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-primary-hover mb-2">わかった（{correctCards.length}語）</h3>
+            <h3 className="text-sm font-semibold text-primary-hover mb-2">{t.correct(correctCards.length)}</h3>
             {correctCards.map((card, i) => (
               <div key={`correct-${card.word}-${i}`} onClick={() => openByWord(card.word)}
                 className="flex items-center gap-3 py-2.5 border-b border-line last:border-0 cursor-pointer hover:bg-primary-subtle -mx-1 px-1 rounded">
@@ -531,6 +540,8 @@ export default function QuizSession({
   initialMode = 'example', autoPlayExampleAudio = false, autoPlayHeadwordAudio = false,
   deckId = null,
 }: Props) {
+  const locale = useDisplayLocale()
+  const tSession = messages[locale].quizSession
   const [cards, setCards] = useState<QuizCard[]>(initialCards)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [results, setResults] = useState<boolean[]>([])
@@ -687,13 +698,13 @@ export default function QuizSession({
                 <HiX className="size-4" />
               </button>
               <div className="text-3xl text-center mb-3 select-none">🎯</div>
-              <h2 className="text-base font-bold text-center text-gray-900 mb-2">使い方</h2>
+              <h2 className="text-base font-bold text-center text-gray-900 mb-2">{tSession.howToTitle}</h2>
               <p className="text-sm text-gray-600 text-center leading-relaxed mb-5">
-                単語や例文を見て意味を思い出したら「覚えた」、思い出せなかったら「まだ」を押しましょう。間違えた単語だけ再挑戦することもできます。
+                {tSession.howToBody}
               </p>
               <button onClick={finishTutorial}
                 className="w-full bg-primary text-white rounded-full py-2.5 text-sm font-semibold hover:bg-primary-hover transition-colors">
-                はじめる
+                {tSession.howToStart}
               </button>
             </div>
           </div>

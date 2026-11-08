@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
 import { ensureNativeGuestSession } from '@/lib/ensureNativeGuestSession'
 import Link from 'next/link'
@@ -67,10 +68,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
   const [exampleAudioUrl, setExampleAudioUrl] = useState<Record<string, string>>({})
   const [exampleAudioLoading, setExampleAudioLoading] = useState<Record<string, boolean>>({})
   const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(null)
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(detectDisplayLocale)
 
   const senses: PhraseSense[] = useMemo(() => {
     if (card.senses && card.senses.length > 0) return card.senses
@@ -294,7 +292,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
       <ReportContentLink kind="phrase" content={card.phrase} />
 
       {/* 収録デッキカルーセル。単語ページ (WordPageClient) と同じ見た目。該当なしなら出さない */}
-      {containingDecks && containingDecks.length > 0 && (
+      {displayLocale === 'ja' && containingDecks && containingDecks.length > 0 && (
         <section className="w-full mx-auto max-w-[600px] px-4 mt-4 pb-6">
           <h2 className="text-xl font-bold text-gray-950 mb-3">この熟語が収録されている単語帳</h2>
           <DeckScrollStrip

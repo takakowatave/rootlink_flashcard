@@ -27,6 +27,8 @@ import {
   filterByPeriod,
   type ReviewPeriod,
 } from '@/lib/reviewPeriod'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type QuizMode = QuizScope
 
@@ -43,6 +45,8 @@ type QuizClientProps = {
 export default function QuizClient({ initialPeriodProp = null }: QuizClientProps = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const locale = useDisplayLocale()
+  const t = messages[locale].quizSession
   const hasPeriodParam = ((): boolean => {
     if (initialPeriodProp) return true
     const p = searchParams.get('period')
@@ -311,7 +315,7 @@ export default function QuizClient({ initialPeriodProp = null }: QuizClientProps
   // 復習エントリ: ReviewDashboard (QuizProgressPanel ベース = 他デッキ章画面と同構造)
   if (reviewMode) {
     if (!reviewStatsLoaded) {
-      return <div className="py-20 text-center text-gray-400">読み込み中...</div>
+      return <div className="py-20 text-center text-gray-400">{t.loading}</div>
     }
     return (
       <>
@@ -341,14 +345,14 @@ export default function QuizClient({ initialPeriodProp = null }: QuizClientProps
   }
 
   if (loading) {
-    return <div className="py-20 text-center text-gray-400">読み込み中...</div>
+    return <div className="py-20 text-center text-gray-400">{t.loading}</div>
   }
 
   if (!sessionEntries || sessionEntries.length === 0) {
     return (
       <div className="py-20 text-center text-gray-400">
-        <p>保存した単語がありません</p>
-        <a href="/wordlist" className="mt-4 inline-block text-primary underline text-sm">単語リストへ</a>
+        <p>{t.noSavedWords}</p>
+        <a href="/wordlist" className="mt-4 inline-block text-primary underline text-sm">{t.goToWordlist}</a>
       </div>
     )
   }

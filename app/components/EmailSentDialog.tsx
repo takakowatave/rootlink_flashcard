@@ -3,34 +3,44 @@
 import { useEffect } from "react";
 import { MdMarkEmailRead } from "react-icons/md";
 import Button from "./Button";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
 
 export type EmailSentVariant =
   | "signup-confirm"
   | "email-change"
   | "password-reset";
 
-const HEADING: Record<EmailSentVariant, string> = {
+const HEADING_JA: Record<EmailSentVariant, string> = {
   "signup-confirm": "確認メールを送信しました",
   "email-change": "確認メールを送信しました",
   "password-reset": "再設定メールを送信しました",
 };
-
-const INSTRUCTION: Record<EmailSentVariant, string> = {
-  "signup-confirm":
-    "メール内のリンクをクリックして登録を完了してください。",
-  "email-change":
-    "新しいメールアドレスに送信された確認リンクをクリックして変更を完了してください。",
-  "password-reset":
-    "メール内のリンクから新しいパスワードを設定してください。",
+const HEADING_EN: Record<EmailSentVariant, string> = {
+  "signup-confirm": "Verification email sent",
+  "email-change": "Verification email sent",
+  "password-reset": "Reset email sent",
 };
 
-const FALLBACK: Record<EmailSentVariant, string> = {
-  "signup-confirm":
-    "数分待っても届かない場合、このメールアドレスは既に登録されている可能性があります。",
-  "email-change":
-    "数分待っても届かない場合は、迷惑メールフォルダをご確認ください。",
-  "password-reset":
-    "数分待っても届かない場合は、迷惑メールフォルダをご確認ください。",
+const INSTRUCTION_JA: Record<EmailSentVariant, string> = {
+  "signup-confirm": "メール内のリンクをクリックして登録を完了してください。",
+  "email-change": "新しいメールアドレスに送信された確認リンクをクリックして変更を完了してください。",
+  "password-reset": "メール内のリンクから新しいパスワードを設定してください。",
+};
+const INSTRUCTION_EN: Record<EmailSentVariant, string> = {
+  "signup-confirm": "Click the link in the email to complete your sign-up.",
+  "email-change": "Click the verification link sent to your new email address to complete the change.",
+  "password-reset": "Use the link in the email to set a new password.",
+};
+
+const FALLBACK_JA: Record<EmailSentVariant, string> = {
+  "signup-confirm": "数分待っても届かない場合、このメールアドレスは既に登録されている可能性があります。",
+  "email-change": "数分待っても届かない場合は、迷惑メールフォルダをご確認ください。",
+  "password-reset": "数分待っても届かない場合は、迷惑メールフォルダをご確認ください。",
+};
+const FALLBACK_EN: Record<EmailSentVariant, string> = {
+  "signup-confirm": "If you do not receive the email in a few minutes, this address may already be registered.",
+  "email-change": "If you do not receive the email in a few minutes, please check your spam folder.",
+  "password-reset": "If you do not receive the email in a few minutes, please check your spam folder.",
 };
 
 interface Props {
@@ -41,6 +51,11 @@ interface Props {
 }
 
 export default function EmailSentDialog({ open, onClose, sentTo, variant }: Props) {
+  const locale = useDisplayLocale();
+  const HEADING = locale === 'en' ? HEADING_EN : HEADING_JA;
+  const INSTRUCTION = locale === 'en' ? INSTRUCTION_EN : INSTRUCTION_JA;
+  const FALLBACK = locale === 'en' ? FALLBACK_EN : FALLBACK_JA;
+  const sentToLine = locale === 'en' ? 'was used to send your email' : '宛にメールを送信しました';
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -75,7 +90,7 @@ export default function EmailSentDialog({ open, onClose, sentTo, variant }: Prop
         <p className="text-sm text-gray-900 break-all">
           <span className="text-primary font-semibold">{sentTo}</span>
           <br />
-          <span className="text-gray-700">宛にメールを送信しました</span>
+          <span className="text-gray-700">{sentToLine}</span>
         </p>
         <p className="text-sm text-gray-600 leading-relaxed">{INSTRUCTION[variant]}</p>
         <p className="text-xs text-gray-500 leading-relaxed mt-1">{FALLBACK[variant]}</p>

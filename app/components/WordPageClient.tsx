@@ -29,6 +29,8 @@ import type { LexicalUnit, SimpleLexicalUnit } from '@/types/LexicalUnit'
 import type { EtymologyData, EtymologyPart, EtymologyPartType, LocalizedEtymologyJa } from '@/types/Etymology'
 import type { DisplayLocale } from '@/types/DisplayLocale'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
+import { messages } from '@/lib/i18n/messages'
 import type { RewrittenSense, RewrittenSenseGroup, RewrittenPayload, SavedWordDictionary } from '@/types/Dictionary'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -707,8 +709,14 @@ export default function WordPageClient({
 
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
+  const tWord = messages[displayLocale].word
 
   useEffect(() => {
+    // 初回: localStorage 未設定ならブラウザ言語で決める。
+    if (!initialDisplayLocale) {
+      const detected = detectDisplayLocale()
+      if (detected !== displayLocale) setDisplayLocale(detected)
+    }
     const syncDisplayLocale = () => {
       const savedLocale = window.localStorage.getItem(
         DISPLAY_LOCALE_STORAGE_KEY
@@ -718,8 +726,6 @@ export default function WordPageClient({
         setDisplayLocale(savedLocale)
       }
     }
-
-    syncDisplayLocale()
 
     window.addEventListener(
       DISPLAY_LOCALE_EVENT_NAME,
@@ -1097,7 +1103,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
     if (result.success) {
       if (!isSaved) {
-        toast.success('単語を保存しました！', { position: 'top-center' })
+        toast.success(tWord.savedToast, { position: 'top-center' })
       }
     } else {
       // 失敗したらロールバック (intent も戻す)
@@ -1180,7 +1186,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
               }
             }}
             className="p-2 rounded-full hover:bg-primary-subtle text-muted shrink-0"
-            aria-label="戻る"
+            aria-label={tWord.back}
           >
             <MdArrowBackIosNew className="size-6" />
           </button>
@@ -1188,7 +1194,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search', { detail: { initialValue: word } }))}
             className="flex-1 min-w-0 h-[33px] flex items-center gap-2 bg-white border border-line rounded-full pl-4 pr-3 text-left"
-            aria-label="検索を開く"
+            aria-label={tWord.openSearch}
           >
             {/* 見ている単語をフォームに表示する (元仕様)。空検索窓には戻さない。 */}
             <span className="flex-1 min-w-0 truncate text-sm text-black">{word}</span>
@@ -1202,7 +1208,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
               setShowShareMenu(true)
             }}
             className="p-2 rounded-full hover:bg-primary-subtle text-muted shrink-0"
-            aria-label="共有"
+            aria-label={tWord.share}
           >
             <MdIosShare className="size-6" />
           </button>
@@ -1230,13 +1236,23 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
     {showCorrectionBanner && correctedFrom && (
       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-lg mb-0 mx-4 mt-3">
         <span>
-          <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span> を{' '}
-          <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span> に補正して検索しました
+          {displayLocale === 'ja' ? (
+            <>
+              <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span> {tWord.correctionPrefix}{' '}
+              <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span> {tWord.correctionSuffix}
+            </>
+          ) : (
+            <>
+              {tWord.correctionPrefix}{' '}
+              <span className="font-mono font-medium">&ldquo;{word}&rdquo;</span>{' '}{tWord.correctionSuffix}{' '}
+              <span className="font-mono">&ldquo;{correctedFrom}&rdquo;</span>
+            </>
+          )}
         </span>
         <button
           onClick={() => setShowCorrectionBanner(false)}
           className="ml-3 text-amber-600 hover:text-amber-800 text-lg leading-none"
-          aria-label="閉じる"
+          aria-label={tWord.closeBanner}
         >
           ×
         </button>
@@ -1279,10 +1295,11 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
     {/* 収録デッキカルーセル (単語カード直下)。該当なしなら何も出さない
         (フッターリンク集化を回避)。DeckScrollStrip は Dashboard / /decks /
-        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc */}
-    {containingDecks && containingDecks.length > 0 && (
+        LP と共通のコンポーネント。Notion issue 3d2d…-7fcfc
+        EN 表示では公式デッキが日本語試験 (TOEIC/英検 等) 中心なので出さない。 */}
+    {displayLocale === 'ja' && containingDecks && containingDecks.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
-        <h2 className="text-xl font-bold text-gray-950 mb-3">この単語が収録されている単語帳</h2>
+        <h2 className="text-xl font-bold text-gray-950 mb-3">{tWord.containingDecks}</h2>
         <DeckScrollStrip
           items={containingDecks.map((d) => ({
             key: d.slug,
@@ -1297,15 +1314,15 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       </section>
     )}
 
-    {rootPosts && rootPosts.length > 0 && (
+    {displayLocale === 'ja' && rootPosts && rootPosts.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-4">
         <h2 className="text-xl font-bold text-gray-950 mb-3">
-          {rootPosts.length === 1 ? `語根「${rootPosts[0].root}」をもっと知る` : '語根をもっと知る'}
+          {rootPosts.length === 1 ? tWord.rootMore(rootPosts[0].root) : tWord.rootMoreMulti}
         </h2>
         <DeckScrollStrip
           items={rootPosts.map((p) => ({
             key: p.slug,
-            label: '語根',
+            label: tWord.rootLabel,
             title: p.root,
             imageSrc: `/blog/${p.slug}/cover.png`,
             imageFit: 'contain' as const,
@@ -1316,9 +1333,9 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
       </section>
     )}
 
-    {relatedPosts && relatedPosts.length > 0 && (
+    {displayLocale === 'ja' && relatedPosts && relatedPosts.length > 0 && (
       <section className="w-full mx-auto max-w-[600px] px-4 mt-3 mb-6">
-        <h2 className="text-sm font-semibold text-muted mb-2">この単語を扱った記事</h2>
+        <h2 className="text-sm font-semibold text-muted mb-2">{tWord.relatedPosts}</h2>
         <ul className="space-y-2">
           {relatedPosts.map((post) => (
             <li key={post.slug}>

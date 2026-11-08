@@ -6,6 +6,7 @@ import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord, getRootPostsForParts } from '@/lib/blog'
 import { deckCardTitle, toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
+import { detectServerLocale } from '@/lib/serverLocale'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -346,11 +347,29 @@ function getFirstJaMeaning(dictionary: MetaDictionary | null): string | null {
   return meaning || null
 }
 
-function buildTitle(word: string): string {
+type MetaDictionaryWithEn = MetaDictionary & {
+  senseGroups?: Array<{ senses?: Array<{ senseId?: string; definition?: string }> }>
+}
+
+function getFirstEnMeaning(dictionary: MetaDictionaryWithEn | null): string | null {
+  const def = dictionary?.senseGroups?.[0]?.senses?.[0]?.definition
+  return typeof def === 'string' && def.trim() ? def.trim() : null
+}
+
+function buildTitle(word: string, locale: 'ja' | 'en'): string {
+  // layout.tsx の metadata.template が "%s | RootLink" を付けるので、ここでは語単体にする。
+  if (locale === 'en') return `${word} — etymology and meaning`
   return `${word} の語源と意味｜語根から覚える英単語`
 }
 
-function buildDescription(word: string, dictionary: MetaDictionary | null): string {
+function buildDescription(word: string, dictionary: MetaDictionaryWithEn | null, locale: 'ja' | 'en'): string {
+  if (locale === 'en') {
+    const enMeaning = getFirstEnMeaning(dictionary)
+    if (enMeaning) {
+      return `${word}: ${enMeaning}. Understand this word by its roots and etymology on RootLink.`
+    }
+    return `Learn ${word} by its roots and etymology. RootLink teaches English vocabulary through word origins.`
+  }
   const jaMeaning = getFirstJaMeaning(dictionary)
   if (jaMeaning) {
     return `${word} の意味は「${jaMeaning}」。語根と語源から英単語の成り立ちを解説します。`
@@ -363,16 +382,17 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: { word: string }
-  searchParams?: { fresh?: string }
+  searchParams?: { fresh?: string; lang?: string }
 }): Promise<Metadata> {
   const original = decodeURIComponent(params.word).trim()
   const raw = original.toLowerCase()
   const fresh = searchParams?.fresh === '1'
+  const locale = detectServerLocale({ queryLang: searchParams?.lang })
   const data = await resolveWordAnyCase(original, fresh)
   const word = data?.resolved ?? raw
-  const dictionary = (data?.dictionary ?? null) as MetaDictionary | null
-  const title = buildTitle(word)
-  const description = buildDescription(word, dictionary)
+  const dictionary = (data?.dictionary ?? null) as MetaDictionaryWithEn | null
+  const title = buildTitle(word, locale)
+  const description = buildDescription(word, dictionary, locale)
   const cardUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`
   return {
     title,
@@ -384,6 +404,7 @@ export async function generateMetadata({
       title: `${word} | RootLink`,
       description,
       url: `https://www.rootlink.app/word/${encodeURIComponent(word)}`,
+      locale: locale === 'en' ? 'en_US' : 'ja_JP',
       images: [{ url: cardUrl, width: 1200, height: 675, alt: `${word} — RootLink` }],
     },
     twitter: {
@@ -400,12 +421,13 @@ export default async function Page({
   searchParams,
 }: {
   params: { word: string }
-  searchParams?: { pin?: string; fresh?: string }
+  searchParams?: { pin?: string; fresh?: string; lang?: string }
 }) {
   const original = decodeURIComponent(params.word).replace(/_/g, ' ').trim()
   const raw = original.toLowerCase()
   const pin = searchParams?.pin ?? null
   const fresh = searchParams?.fresh === '1'
+  const locale = detectServerLocale({ queryLang: searchParams?.lang })
 
   // 複数語はフレーズを優先して検索（語源ツリーを避ける）
   if (raw.includes(' ')) {
@@ -448,6 +470,7 @@ export default async function Page({
         containingDecks={containingDecks}
         initialEtymologyRelatedWords={etymologyTree.relatedWords}
         etymologyLinkableWords={etymologyTree.linkable}
+        initialDisplayLocale={locale}
       />
     )
   }

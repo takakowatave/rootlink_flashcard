@@ -19,7 +19,7 @@ import Footer from '@/components/Footer'
 import ShareMenu from '@/components/ShareMenu'
 import { shareViaClipboardAndX } from '@/lib/shareToX'
 import { isNativePlatform } from '@/lib/isNativePlatform'
-import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty } from '@/lib/deckDisplay'
+import { LABEL_ORDER, toShortName, getDeckImage, sortDecksByDifficulty, deckCardTitle } from '@/lib/deckDisplay'
 import {
   fetchReviewCandidates,
   filterByPeriod,
@@ -28,6 +28,10 @@ import {
 } from '@/lib/reviewPeriod'
 import { fetchLatestPost, type PostCard } from '@/lib/blogQueries'
 import BlogLatestBanner from '@/components/blog/BlogLatestBanner'
+import { detectDisplayLocale } from '@/lib/displayLocale'
+import { DISPLAY_LOCALE_EVENT_NAME, DISPLAY_LOCALE_STORAGE_KEY, type DisplayLocale } from '@/types/DisplayLocale'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type Deck = {
   id: string
@@ -38,9 +42,9 @@ type Deck = {
   is_premium: boolean
 }
 
-const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
-
-function getWeekDates(): { date: string; label: string; isToday: boolean; isFuture: boolean }[] {
+function getWeekDates(
+  dayLabels: readonly string[],
+): { date: string; label: string; isToday: boolean; isFuture: boolean }[] {
   const today = new Date()
   const todayStr = today.toLocaleDateString('sv')
   // 今週の月曜日を起点にする
@@ -49,7 +53,7 @@ function getWeekDates(): { date: string; label: string; isToday: boolean; isFutu
   const monday = new Date(today)
   monday.setDate(today.getDate() + mondayOffset)
 
-  return DAY_LABELS.map((label, i) => {
+  return dayLabels.map((label, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
     const dateStr = d.toLocaleDateString('sv')
@@ -63,8 +67,10 @@ function getWeekDates(): { date: string; label: string; isToday: boolean; isFutu
 }
 
 function WeeklyStreak({ streak, activityDates, compact = false }: { streak: number; activityDates: string[]; compact?: boolean }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].dashboard
   const dateSet = new Set(activityDates)
-  const weekDates = getWeekDates()
+  const weekDates = getWeekDates(d.dayLabels)
 
   return (
     <div className="bg-white rounded-xl border border-line px-5 py-4 flex items-center gap-6">
@@ -72,10 +78,10 @@ function WeeklyStreak({ streak, activityDates, compact = false }: { streak: numb
         <>
           {/* 連続日数 */}
           <div className="flex flex-col items-center shrink-0">
-            <p className="text-xs text-muted mb-0.5">連続ログイン</p>
+            <p className="text-xs text-muted mb-0.5">{d.streakLabel}</p>
             <div className="flex items-end gap-1">
               <span className="text-5xl font-black text-quiz-review tabular-nums leading-none">{streak}</span>
-              <span className="text-lg font-bold text-quiz-review mb-1">日</span>
+              <span className="text-lg font-bold text-quiz-review mb-1">{d.streakUnit}</span>
             </div>
           </div>
 
@@ -124,6 +130,8 @@ function ShareButton({
   isSharing: boolean
   buttonRef?: React.Ref<HTMLButtonElement>
 }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].dashboard
   return (
     <Button
       ref={buttonRef}
@@ -135,19 +143,21 @@ function ShareButton({
       className="mt-2"
     >
       <FaShareNodes className="size-4" />
-      {isSharing ? '準備中...' : 'SNSでシェア'}
+      {isSharing ? d.sharePreparing : d.shareSNS}
     </Button>
   )
 }
 
 // Figma 2603:6294 準拠: 円形・モーダル枠の外側右上に浮かべる close
 function ModalCloseButton({ onClose }: { onClose: () => void }) {
+  const locale = useDisplayLocale()
+  const c = messages[locale].common
   return (
     <button
       type="button"
       onClick={onClose}
       className="absolute -top-3 -right-3 size-10 rounded-full bg-slate-50 shadow-[0_0_8px_rgba(144,161,185,0.6)] flex items-center justify-center text-gray-700 hover:bg-white"
-      aria-label="閉じる"
+      aria-label={c.close}
     >
       <HiXMark className="size-5" />
     </button>
@@ -169,6 +179,8 @@ function LevelUpModal({
   plantSrc: string
   onClose: () => void
 }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].dashboard
   const [isSharing, setIsSharing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -202,7 +214,7 @@ function LevelUpModal({
 
   const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}&up=1`
   const filename = `rootlink-level-${level}.png`
-  const shareText = `単語学習でLv.${level}に成長🌱 ${streak}日連続学習中\n\n#RootLink #英単語 #語源学習`
+  const shareText = d.shareLevelUpText(level, streak)
   const shareUrl = 'https://www.rootlink.app'
 
   const handleShare = async () => {
@@ -214,7 +226,7 @@ function LevelUpModal({
         await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
       } catch (err) {
         console.error('SHARE FAILED:', err)
-        toast.error('シェアに失敗しました')
+        toast.error(d.shareFailed)
       } finally {
         setIsSharing(false)
       }
@@ -229,7 +241,7 @@ function LevelUpModal({
       await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
     } catch (err) {
       console.error('SHARE X FAILED:', err)
-      toast.error('シェアに失敗しました')
+      toast.error(d.shareFailed)
     } finally {
       setIsSharing(false)
     }
@@ -248,7 +260,7 @@ function LevelUpModal({
           <ModalCloseButton onClose={onClose} />
 
           <p className="text-[25px] font-extrabold text-orange-400 text-center w-full leading-none">
-            レベルアップ！
+            {d.levelUp}
           </p>
 
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -256,10 +268,10 @@ function LevelUpModal({
 
           <div className="flex flex-col items-center text-center">
             <p className="text-[25px] font-bold text-orange-400 leading-8">
-              連続{streak}日学習中
+              {d.streakLearning(streak)}
             </p>
             <p className="text-base font-bold text-gray-950 leading-7">
-              毎日ログインして育てよう
+              {d.growWithLogin}
             </p>
           </div>
 
@@ -295,13 +307,15 @@ function StreakModal({
   pointsToNext: number | null
   onClose: () => void
 }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].dashboard
   const [isSharing, setIsSharing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const cardUrl = `/share/streak/${streak}/card.png?lv=${plantLevel}`
   const filename = `rootlink-streak-${streak}days.png`
-  const shareText = `${streak}日連続で英単語学習🔥\n\n#RootLink #英単語 #語源学習`
+  const shareText = d.shareStreakText(streak)
   const shareUrl = `https://www.rootlink.app/share/streak/${streak}?lv=${plantLevel}`
 
   const handleShare = async () => {
@@ -313,7 +327,7 @@ function StreakModal({
         await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
       } catch (err) {
         console.error('SHARE FAILED:', err)
-        toast.error('シェアに失敗しました')
+        toast.error(d.shareFailed)
       } finally {
         setIsSharing(false)
       }
@@ -328,7 +342,7 @@ function StreakModal({
       await shareViaClipboardAndX({ cardUrl, filename, shareText, shareUrl })
     } catch (err) {
       console.error('SHARE X FAILED:', err)
-      toast.error('シェアに失敗しました')
+      toast.error(d.shareFailed)
     } finally {
       setIsSharing(false)
     }
@@ -359,16 +373,16 @@ function StreakModal({
               />
             </div>
             {pointsToNext != null && (
-              <p className="text-sm text-slate-400">あと{pointsToNext}ptで次の進化</p>
+              <p className="text-sm text-slate-400">{d.nextEvolution(pointsToNext)}</p>
             )}
           </div>
 
           <div className="flex flex-col items-center text-center">
             <p className="text-[25px] font-bold text-orange-400 leading-8">
-              連続{streak}日学習中
+              {d.streakLearning(streak)}
             </p>
             <p className="text-base font-bold text-gray-950 leading-7">
-              毎日ログインして育てよう
+              {d.growWithLogin}
             </p>
           </div>
 
@@ -406,6 +420,8 @@ function DeckSection({
   items: DeckItem[]
   moreHref?: string
 }) {
+  const locale = useDisplayLocale()
+  const d = messages[locale].dashboard
   if (items.length === 0) return null
   return (
     <section className="flex flex-col gap-3">
@@ -416,7 +432,7 @@ function DeckSection({
             href={moreHref}
             className="flex items-center gap-0.5 text-sm text-muted hover:text-primary-dark"
           >
-            もっと見る
+            {d.moreSuffix}
             <HiChevronRight className="size-4" />
           </Link>
         )}
@@ -445,11 +461,18 @@ const QUIZ_COMPLETED_FLAG = 'plant_quiz_completed'
 // 日次 StreakModal は 1日1回のみ (最後に出した日付を保存)
 const STREAK_MODAL_KEY = 'streak_modal_last_shown'
 
-const REVIEW_PERIOD_LABEL: Record<ReviewPeriod, string> = {
+const REVIEW_PERIOD_LABEL_JA: Record<ReviewPeriod, string> = {
   yesterday: '昨日',
   week: '1週間',
   month: '1ヶ月',
   all: '全期間',
+}
+
+const REVIEW_PERIOD_LABEL_EN: Record<ReviewPeriod, string> = {
+  yesterday: 'Yesterday',
+  week: 'Past 7 days',
+  month: 'Past 30 days',
+  all: 'All time',
 }
 
 export default function Dashboard() {
@@ -470,6 +493,18 @@ export default function Dashboard() {
     yesterday: 0, week: 0, month: 0, all: 0,
   })
   const [latestPost, setLatestPost] = useState<PostCard | null>(null)
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>('ja')
+
+  useEffect(() => {
+    // 初回: 端末言語で判定。以降は localStorage 更新イベントに追従。
+    setDisplayLocale(detectDisplayLocale())
+    const handler = () => {
+      const saved = window.localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale | null
+      if (saved === 'ja' || saved === 'en') setDisplayLocale(saved)
+    }
+    window.addEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+    return () => window.removeEventListener(DISPLAY_LOCALE_EVENT_NAME, handler)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -571,9 +606,11 @@ export default function Dashboard() {
     load()
   }, [])
 
+  const d = messages[displayLocale].dashboard
+  const c = messages[displayLocale].common
   const myDeckItem: DeckItem = {
     key: 'my-wordlist',
-    title: 'My単語帳',
+    title: d.myWordlistTitle,
     href: '/wordlist',
     imageSrc: getPlantImageSrc(quizAttemptCount, activityDates.length),
     wordCount: savedCount ?? undefined,
@@ -583,10 +620,12 @@ export default function Dashboard() {
     .filter((d): d is Deck => d !== undefined)
     .map(d => {
       const shortName = toShortName(d.name, d.label)
+      // シリーズ系 (英会話 Cuppa English 等) はカード用に短縮タイトルを使い label を伏せる。
+      const card = deckCardTitle(d.name, d.label)
       return {
         key: d.id,
-        label: d.label,
-        title: shortName,
+        label: card.label,
+        title: card.title,
         imageSrc: getDeckImage(d.label, shortName),
         wordCount: d.word_count,
         isPremium: d.is_premium && plan === 'free',
@@ -598,10 +637,11 @@ export default function Dashboard() {
     sortDecksByDifficulty(decks.filter(d => d.label === label))
       .map(d => {
         const shortName = toShortName(d.name, d.label)
+        const card = deckCardTitle(d.name, d.label)
         return {
           key: d.id,
-          label: d.label,
-          title: shortName,
+          label: card.label,
+          title: card.title,
           imageSrc: getDeckImage(d.label, shortName),
           wordCount: d.word_count,
           isPremium: d.is_premium && plan === 'free',
@@ -644,15 +684,15 @@ export default function Dashboard() {
 
             {/* 利用状況 */}
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-gray-950">利用状況</h2>
+              <h2 className="text-xl font-bold text-gray-950">{d.usageTitle}</h2>
 
               {/* SP: Figma準拠 コンパクト複合カード (鉢植え部は PlantStatus 経由でロジック統一) */}
               <div className="sm:hidden bg-white rounded-2xl border border-line p-4 flex items-center gap-3">
                 <div className="pr-3 border-r border-line shrink-0">
-                  <p className="text-[11px] text-muted mb-0.5">連続ログイン</p>
+                  <p className="text-[11px] text-muted mb-0.5">{d.streakLabel}</p>
                   <div className="flex items-baseline gap-0.5 leading-none">
                     <span className="text-[40px] font-black text-quiz-review tabular-nums">{streak}</span>
-                    <span className="text-base font-bold text-quiz-review">日</span>
+                    <span className="text-base font-bold text-quiz-review">{d.streakUnit}</span>
                   </div>
                 </div>
                 <PlantStatus variant="compact" quizCount={quizAttemptCount} loginDays={activityDates.length} />
@@ -665,13 +705,13 @@ export default function Dashboard() {
               <div className="hidden sm:flex bg-white rounded-xl border border-line items-stretch overflow-hidden">
                 <PlantStatus quizCount={quizAttemptCount} loginDays={activityDates.length} />
                 <div className="flex-1 px-6 py-3 border-r border-line flex flex-col justify-center">
-                  <p className="text-xs text-muted">学習中の単語数</p>
+                  <p className="text-xs text-muted">{d.studyingCount}</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
                     {(savedCount ?? 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex-1 px-6 py-3 flex flex-col justify-center">
-                  <p className="text-xs text-muted">覚えた単語数</p>
+                  <p className="text-xs text-muted">{d.masteredCount}</p>
                   <p className="text-2xl font-bold text-gray-950 tracking-tight tabular-nums">
                     {masteredCount.toLocaleString()}
                   </p>
@@ -686,7 +726,7 @@ export default function Dashboard() {
 
             {/* 辞書から単語帳を作成 */}
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-gray-950">辞書から単語帳を作成</h2>
+              <h2 className="text-xl font-bold text-gray-950">{d.createWordlistTitle}</h2>
               {savedCount === null ? (
                 // フェッチ完了までは何も出さない (0扱いで空カードが一瞬映るのを防ぐ)
                 <div aria-hidden className="h-[188px]" />
@@ -709,12 +749,12 @@ export default function Dashboard() {
 
             {/* 復習 (期間別4枚固定) */}
             <section className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold text-gray-950">復習</h2>
+              <h2 className="text-xl font-bold text-gray-950">{d.reviewTitle}</h2>
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
                 {REVIEW_PERIODS.map((period) => (
                   <SharedDeckCard
                     key={period}
-                    title={REVIEW_PERIOD_LABEL[period]}
+                    title={(displayLocale === 'en' ? REVIEW_PERIOD_LABEL_EN : REVIEW_PERIOD_LABEL_JA)[period]}
                     imageSrc="/dashboard/recent-words.png"
                     wordCount={reviewCounts[period]}
                     disabled={reviewCounts[period] === 0}
@@ -725,11 +765,13 @@ export default function Dashboard() {
               </div>
             </section>
 
-            <DeckSection title="履歴" items={historyItems} />
+            <DeckSection title={d.historyTitle} items={historyItems} />
 
             {latestPost && <BlogLatestBanner post={latestPost} />}
 
-            <DeckSection title="試験対策" items={examItems} moreHref="/decks" />
+            {displayLocale === 'ja' && (
+              <DeckSection title={d.examPrepTitle} items={examItems} moreHref="/decks" />
+            )}
 
           </div>
         </div>
@@ -741,7 +783,7 @@ export default function Dashboard() {
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event('open-mobile-search'))}
-        aria-label="検索"
+        aria-label={c.search}
         data-tutorial="search"
         className="lg:hidden fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary-hover active:scale-95 transition-transform"
       >

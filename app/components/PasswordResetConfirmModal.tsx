@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Button from "./Button";
 import OtpVerifyStep from "./auth/OtpVerifyStep";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 interface Props {
   open: boolean;
@@ -24,6 +26,29 @@ type Step = "confirm" | "otp";
  */
 export default function PasswordResetConfirmModal({ open, onClose, email, onSent }: Props) {
   const router = useRouter();
+  const locale = useDisplayLocale();
+  const authCopy = messages[locale].auth;
+  const L = locale === 'en'
+    ? {
+        title: 'Reset password',
+        intro: 'We will send a verification code to this address.',
+        next: 'On the next screen, enter the code and set a new password.',
+        cancel: 'Cancel',
+        submitting: 'Sending...',
+        submit: 'Send',
+        sendFailed: 'Failed to send. Please try again later.',
+        resendFailed: 'Resend failed. Please try again later.',
+      }
+    : {
+        title: 'パスワードの再設定',
+        intro: 'こちらのアドレスに確認コードを送信します。',
+        next: '次の画面でコードを入力して、新しいパスワードを設定してください。',
+        cancel: 'キャンセル',
+        submitting: '送信中...',
+        submit: '送信',
+        sendFailed: '送信に失敗しました。時間をおいて再試行してください。',
+        resendFailed: '再送に失敗しました。時間をおいて再試行してください',
+      };
   const [step, setStep] = useState<Step>("confirm");
   const [submitting, setSubmitting] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
@@ -58,7 +83,7 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     setSubmitting(false);
     if (error) {
-      setSendError("送信に失敗しました。時間をおいて再試行してください。");
+      setSendError(L.sendFailed);
       return;
     }
     setStep("otp");
@@ -76,7 +101,7 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
     if (error) {
       setOtpError(
         /expired|invalid/i.test(error.message)
-          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          ? authCopy.otpInvalid
           : error.message,
       );
       return;
@@ -89,7 +114,7 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
   const handleResend = async () => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
-      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+      setOtpError(L.resendFailed);
     }
   };
 
@@ -109,13 +134,13 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
       >
         {step === "confirm" ? (
           <>
-            <h3 className="text-base font-semibold text-gray-950">パスワードの再設定</h3>
+            <h3 className="text-base font-semibold text-gray-950">{L.title}</h3>
             <p className="text-sm text-gray-700 leading-relaxed">
-              こちらのアドレスに確認コードを送信します。
+              {L.intro}
             </p>
             <p className="text-base font-medium text-primary break-all">{email}</p>
             <p className="text-xs text-gray-500 leading-relaxed">
-              次の画面でコードを入力して、新しいパスワードを設定してください。
+              {L.next}
             </p>
             {sendError && <p className="text-xs text-red-500">{sendError}</p>}
             <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
@@ -127,7 +152,7 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
                 disabled={submitting}
                 className="w-full md:w-auto"
               >
-                キャンセル
+                {L.cancel}
               </Button>
               <Button
                 type="button"
@@ -137,7 +162,7 @@ export default function PasswordResetConfirmModal({ open, onClose, email, onSent
                 disabled={submitting}
                 className="w-full md:w-auto"
               >
-                {submitting ? "送信中..." : "送信"}
+                {submitting ? L.submitting : L.submit}
               </Button>
             </div>
           </>

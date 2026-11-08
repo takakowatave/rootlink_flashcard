@@ -4,23 +4,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { isInAppBrowser } from "@/lib/isInAppBrowser";
 import { isNativePlatform } from "@/lib/isNativePlatform";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 const NATIVE_REDIRECT = "com.rootlink.app://auth-callback";
 
 type Variant = "signup" | "login";
 
-// Web (/login /signup) は従来どおり signup / login で文言を分けるが、
-// ネイティブ (NativeAuthForm) は Figma 2613-6938 準拠で単に "Google" とだけ出す。
-const LABEL_WEB: Record<Variant, string> = {
-  signup: "Googleで登録",
-  login: "Googleでログイン",
-};
 const LABEL_NATIVE = "Google";
-
-const ERROR_MESSAGE: Record<Variant, string> = {
-  signup: "Google登録に失敗しました。時間をおいて再試行してください",
-  login: "Googleログインに失敗しました。時間をおいて再試行してください",
-};
 
 export default function GoogleAuthButton({
   variant,
@@ -29,6 +20,10 @@ export default function GoogleAuthButton({
   variant: Variant;
   onError?: (message: string) => void;
 }) {
+  const locale = useDisplayLocale();
+  const authCopy = messages[locale].auth;
+  const label = variant === "signup" ? authCopy.googleSignup : authCopy.googleLogin;
+  const errorMessage = variant === "signup" ? authCopy.googleSignupError : authCopy.googleLoginError;
   const [inAppBrowser, setInAppBrowser] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isNative, setIsNative] = useState(false);
@@ -67,7 +62,7 @@ export default function GoogleAuthButton({
           });
       const { data, error } = await call;
       if (error || !data?.url) {
-        onError?.(ERROR_MESSAGE[variant]);
+        onError?.(errorMessage);
         return;
       }
       if (native) {
@@ -79,7 +74,7 @@ export default function GoogleAuthButton({
         window.location.href = data.url;
       }
     } catch {
-      onError?.(ERROR_MESSAGE[variant]);
+      onError?.(errorMessage);
     }
   };
 
@@ -92,7 +87,7 @@ export default function GoogleAuthButton({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/google-icon.svg" className="w-5 h-5" alt="Google" />
-      {isNative ? LABEL_NATIVE : LABEL_WEB[variant]}
+      {isNative ? LABEL_NATIVE : label}
     </button>
   );
 }

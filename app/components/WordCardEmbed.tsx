@@ -14,7 +14,8 @@ import { toggleSaveStatus } from '@/lib/supabaseApi'
 import { useAuthReload } from '@/lib/useAuthReload'
 import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudio'
 import { sendEvent } from '@/lib/ga'
-import { POS_LABEL_JA } from '@/lib/pos'
+import { POS_LABEL_JA, POS_LABEL_EN } from '@/lib/pos'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import type { SavedWordDictionary } from '@/types/Dictionary'
 
@@ -78,11 +79,16 @@ function pickSense(
   return flat[idx]
 }
 
-function posLabel(pos: string): string {
-  return POS_LABEL_JA[pos] ?? pos
+function posLabel(pos: string, locale: 'ja' | 'en' = 'ja'): string {
+  const map = locale === 'en' ? POS_LABEL_EN : POS_LABEL_JA
+  return map[pos] ?? pos
 }
 
 export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
+  const locale = useDisplayLocale()
+  const L = locale === 'en'
+    ? { saveLimit: 'Save limit reached', saved: 'Word saved!', open: 'Open this word page', playAudio: 'Play audio', savedAria: 'Saved', saveAria: 'Save' }
+    : { saveLimit: '保存上限に達しました', saved: '単語を保存しました！', open: 'この単語の詳細ページを開く', playAudio: '発音を再生', savedAria: '保存済み', saveAria: '保存' }
   const [userId, setUserId] = useState<string | null>(null)
   const [isSaved, setIsSaved] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -151,10 +157,10 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
     if (!result.success) {
       setIsSaved(prev)
       if (result.limitReached) {
-        toast.error('保存上限に達しました', { position: 'top-center' })
+        toast.error(L.saveLimit, { position: 'top-center' })
       }
     } else if (!prev) {
-      toast.success('単語を保存しました！', { position: 'top-center' })
+      toast.success(L.saved, { position: 'top-center' })
     }
   }
 
@@ -205,7 +211,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
               {word}
             </a>
             <p className="mt-1 text-sm text-muted">
-              この単語の詳細ページを開く
+              {L.open}
             </p>
           </div>
         </CardShell>
@@ -237,7 +243,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); playHeadwordAudio() }}
               disabled={headwordAudio.loading}
               className="shrink-0"
-              aria-label="発音を再生"
+              aria-label={L.playAudio}
             >
               <HiSpeakerWave className={`size-6 ${headwordAudio.loading ? 'text-muted animate-pulse' : 'text-muted'}`} />
             </button>
@@ -245,7 +251,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
           <button
             type="button"
             onClick={handleBookmark}
-            aria-label={isSaved ? '保存済み' : '保存'}
+            aria-label={isSaved ? L.savedAria : L.saveAria}
             className="p-2 -mr-2 -mt-1 shrink-0"
           >
             {isSaved
@@ -275,7 +281,7 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
         {sense && (
           <div className="mt-2">
             <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-sm font-medium text-muted">
-              {posLabel(sense.pos)}
+              {posLabel(sense.pos, locale)}
             </span>
             <p className="mt-2 text-base font-medium text-black">
               {sense.meaningJa || sense.meaningEn}

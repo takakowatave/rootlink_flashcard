@@ -6,6 +6,7 @@ import { clearReminders } from "@/lib/reminders";
 import { signOutRevenueCat } from "@/lib/revenuecat";
 import Button from "./Button";
 import { TextInput } from "./TextInput";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
 
 interface Props {
   open: boolean;
@@ -14,7 +15,8 @@ interface Props {
   onDeleted: () => void;
 }
 
-const CONFIRM_WORD = "退会";
+const CONFIRM_WORD_JA = "退会";
+const CONFIRM_WORD_EN = "DELETE";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -26,6 +28,43 @@ export default function DeleteAccountModal({
   hasActiveSubscription,
   onDeleted,
 }: Props) {
+  const locale = useDisplayLocale();
+  const CONFIRM_WORD = locale === 'en' ? CONFIRM_WORD_EN : CONFIRM_WORD_JA;
+  const L = locale === 'en'
+    ? {
+        title: 'Delete account',
+        introBefore: 'The following data will be permanently deleted:',
+        itemProfile: 'Profile and avatar',
+        itemWords: 'Saved words and phrases',
+        itemStats: 'Learning progress and streaks',
+        itemHistory: 'All learning history',
+        premiumWarn: 'Your current Premium plan will be cancelled automatically when you delete your account.',
+        privacyNote: 'Any remaining personal data will be permanently deleted within 30 days per our Privacy Policy.',
+        irreversible: 'This action cannot be undone.',
+        confirmPrompt: `Type "${CONFIRM_WORD}" to confirm`,
+        cancel: 'Cancel',
+        submitting: 'Deleting...',
+        submit: 'Delete account',
+        sessionError: 'Your session is invalid. Please log in again.',
+        failed: 'Failed to delete account. Please try again later.',
+      }
+    : {
+        title: '退会の確認',
+        introBefore: '以下のデータが完全に削除されます:',
+        itemProfile: 'プロフィール・アイコン',
+        itemWords: '保存単語・保存フレーズ',
+        itemStats: '学習成績・学習ストリーク',
+        itemHistory: 'すべての学習履歴',
+        premiumWarn: '現在ご加入のPremiumプランは、退会と同時に自動的に解約されます。',
+        privacyNote: '残存する個人データは、プライバシーポリシーに基づき30日以内に完全に削除されます。',
+        irreversible: 'この操作は取り消せません。',
+        confirmPrompt: `確認のため「${CONFIRM_WORD}」と入力してください`,
+        cancel: 'キャンセル',
+        submitting: '退会処理中...',
+        submit: '退会する',
+        sessionError: 'セッションが無効です。再度ログインしてください。',
+        failed: '退会処理に失敗しました。時間をおいて再試行してください。',
+      };
   const [confirmText, setConfirmText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -58,7 +97,7 @@ export default function DeleteAccountModal({
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
-        setError("セッションが無効です。再度ログインしてください。");
+        setError(L.sessionError);
         setSubmitting(false);
         return;
       }
@@ -71,7 +110,7 @@ export default function DeleteAccountModal({
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        setError("退会処理に失敗しました。時間をおいて再試行してください。");
+        setError(L.failed);
         setSubmitting(false);
         return;
       }
@@ -83,7 +122,7 @@ export default function DeleteAccountModal({
       await supabase.auth.signOut();
       onDeleted();
     } catch {
-      setError("退会処理に失敗しました。時間をおいて再試行してください。");
+      setError(L.failed);
       setSubmitting(false);
     }
   };
@@ -97,32 +136,32 @@ export default function DeleteAccountModal({
         className="relative z-10 bg-white w-full max-w-md rounded-2xl shadow-xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-gray-950">退会の確認</h3>
+        <h3 className="text-lg font-semibold text-gray-950">{L.title}</h3>
 
         <div className="flex flex-col gap-3 text-sm text-gray-700 leading-relaxed">
-          <p>以下のデータが完全に削除されます:</p>
+          <p>{L.introBefore}</p>
           <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600">
-            <li>プロフィール・アイコン</li>
-            <li>保存単語・保存フレーズ</li>
-            <li>学習成績・学習ストリーク</li>
-            <li>すべての学習履歴</li>
+            <li>{L.itemProfile}</li>
+            <li>{L.itemWords}</li>
+            <li>{L.itemStats}</li>
+            <li>{L.itemHistory}</li>
           </ul>
           {hasActiveSubscription && (
             <p className="text-sm text-gray-900 bg-primary-light rounded-lg p-3">
-              現在ご加入のPremiumプランは、退会と同時に自動的に解約されます。
+              {L.premiumWarn}
             </p>
           )}
           <p className="text-xs text-gray-500">
-            残存する個人データは、プライバシーポリシーに基づき30日以内に完全に削除されます。
+            {L.privacyNote}
           </p>
           <p className="text-sm font-medium text-red-600">
-            この操作は取り消せません。
+            {L.irreversible}
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
           <label className="text-sm text-gray-600">
-            確認のため「<span className="font-bold text-gray-900">{CONFIRM_WORD}</span>」と入力してください
+            {L.confirmPrompt}
           </label>
           <TextInput
             value={confirmText}
@@ -143,7 +182,7 @@ export default function DeleteAccountModal({
             disabled={submitting}
             className="w-full md:w-auto"
           >
-            キャンセル
+            {L.cancel}
           </Button>
           <Button
             type="button"
@@ -152,7 +191,7 @@ export default function DeleteAccountModal({
             disabled={!canSubmit}
             className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? "退会処理中..." : "退会する"}
+            {submitting ? L.submitting : L.submit}
           </Button>
         </div>
       </div>

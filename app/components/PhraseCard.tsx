@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import CardShell from '@/components/CardShell'
 import CardHeader from '@/components/CardHeader'
 import SenseExample from '@/components/SenseExample'
@@ -64,11 +65,7 @@ export default function PhraseCard({
   bordered = false,
 }: Props) {
   const router = useRouter()
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (displayLocaleProp) return displayLocaleProp
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => displayLocaleProp ?? detectDisplayLocale())
 
   useEffect(() => {
     if (displayLocaleProp) { setDisplayLocale(displayLocaleProp); return }

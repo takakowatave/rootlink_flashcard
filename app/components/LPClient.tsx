@@ -9,6 +9,8 @@ import LPDecks from '@/components/LPDecks'
 import LPCta from '@/components/LPCta'
 import LPFooter from '@/components/LPFooter'
 import { HiSearch } from 'react-icons/hi'
+import { detectLpLocale } from '@/lib/getLpLocale'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 
 const API_BASE =
   process.env.NEXT_PUBLIC_CLOUDRUN_API_URL ??
@@ -23,7 +25,19 @@ export default function LPClient() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showStickySearch, setShowStickySearch] = useState(false)
+  const [locale, setLocale] = useState<DisplayLocale>('en')
   const heroRef = useRef<HTMLDivElement>(null)
+
+  // 初回マウント時にブラウザ言語 / URL から locale を確定する。
+  useEffect(() => {
+    setLocale(detectLpLocale())
+  }, [])
+
+  // <html lang> を locale に追従させる (SEO / アクセシビリティ向け)。
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.documentElement.lang = locale
+  }, [locale])
 
   useEffect(() => {
     const el = heroRef.current
@@ -74,13 +88,14 @@ export default function LPClient() {
           onSubmit={handleSubmit}
           isLoading={isLoading}
           error={error}
+          locale={locale}
         />
       </div>
-      <LPAbout />
-      <LPFeatures />
-      <LPDecks />
-      <LPCta />
-      <LPFooter />
+      <LPAbout locale={locale} />
+      <LPFeatures locale={locale} />
+      {locale === 'ja' && <LPDecks locale={locale} />}
+      <LPCta locale={locale} />
+      <LPFooter locale={locale} />
 
       {/* SP: ヒーローが見切れたら追従する検索バー */}
       {showStickySearch && (
@@ -92,7 +107,7 @@ export default function LPClient() {
             <input
               value={value}
               onChange={(e) => { setValue(e.target.value); setError(null) }}
-              placeholder="単語を入れて検索しよう"
+              placeholder={locale === 'en' ? 'Type a word to search' : '単語を入れて検索しよう'}
               disabled={isLoading}
               className="flex-1 min-w-0 text-base text-black bg-transparent outline-none disabled:opacity-50"
             />

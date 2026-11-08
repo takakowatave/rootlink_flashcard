@@ -23,6 +23,7 @@ const baseProfile: Profile = {
   bio: null,
   twitter: null,
   email: 'kiko@example.com',
+  display_locale: null,
 }
 
 export const NamedUser: Story = {

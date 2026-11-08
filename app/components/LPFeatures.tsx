@@ -1,92 +1,55 @@
 'use client'
 
 import Image from 'next/image'
-import type { ReactNode } from 'react'
+import { lpCopy } from '@/lib/lp-copy'
+import type { DisplayLocale } from '@/types/DisplayLocale'
 
-// ── Feature 1: 語源パーツ — 画像 ──────────────────────────
-function EtymologyCard() {
-  return (
-    <div className="w-full shrink-0 md:w-[358px]">
-      <Image src="/lp/01.png" alt="語源パーツ画面" width={716} height={580} className="w-full h-auto" sizes="(max-width: 768px) 100vw, 358px" />
-    </div>
-  )
+interface Props {
+  locale: DisplayLocale
 }
 
-// ── Feature 2: あ/A トグル — 画像 ─────────────────────────
-function ToggleCard() {
-  return (
-    <div className="w-full shrink-0 md:w-[358px]">
-      <Image src="/lp/02.png" alt="和英・英英切り替え画面" width={716} height={580} className="w-full h-auto" sizes="(max-width: 768px) 100vw, 358px" />
-    </div>
-  )
-}
+const CARDS = [
+  { src: '/lp/01.png', reverse: false },
+  { src: '/lp/02.png', reverse: true  },
+  { src: '/lp/03.png', reverse: false },
+] as const
 
-// ── Feature 3: フラッシュカード — 画像 ───────────────────
-function QuizCard() {
-  return (
-    <div className="w-full shrink-0 md:w-[358px]">
-      <Image src="/lp/03.png" alt="フラッシュカード画面" width={716} height={580} className="w-full h-auto" sizes="(max-width: 768px) 100vw, 358px" />
-    </div>
-  )
-}
+export default function LPFeatures({ locale }: Props) {
+  const copy = lpCopy[locale].features
 
-// ── Features list ──────────────────────────────────────────
-const FEATURES: {
-  card: ReactNode
-  reverse: boolean
-  title: string
-  body: string
-}[] = [
-  {
-    card: <EtymologyCard />,
-    reverse: false,
-    title: '語源パーツで未知語を推測',
-    body: '初めて見た単語でも、語根がわかれば意味が推測できます。知らない単語を「なんとなく読む」から「構造で読む」へ。',
-  },
-  {
-    card: <ToggleCard />,
-    reverse: true,
-    title: '和英⇄英英のモード切り替え',
-    body: 'ボタン一つで和英⇄英英を切り替えられます。まずは日本語で意味をつかみ、慣れてきたら英英モードで英語のまま考える力をつけられます。',
-  },
-  {
-    card: <QuizCard />,
-    reverse: false,
-    title: 'フラッシュカードで記憶を定着',
-    body: 'せっかくストックした単語を眠らせていませんか？保存した単語はそのままフラッシュカードでテストできます。検索するだけで復習の仕組みが自然にできあがります。',
-  },
-]
-
-// ── Section ────────────────────────────────────────────────
-export default function LPFeatures() {
   return (
     <section
       className="flex w-full flex-col items-center gap-[32px] py-[42px] md:gap-[42px] md:py-[80px]"
       style={{ backgroundImage: 'linear-gradient(41.06deg, rgba(0,235,180,0.1) 4.63%, rgba(108,222,109,0.1) 100%)' }}
     >
       <h2 className="text-[32px] font-bold text-primary md:text-[42px]">
-        RootLinkの3つの特徴
+        {copy.title}
       </h2>
 
       <div className="flex w-full max-w-[800px] flex-col gap-[24px] px-2 md:px-6 lg:px-0">
-        {FEATURES.map((f, i) => (
-          <div
-            key={i}
-            className={`flex flex-col items-center gap-6 rounded-lg md:flex-row ${
-              f.reverse ? 'md:flex-row-reverse' : ''
-            }`}
-          >
-            {f.card}
-            <div className="flex flex-1 flex-col items-center gap-4 text-[#333] md:items-start">
-              <p className="w-full text-center text-[24px] font-bold leading-[34px] md:text-left md:text-[27px]">
-                {f.title}
-              </p>
-              <p className="text-[16px] leading-[28px] tracking-[0.64px] md:text-[18px] md:leading-[28px] md:tracking-[0.72px]">
-                {f.body}
-              </p>
+        {copy.items.map((f, i) => {
+          const card = CARDS[i]
+          return (
+            <div
+              key={i}
+              className={`flex flex-col items-center gap-6 rounded-lg md:flex-row ${
+                card.reverse ? 'md:flex-row-reverse' : ''
+              }`}
+            >
+              <div className="w-full shrink-0 md:w-[358px]">
+                <Image src={card.src} alt={f.title} width={716} height={580} className="w-full h-auto" sizes="(max-width: 768px) 100vw, 358px" />
+              </div>
+              <div className="flex flex-1 flex-col items-center gap-4 text-[#333] md:items-start">
+                <p className="w-full text-center text-[24px] font-bold leading-[34px] md:text-left md:text-[27px]">
+                  {f.title}
+                </p>
+                <p className="text-[16px] leading-[28px] tracking-[0.64px] md:text-[18px] md:leading-[28px] md:tracking-[0.72px]">
+                  {f.body}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

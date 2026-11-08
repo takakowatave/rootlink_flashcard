@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TextInput } from "./TextInput";
 import Button from "./Button";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
 
 interface Props {
   label: string;
@@ -26,13 +27,20 @@ export default function EditableField({
   type = "text",
   helperText,
   disabled,
-  editLabel = "変更",
-  saveLabel = "保存",
-  cancelLabel = "キャンセル",
+  editLabel,
+  saveLabel,
+  cancelLabel,
   emptyLabel = "—",
   validate,
   onSave,
 }: Props) {
+  const locale = useDisplayLocale();
+  const defaults = locale === 'en'
+    ? { edit: 'Change', save: 'Save', cancel: 'Cancel', saving: 'Saving...', saveFailed: 'Failed to save' }
+    : { edit: '変更', save: '保存', cancel: 'キャンセル', saving: '保存中...', saveFailed: '保存に失敗しました' };
+  const effEdit = editLabel ?? defaults.edit;
+  const effSave = saveLabel ?? defaults.save;
+  const effCancel = cancelLabel ?? defaults.cancel;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -63,7 +71,7 @@ export default function EditableField({
       setEditing(false);
       setError(undefined);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存に失敗しました");
+      setError(e instanceof Error ? e.message : defaults.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -91,7 +99,7 @@ export default function EditableField({
             disabled={saving}
             className="w-full md:w-auto"
           >
-            {cancelLabel}
+            {effCancel}
           </Button>
           <Button
             type="button"
@@ -101,7 +109,7 @@ export default function EditableField({
             disabled={saving}
             className="w-full md:w-auto"
           >
-            {saving ? "保存中..." : saveLabel}
+            {saving ? defaults.saving : effSave}
           </Button>
         </div>
       </div>
@@ -122,7 +130,7 @@ export default function EditableField({
               onClick={startEdit}
               className="text-sm font-bold text-primary hover:underline whitespace-nowrap"
             >
-              {editLabel}
+              {effEdit}
             </button>
           )}
         </div>

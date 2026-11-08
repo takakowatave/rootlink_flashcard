@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabaseClient'
 import { DISPLAY_LOCALE_STORAGE_KEY, DISPLAY_LOCALE_EVENT_NAME } from '@/types/DisplayLocale'
 import type { DisplayLocale } from '@/types/DisplayLocale'
+import { detectDisplayLocale } from '@/lib/displayLocale'
 import PhraseCard, { type PhraseCardData } from '@/components/PhraseCard'
 import { useTtsAudio } from '@/lib/useTtsAudio'
 import { buildPhraseSpanRegex } from '@/lib/phraseDisplay'
@@ -66,10 +67,28 @@ function PhrasesPageInner() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
   const [todayOnly, setTodayOnly] = useState(searchParams.get('today') === '1')
-  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(() => {
-    if (typeof window === 'undefined') return 'ja'
-    return (localStorage.getItem(DISPLAY_LOCALE_STORAGE_KEY) as DisplayLocale) ?? 'ja'
-  })
+  const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(detectDisplayLocale)
+  const L = displayLocale === 'en'
+    ? {
+        title: 'Phrases',
+        count: (n: number) => `${n}`,
+        all: 'All',
+        today: 'Today',
+        emptyToday: 'Nothing added today yet',
+        emptyAll: 'No phrases yet',
+        saveFailed: 'Failed to save',
+        bulkSaved: (n: number) => `Saved ${n}`,
+      }
+    : {
+        title: '表現・フレーズ',
+        count: (n: number) => `${n}件`,
+        all: 'すべて',
+        today: '今日追加',
+        emptyToday: '今日の追加はまだありません',
+        emptyAll: 'フレーズがありません',
+        saveFailed: '保存に失敗しました',
+        bulkSaved: (n: number) => `${n}件保存しました`,
+      }
 
   useEffect(() => {
     const load = async () => {
@@ -122,14 +141,14 @@ function PhrasesPageInner() {
       .from('saved_phrase_cards')
       .insert(targetIds.map(phrase_card_id => ({ user_id: userId, phrase_card_id })))
     if (error) {
-      toast.error('保存に失敗しました')
+      toast.error(L.saveFailed)
     } else {
       setSavedIds(prev => {
         const s = new Set(prev)
         for (const id of targetIds) s.add(id)
         return s
       })
-      toast.success(`${targetIds.length}件保存しました`)
+      toast.success(L.bulkSaved(targetIds.length))
     }
     setBulkSaving(false)
   }
@@ -165,8 +184,8 @@ function PhrasesPageInner() {
       <div className="flex justify-center w-full">
         <div className="w-full max-w-[812px] px-4 py-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-950">表現・フレーズ</h1>
-            <span className="text-sm text-muted">{displayed.length}件</span>
+            <h1 className="text-xl font-bold text-gray-950">{L.title}</h1>
+            <span className="text-sm text-muted">{L.count(displayed.length)}</span>
           </div>
 
           <div className="flex gap-2 mb-5">
@@ -174,13 +193,13 @@ function PhrasesPageInner() {
               onClick={() => setTodayOnly(false)}
               className={`text-sm font-medium px-3 py-1 rounded-full border transition-colors ${!todayOnly ? 'bg-primary text-white border-primary' : 'border-line text-muted bg-white'}`}
             >
-              すべて
+              {L.all}
             </button>
             <button
               onClick={() => setTodayOnly(true)}
               className={`text-sm font-medium px-3 py-1 rounded-full border transition-colors ${todayOnly ? 'bg-primary text-white border-primary' : 'border-line text-muted bg-white'}`}
             >
-              今日追加 {todayCount > 0 && <span className="ml-1">{todayCount}</span>}
+              {L.today} {todayCount > 0 && <span className="ml-1">{todayCount}</span>}
             </button>
           </div>
 
@@ -193,7 +212,7 @@ function PhrasesPageInner() {
             </div>
           ) : displayed.length === 0 ? (
             <p className="text-sm text-muted text-center py-16">
-              {todayOnly ? '今日の追加はまだありません' : 'フレーズがありません'}
+              {todayOnly ? L.emptyToday : L.emptyAll}
             </p>
           ) : (
             <>

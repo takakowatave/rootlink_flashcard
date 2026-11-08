@@ -6,6 +6,8 @@ import QuizProgressPanel from '@/components/QuizProgressPanel'
 import type { QuizScope } from '@/components/QuizScopeSelector'
 import type { QuizSettings } from '@/lib/quizSettings'
 import type { ReviewPeriod } from '@/lib/reviewPeriod'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 export type ReviewPeriodStats = {
   mastered: number
@@ -16,11 +18,18 @@ export type ReviewPeriodStats = {
   scopes: { all: number; unseen: number; review: number; hard: number }
 }
 
-const PERIOD_LABEL: Record<ReviewPeriod, string> = {
+const PERIOD_LABEL_JA: Record<ReviewPeriod, string> = {
   yesterday: '昨日',
   week: '1週間',
   month: '1ヶ月',
   all: '全期間',
+}
+
+const PERIOD_LABEL_EN: Record<ReviewPeriod, string> = {
+  yesterday: 'Yesterday',
+  week: 'Past 7 days',
+  month: 'Past 30 days',
+  all: 'All time',
 }
 
 type Props = {
@@ -38,6 +47,12 @@ type Props = {
  * を他デッキと同じ UI で選べる。問題数ステッパー・音声設定も同じ。
  */
 export default function ReviewDashboard({ period, stats, settings, onSettingChange, onStart }: Props) {
+  const locale = useDisplayLocale()
+  const commonCopy = messages[locale].common
+  const dashCopy = messages[locale].dashboard
+  const quizSessionCopy = messages[locale].quizSession
+  const PERIOD_LABEL = locale === 'en' ? PERIOD_LABEL_EN : PERIOD_LABEL_JA
+  const reviewLabel = dashCopy.reviewTitle
   const [scope, setScope] = useState<QuizScope>('all')
 
   // scope が 0 件なら 'all' にフォールバック (他デッキと同じ振る舞い)
@@ -48,8 +63,8 @@ export default function ReviewDashboard({ period, stats, settings, onSettingChan
   }, [stats, scope])
 
   const breadcrumb = [
-    { label: 'ホーム', href: '/' },
-    { label: '復習' },
+    { label: commonCopy.home, href: '/' },
+    { label: reviewLabel },
     { label: PERIOD_LABEL[period] },
   ]
 
@@ -60,7 +75,7 @@ export default function ReviewDashboard({ period, stats, settings, onSettingChan
       <PageHeader
         items={breadcrumb}
         showSearch={false}
-        title={`復習 / ${PERIOD_LABEL[period]}`}
+        title={`${reviewLabel} / ${PERIOD_LABEL[period]}`}
       />
       <QuizProgressPanel
         mastered={stats.mastered}
@@ -75,7 +90,7 @@ export default function ReviewDashboard({ period, stats, settings, onSettingChan
         ]}
         selectedScope={scope}
         onScopeChange={setScope}
-        buttonLabel="はじめる"
+        buttonLabel={quizSessionCopy.howToStart}
         buttonDisabled={currentCount === 0}
         onStart={() => onStart(scope)}
         settings={currentCount > 0 ? {

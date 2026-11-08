@@ -1,4 +1,8 @@
+'use client'
+
 import QuizStatusHelp from '@/components/QuizStatusHelp'
+import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import { messages } from '@/lib/i18n/messages'
 
 type Props = {
   mastered: number
@@ -14,6 +18,8 @@ type Props = {
 export default function TriDonutChart({
   mastered, review, hard, unseen, showLegend = true, size = 180,
 }: Props) {
+  const locale = useDisplayLocale()
+  const q = messages[locale].quiz
   const total = mastered + review + hard + unseen
   const stroke = Math.max(10, Math.round(size * 16 / 180))
   const r = (size - stroke) / 2
@@ -63,26 +69,26 @@ export default function TriDonutChart({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-4xl font-bold text-gray-900 leading-none">{pct}<span className="text-xl font-normal text-gray-500">%</span></span>
-          <span className="text-sm text-gray-400 mt-1">習得済</span>
+          <span className="text-sm text-gray-400 mt-1">{q.donutMastered}</span>
         </div>
       </div>
       {showLegend && (
         <div className="flex items-center gap-5 text-sm">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-line inline-block" />
-            <span className="text-gray-500">未習得 <strong className="text-gray-700">{unseen}</strong></span>
+            <span className="text-gray-500">{q.donutUnseen} <strong className="text-gray-700">{unseen}</strong></span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-quiz-review inline-block" />
-            <span className="text-gray-500">要復習 <strong className="text-gray-700">{review}</strong></span>
+            <span className="text-gray-500">{q.donutReview} <strong className="text-gray-700">{review}</strong></span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-primary-mid inline-block" />
-            <span className="text-gray-500">習得済 <strong className="text-gray-700">{mastered}</strong></span>
+            <span className="text-gray-500">{q.donutMastered} <strong className="text-gray-700">{mastered}</strong></span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-quiz-hard inline-block" />
-            <span className="text-gray-500">苦手 <strong className="text-gray-700">{hard}</strong></span>
+            <span className="text-gray-500">{q.donutHard} <strong className="text-gray-700">{hard}</strong></span>
           </div>
           <QuizStatusHelp />
         </div>

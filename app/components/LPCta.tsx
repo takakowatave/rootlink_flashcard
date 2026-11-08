@@ -1,9 +1,19 @@
 import Image from 'next/image'
+import { lpCopy } from '@/lib/lp-copy'
+import type { DisplayLocale } from '@/types/DisplayLocale'
+
+interface Props {
+  locale: DisplayLocale
+}
 
 const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rootlink.app'
-const APP_STORE_URL = 'https://apps.apple.com/jp/app/rootlink/id6809248684'
+// /jp/ を付けない: Apple 側でユーザーの国に応じて自動リダイレクトされるため、
+// 英語ユーザーにも US / UK / AU などのストアが開く。
+const APP_STORE_URL = 'https://apps.apple.com/app/rootlink/id6809248684'
 
-export default function LPCta() {
+export default function LPCta({ locale }: Props) {
+  const copy = lpCopy[locale].cta
+
   return (
     <section
       className="flex w-full flex-col items-center overflow-hidden pt-[32px] md:pt-[60px]"
@@ -20,9 +30,9 @@ export default function LPCta() {
 
         {/* テキスト — SP: 上 / PC: 右 */}
         <div className="order-1 md:order-2 flex flex-col gap-3 text-center md:text-left">
-          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">iOS / Android</p>
+          <p className="text-[34px] font-bold leading-none text-white md:text-[44px]">{copy.platform}</p>
           <p className="text-[31px] font-bold leading-tight text-white md:text-[34px]">
-            配信中
+            {copy.status}
           </p>
           {/* バッジ — PC のみここに表示 */}
           <div className="hidden md:flex flex-wrap items-center gap-4 pb-[80px]">
@@ -39,7 +49,7 @@ export default function LPCta() {
         <div className="order-2 md:order-1 w-[276px] shrink-0 md:w-[300px]">
           <Image
             src="/lp/mock_.png"
-            alt="RootLink アプリ"
+            alt="RootLink"
             width={874}
             height={936}
             className="w-full h-auto block"

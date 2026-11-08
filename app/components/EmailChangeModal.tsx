@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { TextInput } from "./TextInput";
 import Button from "./Button";
 import OtpVerifyStep from "./auth/OtpVerifyStep";
+import { useDisplayLocale } from "@/lib/useDisplayLocale";
+import { messages } from "@/lib/i18n/messages";
 
 interface FormData {
   email: string;
@@ -29,6 +31,33 @@ type Step = "input" | "otp";
  *     verifyOtp({ email: 新しいメール, type: 'email_change' }) → 変更完了。
  */
 export default function EmailChangeModal({ open, onClose, currentEmail, onSent }: Props) {
+  const locale = useDisplayLocale();
+  const authCopy = messages[locale].auth;
+  const L = locale === 'en'
+    ? {
+        title: 'Change email address',
+        currentPrefix: 'Current:',
+        intro: 'We will send a verification code to the new address.',
+        newEmail: 'New email address',
+        sameAsCurrent: 'This is the same as your current email address',
+        emailInvalid: 'Please enter a valid email address',
+        cancel: 'Cancel',
+        submitting: 'Sending...',
+        submit: 'Send verification code',
+        resendFailed: 'Resend failed. Please try again later.',
+      }
+    : {
+        title: 'メールアドレスの変更',
+        currentPrefix: '現在:',
+        intro: '新しいメールアドレスに確認コードを送信します。',
+        newEmail: '新しいメールアドレス',
+        sameAsCurrent: '現在のメールアドレスと同じです',
+        emailInvalid: 'メールアドレスの形式が正しくありません',
+        cancel: 'キャンセル',
+        submitting: '送信中...',
+        submit: '確認コードを送信',
+        resendFailed: '再送に失敗しました。時間をおいて再試行してください',
+      };
   const {
     register,
     handleSubmit,
@@ -63,7 +92,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
 
   const onSubmit = async ({ email }: FormData) => {
     if (email === currentEmail) {
-      setError("email", { message: "現在のメールアドレスと同じです" });
+      setError("email", { message: L.sameAsCurrent });
       return;
     }
     const { error } = await supabase.auth.updateUser({ email });
@@ -87,7 +116,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
     if (error) {
       setOtpError(
         /expired|invalid/i.test(error.message)
-          ? "コードが違うか期限切れです。もう一度ご確認ください"
+          ? authCopy.otpInvalid
           : error.message,
       );
       return;
@@ -104,7 +133,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
       email: pendingEmail,
     });
     if (error) {
-      setOtpError("再送に失敗しました。時間をおいて再試行してください");
+      setOtpError(L.resendFailed);
     }
   };
 
@@ -129,26 +158,26 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
         {step === "input" ? (
           <>
             <h3 className="text-base font-semibold text-gray-950">
-              メールアドレスの変更
+              {L.title}
             </h3>
             <p className="text-xs text-gray-600 leading-relaxed">
-              現在:{" "}
+              {L.currentPrefix}{" "}
               <span className="font-medium text-gray-900 break-all">{currentEmail}</span>
               <br />
-              新しいメールアドレスに確認コードを送信します。
+              {L.intro}
             </p>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <TextInput
-                label="新しいメールアドレス"
+                label={L.newEmail}
                 type="email"
                 placeholder="new@example.com"
                 autoFocus
                 error={errors.email}
                 {...register("email", {
-                  required: "メールアドレスは必須です",
+                  required: authCopy.emailRequired,
                   pattern: {
                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: "メールアドレスの形式が正しくありません",
+                    message: L.emailInvalid,
                   },
                 })}
               />
@@ -161,7 +190,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
                   disabled={isSubmitting}
                   className="w-full md:w-auto"
                 >
-                  キャンセル
+                  {L.cancel}
                 </Button>
                 <Button
                   type="submit"
@@ -170,7 +199,7 @@ export default function EmailChangeModal({ open, onClose, currentEmail, onSent }
                   disabled={isSubmitting}
                   className="w-full md:w-auto"
                 >
-                  {isSubmitting ? "送信中..." : "確認コードを送信"}
+                  {isSubmitting ? L.submitting : L.submit}
                 </Button>
               </div>
             </form>
