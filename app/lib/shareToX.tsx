@@ -91,9 +91,18 @@ async function shareOnNative({ cardUrl, filename, shareText, shareUrl }: Params)
   }
 }
 
+function readLocaleFromCookie(): 'ja' | 'en' {
+  if (typeof document === 'undefined') return 'ja'
+  const match = document.cookie.match(/(?:^|; )rootlink_locale=(ja|en)/)
+  return (match?.[1] as 'ja' | 'en') ?? 'ja'
+}
+
 export async function shareViaClipboardAndX(params: Params) {
+  const loc = readLocaleFromCookie()
+  const preparing = loc === 'en' ? 'Preparing image...' : '画像を準備中…'
+  const shareFailed = loc === 'en' ? 'Sharing failed' : '共有に失敗しました'
   if (isNativePlatform()) {
-    const loadingId = toast.loading('画像を準備中…')
+    const loadingId = toast.loading(preparing)
     try {
       await shareOnNative(params)
       toast.dismiss(loadingId)
@@ -103,7 +112,7 @@ export async function shareViaClipboardAndX(params: Params) {
       const msg = (err as { message?: string })?.message ?? ''
       // ユーザーが共有シートで cancel した場合は toast しない
       if (!/cancel|abort/i.test(msg)) {
-        toast.error('共有に失敗しました')
+        toast.error(shareFailed)
       }
     }
     return

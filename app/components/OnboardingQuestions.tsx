@@ -424,6 +424,8 @@ export function OnboardingQuestionsView({
 
 export default function OnboardingQuestions() {
   const router = useRouter()
+  const outerLocale = useDisplayLocale()
+  const saveFailedMsg = outerLocale === 'en' ? 'Failed to save' : '保存に失敗しました'
   const [userId, setUserId] = useState<string | null>(null)
   const [visible, setVisible] = useState(false)
   const isNative = useMemo(() => isNativeOrPreview(isNativePlatform()), [])
@@ -556,7 +558,7 @@ export default function OnboardingQuestions() {
     if (error) {
       setSaving(false)
       console.error('ONBOARDING SAVE FAILED:', error)
-      toast.error('保存に失敗しました')
+      toast.error(saveFailedMsg)
       return
     }
     setSaving(false)

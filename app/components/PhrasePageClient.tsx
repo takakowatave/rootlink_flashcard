@@ -292,7 +292,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
       <ReportContentLink kind="phrase" content={card.phrase} />
 
       {/* 収録デッキカルーセル。単語ページ (WordPageClient) と同じ見た目。該当なしなら出さない */}
-      {containingDecks && containingDecks.length > 0 && (
+      {displayLocale === 'ja' && containingDecks && containingDecks.length > 0 && (
         <section className="w-full mx-auto max-w-[600px] px-4 mt-4 pb-6">
           <h2 className="text-xl font-bold text-gray-950 mb-3">この熟語が収録されている単語帳</h2>
           <DeckScrollStrip
