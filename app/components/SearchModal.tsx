@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import type { SearchFormProps } from "../types/SearchFormProps";
+import { useLocale } from "@/lib/LocaleProvider";
+import { messages } from "@/lib/i18n/messages";
 
 /**
  * SearchModal
@@ -29,6 +31,8 @@ const SearchModal = ({
   formRef,
   inputRef,
 }: SearchModalProps) => {
+  const locale = useLocale();
+  const t = messages[locale].common;
   // モーダル表示時に即フォーカス（SP UX用）
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +53,7 @@ const SearchModal = ({
           className="text-blue-600 mb-4"
           onClick={onClose}
         >
-          閉じる
+          {t.close}
         </button>
       </div>
     </>

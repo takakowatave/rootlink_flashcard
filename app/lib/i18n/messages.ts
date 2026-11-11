@@ -98,6 +98,22 @@ export type Messages = {
     saveFailed: string
     sessionExpired: string
     unexpectedError: string
+    back: string
+    done: string
+    showPassword: string
+    hidePassword: string
+    quotaExceeded: string
+    audioPlay: string
+    audioUnavailable: string
+    shareLabel: string
+    savedLabel: string
+    saveLabel: string
+    plantAlt: (levelLabel: string) => string
+    plantNext: (pt: number, lv: string) => string
+    myWordlistTitle: string
+    myWordlistBody: string
+    myWordlistCta: string
+    accountDeleted: string
   }
   decksIndex: {
     breadcrumbTitle: string
@@ -334,6 +350,22 @@ const ja: Messages = {
     saveFailed: '保存に失敗しました',
     sessionExpired: 'セッションが切れました。もう一度お試しください',
     unexpectedError: 'エラーが発生しました',
+    back: '戻る',
+    done: '完了',
+    showPassword: 'パスワードを表示',
+    hidePassword: 'パスワードを隠す',
+    quotaExceeded: '無料枠の上限に達しました',
+    audioPlay: '音声を再生',
+    audioUnavailable: '音声はありません',
+    shareLabel: '共有',
+    savedLabel: '保存済み',
+    saveLabel: '保存',
+    plantAlt: (levelLabel: string) => `鉢植え ${levelLabel}`,
+    plantNext: (pt: number, lv: string) => `あと${pt}ptでLv.${lv}`,
+    myWordlistTitle: 'My単語帳',
+    myWordlistBody: '気になる単語を保存して、あなた専用の単語帳を作りましょう',
+    myWordlistCta: '検索して追加する',
+    accountDeleted: '退会が完了しました',
   },
   decksIndex: {
     breadcrumbTitle: '教材一覧',
@@ -582,6 +614,22 @@ const en: Messages = {
     saveFailed: 'Failed to save',
     sessionExpired: 'Your session expired. Please try again.',
     unexpectedError: 'An error occurred',
+    back: 'Back',
+    done: 'Done',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    quotaExceeded: 'You have reached the free daily limit',
+    audioPlay: 'Play audio',
+    audioUnavailable: 'Audio unavailable',
+    shareLabel: 'Share',
+    savedLabel: 'Saved',
+    saveLabel: 'Save',
+    plantAlt: (levelLabel: string) => `Plant ${levelLabel}`,
+    plantNext: (pt: number, lv: string) => `${pt} pt to Lv.${lv}`,
+    myWordlistTitle: 'My wordlist',
+    myWordlistBody: 'Save words that catch your eye and build your own wordlist',
+    myWordlistCta: 'Search and add',
+    accountDeleted: 'Your account has been deleted',
   },
   decksIndex: {
     breadcrumbTitle: 'Decks',

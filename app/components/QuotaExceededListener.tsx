@@ -8,6 +8,8 @@ import { QUOTA_EXCEEDED_EVENT } from '@/lib/quotaExceeded'
 import { decidePaywallVariant, type PaywallVariant } from '@/lib/paywall'
 import UpgradeModal from '@/components/UpgradeModal'
 import NativePaywall from '@/components/NativePaywall'
+import { useLocale } from '@/lib/LocaleProvider'
+import { messages } from '@/lib/i18n/messages'
 
 // /resolve が 429 QUOTA_EXCEEDED を返したときに、既存ペイウォールをモーダル表示する。
 // Guideline 5.1.1(v) 対応で、無料枠（1日20語の新規検索）を超えたら premium を促す。
@@ -15,10 +17,12 @@ import NativePaywall from '@/components/NativePaywall'
 export default function QuotaExceededListener() {
   const [showWeb, setShowWeb] = useState(false)
   const [nativeVariant, setNativeVariant] = useState<Exclude<PaywallVariant, 'none'> | null>(null)
+  const locale = useLocale()
+  const t = messages[locale].common
 
   useEffect(() => {
     const open = async () => {
-      toast('無料枠の上限に達しました')
+      toast(t.quotaExceeded)
       if (isNativePlatform()) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
@@ -30,7 +34,7 @@ export default function QuotaExceededListener() {
     }
     window.addEventListener(QUOTA_EXCEEDED_EVENT, open)
     return () => window.removeEventListener(QUOTA_EXCEEDED_EVENT, open)
-  }, [])
+  }, [t.quotaExceeded])
 
   return (
     <>
