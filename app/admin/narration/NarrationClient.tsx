@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { HiPlay, HiDownload, HiRefresh } from 'react-icons/hi'
+import { HiDownload, HiRefresh } from 'react-icons/hi'
 import { makeStoreZip } from './zipStore'
 
 type Lang = 'JA' | 'EN'
@@ -153,10 +153,6 @@ export default function NarrationClient() {
     if ('error' in result) toast.error(`失敗: ${result.error}`)
   }
 
-  function play(url: string) {
-    new Audio(url).play().catch(() => {})
-  }
-
   async function downloadOne(clip: Clip, index1: number) {
     if (!clip.audioUrl) return
     // 直リンクで download 属性を付けても、別オリジン (Supabase Storage) だと
@@ -274,7 +270,7 @@ export default function NarrationClient() {
             {clips.map((clip, i) => {
               const preset = LANG_PRESETS[clip.lang]
               return (
-                <div key={clip.id} className="bg-white rounded-xl border border-line px-5 py-4">
+                <div key={clip.id} className="bg-white rounded-xl border border-line px-5 py-4 flex flex-col gap-3">
                   <div className="flex items-center gap-3">
                     <span className="shrink-0 font-mono text-xs text-muted w-10">
                       {String(i + 1).padStart(3, '0')}
@@ -286,16 +282,6 @@ export default function NarrationClient() {
                     <div className="shrink-0 flex items-center gap-1">
                       {clip.status === 'generating' && <span className="text-xs text-muted mr-2">生成中…</span>}
                       {clip.status === 'error' && <span className="text-xs text-red-600 mr-2">{clip.error}</span>}
-                      {clip.status === 'done' && clip.audioUrl && (
-                        <button
-                          type="button"
-                          onClick={() => play(clip.audioUrl!)}
-                          className="size-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-700"
-                          aria-label="再生"
-                        >
-                          <HiPlay className="size-5" />
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={() => downloadOne(clip, i + 1)}
@@ -316,6 +302,14 @@ export default function NarrationClient() {
                       </button>
                     </div>
                   </div>
+                  {clip.status === 'done' && clip.audioUrl && (
+                    <audio
+                      controls
+                      preload="none"
+                      src={clip.audioUrl}
+                      className="w-full h-10"
+                    />
+                  )}
                 </div>
               )
             })}
