@@ -1,6 +1,10 @@
+'use client'
+
 // 鉢植えの成長状態を表示するコンポーネント。
 // ロジック・しきい値・文言は lib/plantGrowth.ts に集約。PC/SP どちらもここを経由すること。
 import { resolveGrowth, GROWTH_HEADING, formatLevelLabel } from '@/lib/plantGrowth'
+import { useLocale } from '@/lib/LocaleProvider'
+import { messages } from '@/lib/i18n/messages'
 
 export { getPlantImageSrc } from '@/lib/plantGrowth'
 
@@ -15,11 +19,14 @@ export default function PlantStatus({
   loginDays: number
   variant?: Variant
 }) {
+  const locale = useLocale()
+  const t = messages[locale].common
   const { current, next, pointsToNext, progressRatio } = resolveGrowth(quizCount, loginDays)
   const levelLabel = formatLevelLabel(current.level)
+  const plantAlt = t.plantAlt(levelLabel)
   const nextText =
     next && pointsToNext !== null
-      ? `あと${pointsToNext}ptでLv.${String(next.level).padStart(2, '0')}`
+      ? t.plantNext(pointsToNext, String(next.level).padStart(2, '0'))
       : null
 
   if (variant === 'compact') {
@@ -28,7 +35,7 @@ export default function PlantStatus({
         <div className="bg-orange-50 rounded-full size-[72px] flex items-center justify-center overflow-hidden shrink-0">
           <img
             src={current.src}
-            alt={`鉢植え ${levelLabel}`}
+            alt={plantAlt}
             className="size-full object-contain"
             draggable={false}
           />
@@ -57,7 +64,7 @@ export default function PlantStatus({
     <div className="flex items-center gap-3 px-4 py-3 border-r border-line shrink-0">
       <img
         src={current.src}
-        alt={`鉢植え ${levelLabel}`}
+        alt={plantAlt}
         className="size-20 select-none shrink-0 object-contain"
         draggable={false}
       />

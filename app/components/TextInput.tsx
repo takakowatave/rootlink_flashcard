@@ -3,6 +3,8 @@
 import { forwardRef, useState } from "react";
 import { FieldError } from "react-hook-form";
 import { BsEye, BsEyeSlash } from "react-icons/bs";
+import { useLocale } from "@/lib/LocaleProvider";
+import { messages } from "@/lib/i18n/messages";
 
 type Size = "sm" | "md";
 
@@ -23,6 +25,8 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
   ref,
 ) {
   const [show, setShow] = useState(false);
+  const locale = useLocale();
+  const t = messages[locale].common;
   const isPassword = type === "password";
   const inputType = isPassword ? (show ? "text" : "password") : type;
 
@@ -61,7 +65,7 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(function TextInput(
             type="button"
             onClick={() => setShow((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary-dark"
-            aria-label={show ? "パスワードを隠す" : "パスワードを表示"}
+            aria-label={show ? t.hidePassword : t.showPassword}
             tabIndex={-1}
           >
             {show ? <BsEyeSlash size={18} /> : <BsEye size={18} />}

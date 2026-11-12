@@ -3,6 +3,8 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { HiBookmark, HiOutlineBookmark, HiSpeakerWave } from 'react-icons/hi2'
 import { MdIosShare } from 'react-icons/md'
+import { useLocale } from '@/lib/LocaleProvider'
+import { messages } from '@/lib/i18n/messages'
 
 type Props = {
   title: string
@@ -28,14 +30,6 @@ type Props = {
   tutorialAttr?: boolean
 }
 
-const DEFAULT_LABELS = {
-  audioPlay: '音声を再生',
-  audioUnavailable: '音声はありません',
-  share: '共有',
-  saved: '保存済み',
-  save: '保存',
-} as const
-
 export default function CardHeader({
   title,
   audioLoading,
@@ -50,7 +44,16 @@ export default function CardHeader({
   headingLevel = 'h1',
   tutorialAttr = false,
 }: Props) {
-  const L = { ...DEFAULT_LABELS, ...(ariaLabels ?? {}) }
+  const locale = useLocale()
+  const c = messages[locale].common
+  const defaults = {
+    audioPlay: c.audioPlay,
+    audioUnavailable: c.audioUnavailable,
+    share: c.shareLabel,
+    saved: c.savedLabel,
+    save: c.saveLabel,
+  }
+  const L = { ...defaults, ...(ariaLabels ?? {}) }
   const Heading = headingLevel
 
   const handleAudioClick = (e: ReactMouseEvent) => {
