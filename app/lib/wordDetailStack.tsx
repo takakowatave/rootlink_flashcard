@@ -7,6 +7,7 @@ export type WordDetailEntry = {
   word: string
   dictionary: SavedWordDictionary | null
   pinned_sense_id?: string | null
+  phrase_card_id?: string | null
 }
 
 // クイズ中の単語詳細モーダル。stack ではなく単一 slot を replace 方式で更新する。

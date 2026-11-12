@@ -59,7 +59,7 @@ function getComponentWords(phrase: string): string[] {
     .filter(w => /^[a-zA-Z]+$/.test(w) && !STOP_WORDS.has(w.toLowerCase()))
 }
 
-export default function PhrasePageClient({ card, containingDecks, linkableComponentWords }: { card: PhraseCard; containingDecks?: ContainingDeck[]; linkableComponentWords?: string[] }) {
+export default function PhrasePageClient({ card, containingDecks, linkableComponentWords, embedded = false }: { card: PhraseCard; containingDecks?: ContainingDeck[]; linkableComponentWords?: string[]; embedded?: boolean }) {
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -199,7 +199,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
   const usEquivalent = card.locale === 'en-GB' ? (card.us_equivalent ?? null) : null
 
   return (
-    <div className="bg-surface min-h-screen">
+    <div className={embedded ? 'bg-surface' : 'bg-surface min-h-screen'}>
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       <CardShell>
         {/* タイトル + 再生 + ブックマーク */}
