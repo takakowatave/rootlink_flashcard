@@ -5,37 +5,49 @@ import toast from 'react-hot-toast'
 import { HiDownload, HiRefresh } from 'react-icons/hi'
 import { makeStoreZip } from './zipStore'
 
-type Lang = 'JA' | 'EN'
+type Accent = 'JA' | 'EN_GB' | 'EN_US'
 
 type Clip = {
   id: string
-  lang: Lang
+  accent: Accent
   text: string
   status: 'idle' | 'generating' | 'done' | 'error'
   audioUrl?: string
-  bytes?: number
   error?: string
 }
 
-// gpt-4o-mini-tts で選べる voice。
+// gpt-4o-mini-tts の全 voice に性別メモを付けた UI 用リスト。
+// 性別は OpenAI 公式 docs + 実聴の感触をベースにした参考値。
 const VOICES = [
-  'alloy', 'ash', 'ballad', 'coral', 'echo',
-  'fable', 'onyx', 'nova', 'sage', 'shimmer', 'verse',
+  { id: 'shimmer', label: 'shimmer (女性・やわらか)' },
+  { id: 'nova', label: 'nova (女性・若め)' },
+  { id: 'coral', label: 'coral (女性・あたたかみ)' },
+  { id: 'alloy', label: 'alloy (中性)' },
+  { id: 'sage', label: 'sage (中性)' },
+  { id: 'verse', label: 'verse (表現豊か)' },
+  { id: 'ash', label: 'ash (男性)' },
+  { id: 'ballad', label: 'ballad (男性・落ち着き)' },
+  { id: 'echo', label: 'echo (男性・クリア)' },
+  { id: 'fable', label: 'fable (男性・物語調)' },
+  { id: 'onyx', label: 'onyx (男性・低音)' },
 ] as const
-type Voice = typeof VOICES[number]
+type Voice = typeof VOICES[number]['id']
 
-// 言語ごとのデフォルト voice と instructions。
-// kiko が「イギリス英語」「日本語」両方選べる + 最低限 download、を最優先。
-const LANG_PRESETS: Record<Lang, { voice: Voice; instructions: string; label: string }> = {
+const ACCENTS: Record<Accent, { label: string; prefix: string; instructions: string }> = {
   JA: {
-    voice: 'shimmer',
-    instructions: '落ち着いた日本語の先生の口調で。優しく聞き手に語りかけるトーン。やや明るく、ゆっくりめのテンポで。',
     label: '日本語',
+    prefix: 'JA',
+    instructions: '自然な日本語で、落ち着いた先生の口調で読んでください。優しく、聞き手に語りかけるトーン。',
   },
-  EN: {
-    voice: 'shimmer',
-    instructions: 'Read in a clear British English accent. Speak as a whole sentence with natural intonation and pacing.',
+  EN_GB: {
     label: 'イギリス英語',
+    prefix: 'EN',
+    instructions: 'Speak in a clear, natural British English accent with standard Received Pronunciation. Natural narration pace.',
+  },
+  EN_US: {
+    label: 'アメリカ英語',
+    prefix: 'EN',
+    instructions: 'Speak in a clear, natural American English accent. Natural narration pace.',
   },
 }
 
@@ -43,17 +55,21 @@ const DEFAULT_SCRIPT = `JA: こんにちは、Cuppa English です。
 EN: Today we learn English through etymology.
 JA: 今日は語源から単語を覚えていきましょう。`
 
-function parseScript(raw: string, defaultLang: Lang): { lang: Lang; text: string }[] {
-  const out: { lang: Lang; text: string }[] = []
+function parseScript(raw: string, defaultAccent: Accent, enAccent: Accent): { accent: Accent; text: string }[] {
+  const out: { accent: Accent; text: string }[] = []
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim()
     if (!trimmed) continue
     const m = trimmed.match(/^(JA|EN)\s*[:：]\s*(.*)$/i)
     if (m) {
       const text = m[2].trim()
-      if (text) out.push({ lang: m[1].toUpperCase() as Lang, text })
+      if (!text) continue
+      const prefix = m[1].toUpperCase()
+      // JA: → 日本語、EN: → 選択中の英語アクセント
+      const accent: Accent = prefix === 'JA' ? 'JA' : enAccent
+      out.push({ accent, text })
     } else {
-      out.push({ lang: defaultLang, text: trimmed })
+      out.push({ accent: defaultAccent, text: trimmed })
     }
   }
   return out
@@ -70,22 +86,28 @@ function makeFilename(index1: number, text: string): string {
 
 export default function NarrationClient() {
   const [script, setScript] = useState(DEFAULT_SCRIPT)
-  const [defaultLang, setDefaultLang] = useState<Lang>('JA')
+  const [voice, setVoice] = useState<Voice>('shimmer')
+  const [defaultAccent, setDefaultAccent] = useState<Accent>('JA')
+  const [enAccent, setEnAccent] = useState<Accent>('EN_GB')
+  const [speed, setSpeed] = useState(1.0)
   const [clips, setClips] = useState<Clip[]>([])
   const [running, setRunning] = useState(false)
 
-  const parsed = useMemo(() => parseScript(script, defaultLang), [script, defaultLang])
+  const parsed = useMemo(
+    () => parseScript(script, defaultAccent, enAccent),
+    [script, defaultAccent, enAccent],
+  )
 
-  async function callApi(text: string, lang: Lang): Promise<{ audioUrl: string } | { error: string }> {
-    const preset = LANG_PRESETS[lang]
+  async function callApi(text: string, accent: Accent): Promise<{ audioUrl: string } | { error: string }> {
     try {
       const res = await fetch('/api/admin/narration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          voice: preset.voice,
-          instructions: preset.instructions,
+          voice,
+          instructions: ACCENTS[accent].instructions,
+          speed,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -101,22 +123,17 @@ export default function NarrationClient() {
   function applyResult(id: string, result: { audioUrl: string } | { error: string }) {
     setClips(prev => prev.map(c => {
       if (c.id !== id) return c
-      if ('error' in result) {
-        return { ...c, status: 'error', error: result.error }
-      }
+      if ('error' in result) return { ...c, status: 'error', error: result.error }
       return { ...c, status: 'done', audioUrl: result.audioUrl, error: undefined }
     }))
   }
 
   async function generateAll() {
-    if (parsed.length === 0) {
-      toast.error('スクリプトが空')
-      return
-    }
+    if (parsed.length === 0) { toast.error('スクリプトが空'); return }
     setRunning(true)
     const initial: Clip[] = parsed.map(p => ({
       id: newId(),
-      lang: p.lang,
+      accent: p.accent,
       text: p.text,
       status: 'idle',
     }))
@@ -125,7 +142,7 @@ export default function NarrationClient() {
     let ok = 0, ng = 0
     for (const clip of initial) {
       setClips(prev => prev.map(c => c.id === clip.id ? { ...c, status: 'generating' } : c))
-      const result = await callApi(clip.text, clip.lang)
+      const result = await callApi(clip.text, clip.accent)
       applyResult(clip.id, result)
       if ('error' in result) ng++
       else ok++
@@ -138,8 +155,8 @@ export default function NarrationClient() {
     const first = parsed[0]
     if (!first) { toast.error('スクリプトが空'); return }
     const id = newId()
-    setClips([{ id, lang: first.lang, text: first.text, status: 'generating' }])
-    const result = await callApi(first.text, first.lang)
+    setClips([{ id, accent: first.accent, text: first.text, status: 'generating' }])
+    const result = await callApi(first.text, first.accent)
     applyResult(id, result)
     if ('error' in result) toast.error(`失敗: ${result.error}`)
   }
@@ -148,15 +165,15 @@ export default function NarrationClient() {
     const clip = clips.find(c => c.id === id)
     if (!clip) return
     setClips(prev => prev.map(c => c.id === id ? { ...c, status: 'generating', error: undefined } : c))
-    const result = await callApi(clip.text, clip.lang)
+    const result = await callApi(clip.text, clip.accent)
     applyResult(id, result)
     if ('error' in result) toast.error(`失敗: ${result.error}`)
   }
 
   async function downloadOne(clip: Clip, index1: number) {
     if (!clip.audioUrl) return
-    // 直リンクで download 属性を付けても、別オリジン (Supabase Storage) だと
-    // ブラウザが別タブで開く挙動になる。一度 blob に落として anchor から保存する。
+    // 別オリジン (Supabase Storage) の mp3 を download 属性付きで保存するため、
+    // 一度 blob に落としてから anchor でファイル名付き保存する。
     try {
       const res = await fetch(clip.audioUrl)
       const blob = await res.blob()
@@ -204,51 +221,110 @@ export default function NarrationClient() {
           <span className="text-xs text-muted">gpt-4o-mini-tts · 500 call/day</span>
         </header>
 
-        {/* 設定カード: 言語トグル + 生成ボタン */}
-        <section className="bg-white rounded-xl border border-line px-5 py-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted">デフォルト言語</span>
-            <div className="inline-flex rounded-full border border-line overflow-hidden">
-              {(['JA', 'EN'] as Lang[]).map(l => (
+        {/* 音声設定カード: voice / 英語アクセント / デフォルト言語 / speed */}
+        <section className="bg-white rounded-xl border border-line px-5 py-4 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted shrink-0">音声</span>
+              <select
+                value={voice}
+                onChange={e => setVoice(e.target.value as Voice)}
+                className="border border-line rounded-md px-3 h-9 text-sm bg-white"
+              >
+                {VOICES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted shrink-0">英語アクセント</span>
+              <select
+                value={enAccent}
+                onChange={e => setEnAccent(e.target.value as Accent)}
+                className="border border-line rounded-md px-3 h-9 text-sm bg-white"
+              >
+                <option value="EN_GB">イギリス英語</option>
+                <option value="EN_US">アメリカ英語</option>
+              </select>
+            </label>
+
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted shrink-0">デフォルト言語</span>
+              <div className="inline-flex rounded-full border border-line overflow-hidden">
+                {(['JA', 'EN_GB'] as Accent[]).map(a => {
+                  const selected = defaultAccent === a || (a === 'EN_GB' && defaultAccent === 'EN_US')
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setDefaultAccent(a === 'EN_GB' ? enAccent : a)}
+                      className={`px-4 h-8 text-sm ${selected ? 'bg-primary text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                    >
+                      {a === 'JA' ? '日本語' : '英語'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted shrink-0">スピード {speed.toFixed(2)}x</span>
+            <input
+              type="range"
+              min={0.5}
+              max={2.0}
+              step={0.05}
+              value={speed}
+              onChange={e => setSpeed(Number(e.target.value))}
+              className="flex-1 max-w-[320px]"
+            />
+            <div className="flex gap-1">
+              {[0.75, 1.0, 1.25, 1.5].map(s => (
                 <button
-                  key={l}
+                  key={s}
                   type="button"
-                  onClick={() => setDefaultLang(l)}
-                  className={`px-4 h-8 text-sm ${defaultLang === l ? 'bg-primary text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                  onClick={() => setSpeed(s)}
+                  className="text-xs px-2 h-7 rounded-full border border-line hover:bg-gray-50"
                 >
-                  {LANG_PRESETS[l].label}
+                  {s}x
                 </button>
               ))}
             </div>
-            <span className="text-xs text-muted">prefix 無しの行に適用。<code className="font-mono">JA:</code> / <code className="font-mono">EN:</code> で行ごと上書き</span>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={generateOne}
-              disabled={running}
-              className="inline-flex items-center h-9 px-4 rounded-full text-sm font-medium bg-white border border-primary text-primary hover:bg-primary-light disabled:opacity-40"
-            >
-              1行だけ試す
-            </button>
-            <button
-              type="button"
-              onClick={generateAll}
-              disabled={running}
-              className="inline-flex items-center h-9 px-5 rounded-full text-sm font-medium bg-primary text-white hover:bg-primary-hover disabled:opacity-40"
-            >
-              {running ? '生成中…' : '全行生成'}
-            </button>
-            <button
-              type="button"
-              onClick={downloadZip}
-              disabled={!hasAnyDone}
-              className="inline-flex items-center gap-1 h-9 px-4 rounded-full text-sm font-medium text-primary hover:bg-primary-light disabled:opacity-40"
-            >
-              <HiDownload className="size-4" />
-              ZIP
-            </button>
+
+          <div className="text-xs text-muted">
+            行頭 <code className="font-mono">JA:</code> / <code className="font-mono">EN:</code> で行ごとのアクセントを上書き。prefix 無しはデフォルト言語。
           </div>
+        </section>
+
+        {/* 生成ボタン群 */}
+        <section className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={generateOne}
+            disabled={running}
+            className="inline-flex items-center h-9 px-4 rounded-full text-sm font-medium bg-white border border-primary text-primary hover:bg-primary-light disabled:opacity-40"
+          >
+            1行だけ試す
+          </button>
+          <button
+            type="button"
+            onClick={generateAll}
+            disabled={running}
+            className="inline-flex items-center h-9 px-5 rounded-full text-sm font-medium bg-primary text-white hover:bg-primary-hover disabled:opacity-40"
+          >
+            {running ? '生成中…' : '全行生成'}
+          </button>
+          <button
+            type="button"
+            onClick={downloadZip}
+            disabled={!hasAnyDone}
+            className="inline-flex items-center gap-1 h-9 px-4 rounded-full text-sm font-medium text-primary hover:bg-primary-light disabled:opacity-40"
+          >
+            <HiDownload className="size-4" />
+            ZIP
+          </button>
+          <span className="ml-auto text-xs text-muted">{parsed.length} 行</span>
         </section>
 
         {/* 原稿カード */}
@@ -261,14 +337,13 @@ export default function NarrationClient() {
             spellCheck={false}
             className="w-full border border-line rounded-md px-3 py-2 text-sm font-mono leading-relaxed"
           />
-          <div className="text-xs text-muted">{parsed.length} 行</div>
         </section>
 
-        {/* 生成結果: ブロック */}
+        {/* 生成結果 */}
         {clips.length > 0 && (
           <section className="flex flex-col gap-2">
             {clips.map((clip, i) => {
-              const preset = LANG_PRESETS[clip.lang]
+              const accent = ACCENTS[clip.accent]
               return (
                 <div key={clip.id} className="bg-white rounded-xl border border-line px-5 py-4 flex flex-col gap-3">
                   <div className="flex items-center gap-3">
@@ -276,7 +351,7 @@ export default function NarrationClient() {
                       {String(i + 1).padStart(3, '0')}
                     </span>
                     <span className="shrink-0 text-xs px-2 py-0.5 rounded-full border border-line text-gray-700">
-                      {preset.label}
+                      {accent.label}
                     </span>
                     <span className="flex-1 min-w-0 text-sm text-gray-950 break-words">{clip.text}</span>
                     <div className="shrink-0 flex items-center gap-1">
@@ -303,12 +378,7 @@ export default function NarrationClient() {
                     </div>
                   </div>
                   {clip.status === 'done' && clip.audioUrl && (
-                    <audio
-                      controls
-                      preload="none"
-                      src={clip.audioUrl}
-                      className="w-full h-10"
-                    />
+                    <audio controls preload="none" src={clip.audioUrl} className="w-full h-10" />
                   )}
                 </div>
               )
