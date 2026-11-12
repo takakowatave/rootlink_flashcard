@@ -12,10 +12,9 @@ type Clip = {
   lang: Lang
   text: string
   status: 'idle' | 'generating' | 'done' | 'error'
-  audioBase64?: string
+  audioUrl?: string
   bytes?: number
   error?: string
-  url?: string
 }
 
 // gpt-4o-mini-tts で選べる voice。
@@ -60,13 +59,6 @@ function parseScript(raw: string, defaultLang: Lang): { lang: Lang; text: string
   return out
 }
 
-function base64ToUint8(b64: string): Uint8Array {
-  const bin = atob(b64)
-  const buf = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
-  return buf
-}
-
 function newId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
@@ -84,7 +76,7 @@ export default function NarrationClient() {
 
   const parsed = useMemo(() => parseScript(script, defaultLang), [script, defaultLang])
 
-  async function callApi(text: string, lang: Lang): Promise<{ base64: string; bytes: number } | { error: string }> {
+  async function callApi(text: string, lang: Lang): Promise<{ audioUrl: string } | { error: string }> {
     const preset = LANG_PRESETS[lang]
     try {
       const res = await fetch('/api/admin/narration', {
@@ -100,22 +92,19 @@ export default function NarrationClient() {
       if (!res.ok || !data?.ok) {
         return { error: data?.reason || `HTTP ${res.status}` }
       }
-      return { base64: data.audioBase64, bytes: data.bytes }
+      return { audioUrl: data.audioUrl as string }
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'fetch failed' }
     }
   }
 
-  function applyResult(id: string, result: { base64: string; bytes: number } | { error: string }) {
+  function applyResult(id: string, result: { audioUrl: string } | { error: string }) {
     setClips(prev => prev.map(c => {
       if (c.id !== id) return c
       if ('error' in result) {
         return { ...c, status: 'error', error: result.error }
       }
-      if (c.url) URL.revokeObjectURL(c.url)
-      const blob = new Blob([base64ToUint8(result.base64) as BlobPart], { type: 'audio/mpeg' })
-      const url = URL.createObjectURL(blob)
-      return { ...c, status: 'done', audioBase64: result.base64, bytes: result.bytes, url, error: undefined }
+      return { ...c, status: 'done', audioUrl: result.audioUrl, error: undefined }
     }))
   }
 
@@ -168,28 +157,45 @@ export default function NarrationClient() {
     new Audio(url).play().catch(() => {})
   }
 
-  function downloadOne(clip: Clip, index1: number) {
-    if (!clip.url) return
-    const a = document.createElement('a')
-    a.href = clip.url
-    a.download = makeFilename(index1, clip.text)
-    a.click()
+  async function downloadOne(clip: Clip, index1: number) {
+    if (!clip.audioUrl) return
+    // 直リンクで download 属性を付けても、別オリジン (Supabase Storage) だと
+    // ブラウザが別タブで開く挙動になる。一度 blob に落として anchor から保存する。
+    try {
+      const res = await fetch(clip.audioUrl)
+      const blob = await res.blob()
+      const objUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objUrl
+      a.download = makeFilename(index1, clip.text)
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(objUrl), 10_000)
+    } catch (e) {
+      toast.error(`DL 失敗: ${e instanceof Error ? e.message : 'fetch failed'}`)
+    }
   }
 
-  function downloadZip() {
-    const done = clips.filter(c => c.status === 'done' && c.audioBase64)
+  async function downloadZip() {
+    const done = clips.filter(c => c.status === 'done' && c.audioUrl)
     if (done.length === 0) { toast.error('生成済みの行がない'); return }
-    const entries = done.map((c, i) => ({
-      name: makeFilename(i + 1, c.text),
-      data: base64ToUint8(c.audioBase64!),
-    }))
-    const zip = makeStoreZip(entries)
-    const url = URL.createObjectURL(zip)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `narration_${new Date().toISOString().slice(0, 10)}.zip`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    try {
+      const entries = await Promise.all(
+        done.map(async (c, i) => {
+          const res = await fetch(c.audioUrl!)
+          const buf = new Uint8Array(await res.arrayBuffer())
+          return { name: makeFilename(i + 1, c.text), data: buf }
+        })
+      )
+      const zip = makeStoreZip(entries)
+      const url = URL.createObjectURL(zip)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `narration_${new Date().toISOString().slice(0, 10)}.zip`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (e) {
+      toast.error(`ZIP 失敗: ${e instanceof Error ? e.message : 'fetch failed'}`)
+    }
   }
 
   const hasAnyDone = clips.some(c => c.status === 'done')
@@ -280,10 +286,10 @@ export default function NarrationClient() {
                     <div className="shrink-0 flex items-center gap-1">
                       {clip.status === 'generating' && <span className="text-xs text-muted mr-2">生成中…</span>}
                       {clip.status === 'error' && <span className="text-xs text-red-600 mr-2">{clip.error}</span>}
-                      {clip.status === 'done' && clip.url && (
+                      {clip.status === 'done' && clip.audioUrl && (
                         <button
                           type="button"
-                          onClick={() => play(clip.url!)}
+                          onClick={() => play(clip.audioUrl!)}
                           className="size-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-700"
                           aria-label="再生"
                         >

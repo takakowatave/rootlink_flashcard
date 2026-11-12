@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { checkAdminServer } from '@/lib/adminAuth'
 
-// Cuppa English 長尺動画用ナレーション生成。
-// - フロント側で admin (ADMIN_EMAILS / fallback kiko) を検証
-// - OpenAI key は Cloud Run (rootlink_server) にしか無いので proxy する
-// - 共有秘密 NARRATION_PROXY_SECRET を Authorization: Bearer で渡す
-// - 予算ガード (tts_daily_counters.kind='narration') は Cloud Run 側で実施
+// Cuppa 長尺動画ナレーション: Cloud Run の /audio/narration に proxy するだけ。
+// - 多層防御: Vercel 側で先に admin 判定 (403 を速く返す)
+// - 本物の認証は Cloud Run 側で Supabase Bearer + ADMIN_EMAILS を見ている
+// - OPENAI key は Cloud Run 側にしかない
+// - 生成結果は Supabase Storage の公開 URL (audioUrl) を返す
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,25 +21,26 @@ export async function POST(req: Request) {
   }
 
   const cloudrunUrl = process.env.NEXT_PUBLIC_CLOUDRUN_API_URL
-  const proxySecret = process.env.NARRATION_PROXY_SECRET
-  if (!cloudrunUrl || !proxySecret) {
+  if (!cloudrunUrl) {
     return NextResponse.json({ ok: false, reason: 'MISCONFIGURED' }, { status: 500 })
   }
 
-  let bodyText: string
-  try {
-    bodyText = await req.text()
-  } catch {
-    return NextResponse.json({ ok: false, reason: 'BAD_JSON' }, { status: 400 })
+  // Cloud Run にそのまま回すために、現セッションの access_token を取り出す
+  const supabase = await createSupabaseServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.access_token
+  if (!accessToken) {
+    return NextResponse.json({ ok: false, reason: 'NO_SESSION' }, { status: 401 })
   }
 
+  const bodyText = await req.text()
   let upstream: Response
   try {
-    upstream = await fetch(`${cloudrunUrl.replace(/\/$/, '')}/narration`, {
+    upstream = await fetch(`${cloudrunUrl.replace(/\/$/, '')}/audio/narration`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${proxySecret}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: bodyText,
     })
@@ -47,34 +49,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, reason: 'UPSTREAM_FETCH_FAILED' }, { status: 502 })
   }
 
-  const contentType = upstream.headers.get('content-type') ?? ''
-  if (!upstream.ok) {
-    // Cloud Run 側は JSON でエラーを返す
-    const text = await upstream.text().catch(() => '')
-    try {
-      const data = JSON.parse(text)
-      return NextResponse.json(data, { status: upstream.status })
-    } catch {
-      return NextResponse.json(
-        { ok: false, reason: 'UPSTREAM_ERROR', status: upstream.status, detail: text.slice(0, 300) },
-        { status: upstream.status },
-      )
-    }
-  }
-
-  if (!contentType.includes('audio/mpeg')) {
-    // 想定外: ok なのに audio/mpeg じゃない
+  const text = await upstream.text()
+  try {
+    const data = JSON.parse(text)
+    return NextResponse.json(data, { status: upstream.status })
+  } catch {
     return NextResponse.json(
-      { ok: false, reason: 'UPSTREAM_UNEXPECTED_CONTENT_TYPE', contentType },
-      { status: 502 },
+      { ok: false, reason: 'UPSTREAM_NON_JSON', detail: text.slice(0, 300) },
+      { status: upstream.status },
     )
   }
-
-  const audioBuf = Buffer.from(await upstream.arrayBuffer())
-  return NextResponse.json({
-    ok: true,
-    audioBase64: audioBuf.toString('base64'),
-    mime: 'audio/mpeg',
-    bytes: audioBuf.byteLength,
-  })
 }
