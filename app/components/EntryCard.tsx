@@ -14,6 +14,7 @@ import { useTtsAudio, playAudioAtRate, fetchTtsAudioUrl } from '@/lib/useTtsAudi
 import { useWordDetail } from '@/lib/wordDetailStack'
 import { resolveWord } from '@/lib/resolveClient'
 import { emitQuotaExceeded } from '@/lib/quotaExceeded'
+import Badge from '@/components/Badge'
 
 type Pronunciation = {
   phoneticSpelling?: string
@@ -254,9 +255,9 @@ export default function EntryCard({
 
               return [(
                 <div key={pos}>
-                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
+                  <Badge>
                     {getPosLabel(pos, displayLocale)}
-                  </span>
+                  </Badge>
                   <p className="mt-2 text-base font-medium text-black">{sense.meaning}</p>
                   <SenseExample
                     example={sense.example}
@@ -271,9 +272,9 @@ export default function EntryCard({
 
             return allEntries.map(([pos, items]) => (
               <div key={pos}>
-                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">
+                <Badge>
                   {getPosLabel(pos, displayLocale)}
-                </span>
+                </Badge>
 
                 {pos === 'verb' && inflections.length > 0 && (
                   <p className="mt-1 text-sm text-muted">{inflections.join(' · ')}</p>

@@ -21,6 +21,7 @@ import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import { useDisplayLocale } from '@/lib/useDisplayLocale'
 import { messages } from '@/lib/i18n/messages'
+import Badge from '@/components/Badge'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
 
@@ -444,9 +445,9 @@ function CardView({
             {mode === 'example' && card.example ? renderExample() : (
               <div>
                 {card.pos && (
-                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
+                  <Badge className="mb-2">
                     {getPosLabel(card.pos, locale)}
-                  </span>
+                  </Badge>
                 )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">

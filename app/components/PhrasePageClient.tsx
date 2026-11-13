@@ -16,6 +16,7 @@ import ReportContentLink from '@/components/ReportContentLink'
 import DeckScrollStrip from '@/components/DeckScrollStrip'
 import { stripPhraseParens, displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
 import { useAuthReload } from '@/lib/useAuthReload'
+import Badge from '@/components/Badge'
 
 type PhraseSense = {
   sense_id: string
@@ -216,13 +217,13 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
         {(typeLabel || localeLabel || registerLabel) && (
           <div className="flex flex-wrap items-center gap-2 mb-2">
             {typeLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{typeLabel}</span>
+              <Badge>{typeLabel}</Badge>
             )}
             {localeLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{localeLabel}</span>
+              <Badge>{localeLabel}</Badge>
             )}
             {registerLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{registerLabel}</span>
+              <Badge>{registerLabel}</Badge>
             )}
           </div>
         )}
