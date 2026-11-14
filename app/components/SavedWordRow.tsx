@@ -3,6 +3,7 @@
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2'
 import { getPosLabel } from '@/lib/pos'
 import { useDisplayLocale } from '@/lib/useDisplayLocale'
+import Badge from '@/components/Badge'
 
 type Props = {
   word: string
@@ -18,9 +19,9 @@ export default function SavedWordRow({ word, pos, meaningJa, isSaved, onToggleSa
     <div className="bg-white border-2 border-line rounded-lg px-2 py-2 flex items-center gap-2 w-full h-[52px]">
       <span className="text-base font-medium text-gray-950 leading-6 shrink-0">{word}</span>
       {pos && (
-        <span className="border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted shrink-0">
+        <Badge className="shrink-0">
           {getPosLabel(pos, locale)}
-        </span>
+        </Badge>
       )}
       <span className="flex-1 min-w-0 text-sm text-muted leading-5 truncate">
         {meaningJa ?? ''}

@@ -18,6 +18,7 @@ import { POS_LABEL_JA, POS_LABEL_EN } from '@/lib/pos'
 import { useDisplayLocale } from '@/lib/useDisplayLocale'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import type { SavedWordDictionary } from '@/types/Dictionary'
+import Badge from '@/components/Badge'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -280,9 +281,9 @@ export default function WordCardEmbed({ word, dictionary, senseIndex }: Props) {
         {/* Sense（1件のみ） */}
         {sense && (
           <div className="mt-2">
-            <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-sm font-medium text-muted">
+            <Badge size="md">
               {posLabel(sense.pos, locale)}
-            </span>
+            </Badge>
             <p className="mt-2 text-base font-medium text-black">
               {sense.meaningJa || sense.meaningEn}
             </p>

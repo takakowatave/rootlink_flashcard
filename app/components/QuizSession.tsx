@@ -7,7 +7,9 @@ import { MdArrowBackIosNew } from 'react-icons/md'
 import Button from '@/components/Button'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import LearnedPartWords from '@/components/LearnedPartWords'
+import PhrasePageClient from '@/components/PhrasePageClient'
 import WordPageClient from '@/components/WordPageClient'
+import { supabase } from '@/lib/supabaseClient'
 import { colors } from '@/lib/colors'
 import { readLocalizedEtymologyJa } from '@/lib/etymologyDisplay'
 import { buildPhraseSpanRegex, displayPhrase } from '@/lib/phraseDisplay'
@@ -19,6 +21,7 @@ import type { SavedWordDictionary, SavedWordSense, SavedWordSenseGroup } from '@
 import type { EtymologyData, LocalizedEtymologyJa } from '@/types/Etymology'
 import { useDisplayLocale } from '@/lib/useDisplayLocale'
 import { messages } from '@/lib/i18n/messages'
+import Badge from '@/components/Badge'
 
 const QUIZ_CARD_TUTORIAL_KEY = 'rootlink_quiz_card_tutorial_v1_seen'
 
@@ -165,6 +168,32 @@ function Sparkles({ show }: { show: boolean }) {
   )
 }
 
+type PhraseSenseRow = {
+  sense_id: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  explanation_ja: string | null
+  explanation_en: string | null
+  example_en: string | null
+  example_ja: string | null
+}
+
+type PhraseCardRow = {
+  id: string
+  phrase: string
+  meaning_ja: string | null
+  meaning_en: string | null
+  explanation_ja: string | null
+  explanation_en: string | null
+  example_en: string | null
+  example_ja: string | null
+  type: string | null
+  register: string | null
+  locale: string | null
+  senses: PhraseSenseRow[] | null
+  us_equivalent: string | null
+}
+
 // クイズ中/結果画面から呼ばれる半モーダル。
 // モーダルは単一 slot。関連語チップから遷移するときは stack せず内容を replace する
 // (無限 stack は破綻するため)。戻るは常にクイズに 1手で復帰する。
@@ -177,6 +206,32 @@ function DetailModal({
 }) {
   const locale = useDisplayLocale()
   const t = messages[locale].quizSession
+  const phraseCardId = entry.phrase_card_id ?? null
+  const [phraseCard, setPhraseCard] = useState<PhraseCardRow | null>(null)
+  const [phraseLoading, setPhraseLoading] = useState(false)
+
+  useEffect(() => {
+    if (!phraseCardId) {
+      setPhraseCard(null)
+      setPhraseLoading(false)
+      return
+    }
+    let cancelled = false
+    setPhraseLoading(true)
+    setPhraseCard(null)
+    supabase
+      .from('phrase_cards')
+      .select('id, phrase, meaning_ja, meaning_en, explanation_ja, explanation_en, example_en, example_ja, type, register, locale, senses, us_equivalent')
+      .eq('id', phraseCardId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        setPhraseCard((data as PhraseCardRow | null) ?? null)
+        setPhraseLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [phraseCardId])
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
@@ -199,14 +254,22 @@ function DetailModal({
             <span className="text-sm">{t.back}</span>
           </button>
         </div>
-        <div key={entry.word} className="overflow-y-auto flex-1">
-          <WordPageClient
-            word={entry.word}
-            dictionary={entry.dictionary}
-            savedId={undefined}
-            initialPinnedSenseId={entry.pinned_sense_id ?? null}
-            noCard
-          />
+        <div key={phraseCardId ?? entry.word} className="overflow-y-auto flex-1">
+          {phraseCardId ? (
+            phraseLoading || !phraseCard ? (
+              <div className="p-6 text-sm text-muted">{t.loading}</div>
+            ) : (
+              <PhrasePageClient card={phraseCard} embedded />
+            )
+          ) : (
+            <WordPageClient
+              word={entry.word}
+              dictionary={entry.dictionary}
+              savedId={undefined}
+              initialPinnedSenseId={entry.pinned_sense_id ?? null}
+              noCard
+            />
+          )}
         </div>
       </div>
     </div>
@@ -382,9 +445,9 @@ function CardView({
             {mode === 'example' && card.example ? renderExample() : (
               <div>
                 {card.pos && (
-                  <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted mb-2">
+                  <Badge className="mb-2">
                     {getPosLabel(card.pos, locale)}
-                  </span>
+                  </Badge>
                 )}
                 <p className="text-4xl font-bold text-gray-800 tracking-wide">{isPhrase ? displayPhrase(card.word) : card.word}</p>
                 <div className="flex items-center gap-2 mt-2 h-5 text-gray-400">
@@ -611,6 +674,7 @@ export default function QuizSession({
       word: entry.word,
       dictionary: entry.dictionary,
       pinned_sense_id: entry.pinned_sense_id ?? null,
+      phrase_card_id: entry.phrase_card_id ?? null,
     })
   }, [])
 

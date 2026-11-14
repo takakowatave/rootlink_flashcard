@@ -16,6 +16,7 @@ import ReportContentLink from '@/components/ReportContentLink'
 import DeckScrollStrip from '@/components/DeckScrollStrip'
 import { stripPhraseParens, displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
 import { useAuthReload } from '@/lib/useAuthReload'
+import Badge from '@/components/Badge'
 
 type PhraseSense = {
   sense_id: string
@@ -59,7 +60,7 @@ function getComponentWords(phrase: string): string[] {
     .filter(w => /^[a-zA-Z]+$/.test(w) && !STOP_WORDS.has(w.toLowerCase()))
 }
 
-export default function PhrasePageClient({ card, containingDecks, linkableComponentWords }: { card: PhraseCard; containingDecks?: ContainingDeck[]; linkableComponentWords?: string[] }) {
+export default function PhrasePageClient({ card, containingDecks, linkableComponentWords, embedded = false }: { card: PhraseCard; containingDecks?: ContainingDeck[]; linkableComponentWords?: string[]; embedded?: boolean }) {
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showSignupModal, setShowSignupModal] = useState(false)
@@ -199,7 +200,7 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
   const usEquivalent = card.locale === 'en-GB' ? (card.us_equivalent ?? null) : null
 
   return (
-    <div className="bg-surface min-h-screen">
+    <div className={embedded ? 'bg-surface' : 'bg-surface min-h-screen'}>
       {showSignupModal && <SignupRequiredModal onClose={() => setShowSignupModal(false)} />}
       <CardShell>
         {/* タイトル + 再生 + ブックマーク */}
@@ -216,13 +217,13 @@ export default function PhrasePageClient({ card, containingDecks, linkableCompon
         {(typeLabel || localeLabel || registerLabel) && (
           <div className="flex flex-wrap items-center gap-2 mb-2">
             {typeLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{typeLabel}</span>
+              <Badge>{typeLabel}</Badge>
             )}
             {localeLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{localeLabel}</span>
+              <Badge>{localeLabel}</Badge>
             )}
             {registerLabel && (
-              <span className="text-xs font-medium text-muted border border-muted rounded-sm px-2 py-1">{registerLabel}</span>
+              <Badge>{registerLabel}</Badge>
             )}
           </div>
         )}

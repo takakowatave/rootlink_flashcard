@@ -11,6 +11,7 @@ import SenseExample from '@/components/SenseExample'
 import PhraseNotes from '@/components/PhraseNotes'
 import { TYPE_LABEL, REGISTER_LABEL, LOCALE_LABEL, pickLabel } from '@/lib/phraseLabels'
 import { stripPhraseParens, displayPhrase, phraseHighlightTerms } from '@/lib/phraseDisplay'
+import Badge from '@/components/Badge'
 
 export type PhraseCardSense = {
   sense_id: string
@@ -114,13 +115,13 @@ export default function PhraseCard({
           {(typeLabel || localeLabel || registerLabel) && (
             <div className="flex flex-wrap items-center gap-2">
               {typeLabel && (
-                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{typeLabel}</span>
+                <Badge>{typeLabel}</Badge>
               )}
               {localeLabel && (
-                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{localeLabel}</span>
+                <Badge>{localeLabel}</Badge>
               )}
               {registerLabel && (
-                <span className="inline-flex items-center border border-muted rounded-full px-2 py-1 text-xs font-medium text-muted">{registerLabel}</span>
+                <Badge>{registerLabel}</Badge>
               )}
             </div>
           )}
