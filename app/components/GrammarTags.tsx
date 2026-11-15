@@ -1,5 +1,7 @@
 'use client'
 
+import Badge from '@/components/Badge'
+
 // sense ごとの文法タグ表示担当
 // grammatical note の日英切り替えとタグ見た目をこのコンポーネントに閉じ込める
 
@@ -63,12 +65,7 @@ export default function GrammarTags({ tags, displayLocale }: Props) {
   return (
     <>
       {normalizedTags.map((tag) => (
-        <span
-          key={tag}
-          className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600"
-        >
-          {getDisplayedGrammarTag(tag, displayLocale)}
-        </span>
+        <Badge key={tag}>{getDisplayedGrammarTag(tag, displayLocale)}</Badge>
       ))}
     </>
   )
