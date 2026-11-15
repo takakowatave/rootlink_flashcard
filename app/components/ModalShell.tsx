@@ -51,15 +51,24 @@ export default function ModalShell({
   const backdropClass = isHalfsheet
     ? 'absolute inset-0 bg-black/40'
     : 'absolute inset-0 bg-black/40 hidden md:block'
+  // fullscreen SP: panel が viewport 全面 (status bar / home indicator 配下) を
+  // 覆いきれるよう、wrapper の global safe-area padding を opt-out し
+  // (data-modal-full-overlay)、panel の内側で safe-area padding を効かせる。
+  // これをしないと、裏の ResultScreen のボタンや Footer が status bar 下 /
+  // home indicator 上に透けて見える (「枠の中に枠」の原因)。
   const panelClass = isHalfsheet
     ? `relative z-10 bg-white w-full max-h-[85dvh] rounded-t-2xl shadow-xl lg:h-auto lg:rounded-2xl lg:max-h-[85dvh] ${finalMaxWidth} flex flex-col overflow-hidden`
-    : `relative z-10 bg-white w-full h-full md:h-auto ${finalMaxWidth} md:max-h-[85dvh] md:rounded-2xl md:shadow-xl flex flex-col overflow-hidden`
+    : `relative z-10 bg-white w-full h-full md:h-auto ${finalMaxWidth} md:max-h-[85dvh] md:rounded-2xl md:shadow-xl flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0`
   const headerClass = isHalfsheet
     ? 'flex items-center justify-between border-b border-line h-12 px-3 flex-shrink-0'
     : 'flex items-center justify-between border-b border-line h-14 md:h-12 px-3 flex-shrink-0'
 
   return (
-    <div className={wrapperClass} onClick={onClose}>
+    <div
+      className={wrapperClass}
+      onClick={onClose}
+      {...(isHalfsheet ? {} : { 'data-modal-full-overlay': true })}
+    >
       <div className={backdropClass} />
       <div className={panelClass} onClick={(e) => e.stopPropagation()}>
         <div className={headerClass}>

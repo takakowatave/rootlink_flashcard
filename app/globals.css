@@ -17,8 +17,11 @@ body {
 }
 
 /* fixed inset-0 な全画面オーバーレイ (modal / quiz / onboarding など) は
-   viewport 相対で個別に safe-area を挟む */
-.fixed.inset-0 {
+   viewport 相対で個別に safe-area を挟む。
+   ModalShell 等「panel 内側で safe-area を自前制御する」ものは
+   data-modal-full-overlay を付けて opt-out する (panel が viewport 全面を
+   覆いきれず status bar / home indicator の裏が透ける不具合を防ぐ)。 */
+.fixed.inset-0:not([data-modal-full-overlay]) {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
