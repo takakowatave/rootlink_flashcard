@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import { MdArrowBackIosNew } from 'react-icons/md'
 import Button from '@/components/Button'
 import EtymologyBlock from '@/components/EtymologyBlock'
 import LearnedPartWords from '@/components/LearnedPartWords'
+import ModalShell from '@/components/ModalShell'
 import PhrasePageClient from '@/components/PhrasePageClient'
 import WordPageClient from '@/components/WordPageClient'
 import { supabase } from '@/lib/supabaseClient'
@@ -233,46 +235,37 @@ function DetailModal({
   }, [phraseCardId])
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
-      onClick={onBack}
+    <ModalShell
+      open
+      onClose={onBack}
+      headerLeft={
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-subtle transition-colors text-gray-500"
+        >
+          <MdArrowBackIosNew size={18} />
+          <span className="text-sm">{t.back}</span>
+        </button>
+      }
     >
-      <div className="absolute inset-0 bg-black/40" />
-      <div
-        // iOS notch / status bar と重ならないよう pt-[env(safe-area-inset-top)] で
-        // 上端を押し下げる (他モーダルの ModalShell と揃える)。sm+ は中央ダイアログ
-        // なので safe-area は不要。
-        className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[calc(100dvh-40px)] sm:max-h-[85dvh] mt-10 sm:mt-0 flex flex-col shadow-xl overflow-x-hidden pt-[env(safe-area-inset-top)] sm:pt-0"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center px-2 py-2 border-b border-line flex-shrink-0">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1 pl-1 pr-3 py-2 rounded-full hover:bg-primary-subtle transition-colors text-gray-500"
-          >
-            <MdArrowBackIosNew size={18} />
-            <span className="text-sm">{t.back}</span>
-          </button>
-        </div>
-        <div key={phraseCardId ?? entry.word} className="overflow-y-auto flex-1">
-          {phraseCardId ? (
-            phraseLoading || !phraseCard ? (
-              <div className="p-6 text-sm text-muted">{t.loading}</div>
-            ) : (
-              <PhrasePageClient card={phraseCard} embedded />
-            )
+      <div key={phraseCardId ?? entry.word}>
+        {phraseCardId ? (
+          phraseLoading || !phraseCard ? (
+            <div className="p-6 text-sm text-muted">{t.loading}</div>
           ) : (
-            <WordPageClient
-              word={entry.word}
-              dictionary={entry.dictionary}
-              savedId={undefined}
-              initialPinnedSenseId={entry.pinned_sense_id ?? null}
-              noCard
-            />
-          )}
-        </div>
+            <PhrasePageClient card={phraseCard} embedded />
+          )
+        ) : (
+          <WordPageClient
+            word={entry.word}
+            dictionary={entry.dictionary}
+            savedId={undefined}
+            initialPinnedSenseId={entry.pinned_sense_id ?? null}
+            noCard
+          />
+        )}
       </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -524,6 +517,7 @@ function ResultScreen({
 }) {
   const locale = useDisplayLocale()
   const t = messages[locale].quizSession
+  const router = useRouter()
   const correct = results.filter(Boolean).length
   const total = cards.length
   const correctCards = cards.filter((_, i) => results[i])
@@ -548,7 +542,8 @@ function ResultScreen({
           <p className="text-5xl font-bold text-gray-900 mb-1">{correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span></p>
           <p className="text-base font-bold italic text-gray-600 mt-2">{message}</p>
         </div>
-        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-6">{t.next}</Button>
+        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-3">{t.next}</Button>
+        <Button onClick={() => router.push('/')} variant="secondary" size="lg" fullWidth className="mb-6">{t.goHome}</Button>
         {wrongCards.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
