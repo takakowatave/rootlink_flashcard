@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { HiX } from 'react-icons/hi'
 import { HiSpeakerWave } from 'react-icons/hi2'
 import { MdArrowBackIosNew } from 'react-icons/md'
@@ -524,6 +525,7 @@ function ResultScreen({
 }) {
   const locale = useDisplayLocale()
   const t = messages[locale].quizSession
+  const router = useRouter()
   const correct = results.filter(Boolean).length
   const total = cards.length
   const correctCards = cards.filter((_, i) => results[i])
@@ -548,7 +550,8 @@ function ResultScreen({
           <p className="text-5xl font-bold text-gray-900 mb-1">{correct}<span className="text-2xl text-gray-400 font-normal">/{total}</span></p>
           <p className="text-base font-bold italic text-gray-600 mt-2">{message}</p>
         </div>
-        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-6">{t.next}</Button>
+        <Button onClick={onBack} variant="primary" size="lg" fullWidth className="mb-3">{t.next}</Button>
+        <Button onClick={() => router.push('/')} variant="secondary" size="lg" fullWidth className="mb-6">{t.goHome}</Button>
         {wrongCards.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">

@@ -168,6 +168,7 @@ export type Messages = {
     gotIt: string
     correctCountLabel: string
     next: string
+    goHome: string
     wrong: (n: number) => string
     correct: (n: number) => string
     retry: (n: number) => string
@@ -420,6 +421,7 @@ const ja: Messages = {
     gotIt: '覚えた',
     correctCountLabel: 'わかった数',
     next: '次へ',
+    goHome: 'ホームに戻る',
     wrong: (n: number) => `わからなかった（${n}語）`,
     correct: (n: number) => `わかった（${n}語）`,
     retry: (n: number) => `${n}問を復習`,
@@ -684,6 +686,7 @@ const en: Messages = {
     gotIt: 'Got it',
     correctCountLabel: 'Correct',
     next: 'Next',
+    goHome: 'Back to home',
     wrong: (n: number) => `Missed (${n})`,
     correct: (n: number) => `Correct (${n})`,
     retry: (n: number) => `Review ${n}`,
