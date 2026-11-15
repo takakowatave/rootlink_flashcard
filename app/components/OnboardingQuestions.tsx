@@ -204,9 +204,14 @@ export function OnboardingQuestionsView({
   const progressStep = getOnboardingStepIndex(stepId, isNative)
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6">
+    <div
+      className="fixed inset-0 z-[110] flex items-stretch justify-center md:items-center md:p-6"
+      data-modal-full-overlay
+    >
       <div className="absolute inset-0 bg-black/40 hidden md:block" />
-      <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden">
+      {/* SP: panel 内側で safe-area padding を効かせる (status bar / home indicator
+          配下に裏画面が透けないようにする)。md+ は中央ダイアログなので safe-area 不要。 */}
+      <div className="relative z-10 flex flex-col w-full h-full md:h-auto md:max-w-[720px] md:max-h-[85dvh] bg-teal-50 md:rounded-2xl md:shadow-xl overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0">
       <OnboardingProgressBar
         step={progressStep}
         totalSteps={totalSteps}
