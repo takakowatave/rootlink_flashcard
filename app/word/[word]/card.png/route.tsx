@@ -120,7 +120,9 @@ type CardProps = { data: CardData; logo: string }
 function Card({ data, logo }: CardProps) {
   const meaning = data.meaning ? truncate(data.meaning, 34) : null
   // hook は品質問題で一旦封印。ja 訳優先で etymology description を描画。
-  const description = data.etymologyDescription ? truncate(data.etymologyDescription, 190) : null
+  // 長すぎると flex column が溢れて word/meaning が縮み、字が box から
+  // はみ出して衝突する (2026-11 check で発生)。140 字が縦に収まる上限。
+  const description = data.etymologyDescription ? truncate(data.etymologyDescription, 140) : null
 
   return (
     // ミント外枠（16px の面取り + 内側白）
@@ -155,10 +157,12 @@ function Card({ data, logo }: CardProps) {
             fontSize: 88,
             fontWeight: 700,
             color: '#000000',
-            // lineHeight 1 だと descender/ascender 分が収まらず、下の和訳行に重なる
-            lineHeight: 1.25,
+            lineHeight: 1.1,
             letterSpacing: '-0.02em',
             display: 'flex',
+            // 解説ブロックが長いと flex column が溢れて word box が縮み、
+            // 88px の字が box からはみ出して和訳行に衝突する。縮ませない。
+            flexShrink: 0,
           }}
         >
           {truncate(data.word, 22)}
@@ -172,6 +176,7 @@ function Card({ data, logo }: CardProps) {
               lineHeight: 1.15,
               textAlign: 'center',
               display: 'flex',
+              flexShrink: 0,
             }}
           >
             {meaning}
