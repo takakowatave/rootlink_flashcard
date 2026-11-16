@@ -155,7 +155,8 @@ function Card({ data, logo }: CardProps) {
             fontSize: 88,
             fontWeight: 700,
             color: '#000000',
-            lineHeight: 1,
+            // lineHeight 1 だと descender/ascender 分が収まらず、下の和訳行に重なる
+            lineHeight: 1.25,
             letterSpacing: '-0.02em',
             display: 'flex',
           }}
