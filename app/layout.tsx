@@ -6,7 +6,6 @@ import DevBadge from "@/components/DevBadge";
 import { Analytics } from "@vercel/analytics/next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata, Viewport } from "next";
-import { detectServerLocale } from "@/lib/serverLocale";
 import { LocaleProvider } from "@/lib/LocaleProvider";
 
 export const viewport: Viewport = {
@@ -44,9 +43,12 @@ export default function RootLayout({
     }: {
     children: React.ReactNode;
     }) {
-    // サーバー側で locale を決めて <html lang> に反映する。
-    // ?lang= は各ページの page.tsx で Cookie に書く前提 (layout は searchParams を取れない)。
-    const locale = detectServerLocale()
+    // 以前は detectServerLocale() を読んで <html lang> に反映していたが、
+    // cookies()/headers() は root layout を dynamic 化し、配下の全ページから ISR を
+    // 奪う (2026-11-19 の Active CPU 枯渇の主因)。
+    // layout は 'ja' 固定にして、LocaleProvider / 各 client component 側で
+    // マウント後にブラウザ locale (localStorage / navigator.language) で swap する。
+    const locale = 'ja' as const
     return (
         <html lang={locale}>
         <body>

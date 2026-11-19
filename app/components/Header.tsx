@@ -38,13 +38,26 @@ const Header = () => {
   }, [pathname]);
 
   // 単語ページ上での検索は replace (履歴を積まない = 戻るで dashboard に戻れる)。
-  // fresh=1 は直近 /resolve 済み単語だと SSR に伝える (Data Cache 空応答での 404 flash 回避)。
-  const navigateAfterResolve = (url: string) => {
-    const withFresh = url.includes('?') ? `${url}&fresh=1` : `${url}?fresh=1`;
+  // /word/[word] は ISR 化しているので、直前に /resolve で dictionary_cache に入れた
+  // 新規語が 404 cache に化けないよう、遷移前にそのパスだけ明示的に revalidate する。
+  const navigateAfterResolve = async (url: string) => {
+    const word = url.match(/^\/word\/([^/?#]+)/)?.[1]
+    if (word) {
+      try {
+        await fetch('/api/revalidate-word', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word: decodeURIComponent(word).replace(/_/g, ' ') }),
+        })
+      } catch {
+        // 失敗しても遷移自体は続行。古い HTML が最長 24h 残るだけで、
+        // 続けて検索すれば次のナビで修復される。
+      }
+    }
     if (pathname.startsWith('/word/')) {
-      router.replace(withFresh);
+      router.replace(url);
     } else {
-      router.push(withFresh);
+      router.push(url);
     }
   };
 

@@ -6,10 +6,21 @@ import PhrasePageClient from '@/components/PhrasePageClient'
 import { getPostsReferencingWord, getRootPostsForParts } from '@/lib/blog'
 import { deckCardTitle, toShortName, sortDecksByDifficulty, getDeckImage } from '@/lib/deckDisplay'
 import type { RewrittenPayload } from '@/types/Dictionary'
-import { detectServerLocale } from '@/lib/serverLocale'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// ISR: 1 ページあたり 24h キャッシュ。cookies/headers/searchParams を一切読まないことで
+// ルート全体を static にし、ボットの巡回で Function Invocations が積まれないようにする。
+// 2026-11-19 の Active CPU 枯渇インシデント対応。
+// 新規解決した語は `/api/revalidate-word` 経由でそのパスだけ明示的に purge する。
+export const revalidate = 86400
+// generateStaticParams を空で返し dynamicParams を true にすると、全パスが「最初のアクセスで
+// SSR → 以後キャッシュ」の ISR 動作になる。build output で ● マークで表示される。
+export const dynamicParams = true
+export async function generateStaticParams(): Promise<Array<{ word: string }>> {
+  return []
+}
 
 /**
  * SSR は dictionary_cache だけを読む。Cloud Run も Oxford も呼ばない。
@@ -36,21 +47,20 @@ const SUPABASE_HEADERS = {
 const DAY = 60 * 60 * 24
 
 /**
- * 検索フローで来たときは fresh=1 が付く。その場合 Data Cache を bypass して
- * (cache: 'no-store') 直前の /resolve で書き込まれた DB 内容を必ず読み込む。
- * 以前は revalidate: DAY のせいで、他ユーザ/bot が同じ URL で先に空応答を
- * cache してしまうと直後の検索が 404 に化けていた (Bug: 検索結果前に 404 flash)。
- * bot / 直接アクセスは fresh 無しで従来通り DAY cache を使う (Oxford コスト保護維持)。
+ * 404 flash 対策:
+ * 以前は searchParams.fresh=1 のときだけ no-store で引いて直前の /resolve 結果を
+ * 確実に読んでいた。searchParams を読むとルートが dynamic になりキャッシュが効かない
+ * ので、代わりにページ全体を ISR 化し、/resolve 成功直後に `/api/revalidate-word` で
+ * 該当パスの Full Route Cache を明示的に invalidate する方式に切り替えた。
+ * DB 空振り時 (dictionary_cache 未登録) の 404 も ISR でキャッシュされるが、
+ * 新規解決すれば上記 revalidate が走って即座に新鮮な HTML に差し替わる。
  */
 const resolveWord = cache(
-  async (raw: string, fresh = false): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> => {
-    const cacheOpts = fresh
-      ? ({ cache: 'no-store' } as const)
-      : ({ next: { revalidate: DAY } } as const)
+  async (raw: string): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> => {
     try {
       const wordRes = await fetch(
         `${SUPABASE_URL}/rest/v1/words?select=id,word&word=eq.${encodeURIComponent(raw)}&limit=1`,
-        { headers: SUPABASE_HEADERS, ...cacheOpts }
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
       )
       if (!wordRes.ok) return null
 
@@ -68,7 +78,7 @@ const resolveWord = cache(
         `${SUPABASE_URL}/rest/v1/dictionary_cache?select=payload&word_id=eq.${encodeURIComponent(
           String(wordId)
         )}&limit=1`,
-        { headers: SUPABASE_HEADERS, ...cacheOpts }
+        { headers: SUPABASE_HEADERS, next: { revalidate: DAY } }
       )
       if (!cacheRes.ok) return null
 
@@ -90,12 +100,11 @@ const resolveWord = cache(
  */
 async function resolveWordAnyCase(
   original: string,
-  fresh = false,
 ): Promise<{ resolved: string; dictionary: RewrittenPayload } | null> {
   const lower = original.toLowerCase()
-  const hit = await resolveWord(lower, fresh)
+  const hit = await resolveWord(lower)
   if (hit) return hit
-  return original !== lower ? resolveWord(original, fresh) : null
+  return original !== lower ? resolveWord(original) : null
 }
 
 const filterExistingWords = cache(async (candidates: string[]): Promise<string[]> => {
@@ -351,25 +360,15 @@ type MetaDictionaryWithEn = MetaDictionary & {
   senseGroups?: Array<{ senses?: Array<{ senseId?: string; definition?: string }> }>
 }
 
-function getFirstEnMeaning(dictionary: MetaDictionaryWithEn | null): string | null {
-  const def = dictionary?.senseGroups?.[0]?.senses?.[0]?.definition
-  return typeof def === 'string' && def.trim() ? def.trim() : null
-}
-
-function buildTitle(word: string, locale: 'ja' | 'en'): string {
+function buildTitle(word: string): string {
   // layout.tsx の metadata.template が "%s | RootLink" を付けるので、ここでは語単体にする。
-  if (locale === 'en') return `${word} — etymology and meaning`
+  // ISR 化に伴い locale を server で判定しない (cookies/headers 読取はルートを dynamic にする)。
+  // JA 読者が圧倒的多数なので static HTML の title は JA 固定。EN 読者向けの表示は
+  // クライアント側 (`detectDisplayLocale`) で swap する。
   return `${word} の語源と意味｜語根から覚える英単語`
 }
 
-function buildDescription(word: string, dictionary: MetaDictionaryWithEn | null, locale: 'ja' | 'en'): string {
-  if (locale === 'en') {
-    const enMeaning = getFirstEnMeaning(dictionary)
-    if (enMeaning) {
-      return `${word}: ${enMeaning}. Understand this word by its roots and etymology on RootLink.`
-    }
-    return `Learn ${word} by its roots and etymology. RootLink teaches English vocabulary through word origins.`
-  }
+function buildDescription(word: string, dictionary: MetaDictionaryWithEn | null): string {
   const jaMeaning = getFirstJaMeaning(dictionary)
   if (jaMeaning) {
     return `${word} の意味は「${jaMeaning}」。語根と語源から英単語の成り立ちを解説します。`
@@ -379,20 +378,16 @@ function buildDescription(word: string, dictionary: MetaDictionaryWithEn | null,
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: { word: string }
-  searchParams?: { fresh?: string; lang?: string }
 }): Promise<Metadata> {
   const original = decodeURIComponent(params.word).trim()
   const raw = original.toLowerCase()
-  const fresh = searchParams?.fresh === '1'
-  const locale = detectServerLocale({ queryLang: searchParams?.lang })
-  const data = await resolveWordAnyCase(original, fresh)
+  const data = await resolveWordAnyCase(original)
   const word = data?.resolved ?? raw
   const dictionary = (data?.dictionary ?? null) as MetaDictionaryWithEn | null
-  const title = buildTitle(word, locale)
-  const description = buildDescription(word, dictionary, locale)
+  const title = buildTitle(word)
+  const description = buildDescription(word, dictionary)
   const cardUrl = `https://www.rootlink.app/word/${encodeURIComponent(word)}/card.png`
   return {
     title,
@@ -404,7 +399,7 @@ export async function generateMetadata({
       title: `${word} | RootLink`,
       description,
       url: `https://www.rootlink.app/word/${encodeURIComponent(word)}`,
-      locale: locale === 'en' ? 'en_US' : 'ja_JP',
+      locale: 'ja_JP',
       images: [{ url: cardUrl, width: 1200, height: 675, alt: `${word} — RootLink` }],
     },
     twitter: {
@@ -418,16 +413,11 @@ export async function generateMetadata({
 
 export default async function Page({
   params,
-  searchParams,
 }: {
   params: { word: string }
-  searchParams?: { pin?: string; fresh?: string; lang?: string }
 }) {
   const original = decodeURIComponent(params.word).replace(/_/g, ' ').trim()
   const raw = original.toLowerCase()
-  const pin = searchParams?.pin ?? null
-  const fresh = searchParams?.fresh === '1'
-  const locale = detectServerLocale({ queryLang: searchParams?.lang })
 
   // 複数語はフレーズを優先して検索（語源ツリーを避ける）
   if (raw.includes(' ')) {
@@ -441,7 +431,7 @@ export default async function Page({
     }
   }
 
-  const data = await resolveWordAnyCase(original, fresh)
+  const data = await resolveWordAnyCase(original)
   if (data) {
     const resolvedWord = data.resolved
     const rawDerivatives = readDerivativesFromDictionary(data.dictionary)
@@ -458,19 +448,20 @@ export default async function Page({
     // 語根まとめ記事はカードで別に出すので、テキストリンクの記事一覧からは外す
     const rootPostSlugs = new Set(rootPosts.map((p) => p.slug))
     const relatedPosts = referencingPosts.filter((p) => !rootPostSlugs.has(p.slug))
+    // initialPinnedSenseId / initialDisplayLocale は ISR 化のため server から渡さない。
+    // pin は WordPageClient が `useSearchParams()` で、locale は `detectDisplayLocale()` で
+    // クライアント側で確定させる。
     return (
       <WordPageClient
         key={resolvedWord}
         word={resolvedWord}
         dictionary={data.dictionary}
-        initialPinnedSenseId={pin}
         relatedPosts={relatedPosts}
         rootPosts={rootPosts}
         initialExistingDerivatives={initialExistingDerivatives}
         containingDecks={containingDecks}
         initialEtymologyRelatedWords={etymologyTree.relatedWords}
         etymologyLinkableWords={etymologyTree.linkable}
-        initialDisplayLocale={locale}
       />
     )
   }

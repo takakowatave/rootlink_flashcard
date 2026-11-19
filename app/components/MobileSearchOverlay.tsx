@@ -85,18 +85,29 @@ export default function MobileSearchOverlay() {
   }, [open])
 
   // 単語ページから検索した場合は履歴を積まずに replace する
-  // (連続検索で戻るを押したら dashboard に戻れるように)。fresh フラグは
-  // 直近 /resolve 済みの語だと SSR に伝え、Data Cache の空応答を回避する。
+  // (連続検索で戻るを押したら dashboard に戻れるように)。/word/[word] は ISR なので、
+  // /resolve 直後に埋めた辞書が 404 cache で隠れないよう該当パスを revalidate する。
   // startTransition で包み、遷移完了 (新ページ描画完了) までモーダルを閉じない
   // → 遷移途中に直前ページが見える bug を防ぐ。close は上の useEffect で行う。
-  const navigateAfterResolve = (url: string) => {
-    const withFresh = url.includes('?') ? `${url}&fresh=1` : `${url}?fresh=1`
+  const navigateAfterResolve = async (url: string) => {
+    const word = url.match(/^\/word\/([^/?#]+)/)?.[1]
+    if (word) {
+      try {
+        await fetch('/api/revalidate-word', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word: decodeURIComponent(word).replace(/_/g, ' ') }),
+        })
+      } catch {
+        // 失敗しても遷移続行 (最長 24h で自然に治る)
+      }
+    }
     wasNavigating.current = true
     startTransition(() => {
       if (pathname.startsWith('/word/')) {
-        router.replace(withFresh)
+        router.replace(url)
       } else {
-        router.push(withFresh)
+        router.push(url)
       }
     })
   }

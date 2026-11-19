@@ -105,13 +105,20 @@ export default function SearchBox({
       return
     }
     // 単語ページ上での検索は履歴を積まずに replace (連続検索の戻る先を dashboard に)。
-    // fresh=1 は SSR 側で Data Cache を bypass するフラグ (404 flash 回避)。
-    const url = `/word/${label.replace(/\s+/g, '_')}?fresh=1`
-    if (pathname.startsWith('/word/')) {
-      router.replace(url)
-    } else {
-      router.push(url)
-    }
+    // /word/[word] は ISR なので、直前に /resolve で詰めた辞書が 404 cache に化けないよう
+    // そのパスだけ revalidate してから遷移する。失敗は無視 (最長 24h で自然に治る)。
+    const url = `/word/${label.replace(/\s+/g, '_')}`
+    fetch('/api/revalidate-word', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: label }),
+    }).catch(() => {}).finally(() => {
+      if (pathname.startsWith('/word/')) {
+        router.replace(url)
+      } else {
+        router.push(url)
+      }
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

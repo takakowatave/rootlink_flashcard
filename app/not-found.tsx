@@ -1,9 +1,14 @@
+'use client'
+
 import Link from 'next/link'
 import Button from '@/components/Button'
-import { detectServerLocale } from '@/lib/serverLocale'
+import { useLocale } from '@/lib/LocaleProvider'
 
+// 以前は detectServerLocale() を直接読んでいたが、cookies/headers を触ると
+// Next.js が「not-found 境界を持つ全ページ」を dynamic 扱いにして /word/[word] 等の
+// ISR が効かなくなる。LocaleProvider 経由のクライアント判定に寄せる (2026-11-19)。
 export default function NotFound() {
-  const locale = detectServerLocale()
+  const locale = useLocale()
   const t = locale === 'ja'
     ? {
         title: 'ページが見つかりません',

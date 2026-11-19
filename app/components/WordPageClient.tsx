@@ -694,18 +694,18 @@ export default function WordPageClient({
   etymologyLinkableWords?: string[]
 }) {
   const router = useRouter()
-
-  // /word/xxx?fresh=1 で来た場合、SSR で Data Cache を bypass するためのフラグを付けてるだけ
-  // なので、レンダー確定後は URL からクリーンアップして共有時にゴミが残らないようにする。
+  // pin は /word/[word]/page.tsx を ISR 化したため searchParams を server で読まない。
+  // URL (?pin=senseId) はマウント後に拾う。`useSearchParams()` は静的ページで
+  // Suspense 境界を要求するので、ここでは window.location を直接見る。
+  // モーダル用途で props 経由 (initialPinnedSenseId) も残しており、両方ある場合は
+  // props 優先 (deck モーダル経由のケースを壊さない)。
+  const [pinFromUrl, setPinFromUrl] = useState<string | null>(null)
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const url = new URL(window.location.href)
-    if (url.searchParams.has('fresh')) {
-      url.searchParams.delete('fresh')
-      const q = url.searchParams.toString()
-      window.history.replaceState(null, '', url.pathname + (q ? `?${q}` : '') + url.hash)
-    }
+    const p = new URL(window.location.href).searchParams.get('pin')
+    if (p) setPinFromUrl(p)
   }, [word])
+  const effectiveInitialPinnedSenseId = initialPinnedSenseId ?? pinFromUrl
 
   // Header と共有する表示言語
   const [displayLocale, setDisplayLocale] = useState<DisplayLocale>(initialDisplayLocale ?? 'ja')
@@ -946,7 +946,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
 
   const [savedWords, setSavedWords] = useState<string[]>([])
   const [resolvedSavedId, setResolvedSavedId] = useState<string | null>(savedId ?? null)
-  const [resolvedPinnedSenseId, setResolvedPinnedSenseId] = useState<string | null>(initialPinnedSenseId ?? null)
+  const [resolvedPinnedSenseId, setResolvedPinnedSenseId] = useState<string | null>(effectiveInitialPinnedSenseId ?? null)
   // 認証状態キャッシュ (handleSave で毎回 auth.getUser() を await しないため)
   const [isAuthed, setIsAuthed] = useState(false)
   const authedUserIdRef = useRef<string | null>(null)
@@ -961,7 +961,7 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [displaySenses])
 
   const [pinnedSenseId, setPinnedSenseId] = useState<string | null>(
-    initialPinnedSenseId ?? null
+    effectiveInitialPinnedSenseId ?? null
   )
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [paywallVariant, setPaywallVariant] = useState<Exclude<PaywallVariant, 'none'> | null>(null)
@@ -1025,10 +1025,12 @@ const grammarTags = useMemo<GrammarTagsBySense>(() => {
   }, [derivatives])
 
   useEffect(() => {
-    if (!initialPinnedSenseId) {
+    if (effectiveInitialPinnedSenseId) {
+      setPinnedSenseId(effectiveInitialPinnedSenseId)
+    } else {
       setPinnedSenseId(firstSenseId)
     }
-  }, [word, firstSenseId, initialPinnedSenseId])
+  }, [word, firstSenseId, effectiveInitialPinnedSenseId])
 
   // sense のピン留め切り替え担当
   const handleTogglePin = async (senseId: string) => {
